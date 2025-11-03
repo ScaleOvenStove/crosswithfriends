@@ -9,8 +9,6 @@ import {isMobile} from './lib/jsUtils';
 import {
   Account,
   Battle,
-  Compose,
-  Composition,
   Game,
   Play,
   Replay,
@@ -76,8 +74,6 @@ const Root = () => {
             <Route exact path="/beta/battle/:bid" component={Battle} />
             <Route exact path="/beta/play/:pid" component={Play} />
             <Route path="/account" component={Account} />
-            <Route exact path="/compose" component={Compose} />
-            <Route exact path="/composition/:cid" component={Composition} />
             <Route exact path="/fencing/:gid" component={Fencing} />
             <Route exact path="/beta/fencing/:gid" component={Fencing} />
             <Route

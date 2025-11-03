@@ -5,7 +5,6 @@ import React, {Component} from 'react';
 import Grid from '../Grid';
 import GridControls from './GridControls';
 import EditableSpan from '../common/EditableSpan';
-import Hints from '../Compose/Hints';
 
 import GridObject from '../../lib/wrappers/GridWrapper';
 import * as gameUtils from '../../lib/gameUtils';
