@@ -66,13 +66,14 @@ docker compose -f dockerfiles/db-local.yaml up
 
 2. Create the tables
 
-```
+```bash
+cd server
 ./create_fresh_dbs.sh postgresql://postgres:admin@localhost:5432/dfac
 ```
 
 Or if you want to do it manually, run the sql in sql/ like
 
-```
+```bash
 psql dfac < create_game_events.sql
 ```
 
