@@ -57,18 +57,17 @@ Important: If you aren't making changes to `server/server.js`, you don't need to
 
 #### Initialize your local db:
 
-1. Create the database
+1. Start the database with docker-compose:
 
+```bash
+cd server
+docker compose -f dockerfiles/db-local.yaml up
 ```
-psql -c 'create database dfac'
-```
-
-(`createdb` if this fails)
 
 2. Create the tables
 
 ```
-./create_fresh_dbs.sh
+./create_fresh_dbs.sh postgresql://postgres:admin@localhost:5432/dfac
 ```
 
 Or if you want to do it manually, run the sql in sql/ like
