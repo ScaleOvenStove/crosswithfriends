@@ -5,6 +5,7 @@
 
 echo "creating dbs in ${1}"
 
+psql -a "${1}" < sql/initialize_roles.sql
 psql -a "${1}" < sql/create_game_events.sql
 psql -a "${1}" < sql/create_puzzles.sql
 psql -a "${1}" < sql/create_room_events.sql
