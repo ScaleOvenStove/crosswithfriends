@@ -2,6 +2,8 @@ import pg from 'pg';
 // ============= Database Operations ============
 
 const port: number = +(process.env.PGPORT || "5432")
+// For localhost development, disable SSL setup
+const shouldDisableSsl = process.env.PGSSL === "disabled"
 
 export const pool = new pg.Pool({
   host: process.env.PGHOST || 'localhost',
@@ -9,5 +11,7 @@ export const pool = new pg.Pool({
   port,
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
-  ssl: false,
+  ssl: shouldDisableSsl ? false : {
+    rejectUnauthorized: false,
+  },
 });
