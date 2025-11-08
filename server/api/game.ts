@@ -2,6 +2,10 @@ import express from 'express';
 import {CreateGameResponse, CreateGameRequest} from '../../src/shared/types';
 
 import {addInitialGameEvent} from '../model/game';
+import {getPuzzleInfo} from '../model/puzzle';
+import {getPuzzleSolves} from '../model/puzzle_solve';
+
+import {InfoJson} from '../../src/shared/types';
 
 const router = express.Router();
 
