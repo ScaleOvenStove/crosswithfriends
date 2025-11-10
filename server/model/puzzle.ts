@@ -45,7 +45,11 @@ export async function listPuzzles(
 > {
   const startTime = Date.now();
   const parametersForTitleAuthorFilter = filter.nameOrTitleFilter.split(/\s/).map((s) => `%${s}%`);
-  const parameterOffset = 4;
+  const sizeFilterArray = mapSizeFilterForDB(filter.sizeFilter);
+  // Parameter offset depends on whether size filter is present:
+  // - With size filter: $1=sizeFilter, $2=limit, $3=offset, $4+=titleAuthorFilter
+  // - Without size filter: $1=limit, $2=offset, $3+=titleAuthorFilter
+  const parameterOffset = sizeFilterArray.length > 0 ? 4 : 3;
   // see https://github.com/brianc/node-postgres/wiki/FAQ#11-how-do-i-build-a-where-foo-in--query-to-find-rows-matching-an-array-of-values
   // for why this is okay.
   // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL cause, but will for multiple ands
@@ -59,18 +63,24 @@ export async function listPuzzles(
         }`
     )
     .join('\n');
+  const sizeFilterCondition = sizeFilterArray.length > 0 
+    ? `AND (content->'info'->>'type') = ANY($1)`
+    : '';
+  const queryParams = sizeFilterArray.length > 0
+    ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
+    : [limit, offset, ...parametersForTitleAuthorFilter];
   const {rows} = await pool.query(
     `
       SELECT pid, uploaded_at, content, times_solved
       FROM puzzles
       WHERE is_public = true
-      AND (content->'info'->>'type') = ANY($1)
+      ${sizeFilterCondition}
       ${parameterizedTileAuthorFilter}
       ORDER BY pid_numeric DESC 
-      LIMIT $2
-      OFFSET $3
+      LIMIT $${sizeFilterArray.length > 0 ? '2' : '1'}
+      OFFSET $${sizeFilterArray.length > 0 ? '3' : '2'}
     `,
-    [mapSizeFilterForDB(filter.sizeFilter), limit, offset, ...parametersForTitleAuthorFilter]
+    queryParams
   );
   const puzzles = rows.map(
     (row: {
