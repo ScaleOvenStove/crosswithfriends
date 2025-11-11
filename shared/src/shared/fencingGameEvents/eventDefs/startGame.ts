@@ -3,7 +3,7 @@ import type {EventDef} from '../types/EventDef';
 export interface StartEvent {}
 
 const start: EventDef<StartEvent> = {
-  reducer(state, params, timestamp) {
+  reducer(state, _params, timestamp) {
     return {
       ...state,
       started: true,

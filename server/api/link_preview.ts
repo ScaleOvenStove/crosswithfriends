@@ -28,9 +28,15 @@ async function linkPreviewRouter(fastify: FastifyInstance) {
       const pathParts = url.pathname.split('/');
       if (pathParts[1] === 'game') {
         const gid = pathParts[2];
+        if (!gid) {
+          throw createHttpError('Invalid URL path: missing game ID', 400);
+        }
         info = (await getGameInfo(gid)) as InfoJson;
       } else if (pathParts[1] === 'play') {
         const pid = pathParts[2];
+        if (!pid) {
+          throw createHttpError('Invalid URL path: missing puzzle ID', 400);
+        }
         info = (await getPuzzleInfo(pid)) as InfoJson;
       } else {
         throw createHttpError('Invalid URL path', 400);

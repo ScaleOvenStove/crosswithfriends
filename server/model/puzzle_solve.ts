@@ -71,7 +71,7 @@ export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[
       const title = puzzle.content.info.title;
       const grid = puzzle.content.grid;
       const width = grid.length;
-      const length = grid.length > 0 ? grid[0].length : 0;
+      const length = grid.length > 0 && grid[0] ? grid[0].length : 0;
       // Parse date string (YYYY-MM-DD) to Date object
       // If it's already a Date, use it directly
       const solvedTime =
