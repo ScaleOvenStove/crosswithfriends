@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/no-unused-vars : "warn" */
-import {GameEvent} from '@shared/fencingGameEvents/types/GameEvent';
-import {GameState} from '@shared/fencingGameEvents/types/GameState';
+import {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
+import {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
 
 export interface ToolbarActions {
   revealCell(): void;

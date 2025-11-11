@@ -60,10 +60,36 @@ export default class HistoryWrapper {
   getSnapshotAtIndex(index, {optimistic = false} = {}) {
     const _i = _.sortedLastIndexBy(this.memo, {index}, (memoItem) => memoItem.index);
     const memoItem = this.memo[_i - 1];
+
+    // Handle case where memo is empty or index is out of bounds
+    if (!memoItem) {
+      // If no memo item, start from createEvent
+      if (!this.createEvent) {
+        return null;
+      }
+      let game = this.reduce(null, this.createEvent);
+      for (let i = 0; i <= index; i += 1) {
+        const event = this.history[i];
+        if (event) {
+          game = this.reduce(game, event);
+        }
+      }
+      if (optimistic) {
+        for (const event of this.optimisticEvents) {
+          game = this.reduce(game, event, {
+            isOptimistic: true,
+          });
+        }
+      }
+      return game;
+    }
+
     let {game} = memoItem;
     for (let i = memoItem.index + 1; i <= index; i += 1) {
       const event = this.history[i];
-      game = this.reduce(game, event);
+      if (event) {
+        game = this.reduce(game, event);
+      }
     }
     if (optimistic) {
       for (const event of this.optimisticEvents) {

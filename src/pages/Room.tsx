@@ -158,19 +158,12 @@ const Room: React.FC<RouteComponentProps<{rid: string}>> = (props) => {
       </div>
       <div className={classes.footer}>
         <div>
-          In this room:
-          {' '}
+          In this room:{' '}
           {
             _.filter(roomState.users, (user) => user.lastPing > currentTime - ACTIVE_SECONDS_TIMEOUT * 1000)
               .length
-          }
-          {' '}
-          <span className={classes.totalUsersParen}>
-            (
-            {roomState.users.length}
-            {' '}
-            total)
-          </span>
+          }{' '}
+          <span className={classes.totalUsersParen}>({roomState.users.length} total)</span>
         </div>
         <div>
           <button onClick={handleAddGame}>

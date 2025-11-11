@@ -1,51 +1,103 @@
+import React, {forwardRef, useCallback, useMemo} from 'react';
 import GridControls from './GridControls';
+import {UseGridControlsProps, GridControlsActions, useGridControls} from './useGridControls';
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 
-export default class ListViewControls extends GridControls {
-  actions = {
-    left: this.moveToPreviousCell.bind(this),
-    up: this.selectPreviousClue.bind(this),
-    down: this.selectNextClue.bind(this),
-    right: this.moveToNextCell.bind(this),
-    forward: this.selectNextClue.bind(this),
-    backward: this.selectPreviousClue.bind(this),
-    home: this.moveToEdge(true).bind(this),
-    end: this.moveToEdge(false).bind(this),
-    backspace: this.backspace.bind(this),
-    delete: this.delete.bind(this),
-    tab: this.selectNextClue.bind(this),
-    space: this.flipDirection.bind(this),
-  };
+interface ListViewControlsProps extends UseGridControlsProps {
+  children?: React.ReactNode;
+}
 
-  moveToNextCell() {
-    const {r, c} = this.props.selected;
-    const nextCell = this.grid.getNextCell(r, c, this.props.direction);
+const ListViewControls = forwardRef<HTMLDivElement, ListViewControlsProps>((props, ref) => {
+  const grid = useMemo(() => new GridObject(props.grid), [props.grid]);
+
+  // Use the hook to get base methods
+  const gridControls = useGridControls(props);
+  const {selectNextClue, flipDirection, moveToEdge, deleteCell: baseDeleteCell} = gridControls;
+
+  const moveToNextCell = useCallback(() => {
+    const {r, c} = props.selected;
+    const nextCell = grid.getNextCell(r, c, props.direction);
     if (nextCell) {
-      this.setSelected(nextCell);
+      props.onSetSelected(nextCell);
       return nextCell;
     }
-    this.selectNextClue();
-  }
+    selectNextClue();
+  }, [props.selected, props.direction, props.onSetSelected, grid, selectNextClue]);
 
-  moveToPreviousCell() {
-    const {r, c} = this.props.selected;
-    const previousCell = this.grid.getPreviousCell(r, c, this.props.direction);
+  const moveToPreviousCell = useCallback(() => {
+    const {r, c} = props.selected;
+    const previousCell = grid.getPreviousCell(r, c, props.direction);
     if (previousCell) {
-      this.setSelected(previousCell);
+      props.onSetSelected(previousCell);
       return previousCell;
     }
-    this.selectPreviousClue();
-  }
+    selectNextClue(true);
+  }, [props.selected, props.direction, props.onSetSelected, grid, selectNextClue]);
 
-  selectPreviousClue() {
-    this.selectNextClue(true);
-  }
+  const selectPreviousClue = useCallback(() => {
+    selectNextClue(true);
+  }, [selectNextClue]);
 
-  backspace(shouldStay: any): void {
-    if (!this.delete() && !shouldStay) {
-      const cell = this.moveToPreviousCell();
-      if (cell) {
-        this.props.updateGrid(cell.r, cell.c, '');
+  const backspace = useCallback(
+    (shouldStay: any = false) => {
+      const {r, c} = props.selected;
+      const deleteCellLocal = () => {
+        if (props.grid[r][c].value !== '' && !props.grid[r][c].good) {
+          props.updateGrid(r, c, '');
+          return true;
+        }
+        return false;
+      };
+      if (!deleteCellLocal() && !shouldStay) {
+        const cell = moveToPreviousCell();
+        if (cell) {
+          props.updateGrid(cell.r, cell.c, '');
+        }
       }
+    },
+    [props.selected, props.grid, props.updateGrid, moveToPreviousCell]
+  );
+
+  const deleteCell = useCallback(() => {
+    const {r, c} = props.selected;
+    if (props.grid[r][c].value !== '' && !props.grid[r][c].good) {
+      props.updateGrid(r, c, '');
+      return true;
     }
-  }
-}
+    return false;
+  }, [props.selected, props.grid, props.updateGrid]);
+
+  // Create custom actions that override the defaults
+  const customActions = useMemo<Partial<GridControlsActions>>(
+    () => ({
+      left: () => moveToPreviousCell(),
+      up: () => selectPreviousClue(),
+      down: () => selectNextClue(false),
+      right: () => moveToNextCell(),
+      forward: () => selectNextClue(false),
+      backward: () => selectPreviousClue(),
+      backspace: () => backspace(),
+      home: moveToEdge(true),
+      end: moveToEdge(false),
+      delete: () => deleteCell(),
+      tab: () => selectNextClue(false),
+      space: () => flipDirection(),
+    }),
+    [
+      moveToNextCell,
+      moveToPreviousCell,
+      selectPreviousClue,
+      selectNextClue,
+      backspace,
+      moveToEdge,
+      deleteCell,
+      flipDirection,
+    ]
+  );
+
+  return <GridControls {...props} actions={customActions} />;
+});
+
+ListViewControls.displayName = 'ListViewControls';
+
+export default ListViewControls;

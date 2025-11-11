@@ -1,27 +1,20 @@
 import React from 'react';
 import {useToggle} from 'react-use';
 import {CirclePicker} from 'react-color';
-import {makeStyles} from '@material-ui/core';
+import {Box} from '@mui/material';
 
 interface ColorPickerProps {
   color: string;
   onUpdateColor: (color: string) => void;
 }
-const useStyles = makeStyles<any, ColorPickerProps>({
-  clickableDot: {
-    color: (props) => props.color,
-    cursor: 'pointer',
-  },
-});
 const ColorPicker: React.FC<ColorPickerProps> = (props) => {
-  const classes = useStyles(props);
   const [isActive, toggleIsActive] = useToggle(false);
   return (
     <>
-      <span onClick={toggleIsActive} className={classes.clickableDot}>
+      <Box component="span" onClick={toggleIsActive} sx={{color: props.color, cursor: 'pointer'}}>
         {' '}
         {'\u25CF '}
-      </span>
+      </Box>
       {isActive ? (
         <>
           <CirclePicker

@@ -2,58 +2,17 @@ import React, {Dispatch, SetStateAction, useEffect, useMemo, useState} from 'rea
 import {useUpdateEffect} from 'react-use';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import {RouteComponentProps} from 'react-router';
+import {useParams} from 'react-router-dom';
 
-import {makeStyles} from '@material-ui/core';
-import {RoomEvent, SetGameRoomEvent, UserPingRoomEvent} from '@shared/roomEvents';
+import {Box} from '@mui/material';
+import {RoomEvent, SetGameRoomEvent, UserPingRoomEvent} from '@crosswithfriends/shared/roomEvents';
 import {useSocket} from '../sockets/useSocket';
-import {initialRoomState, roomReducer} from '@lib/reducers/room';
+import {initialRoomState, roomReducer} from '@crosswithfriends/shared/lib/reducers/room';
 import {emitAsync} from '../sockets/emitAsync';
 import {getUser} from '../store';
 
 const ACTIVE_SECONDS_TIMEOUT = 60;
 
-const useStyles = makeStyles({
-  container: {
-    display: 'flex',
-    height: '100%',
-    flexDirection: 'column',
-  },
-  content: {
-    flex: 1,
-    display: 'flex',
-    '& iframe': {
-      border: 'none',
-      width: '100%',
-      height: '100%',
-    },
-  },
-  totalUsersParen: {
-    color: '#DDDDDD',
-  },
-  footer: {
-    padding: 12,
-    display: 'flex',
-    justifyContent: 'space-between',
-    background: 'var(--main-blue)',
-    color: '#FBFBFB',
-    '& button': {
-      border: 'none',
-      background: 'none',
-      outline: '1px solid',
-      color: '#FBFBFB',
-      cursor: 'pointer',
-    },
-  },
-  noGameMessage: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
 function subscribeToRoomEvents(
   socket: SocketIOClient.Socket | undefined,
   rid: string,
@@ -99,8 +58,9 @@ const useTimer = (interval = 1000): number => {
   return time;
 };
 
-const Room: React.FC<RouteComponentProps<{rid: string}>> = (props) => {
-  const rid = props.match.params.rid;
+const Room: React.FC = () => {
+  const params = useParams<{rid: string}>();
+  const rid = params.rid || '';
   const socket = useSocket();
   const [events, setEvents] = useState<RoomEvent[]>([]);
   const roomState = useRoomState(events);
@@ -142,35 +102,62 @@ const Room: React.FC<RouteComponentProps<{rid: string}>> = (props) => {
     }
   };
   const currentTime = useTimer();
-  const classes = useStyles();
   const currentGame = _.first(roomState.games);
   return (
-    <div className={classes.container}>
+    <Box sx={{display: 'flex', height: '100%', flexDirection: 'column'}}>
       <Helmet title={`Room ${rid}`} />
-      <div className={classes.content}>
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          '& iframe': {
+            border: 'none',
+            width: '100%',
+            height: '100%',
+          },
+        }}
+      >
         {currentGame && <iframe title="game" src={`/game/${currentGame.gid}`} />}
         {!currentGame && (
-          <div className={classes.noGameMessage}>
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <div>No game selected!</div>
             <div> Click the button on the bottom-right to enter a game link</div>
-          </div>
+          </Box>
         )}
-      </div>
-      <div className={classes.footer}>
+      </Box>
+      <Box
+        sx={{
+          padding: 1.5,
+          display: 'flex',
+          justifyContent: 'space-between',
+          background: 'var(--main-blue)',
+          color: '#FBFBFB',
+          '& button': {
+            border: 'none',
+            background: 'none',
+            outline: '1px solid',
+            color: '#FBFBFB',
+            cursor: 'pointer',
+          },
+        }}
+      >
         <div>
-          In this room:
-          {' '}
+          In this room:{' '}
           {
             _.filter(roomState.users, (user) => user.lastPing > currentTime - ACTIVE_SECONDS_TIMEOUT * 1000)
               .length
-          }
-          {' '}
-          <span className={classes.totalUsersParen}>
-            (
-            {roomState.users.length}
-            {' '}
-            total)
-          </span>
+          }{' '}
+          <Box component="span" sx={{color: '#DDDDDD'}}>
+            ({roomState.users.length} total)
+          </Box>
         </div>
         <div>
           <button onClick={handleAddGame}>
@@ -178,8 +165,8 @@ const Room: React.FC<RouteComponentProps<{rid: string}>> = (props) => {
             {currentGame?.gid ?? 'N/A'}
           </button>
         </div>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
 export default Room;

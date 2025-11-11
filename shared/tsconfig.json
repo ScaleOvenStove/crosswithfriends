@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
+    "target": "es2020",
+    "lib": ["es2020"],
     "module": "ESNext",
     "moduleResolution": "node",
     "jsx": "react",
@@ -13,7 +13,8 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
+    "noEmit": false,
+    "outDir": "./dist",
     "incremental": true,
     "declaration": true,
     "declarationMap": true
@@ -21,4 +22,3 @@
   "include": ["src"],
   "exclude": ["node_modules"]
 }
-

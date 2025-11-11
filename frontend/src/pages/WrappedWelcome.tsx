@@ -1,7 +1,8 @@
 import React from 'react';
 
-import useStateParams from '@lib/hooks/useStateParams';
+import useStateParams from '@crosswithfriends/shared/lib/hooks/useStateParams';
 import Welcome from './Welcome';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 interface UseFencing {
   fencing: boolean;
@@ -30,43 +31,43 @@ const WrappedWelcome = (props: UseFencing) => {
   const [includeComplete, setIncludeComplete] = useStateParams(
     true,
     'complete',
-    (s) => (s ? '1' : '0'),
-    (s) => s === '1'
+    (s: boolean) => (s ? '1' : '0'),
+    (s: string) => s === '1'
   );
 
   const [includeInProgress, setIncludeInProgress] = useStateParams(
     true,
     'in_progress',
-    (s) => (s ? '1' : '0'),
-    (s) => s === '1'
+    (s: boolean) => (s ? '1' : '0'),
+    (s: string) => s === '1'
   );
 
   const [includeNew, setIncludeNew] = useStateParams(
     true,
     'new',
-    (s) => (s ? '1' : '0'),
-    (s) => s === '1'
+    (s: boolean) => (s ? '1' : '0'),
+    (s: string) => s === '1'
   );
 
   const [includeMini, setIncludeMini] = useStateParams(
     true,
     'mini',
-    (s) => (s ? '1' : '0'),
-    (s) => s === '1'
+    (s: boolean) => (s ? '1' : '0'),
+    (s: string) => s === '1'
   );
 
   const [includeStandard, setIncludeStandard] = useStateParams(
     true,
     'standard',
-    (s) => (s ? '1' : '0'),
-    (s) => s === '1'
+    (s: boolean) => (s ? '1' : '0'),
+    (s: string) => s === '1'
   );
 
   const [search, setSearch] = useStateParams(
     '',
     'search',
-    (s) => s,
-    (s) => s
+    (s: string) => s,
+    (s: string) => s
   );
 
   function setStatusFilter(statusFilter: StatusFilter) {
@@ -90,7 +91,11 @@ const WrappedWelcome = (props: UseFencing) => {
     fencing: props.fencing,
   };
 
-  return <Welcome {...welcomeProps} />;
+  return (
+    <ErrorBoundary>
+      <Welcome {...welcomeProps} />
+    </ErrorBoundary>
+  );
 };
 
 export default WrappedWelcome;

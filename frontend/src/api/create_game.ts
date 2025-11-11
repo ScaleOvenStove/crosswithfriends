@@ -1,6 +1,6 @@
 // ========== GET /api/puzzlelist ============
 
-import {CreateGameRequest, CreateGameResponse} from '@shared/types';
+import {CreateGameRequest, CreateGameResponse} from '@crosswithfriends/shared/types';
 import {SERVER_URL} from './constants';
 
 export async function createGame(data: CreateGameRequest): Promise<CreateGameResponse> {

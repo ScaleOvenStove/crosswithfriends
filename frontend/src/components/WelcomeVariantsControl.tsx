@@ -1,4 +1,4 @@
-import {makeStyles} from '@material-ui/core';
+import {Box, Stack} from '@mui/material';
 import React from 'react';
 import {Link} from 'react-router-dom';
 import clsx from 'clsx';
@@ -8,7 +8,6 @@ import swal from '@sweetalert/with-react';
 export const WelcomeVariantsControl: React.FC<{
   fencing?: boolean;
 }> = (props) => {
-  const classes = useStyles();
   const showFencingInfo = () => {
     swal({
       title: 'crosswithfriends.com/fencing',
@@ -36,51 +35,55 @@ export const WelcomeVariantsControl: React.FC<{
     });
   };
   return (
-    <div className={classes.container}>
-      <span className={classes.title}>Variants</span>
+    <Stack
+      direction="column"
+      sx={{
+        padding: '20px !important',
+        '& a': {
+          textDecoration: 'none',
+        },
+      }}
+    >
+      <Box component="span" sx={{fontSize: '200%'}}>
+        Variants
+      </Box>
       <Link to="/">
-        <span
-          className={clsx(classes.option, {
+        <Box
+          component="span"
+          className={clsx({
             selected: !props.fencing,
           })}
+          sx={{
+            color: 'gray',
+            '&.selected': {
+              color: 'blue',
+            },
+          }}
         >
           Normal
-        </span>
+        </Box>
       </Link>
-      <span>
+      <Box component="span">
         <Link to="/fencing">
-          <span
-            className={clsx(classes.option, {
+          <Box
+            component="span"
+            className={clsx({
               selected: !!props.fencing,
             })}
+            sx={{
+              color: 'gray',
+              '&.selected': {
+                color: 'blue',
+              },
+            }}
           >
             Fencing
-          </span>
+          </Box>
         </Link>
         <span className="nav--info" onClick={showFencingInfo}>
           <i className="fa fa-info-circle" />
         </span>
-      </span>
-    </div>
+      </Box>
+    </Stack>
   );
 };
-
-const useStyles = makeStyles({
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: '20px !important',
-    '& a': {
-      textDecoration: 'none',
-    },
-  },
-  title: {
-    fontSize: '200%',
-  },
-  option: {
-    color: 'gray',
-    '&.selected': {
-      color: 'blue',
-    },
-  },
-});

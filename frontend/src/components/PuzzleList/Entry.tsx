@@ -1,6 +1,6 @@
-import React, {Component} from 'react';
+import React from 'react';
 import _ from 'lodash';
-import Flex from 'react-flexview';
+import {Box, Stack} from '@mui/material';
 import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {Link} from 'react-router-dom';
@@ -20,20 +20,18 @@ export interface EntryProps {
   fencing?: boolean;
 }
 
-export default class Entry extends Component<EntryProps> {
-  handleClick = () => {
+const Entry: React.FC<EntryProps> = ({title, author, pid, status, stats, fencing, info}) => {
+  const handleClick = () => {
     /*
-    this.setState({
-      expanded: !this.state.expanded,
-    });
-    this.props.onPlay(this.props.pid);
+    // Expanded state removed - can be added back with useState if needed
+    // onPlay?.(pid);
     */
   };
 
-  handleMouseLeave = () => {};
+  const handleMouseLeave = () => {};
 
-  get size() {
-    const {type} = this.props.info;
+  const getSize = () => {
+    const {type} = info;
     if (type === 'Daily Puzzle') {
       return 'Standard';
     }
@@ -41,50 +39,50 @@ export default class Entry extends Component<EntryProps> {
       return 'Mini';
     }
     return 'Puzzle'; // shouldn't get here???
-  }
+  };
 
-  render() {
-    const {title, author, pid, status, stats, fencing} = this.props;
-    const numSolvesOld = _.size(stats?.solves || []);
-    const numSolves = numSolvesOld + (stats?.numSolves || 0);
-    const displayName = _.compact([author.trim(), this.size]).join(' | ');
-    return (
-      <Link
-        to={`/beta/play/${pid}${fencing ? '?fencing=1' : ''}`}
-        style={{textDecoration: 'none', color: 'initial'}}
-      >
-        <Flex className="entry" column onClick={this.handleClick} onMouseLeave={this.handleMouseLeave}>
-          <Flex className="entry--top--left">
-            <Flex grow={0}>
-              <p
-                style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}
-                title={displayName}
-              >
-                {displayName}
-              </p>
-            </Flex>
-            <Flex>
-              {status === 'started' && <MdRadioButtonUnchecked className="entry--icon" />}
-              {status === 'solved' && <MdCheckCircle className="entry--icon" />}
-              {status !== 'started' && status !== 'solved' && fencing && (
-                <GiCrossedSwords className="entry--icon fencing" />
-              )}
-            </Flex>
-          </Flex>
-          <Flex className="entry--main">
-            <Flex grow={0}>
-              <p style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}} title={title}>
-                {title}
-              </p>
-            </Flex>
-          </Flex>
-          <Flex className="entry--details">
-            <p>
-              Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
+  const numSolvesOld = _.size(stats?.solves || []);
+  const numSolves = numSolvesOld + (stats?.numSolves || 0);
+  const displayName = _.compact([author.trim(), getSize()]).join(' | ');
+
+  return (
+    <Link
+      to={`/beta/play/${pid}${fencing ? '?fencing=1' : ''}`}
+      style={{textDecoration: 'none', color: 'initial'}}
+    >
+      <Stack className="entry" direction="column" onClick={handleClick} onMouseLeave={handleMouseLeave}>
+        <Box className="entry--top--left" sx={{display: 'flex'}}>
+          <Box sx={{flexGrow: 0, display: 'flex'}}>
+            <p
+              style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}
+              title={displayName}
+            >
+              {displayName}
             </p>
-          </Flex>
-        </Flex>
-      </Link>
-    );
-  }
-}
+          </Box>
+          <Box sx={{display: 'flex'}}>
+            {status === 'started' && <MdRadioButtonUnchecked className="entry--icon" />}
+            {status === 'solved' && <MdCheckCircle className="entry--icon" />}
+            {status !== 'started' && status !== 'solved' && fencing && (
+              <GiCrossedSwords className="entry--icon fencing" />
+            )}
+          </Box>
+        </Box>
+        <Box className="entry--main" sx={{display: 'flex'}}>
+          <Box sx={{flexGrow: 0, display: 'flex'}}>
+            <p style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}} title={title}>
+              {title}
+            </p>
+          </Box>
+        </Box>
+        <Box className="entry--details" sx={{display: 'flex'}}>
+          <p>
+            Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
+          </p>
+        </Box>
+      </Stack>
+    </Link>
+  );
+};
+
+export default Entry;

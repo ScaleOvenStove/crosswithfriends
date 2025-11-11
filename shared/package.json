@@ -2,12 +2,34 @@
   "name": "@crosswithfriends/shared",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
   "exports": {
-    ".": "./src/index.ts",
-    "./types": "./src/shared/types.ts",
-    "./roomEvents": "./src/shared/roomEvents.ts",
-    "./lib/*": "./src/lib/*"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/shared/types.d.ts",
+      "default": "./dist/shared/types.js"
+    },
+    "./roomEvents": {
+      "types": "./dist/shared/roomEvents.d.ts",
+      "default": "./dist/shared/roomEvents.js"
+    },
+    "./fencingGameEvents/*": {
+      "types": "./dist/shared/fencingGameEvents/*.d.ts",
+      "default": "./dist/shared/fencingGameEvents/*.js"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "default": "./dist/lib/*.js"
+    }
   }
 }

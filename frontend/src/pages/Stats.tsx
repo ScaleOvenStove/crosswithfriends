@@ -1,23 +1,15 @@
 import React, {useEffect, useState} from 'react';
 import _ from 'lodash';
 import {fetchStats} from '../api/stats';
-import {ListPuzzleStatsResponse} from '@shared/types';
+import {ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
 import {getUser} from '../store/user';
-import Flex from 'react-flexview';
+import {Stack, Box} from '@mui/material';
 import {Helmet} from 'react-helmet';
 import Nav from '../components/common/Nav';
 import {formatMilliseconds} from '../components/Toolbar/Clock';
-import {makeStyles} from '@material-ui/core';
-
-const useStyles = makeStyles({
-  header: {
-    textAlign: 'center',
-  },
-});
 
 const Stats: React.FC<{}> = () => {
   const user = getUser();
-  const classes = useStyles();
 
   const [stats, setStats] = useState<ListPuzzleStatsResponse | null>(null);
 
@@ -35,14 +27,16 @@ const Stats: React.FC<{}> = () => {
   }, [user]);
 
   return (
-    <Flex column className="replays">
+    <Stack direction="column" className="replays">
       <Nav hidden={false} v2 canLogin={false} divRef={null} linkStyle={null} mobile={null} />
       <Helmet>
         <title>Stats</title>
       </Helmet>
 
       <div>
-        <h2 className={classes.header}>Stats</h2>
+        <Box component="h2" sx={{textAlign: 'center'}}>
+          Stats
+        </Box>
         <table className="main-table">
           <tbody>
             <tr>
@@ -82,7 +76,10 @@ const Stats: React.FC<{}> = () => {
         </table>
       </div>
       <div>
-        <h2 className={classes.header}>{`History (${stats?.history?.length || 0} total puzzles)`}</h2>
+        <Box
+          component="h2"
+          sx={{textAlign: 'center'}}
+        >{`History (${stats?.history?.length || 0} total puzzles)`}</Box>
         <table className="main-table">
           <tbody>
             <tr>
@@ -110,7 +107,7 @@ const Stats: React.FC<{}> = () => {
           </tbody>
         </table>
       </div>
-    </Flex>
+    </Stack>
   );
 };
 

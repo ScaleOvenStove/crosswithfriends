@@ -22,22 +22,27 @@
     "argparse": "^2.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "turbo": "^2.3.3"
   },
   "scripts": {
-    "devfrontend": "yarn workspace @crosswithfriends/frontend dev",
-    "devfrontendprod": "yarn workspace @crosswithfriends/frontend dev:prod",
-    "devbackend": "yarn workspace @crosswithfriends/server dev",
-    "devbackendprod": "yarn workspace @crosswithfriends/server dev:prod",
+    "devfrontend": "turbo run dev --filter=@crosswithfriends/frontend",
+    "devfrontendprod": "turbo run dev:prod --filter=@crosswithfriends/frontend",
+    "devbackend": "turbo run dev --filter=@crosswithfriends/server",
+    "devbackendprod": "turbo run dev:prod --filter=@crosswithfriends/server",
     "servebackendprod": "yarn workspace @crosswithfriends/server serve:prod",
     "servebackendstaging": "yarn workspace @crosswithfriends/server serve:staging",
-    "build": "yarn workspace @crosswithfriends/frontend build",
-    "build:backend": "yarn workspace @crosswithfriends/server build",
+    "build": "turbo run build",
+    "build:frontend": "turbo run build --filter=@crosswithfriends/frontend",
+    "build:backend": "turbo run build --filter=@crosswithfriends/server",
+    "build:shared": "turbo run build --filter=@crosswithfriends/shared",
     "start:backend": "yarn workspace @crosswithfriends/server start",
-    "test": "yarn workspace @crosswithfriends/frontend test",
-    "test:backend": "yarn workspace @crosswithfriends/server test",
+    "test": "turbo run test",
+    "test:backend": "turbo run test --filter=@crosswithfriends/server",
     "test:backend:watch": "yarn workspace @crosswithfriends/server test:watch",
-    "test:backend:coverage": "yarn workspace @crosswithfriends/server test:coverage"
+    "test:backend:coverage": "yarn workspace @crosswithfriends/server test:coverage",
+    "render:install": "corepack enable && corepack prepare yarn@4.11.0 --activate && yarn install --immutable",
+    "render:build": "turbo run build --filter=@crosswithfriends/frontend"
   },
   "lint-staged": {
     "*.{js,jsx, ts,tsx}": [

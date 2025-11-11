@@ -1,8 +1,9 @@
 /**
- * Perhaps this whole file could live elsewhere, e.g. Player/transformGameToPlayerProps?
- * */
+ * Transforms game state and user data into props suitable for the Player component.
+ * Applies team-specific clue visibility and grid filtering for fencing games.
+ */
 import _ from 'lodash';
-import {CluesJson, GameJson, Cursor, GridData, UserJson, CellIndex} from '@shared/types';
+import {CluesJson, GameJson, Cursor, GridData, UserJson, CellIndex} from '@crosswithfriends/shared/types';
 import {CellCoords, Ping} from '../Grid/types';
 import {PlayerActions} from './usePlayerActions';
 
@@ -51,6 +52,17 @@ function applyClueVisibilityToGrid(vis: {across: boolean[]; down: boolean[]}, gr
   );
 }
 
+/**
+ * Transforms game state into Player component props.
+ * Applies team-specific visibility rules for clues and grid cells in fencing mode.
+ *
+ * @param game - The game JSON data containing grid, clues, and team visibility
+ * @param users - Array of user data including cursor positions
+ * @param playerActions - Actions available to the player
+ * @param id - Current user's ID
+ * @param teamId - Team ID for filtering team-specific data (undefined for spectator mode)
+ * @returns Props object for the Player component
+ */
 export const transformGameToPlayerProps = (
   game: GameJson,
   users: UserJson[],

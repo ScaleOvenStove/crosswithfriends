@@ -1,11 +1,13 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": "src",
     "module": "ESNext",
-    "jsx": "react",
+    "jsx": "react-jsx",
     "paths": {
-      "@shared/*": ["../shared/src/shared/*"],
-      "@lib/*": ["../shared/src/lib/*"]
+      "@shared/*": ["../../shared/src/shared/*"],
+      "@lib/*": ["../../shared/src/lib/*"]
     }
-  }
+  },
+  "include": ["src", "../shared/src", "src/vite-env.d.ts"]
 }

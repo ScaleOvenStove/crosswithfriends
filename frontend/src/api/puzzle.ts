@@ -1,5 +1,10 @@
 import {SERVER_URL} from './constants';
-import {AddPuzzleRequest, AddPuzzleResponse, RecordSolveRequest, RecordSolveResponse} from '@shared/types';
+import {
+  AddPuzzleRequest,
+  AddPuzzleResponse,
+  RecordSolveRequest,
+  RecordSolveResponse,
+} from '@crosswithfriends/shared/types';
 
 export async function createNewPuzzle(
   puzzle: AddPuzzleRequest,
@@ -39,5 +44,21 @@ export async function recordSolve(
     },
     body: JSON.stringify(data),
   });
+
+  if (!resp.ok) {
+    const errorText = await resp.text();
+    let errorMessage = `Failed to record solve: ${resp.status} ${resp.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.message || errorMessage;
+    } catch {
+      // If response isn't JSON, use the text as-is
+      if (errorText) {
+        errorMessage = errorText;
+      }
+    }
+    throw new Error(errorMessage);
+  }
+
   return resp.json();
 }

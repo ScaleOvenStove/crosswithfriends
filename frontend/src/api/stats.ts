@@ -1,7 +1,7 @@
 // ========== GET /api/stats ============
 
 import {SERVER_URL} from './constants';
-import {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@shared/types';
+import {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
 
 export async function fetchStats(query: ListPuzzleStatsRequest) {
   // const resp = await fetch(`${SERVER_URL}/api/stats`, ?${qs.stringify(query)}`);

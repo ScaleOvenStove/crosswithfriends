@@ -2,7 +2,7 @@
 
 // eslint-disable-next-line import/no-extraneous-dependencies
 import qs from 'qs';
-import {ListPuzzleRequest, ListPuzzleResponse} from '@shared/types';
+import {ListPuzzleRequest, ListPuzzleResponse} from '@crosswithfriends/shared/types';
 import {SERVER_URL} from './constants';
 
 export async function fetchPuzzleList(query: ListPuzzleRequest): Promise<ListPuzzleResponse> {

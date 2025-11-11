@@ -1,6 +1,5 @@
 import React from 'react';
 import _ from 'lodash';
-import leftPad from 'left-pad';
 
 function toArr(a) {
   if (Array.isArray(a)) return a;
@@ -32,7 +31,7 @@ const hexToRgb = (hex) =>
   _.map([hex.substring(1, 3), hex.substring(3, 5), hex.substring(5, 7)], (x) => Number(x, 16));
 
 const rgbToHex = (r, g, b) => {
-  const [R, G, B] = _.map([r, g, b], (x) => leftPad(x.toString(16, 2), '0', 2).substring(0, 2));
+  const [R, G, B] = _.map([r, g, b], (x) => x.toString(16).padStart(2, '0'));
   return `#${R}${G}${B}`;
 };
 
@@ -48,7 +47,7 @@ export function colorAverage(hex1, hex2, weight) {
 if (typeof window !== 'undefined') {
   window.requestIdleCallback =
     window.requestIdleCallback ||
-    function(cb) {
+    function (cb) {
       const start = Date.now();
       return setTimeout(() => {
         cb({
@@ -62,7 +61,7 @@ if (typeof window !== 'undefined') {
 
   window.cancelIdleCallback =
     window.cancelIdleCallback ||
-    function(id) {
+    function (id) {
       clearTimeout(id);
     };
 }

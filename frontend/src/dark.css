@@ -58,7 +58,7 @@
 }
 
 .dark .cell.referenced {
-  background-color: #80A030 !important;
+  background-color: #80a030 !important;
   color: white;
 }
 
@@ -67,7 +67,7 @@
   color: white;
 }
 
-.dark .cell.referenced .cell--value{
+.dark .cell.referenced .cell--value {
   color: white !important;
 }
 
@@ -128,7 +128,6 @@
   background-color: var(--dark-blue-1);
 }
 
-
 .dark .chat {
   border-color: #888;
   background-color: var(--dark-background-1);
@@ -143,8 +142,8 @@
   border-right: none !important;
   border-top: none !important;
 }
-.dark .cell.selected .cell--wrapper{
-  background-color: rgba(0,0,0,0.1);
+.dark .cell.selected .cell--wrapper {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .dark .cell.good .cell--value {
@@ -204,7 +203,7 @@
 
 .dark .entry {
   background-color: var(--dark-background-1);
-  border-color: rgba(255,255,255,0.3);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 :root {

@@ -1,37 +1,9 @@
-import {makeStyles} from '@material-ui/core';
+import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
 import React from 'react';
-import {GameState} from '@shared/fencingGameEvents/types/GameState';
+import {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
 import EditableSpan from '../common/EditableSpan';
 import './css/fencingScoreboard.css';
-
-const useStyles = makeStyles({
-  fencingScoreboardContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    // alignItems: 'center',
-    '& td, th': {
-      padding: 8,
-    },
-  },
-  teamName: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    '& > *': {
-      marginLeft: 4,
-    },
-  },
-  userName: {
-    marginLeft: 20,
-    display: 'flex',
-    justifyContent: 'space-between',
-  },
-  winIndicator: {
-    marginLeft: 8,
-    color: '#4CAF50',
-    fontWeight: 'bold',
-  },
-});
 export const FencingScoreboard: React.FC<{
   gameState: GameState;
   currentUserId: string;
@@ -41,7 +13,6 @@ export const FencingScoreboard: React.FC<{
   changeTeamName(newName: string): void;
   isGameComplete: boolean;
 }> = (props) => {
-  const classes = useStyles();
   // TODO buttons need to be icons / dropdown menu once team names are editable
   const spectateButton = (
     <button
@@ -76,7 +47,11 @@ export const FencingScoreboard: React.FC<{
   }[] = _.flatMap(teamData, ({team, users}) => [
     {
       nameEl: (
-        <span className={classes.teamName}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{justifyContent: 'space-between', '& > *': {marginLeft: 0.5}}}
+        >
           {currentUser?.teamId === team.id ? (
             <EditableSpan
               style={{
@@ -107,22 +82,24 @@ export const FencingScoreboard: React.FC<{
             </button>
           )}
           {props.isGameComplete && winningTeams?.some((winner) => winner?.id === team.id) && (
-            <span className={classes.winIndicator}>{winningTeams.length > 1 ? '🤝 Tie!' : '🏆 Winner!'}</span>
+            <Box component="span" sx={{marginLeft: 1, color: '#4CAF50', fontWeight: 'bold'}}>
+              {winningTeams.length > 1 ? '🤝 Tie!' : '🏆 Winner!'}
+            </Box>
           )}
-        </span>
+        </Stack>
       ),
       score: team.score,
       guesses: team.guesses,
     },
     ...users.map((user) => ({
       nameEl: (
-        <span className={classes.userName}>
+        <Stack direction="row" spacing={0.5} sx={{marginLeft: 2.5, justifyContent: 'space-between'}}>
           {user.id === props.currentUserId ? (
             <EditableSpan value={user.displayName} onChange={props.changeName} />
           ) : (
             <span>{user.displayName}</span>
           )}
-        </span>
+        </Stack>
       ),
       score: user.score,
       guesses: user.misses,
@@ -155,7 +132,7 @@ export const FencingScoreboard: React.FC<{
         })),
       ];
   return (
-    <div className={classes.fencingScoreboardContainer}>
+    <Stack direction="column" sx={{'& td, th': {padding: 1}}}>
       <table>
         <tbody>
           <tr>
@@ -172,6 +149,6 @@ export const FencingScoreboard: React.FC<{
           ))}
         </tbody>
       </table>
-    </div>
+    </Stack>
   );
 };

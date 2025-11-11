@@ -189,30 +189,18 @@ export default class EmojiPicker extends React.Component {
     return (
       <Flex style={headerStyle}>
         <span>
-          <span style={patternStyle}>
-            "
-            {`:${pattern}`}
-            "
-          </span>
+          <span style={patternStyle}>"{`:${pattern}`}"</span>
         </span>
         <span>
           <span style={hintStyle}>
-            <Kbd>tab</Kbd>
-            {' '}
-            or
-            <Kbd>↑↓</Kbd>
-            {' '}
-            to navigate
+            <Kbd>tab</Kbd> or
+            <Kbd>↑↓</Kbd> to navigate
           </span>
           <span style={hintStyle}>
-            <Kbd>↩</Kbd>
-            {' '}
-            to select
+            <Kbd>↩</Kbd> to select
           </span>
           <span style={hintStyle}>
-            <Kbd>esc</Kbd>
-            {' '}
-            to dismiss
+            <Kbd>esc</Kbd> to dismiss
           </span>
         </span>
       </Flex>

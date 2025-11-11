@@ -17,15 +17,8 @@ export default class Clues extends Component {
   }
 
   render() {
-    const {
-      clues,
-      clueLengths,
-      isClueSelected,
-      isClueHalfSelected,
-      isClueFilled,
-      scrollToClue,
-      selectClue,
-    } = this.props;
+    const {clues, clueLengths, isClueSelected, isClueHalfSelected, isClueFilled, scrollToClue, selectClue} =
+      this.props;
     const {showClueLengths} = this.state;
 
     return (

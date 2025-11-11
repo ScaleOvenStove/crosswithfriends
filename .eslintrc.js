@@ -4,7 +4,7 @@ module.exports = {
     es6: true,
     node: true,
   },
-  extends: ['plugin:react/recommended', 'airbnb-typescript', 'prettier', 'prettier/@typescript-eslint'],
+  extends: ['plugin:react/recommended', 'airbnb-typescript', 'prettier'],
   globals: {
     Atomics: 'readonly',
     SharedArrayBuffer: 'readonly',
@@ -16,7 +16,7 @@ module.exports = {
     },
     ecmaVersion: 2018,
     sourceType: 'module',
-    project: ['tsconfig.json', 'server/tsconfig.json'],
+    project: ['tsconfig.json', 'server/tsconfig.json', 'frontend/tsconfig.json', 'shared/tsconfig.json'],
     tsconfigRootDir: __dirname,
   },
   plugins: ['react', '@typescript-eslint', 'import'],

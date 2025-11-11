@@ -4,6 +4,6 @@ import {ExtractParamsType} from './ExtractParamsType';
 
 export interface GameEvent<T extends EventType = EventType> {
   type: T;
-  params: ExtractParamsType<typeof allEventDefs[T]>;
+  params: ExtractParamsType<(typeof allEventDefs)[T]>;
   timestamp?: number;
 }

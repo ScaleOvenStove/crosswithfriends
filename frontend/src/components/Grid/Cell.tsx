@@ -1,12 +1,12 @@
-import * as React from 'react';
+import React from 'react';
 import * as _ from 'lodash';
 import clsx from 'clsx';
-import Tooltip from '@material-ui/core/Tooltip';
+import {Tooltip} from '@mui/material';
 import Emoji from '../common/Emoji';
-import powerups from '@lib/powerups';
+import powerups from '@crosswithfriends/shared/lib/powerups';
 import {Ping, CellStyles} from './types';
 import './css/cell.css';
-import {CellData, Cursor} from '@shared/types';
+import {CellData, Cursor} from '@crosswithfriends/shared/types';
 
 export interface EnhancedCellData extends CellData {
   r: number;
@@ -39,40 +39,27 @@ interface Props extends EnhancedCellData {
   onContextMenu: (r: number, c: number) => void;
   onFlipColor?: (r: number, c: number) => void;
 }
-/*
- * Summary of Cell component
- *
- * Props: { black, selected, highlighted, bad, good, helped,
- *          value, onClick, cursor }
- *
- * Children: []
- *
- * Potential parents:
- * - Grid
- * */
-export default class Cell extends React.Component<Props> {
-  private touchStart: {pageX: number; pageY: number} = {pageX: 0, pageY: 0};
 
-  shouldComponentUpdate(nextProps: Props) {
-    const pathsToOmit = ['cursors', 'pings', 'cellStyle'] as const;
-    if (!_.isEqual(_.omit(nextProps, ...pathsToOmit), _.omit(this.props, pathsToOmit))) {
-      console.debug(
-        'cell update',
-        // @ts-ignore
-        _.filter(_.keys(this.props), (k) => this.props[k] !== nextProps[k])
-      );
-      return true;
-    }
-    if (_.some(pathsToOmit, (p) => JSON.stringify(nextProps[p]) !== JSON.stringify(this.props[p]))) {
-      console.debug('cell update for array');
-      return true;
-    }
-
-    return false;
-  }
-
-  renderCursors() {
-    const {cursors} = this.props;
+/**
+ * Renders a single cell in the crossword grid.
+ * Handles cell states (selected, highlighted, frozen, etc.), cursors, pings, and user interactions.
+ *
+ * @example
+ * ```tsx
+ * <Cell
+ *   r={0}
+ *   c={0}
+ *   value="A"
+ *   selected={true}
+ *   onClick={handleClick}
+ *   onContextMenu={handleRightClick}
+ *   {...otherProps}
+ * />
+ * ```
+ */
+const Cell: React.FC<Props> = (props) => {
+  const renderCursors = () => {
+    const {cursors} = props;
     return (
       <div className="cell--cursors">
         {cursors.map(({color, active}, i) => (
@@ -91,10 +78,10 @@ export default class Cell extends React.Component<Props> {
         ))}
       </div>
     );
-  }
+  };
 
-  renderPings() {
-    const {pings} = this.props;
+  const renderPings = () => {
+    const {pings} = props;
     return (
       <div className="cell--pings">
         {pings.map(({color, active}, i) => (
@@ -112,65 +99,66 @@ export default class Cell extends React.Component<Props> {
         ))}
       </div>
     );
-  }
+  };
 
-  renderFlipButton() {
-    const {canFlipColor, onFlipColor} = this.props;
+  const renderFlipButton = () => {
+    const {canFlipColor, onFlipColor, r, c} = props;
     if (canFlipColor) {
       return (
         <i
           className="cell--flip fa fa-small fa-sticky-note"
           onClick={(e) => {
             e.stopPropagation();
-            onFlipColor?.(this.props.r, this.props.c);
+            onFlipColor?.(r, c);
           }}
         />
       );
     }
     return null;
-  }
+  };
 
-  renderCircle() {
-    const {circled} = this.props;
+  const renderCircle = () => {
+    const {circled} = props;
     if (circled) {
       return <div className="cell--circle" />;
     }
     return null;
-  }
+  };
 
-  renderShade() {
-    const {shaded} = this.props;
+  const renderShade = () => {
+    const {shaded} = props;
     if (shaded) {
       return <div className="cell--shade" />;
     }
     return null;
-  }
+  };
 
-  renderPickup() {
-    const {pickupType} = this.props;
+  const renderPickup = () => {
+    const {pickupType} = props;
     if (pickupType) {
       const {icon} = powerups[pickupType];
       return <Emoji emoji={icon} big={false} />;
     }
     return null;
-  }
+  };
 
-  renderSolvedBy() {
-    if (!this.props.solvedBy) return null;
+  const renderSolvedBy = () => {
+    const {solvedBy, solvedByIconSize} = props;
+    if (!solvedBy) return null;
     const divStyle: React.CSSProperties = {
-      width: this.props.solvedByIconSize! * 2,
-      height: this.props.solvedByIconSize! * 2,
-      borderRadius: this.props.solvedByIconSize!,
-      backgroundColor: this.props.solvedBy?.teamId === 1 ? '#FA8072' : 'purple',
+      width: solvedByIconSize! * 2,
+      height: solvedByIconSize! * 2,
+      borderRadius: solvedByIconSize!,
+      backgroundColor: solvedBy?.teamId === 1 ? '#FA8072' : 'purple',
       // transform: 'translateX(-0.5px)',
       position: 'absolute',
       right: 1,
     };
     return <div style={divStyle} />;
-  }
+  };
 
-  getStyle() {
-    const {attributionColor, cellStyle, selected, highlighted, frozen} = this.props;
+  const getStyle = () => {
+    const {attributionColor, cellStyle, selected, highlighted, frozen} = props;
     if (selected) {
       return cellStyle.selected;
     }
@@ -181,106 +169,128 @@ export default class Cell extends React.Component<Props> {
       return cellStyle.highlighted;
     }
     return {backgroundColor: attributionColor};
-  }
-
-  handleClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault?.();
-    this.props.onClick(this.props.r, this.props.c);
   };
 
-  handleRightClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
+  const handleClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault?.();
-    this.props.onContextMenu(this.props.r, this.props.c);
+    props.onClick(props.r, props.c);
   };
 
-  render() {
-    const {
-      black,
-      isHidden,
-      selected,
-      highlighted,
-      shaded,
-      bad,
-      good,
-      revealed,
-      pencil,
-      value,
-      myColor,
-      onClick,
-      number,
-      referenced,
-      frozen,
-    } = this.props;
-    if (black || isHidden) {
-      return (
-        <div
-          className={clsx('cell', {
-            selected,
-            black,
-            hidden: isHidden,
-          })}
-          style={selected ? {borderColor: myColor} : undefined}
-          onClick={this.handleClick}
-          onContextMenu={this.handleRightClick}
-        >
-          {this.renderPings()}
-        </div>
-      );
-    }
+  const handleRightClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault?.();
+    props.onContextMenu(props.r, props.c);
+  };
 
-    const val = value || '';
+  const {
+    black,
+    isHidden,
+    selected,
+    highlighted,
+    shaded,
+    bad,
+    good,
+    revealed,
+    pencil,
+    value,
+    myColor,
+    number,
+    referenced,
+    frozen,
+    cursors,
+  } = props;
 
-    const l = Math.max(1, val.length);
-
-    const displayNames = this.props.cursors.map((cursor) => cursor.displayName).join(', ');
-
-    const style = this.getStyle();
-
+  if (black || isHidden) {
     return (
-      <Tooltip title={displayNames}>
-        <div
-          className={clsx('cell', {
-            selected,
-            highlighted,
-            referenced,
-            shaded,
-            bad,
-            good,
-            revealed,
-            pencil,
-            frozen,
-          })}
-          style={style}
-          onClick={this.handleClick}
-          onContextMenu={this.handleRightClick}
-        >
-          <div className="cell--wrapper">
-            <div
-              className={clsx('cell--number', {
-                nonempty: !!number,
-              })}
-            >
-              {number}
-            </div>
-            {this.renderFlipButton()}
-            {this.renderCircle()}
-            {this.renderShade()}
-            {this.renderPickup()}
-            {this.renderSolvedBy()}
-            <div
-              className="cell--value"
-              style={{
-                fontSize: `${350 / Math.sqrt(l)}%`,
-                lineHeight: `${Math.sqrt(l) * 98}%`,
-              }}
-            >
-              {val}
-            </div>
-          </div>
-          {this.renderCursors()}
-          {this.renderPings()}
-        </div>
-      </Tooltip>
+      <div
+        className={clsx('cell', {
+          selected,
+          black,
+          hidden: isHidden,
+        })}
+        style={selected ? {borderColor: myColor} : undefined}
+        onClick={handleClick}
+        onContextMenu={handleRightClick}
+      >
+        {renderPings()}
+      </div>
     );
   }
-}
+
+  const val = value || '';
+  const l = Math.max(1, val.length);
+  const displayNames = cursors.map((cursor) => cursor.displayName).join(', ');
+  const style = getStyle();
+
+  const cellContent = (
+    <div
+      className={clsx('cell', {
+        selected,
+        highlighted,
+        referenced,
+        shaded,
+        bad,
+        good,
+        revealed,
+        pencil,
+        frozen,
+      })}
+      style={style}
+      onClick={handleClick}
+      onContextMenu={handleRightClick}
+    >
+      <div className="cell--wrapper">
+        <div
+          className={clsx('cell--number', {
+            nonempty: !!number,
+          })}
+        >
+          {number}
+        </div>
+        {renderFlipButton()}
+        {renderCircle()}
+        {renderShade()}
+        {renderPickup()}
+        {renderSolvedBy()}
+        <div
+          className="cell--value"
+          style={{
+            fontSize: `${350 / Math.sqrt(l)}%`,
+            lineHeight: `${Math.sqrt(l) * 98}%`,
+          }}
+        >
+          {val}
+        </div>
+      </div>
+      {renderCursors()}
+      {renderPings()}
+    </div>
+  );
+
+  // Only wrap with Tooltip if there are cursors to display
+  // Material-UI Tooltip requires a non-empty title
+  if (displayNames && displayNames.trim()) {
+    return <Tooltip title={displayNames}>{cellContent}</Tooltip>;
+  }
+
+  return cellContent;
+};
+
+// Custom comparison function to replicate shouldComponentUpdate logic
+const areEqual = (prevProps: Props, nextProps: Props) => {
+  const pathsToOmit = ['cursors', 'pings', 'cellStyle'] as const;
+  if (!_.isEqual(_.omit(nextProps, ...pathsToOmit), _.omit(prevProps, ...pathsToOmit))) {
+    console.debug(
+      'cell update',
+      // @ts-ignore
+      _.filter(_.keys(prevProps), (k) => prevProps[k] !== nextProps[k])
+    );
+    return false;
+  }
+  if (_.some(pathsToOmit, (p) => JSON.stringify(nextProps[p]) !== JSON.stringify(prevProps[p]))) {
+    console.debug('cell update for array');
+    return false;
+  }
+  return true;
+};
+
+export default React.memo(Cell, areEqual);

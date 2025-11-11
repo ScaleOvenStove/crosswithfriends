@@ -48,7 +48,7 @@ export function colorAverage(hex1, hex2, weight) {
 if (typeof window !== 'undefined') {
   window.requestIdleCallback =
     window.requestIdleCallback ||
-    function(cb) {
+    function (cb) {
       const start = Date.now();
       return setTimeout(() => {
         cb({
@@ -62,7 +62,7 @@ if (typeof window !== 'undefined') {
 
   window.cancelIdleCallback =
     window.cancelIdleCallback ||
-    function(id) {
+    function (id) {
       clearTimeout(id);
     };
 }

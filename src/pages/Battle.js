@@ -129,8 +129,7 @@ export default class Battle extends Component {
   renderPlayer = (player, idx) => (
     <Flex className="battle--player" key={idx}>
       {' '}
-      {player.name}
-      {' '}
+      {player.name}{' '}
     </Flex>
   );
 

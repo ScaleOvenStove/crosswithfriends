@@ -21,12 +21,8 @@ const ConnectionStats: React.FC<{}> = () => {
     return (
       <div>
         <div>
-          Ping: 
-          {' '}
-          {connectionStatus?.latency}
-          ms (
-          {Math.floor((Date.now() - connectionStatus?.timestamp) / 1000)}
-          s ago)
+          Ping: {connectionStatus?.latency}
+          ms ({Math.floor((Date.now() - connectionStatus?.timestamp) / 1000)}s ago)
         </div>
       </div>
     );

@@ -63,12 +63,11 @@ export async function listPuzzles(
         }`
     )
     .join('\n');
-  const sizeFilterCondition = sizeFilterArray.length > 0 
-    ? `AND (content->'info'->>'type') = ANY($1)`
-    : '';
-  const queryParams = sizeFilterArray.length > 0
-    ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
-    : [limit, offset, ...parametersForTitleAuthorFilter];
+  const sizeFilterCondition = sizeFilterArray.length > 0 ? `AND (content->'info'->>'type') = ANY($1)` : '';
+  const queryParams =
+    sizeFilterArray.length > 0
+      ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
+      : [limit, offset, ...parametersForTitleAuthorFilter];
   const {rows} = await pool.query(
     `
       SELECT pid, uploaded_at, content, times_solved

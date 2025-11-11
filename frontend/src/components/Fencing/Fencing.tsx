@@ -3,27 +3,35 @@ import * as uuid from 'uuid';
 import React, {useState, useEffect} from 'react';
 import {useUpdateEffect} from 'react-use';
 import {Helmet} from 'react-helmet';
-import Flex from 'react-flexview';
-import {makeStyles} from '@material-ui/core';
+import {Box, Stack} from '@mui/material';
 import {useSocket} from '../../sockets/useSocket';
 import {emitAsync} from '../../sockets/emitAsync';
 import Player from '../Player';
 import {transformGameToPlayerProps} from './transformGameToPlayerProps';
 import {usePlayerActions} from './usePlayerActions';
 import {useToolbarActions} from './useToolbarActions';
-import {GameEvent} from '@shared/fencingGameEvents/types/GameEvent';
+import {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
 import {getUser} from '../../store/user';
 import {FencingScoreboard} from './FencingScoreboard';
-import {TEAM_IDS} from '@shared/fencingGameEvents/constants';
+import {TEAM_IDS} from '@crosswithfriends/shared/fencingGameEvents/constants';
 import {FencingToolbar} from './FencingToolbar';
-import nameGenerator from '@lib/nameGenerator';
+import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import {useGameEvents, GameEventsHook} from './useGameEvents';
-import {getStartingCursorPosition} from '@shared/fencingGameEvents/eventDefs/create';
+import {getStartingCursorPosition} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/create';
 import Nav from '../common/Nav';
 import Chat from '../Chat';
 import {FencingCountdown} from './FencingCountdown';
-import Confetti from '../Game/Confetti.js';
+import Confetti from '../Game/Confetti';
 
+/**
+ * Subscribes to Socket.io game events for a specific game.
+ * Joins the game room, sets up event listeners, and syncs all existing events.
+ *
+ * @param socket - The Socket.io client instance (may be undefined if not connected)
+ * @param gid - Game ID to subscribe to
+ * @param eventsHook - Hook for managing game events state
+ * @returns Object with syncPromise and unsubscribe function
+ */
 function subscribeToGameEvents(
   socket: SocketIOClient.Socket | undefined,
   gid: string,
@@ -51,26 +59,18 @@ function subscribeToGameEvents(
 
   return {syncPromise, unsubscribe};
 }
-const useStyles = makeStyles({
-  container: {
-    flex: 1,
-    display: 'flex',
-    // height: '100%',
-    padding: 24,
-    flexDirection: 'column',
-  },
-  scoreboardContainer: {
-    display: 'flex',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-    '& *': {
-      borderCollapse: 'collapse',
-    },
-  },
-});
+
 /**
- * This component is parallel to Game -- will render a <Player/>
- * Will implement custom competitive crossword logic (see PR #145)
+ * Competitive crossword game component that renders a Player component with real-time multiplayer support.
+ * Manages game state synchronization via Socket.io and implements fencing-specific game logic.
+ *
+ * @param props - Component props
+ * @param props.gid - Game ID for the fencing match
+ *
+ * @example
+ * ```tsx
+ * <Fencing gid="game-123" />
+ * ```
  */
 export const Fencing: React.FC<{gid: string}> = (props) => {
   const {gid} = props;
@@ -235,12 +235,12 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
     />
   );
   return (
-    <Flex column style={{flex: 1}}>
+    <Stack direction="column" sx={{flex: 1}}>
       <Nav hidden={false} v2 canLogin={false} divRef={null} linkStyle={null} mobile={null} />
-      <Flex style={{flex: 1, overflow: 'auto'}}>
-        <div className={classes.container}>
+      <Box sx={{flex: 1, overflow: 'auto', display: 'flex'}}>
+        <Box sx={{flex: 1, display: 'flex', padding: 3, flexDirection: 'column'}}>
           <Helmet title={`Fencing ${gid}`} />
-          <div style={{flex: 1}}>
+          <Box sx={{flex: 1}}>
             <FencingCountdown playerActions={playerActions} gameState={gameState} gameEventsHook={eventsHook}>
               {gameState.loaded && gameState.started && (
                 <>
@@ -259,14 +259,25 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
                 </>
               )}
             </FencingCountdown>
-          </div>
-        </div>
-        <Flex column style={{flexBasis: 500}}>
+          </Box>
+        </Box>
+        <Stack direction="column" sx={{flexBasis: 500}}>
           {!gameState.loaded && <div>Loading your game...</div>}
           {gameState.game && (
             <Chat
               isFencing
-              subheader={<div className={classes.scoreboardContainer}>{fencingScoreboard}</div>}
+              subheader={
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-around',
+                    marginBottom: 1.5,
+                    '& *': {borderCollapse: 'collapse'},
+                  }}
+                >
+                  {fencingScoreboard}
+                </Box>
+              }
               info={gameState.game.info}
               teams={gameState.teams}
               path={`/fencing/${gid}`}
@@ -282,9 +293,9 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
               onUpdateDisplayName={(_id: string, name: string) => changeName(name)}
             />
           )}
-        </Flex>
-      </Flex>
+        </Stack>
+      </Box>
       {isGameComplete && <Confetti />}
-    </Flex>
+    </Stack>
   );
 };

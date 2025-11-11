@@ -318,8 +318,8 @@ export default class Editor extends Component {
               this.isClueSelected(dir, i)
                 ? 'selected '
                 : this.isClueHalfSelected(dir, i)
-                ? 'half-selected '
-                : ' '
+                  ? 'half-selected '
+                  : ' '
             }editor--main--clues--list--scroll--clue`}
             ref={
               this.isClueSelected(dir, i) || this.isClueHalfSelected(dir, i)

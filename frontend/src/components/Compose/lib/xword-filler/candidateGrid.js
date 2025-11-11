@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import {makeGridFromComposition} from '@lib/gameUtils';
+import {makeGridFromComposition} from '@crosswithfriends/shared/lib/gameUtils';
 import {getTopMatches, countMatches} from './common';
 
 export const convertFromCandidateGrid = (candidate) =>
