@@ -4,7 +4,6 @@ import {pool} from './pool';
 import {getPuzzle} from './puzzle';
 import type {GameJson} from '@shared/types';
 import {logger} from '../utils/logger';
-import type {CreateEvent} from '@shared/fencingGameEvents/eventDefs/create';
 import type {UpdateCellEvent} from '@shared/fencingGameEvents/eventDefs/updateCell';
 import type {UpdateCursorEvent} from '@shared/fencingGameEvents/eventDefs/updateCursor';
 import type {UpdateDisplayNameEvent} from '@shared/fencingGameEvents/eventDefs/updateDisplayName';
@@ -158,15 +157,12 @@ export interface InitialGameEvent extends GameEvent {
 }
 
 export async function addGameEvent(gid: string, event: GameEvent) {
-  const startTime = Date.now();
   await pool.query(
     `
       INSERT INTO game_events (gid, uid, ts, event_type, event_payload)
       VALUES ($1, $2, $3, $4, $5)`,
     [gid, event.user, new Date(event.timestamp).toISOString(), event.type, event]
   );
-  const ms = Date.now() - startTime;
-  //console.log(`addGameEvent(${gid}, ${event.type}) took ${ms}ms`);
 }
 
 export async function addInitialGameEvent(gid: string, pid: string): Promise<string> {
