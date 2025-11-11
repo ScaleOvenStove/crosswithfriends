@@ -1,10 +1,10 @@
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import type {CreateGameRequest, InfoJson, GetGameResponse} from '@shared/types';
 
-import {addInitialGameEvent} from '../model/game';
-import {getPuzzleSolves} from '../model/puzzle_solve';
-import {getPuzzleInfo} from '../model/puzzle';
-import {createHttpError} from './errors';
+import {addInitialGameEvent} from '../model/game.js';
+import {getPuzzleSolves} from '../model/puzzle_solve.js';
+import {getPuzzleInfo} from '../model/puzzle.js';
+import {createHttpError} from './errors.js';
 
 interface CreateGameResponseWithGid {
   gid: string;

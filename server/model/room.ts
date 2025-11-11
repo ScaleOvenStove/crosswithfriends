@@ -1,7 +1,7 @@
 import type {RoomEvent} from '@shared/roomEvents';
 import _ from 'lodash';
-import {pool} from './pool';
-import {logger} from '../utils/logger';
+import {pool} from './pool.js';
+import {logger} from '../utils/logger.js';
 
 export async function getRoomEvents(rid: string) {
   const startTime = Date.now();

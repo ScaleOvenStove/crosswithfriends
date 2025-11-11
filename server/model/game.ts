@@ -1,9 +1,9 @@
 import _ from 'lodash';
-import {makeGrid} from '../gameUtils';
-import {pool} from './pool';
-import {getPuzzle} from './puzzle';
+import {makeGrid} from '../gameUtils.js';
+import {pool} from './pool.js';
+import {getPuzzle} from './puzzle.js';
 import type {GameJson} from '@shared/types';
-import {logger} from '../utils/logger';
+import {logger} from '../utils/logger.js';
 import type {UpdateCellEvent} from '@shared/fencingGameEvents/eventDefs/updateCell';
 import type {UpdateCursorEvent} from '@shared/fencingGameEvents/eventDefs/updateCursor';
 import type {UpdateDisplayNameEvent} from '@shared/fencingGameEvents/eventDefs/updateDisplayName';

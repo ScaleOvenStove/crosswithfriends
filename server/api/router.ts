@@ -1,13 +1,13 @@
 import type {FastifyInstance} from 'fastify';
-import puzzleListRouter from './puzzle_list';
-import puzzleRouter from './puzzle';
-import gameRouter from './game';
-import recordSolveRouter from './record_solve';
-import statsRouter from './stats';
-import oEmbedRouter from './oembed';
-import linkPreviewRouter from './link_preview';
-import countersRouter from './counters';
-import healthRouter from './health';
+import puzzleListRouter from './puzzle_list.js';
+import puzzleRouter from './puzzle.js';
+import gameRouter from './game.js';
+import recordSolveRouter from './record_solve.js';
+import statsRouter from './stats.js';
+import oEmbedRouter from './oembed.js';
+import linkPreviewRouter from './link_preview.js';
+import countersRouter from './counters.js';
+import healthRouter from './health.js';
 
 async function apiRouter(fastify: FastifyInstance) {
   await fastify.register(healthRouter, {prefix: '/health'});

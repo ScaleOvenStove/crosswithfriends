@@ -2,9 +2,9 @@
 
 import type {RoomEvent} from '@shared/roomEvents';
 import {Server as SocketIOServer} from 'socket.io';
-import {addGameEvent, getGameEvents} from './model/game';
-import type {GameEvent} from './model/game';
-import {addRoomEvent, getRoomEvents} from './model/room';
+import {addGameEvent, getGameEvents} from './model/game.js';
+import type {GameEvent} from './model/game.js';
+import {addRoomEvent, getRoomEvents} from './model/room.js';
 
 interface SocketEvent {
   [key: string]: unknown;

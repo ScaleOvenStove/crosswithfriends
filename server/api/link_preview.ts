@@ -2,10 +2,10 @@ import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import _ from 'lodash';
 
 import type {InfoJson} from '@shared/types';
-import {getGameInfo} from '../model/game';
-import {isLinkExpanderBot, isFBMessengerCrawler} from '../utils/link_preview_util';
-import {getPuzzleInfo} from '../model/puzzle';
-import {createHttpError} from './errors';
+import {getGameInfo} from '../model/game.js';
+import {isLinkExpanderBot, isFBMessengerCrawler} from '../utils/link_preview_util.js';
+import {getPuzzleInfo} from '../model/puzzle.js';
+import {createHttpError} from './errors.js';
 
 interface LinkPreviewQuery {
   url: string;

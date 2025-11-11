@@ -1,8 +1,8 @@
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import type {ListPuzzleResponse} from '@shared/types';
-import {listPuzzles} from '../model/puzzle';
+import {listPuzzles} from '../model/puzzle.js';
 import type {ListPuzzleRequestFilters} from '@shared/types';
-import {createHttpError} from './errors';
+import {createHttpError} from './errors.js';
 
 interface PuzzleListQuery {
   page: string;

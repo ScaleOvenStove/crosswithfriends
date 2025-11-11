@@ -1,7 +1,7 @@
 import _ from 'lodash';
-import {pool} from './pool';
+import {pool} from './pool.js';
 import type {PuzzleJson} from '@shared/types';
-import {logger} from '../utils/logger';
+import {logger} from '../utils/logger.js';
 
 export type SolvedPuzzleType = {
   pid: string;

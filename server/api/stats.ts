@@ -1,9 +1,9 @@
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import type {ListPuzzleStatsResponse, ListPuzzleStatsRequest} from '@shared/types';
 import _ from 'lodash';
-import {getPuzzleSolves} from '../model/puzzle_solve';
-import type {SolvedPuzzleType} from '../model/puzzle_solve';
-import {createHttpError} from './errors';
+import {getPuzzleSolves} from '../model/puzzle_solve.js';
+import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
+import {createHttpError} from './errors.js';
 
 type PuzzleSummaryStat = {
   size: string;

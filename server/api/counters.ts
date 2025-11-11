@@ -1,6 +1,6 @@
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import type {IncrementGidResponse, IncrementPidResponse} from '@shared/types';
-import {incrementGid, incrementPid} from '../model/counters';
+import {incrementGid, incrementPid} from '../model/counters.js';
 
 async function countersRouter(fastify: FastifyInstance) {
   fastify.post<{Reply: IncrementGidResponse}>(

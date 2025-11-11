@@ -1,6 +1,6 @@
 import _ from 'lodash';
-import {pool} from './pool';
-import {logger} from '../utils/logger';
+import {pool} from './pool.js';
+import {logger} from '../utils/logger.js';
 
 export async function incrementGid(): Promise<string> {
   const startTime = Date.now();
