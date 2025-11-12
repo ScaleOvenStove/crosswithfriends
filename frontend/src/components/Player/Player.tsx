@@ -367,6 +367,9 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
     return gameUtils.getReferencedClues(clueText, props.clues);
   }, [getClueBarText, props.clues]);
 
+  // Memoize the result of getReferences() to prevent creating new arrays on every render
+  const references = useMemo(() => getReferences(), [getReferences]);
+
   const scrollToClue = useCallback((dir: string, num: number, el: HTMLElement | null) => {
     if (el && prvNumRef.current[dir] !== num) {
       prvNumRef.current[dir] = num;
@@ -494,7 +497,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
       grid: gridWithColors,
       circles,
       selected: selectedAdjusted,
-      references: getReferences(),
+      references, // Use memoized references instead of calling getReferences()
       direction,
       cursors,
       pings,
@@ -511,7 +514,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
       gridWithColors,
       circles,
       selectedAdjusted,
-      getReferences,
+      references, // Use memoized references
       direction,
       cursors,
       pings,
@@ -732,4 +735,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
 
 Player.displayName = 'Player';
 
-export default Player;
+// Memoize Player component to prevent unnecessary re-renders
+// Note: This is a complex component with many props, so we rely on parent components
+// to properly memoize callbacks and data to avoid re-renders
+export default React.memo(Player);

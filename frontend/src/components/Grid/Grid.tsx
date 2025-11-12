@@ -1,7 +1,6 @@
 import './css/index.css';
 
-import React, {useMemo, useCallback} from 'react';
-import _ from 'lodash';
+import React, {useMemo} from 'react';
 import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import RerenderBoundary from '../RerenderBoundary';
 import {hashGridRow} from './hashGridRow';
@@ -52,161 +51,163 @@ const Grid: React.FC<GridProps> = (props) => {
     return props.opponentGrid ? new GridWrapper(props.opponentGrid) : null;
   }, [props.opponentGrid]);
 
+  // Use Sets for O(1) lookups instead of O(n) indexOf
+  const circlesSet = useMemo(() => {
+    return new Set(props.circles || []);
+  }, [props.circles]);
+
+  const shadesSet = useMemo(() => {
+    return new Set(props.shades || []);
+  }, [props.shades]);
+
+  // Index cursors and pings by cell for faster lookup
+  const cursorsByCell = useMemo(() => {
+    const map = new Map<string, Cursor[]>();
+    (props.cursors || []).forEach((cursor) => {
+      const key = `${cursor.r},${cursor.c}`;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(cursor);
+    });
+    return map;
+  }, [props.cursors]);
+
+  const pingsByCell = useMemo(() => {
+    const map = new Map<string, Ping[]>();
+    (props.pings || []).forEach((ping) => {
+      const key = `${ping.r},${ping.c}`;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(ping);
+    });
+    return map;
+  }, [props.pings]);
+
+  // Index pickups by cell
+  const pickupsByCell = useMemo(() => {
+    const map = new Map<string, BattlePickup>();
+    (props.pickups || []).forEach((pickup) => {
+      if (!pickup.pickedUp) {
+        const key = `${pickup.i},${pickup.j}`;
+        map.set(key, pickup);
+      }
+    });
+    return map;
+  }, [props.pickups]);
+
+  const {size, cellStyle, selected, direction} = props;
+  const cols = props.grid[0].length;
+
+  // Memoize selectedParent and selectedIsWhite to prevent infinite loops
+  const selectedParent = useMemo(() => {
+    return grid.getParent(selected.r, selected.c, direction);
+  }, [grid, selected.r, selected.c, direction]);
+
   const selectedIsWhite = useMemo(() => {
-    return grid.isWhite(props.selected.r, props.selected.c);
-  }, [grid, props.selected]);
+    return grid.isWhite(selected.r, selected.c);
+  }, [grid, selected.r, selected.c]);
 
-  const isSelected = useCallback(
-    (r: number, c: number) => {
-      return r === props.selected.r && c === props.selected.c;
-    },
-    [props.selected]
-  );
-
-  const isCircled = useCallback(
-    (r: number, c: number) => {
-      const idx = toCellIndex(r, c, props.grid[0].length);
-      return (props.circles || []).indexOf(idx) !== -1;
-    },
-    [props.grid, props.circles]
-  );
-
-  const isDoneByOpponent = useCallback(
-    (r: number, c: number) => {
-      if (!opponentGrid || !props.solution) {
-        return false;
-      }
-      return opponentGrid.isFilled(r, c) && props.solution[r][c] === props.opponentGrid[r][c].value;
-    },
-    [opponentGrid, props.solution, props.opponentGrid]
-  );
-
-  const isShaded = useCallback(
-    (r: number, c: number) => {
-      const idx = toCellIndex(r, c, props.grid[0].length);
-      return (props.shades || []).indexOf(idx) !== -1 || isDoneByOpponent(r, c);
-    },
-    [props.grid, props.shades, isDoneByOpponent]
-  );
-
-  const isHighlighted = useCallback(
-    (r: number, c: number) => {
-      if (!selectedIsWhite) return false;
-      const selectedParent = grid.getParent(props.selected.r, props.selected.c, props.direction);
-      return (
-        !isSelected(r, c) && grid.isWhite(r, c) && grid.getParent(r, c, props.direction) === selectedParent
-      );
-    },
-    [selectedIsWhite, grid, props.selected, props.direction, isSelected]
-  );
-
-  const isReferenced = useCallback(
-    (r: number, c: number) => {
-      return props.references.some((clue) => clueContainsSquare(clue, r, c));
-    },
-    [props.references]
-  );
-
-  const getPickup = useCallback(
-    (r: number, c: number) => {
-      return (
-        props.pickups &&
-        _.get(
-          _.find(props.pickups, ({i, j, pickedUp}) => i === r && j === c && !pickedUp),
-          'type'
-        )
-      );
-    },
-    [props.pickups]
-  );
-
-  const clueContainsSquare = useCallback(
-    ({ori, num}: ClueCoords, r: number, c: number) => {
-      return grid.isWhite(r, c) && grid.getParent(r, c, ori) === num;
-    },
-    [grid]
-  );
-
-  const handleClick = useCallback(
-    (r: number, c: number) => {
-      if (!grid.isWhite(r, c) && !props.editMode) return;
-      if (isSelected(r, c)) {
-        props.onChangeDirection();
-      } else {
-        props.onSetSelected({r, c});
-      }
-    },
-    [grid, props.editMode, isSelected, props.onChangeDirection, props.onSetSelected]
-  );
-
-  const handleRightClick = useCallback(
-    (r: number, c: number) => {
-      if (props.onPing) {
-        props.onPing(r, c);
-      }
-    },
-    [props.onPing]
-  );
-
-  const getSizeClass = useCallback((size: number) => {
-    if (size < 20) {
-      return 'tiny';
-    }
-    if (size < 25) {
-      return 'small';
-    }
-    if (size < 40) {
-      return 'medium';
-    }
+  // Simple size class function (no need for useCallback)
+  const getSizeClass = (s: number) => {
+    if (s < 20) return 'tiny';
+    if (s < 25) return 'small';
+    if (s < 40) return 'medium';
     return 'big';
-  }, []);
-
-  const {size, cellStyle} = props;
+  };
   const sizeClass = getSizeClass(size);
 
   const data = useMemo(() => {
     return props.grid.map((row, r) =>
-      row.map((cell, c) => ({
-        ...cell,
-        r,
-        c,
-        solvedByIconSize: Math.round(size / 10),
-        selected: isSelected(r, c),
-        referenced: isReferenced(r, c),
-        circled: isCircled(r, c),
-        shaded: isShaded(r, c),
-        canFlipColor: !!props.canFlipColor?.(r, c),
-        cursors: (props.cursors || []).filter((cursor) => cursor.r === r && cursor.c === c),
-        pings: (props.pings || []).filter((ping) => ping.r === r && ping.c === c),
-        highlighted: isHighlighted(r, c),
-        myColor: props.myColor,
-        frozen: props.frozen,
-        pickupType: getPickup(r, c),
-        cellStyle,
-      }))
+      row.map((cell, c) => {
+        const cellKey = `${r},${c}`;
+        const cellIdx = toCellIndex(r, c, cols);
+        const isCellSelected = r === selected.r && c === selected.c;
+        const isCellWhite = !cell.black;
+
+        // Check if done by opponent
+        const isDoneByOpp = opponentGrid
+          ? opponentGrid.isFilled(r, c) && props.solution[r]?.[c] === props.opponentGrid[r]?.[c]?.value
+          : false;
+
+        // Check if highlighted (same word as selected)
+        const isHighlighted =
+          selectedIsWhite &&
+          isCellWhite &&
+          !isCellSelected &&
+          grid.getParent(r, c, direction) === selectedParent;
+
+        // Check if referenced
+        const isReferenced = props.references.some(
+          (clue) => isCellWhite && grid.getParent(r, c, clue.ori) === clue.num
+        );
+
+        return {
+          ...cell,
+          r,
+          c,
+          solvedByIconSize: Math.round(size / 10),
+          selected: isCellSelected,
+          referenced: isReferenced,
+          circled: circlesSet.has(cellIdx),
+          shaded: shadesSet.has(cellIdx) || isDoneByOpp,
+          canFlipColor: !!props.canFlipColor?.(r, c),
+          cursors: cursorsByCell.get(cellKey) || [],
+          pings: pingsByCell.get(cellKey) || [],
+          highlighted: isHighlighted,
+          myColor: props.myColor,
+          frozen: props.frozen,
+          pickupType: pickupsByCell.get(cellKey)?.type,
+          cellStyle,
+        };
+      })
     );
   }, [
     props.grid,
+    cols,
     size,
-    isSelected,
-    isReferenced,
-    isCircled,
-    isShaded,
-    isHighlighted,
-    props.cursors,
-    props.pings,
+    selected.r,
+    selected.c,
+    direction,
+    selectedParent,
+    selectedIsWhite,
+    circlesSet,
+    shadesSet,
+    cursorsByCell,
+    pingsByCell,
+    pickupsByCell,
+    opponentGrid,
+    props.solution,
+    props.opponentGrid,
+    props.references,
     props.myColor,
     props.frozen,
-    getPickup,
     props.canFlipColor,
     cellStyle,
+    grid, // Needed because we use grid.getParent() inside the useMemo
   ]);
+
+  const handleClick = (r: number, c: number) => {
+    if (!grid.isWhite(r, c) && !props.editMode) return;
+    if (r === selected.r && c === selected.c) {
+      props.onChangeDirection();
+    } else {
+      props.onSetSelected({r, c});
+    }
+  };
+
+  const handleRightClick = (r: number, c: number) => {
+    if (props.onPing) {
+      props.onPing(r, c);
+    }
+  };
 
   return (
     <table
       style={{
-        width: props.grid[0].length * props.size,
-        height: props.grid.length * props.size,
+        width: cols * size,
+        height: props.grid.length * size,
       }}
       className={`grid ${sizeClass}`}
     >

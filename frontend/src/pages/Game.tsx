@@ -5,8 +5,12 @@ import {Box, Stack} from '@mui/material';
 import Nav from '../components/common/Nav';
 import {useParams, useLocation} from 'react-router-dom';
 
-import {GameModel, BattleModel, getUser} from '../store';
-import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
+import {useGameStore} from '../store';
+import {useGameSetup} from '../hooks/useGameSetup';
+import {useBattleSetup} from '../hooks/useBattleSetup';
+import {useUser} from '../hooks/useUser';
+import type {GameEvent} from '../types/events';
+import type {Powerup, Winner, BattlePlayer, Pickup, BattleData, ChatMessage} from '../types/battle';
 import GameComponent from '../components/Game';
 import MobilePanel from '../components/common/MobilePanel';
 import Chat from '../components/Chat';
@@ -15,8 +19,7 @@ import {isMobile, rand_color} from '@crosswithfriends/shared/lib/jsUtils';
 import {isValidGid, createSafePath} from '../store/firebaseUtils';
 
 import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
-import {recordSolve} from '../api/puzzle';
-import User from '../store/user';
+import {useRecordSolve} from '../hooks/api/useRecordSolve';
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 
 const Game: React.FC = () => {
@@ -27,44 +30,18 @@ const Game: React.FC = () => {
   const [rid, setRid] = useState<string | undefined>(params.rid);
   const [mobile, setMobile] = useState<boolean>(isMobile());
   const [mode, setMode] = useState<string>('game');
-  const [powerups, setPowerups] = useState<any>(undefined);
+  const [powerups, setPowerups] = useState<Record<number, Powerup[]> | undefined>(undefined);
   const [lastReadChat, setLastReadChat] = useState<number>(0);
   const [bid, setBid] = useState<number | undefined>(undefined);
   const [team, setTeam] = useState<number | undefined>(undefined);
   const [opponent, setOpponent] = useState<string | undefined>(undefined);
   const [startedAt, setStartedAt] = useState<number | undefined>(undefined);
-  const [winner, setWinner] = useState<any>(undefined);
-  const [players, setPlayers] = useState<any>(undefined);
-  const [pickups, setPickups] = useState<any>(undefined);
+  const [winner, setWinner] = useState<Winner | undefined>(undefined);
+  const [players, setPlayers] = useState<Record<string, BattlePlayer> | undefined>(undefined);
+  const [pickups, setPickups] = useState<Record<string, Pickup> | undefined>(undefined);
   const [archived, setArchived] = useState<boolean>(false);
-  // Track when gameModel is ready to trigger re-render
-  const [gameModelReady, setGameModelReady] = useState<boolean>(false);
-
-  const gameModelRef = useRef<InstanceType<typeof GameModel> | null>(null);
-  const opponentGameModelRef = useRef<InstanceType<typeof GameModel> | null>(null);
-  const battleModelRef = useRef<InstanceType<typeof BattleModel> | null>(null);
-  const historyWrapperRef = useRef<HistoryWrapper | null>(null);
-  const opponentHistoryWrapperRef = useRef<HistoryWrapper | null>(null);
-  const userRef = useRef<User | null>(null);
-  const gameComponentRef = useRef<any>(null);
-  const chatRef = useRef<any>(null);
-  const lastRecordedSolveRef = useRef<string | undefined>(undefined);
-  const powerupIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  // Use a ref to track if we need to force an update, avoiding state updates that cause loops
-  const needsUpdateRef = useRef<boolean>(false);
-  const [updateCounter, setUpdateCounter] = useState(0);
-
-  const forceUpdate = useCallback(() => {
-    // Use requestAnimationFrame to batch updates and prevent infinite loops
-    if (!needsUpdateRef.current) {
-      needsUpdateRef.current = true;
-      requestAnimationFrame(() => {
-        needsUpdateRef.current = false;
-        setUpdateCounter((prev) => prev + 1);
-      });
-    }
-  }, []);
-
+  
+  // Get initial username
   const usernameKey = useMemo(() => {
     return `username_${window.location.href}`;
   }, []);
@@ -76,6 +53,79 @@ const Game: React.FC = () => {
         ? localStorage.getItem('username_default')!
         : nameGenerator();
   }, [usernameKey]);
+
+  // Use game setup hook
+  const {gameHook, opponentGameHook, game, opponentGame} = useGameSetup({
+    gid,
+    opponent,
+    onBattleData: (data: BattleData) => {
+      const {bid: battleId, team: battleTeam} = data;
+      setBid(battleId);
+      setTeam(battleTeam);
+    },
+    onArchived: () => {
+      setArchived(true);
+    },
+    initialUsername,
+  });
+
+  // Use battle setup hook
+  const {battleHook} = useBattleSetup({
+    bid,
+    team,
+    onGames: (games: string[]) => {
+      if (team !== undefined && games.length > 1 - team) {
+        const opponentGame = games[1 - team];
+        setOpponent(opponentGame);
+      }
+    },
+    onPowerups: (value) => {
+      setPowerups(value);
+    },
+    onStartedAt: (value) => {
+      setStartedAt(value);
+    },
+    onWinner: (value) => {
+      setWinner(value);
+    },
+    onPlayers: (value) => {
+      setPlayers(value);
+    },
+    onPickups: (value) => {
+      setPickups(value);
+    },
+    onUsePowerup: (powerupData) => {
+      if (gameComponentRef.current?.player) {
+        const selected = gameComponentRef.current.player.state?.selected;
+        try {
+          powerupLib.applyOneTimeEffects(powerupData, {
+            gameModel: gameHook as unknown,
+            opponentGameModel: opponentGameHook as unknown,
+            selected,
+          });
+          handleChange();
+        } catch (error) {
+          console.error('Error applying powerup effects', error);
+        }
+      }
+    },
+  });
+  const gameComponentRef = useRef<{player?: {state?: {selected?: unknown}}; handleSelectClue?: (direction: string, number: number) => void; focus?: () => void} | null>(null);
+  const chatRef = useRef<{focus?: () => void} | null>(null);
+  const lastRecordedSolveRef = useRef<string | undefined>(undefined);
+  const powerupIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const displayNameSetRef = useRef<string | null>(null); // Track if we've set display name for this user/game
+  const updatingDisplayNameRef = useRef<boolean>(false); // Prevent concurrent updates
+  
+  // Use Zustand user hook instead of EventEmitter User class
+  const user = useUser();
+
+  // React Query hook for recording solves
+  const recordSolveMutation = useRecordSolve({
+    onError: (error) => {
+      console.error('Failed to record solve:', error);
+    },
+  });
 
   const beta = useMemo(() => true, []);
 
@@ -90,9 +140,6 @@ const Game: React.FC = () => {
 
   const userColorKey = useMemo(() => 'user_color', []);
 
-  useEffect(() => {
-    (window as any).gameComponent = {forceUpdate};
-  }, [forceUpdate]);
 
   useEffect(() => {
     setGid(params.gid);
@@ -109,43 +156,17 @@ const Game: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const user = getUser();
-    userRef.current = user;
-    const handleAuth = () => {
-      forceUpdate();
-    };
-    user.onAuth(handleAuth);
-    return () => {
-      user.offAuth(handleAuth);
-    };
-  }, [forceUpdate]);
-
-  const handleUpdateRef = useRef<_.DebouncedFunc<() => void>>();
-  if (!handleUpdateRef.current) {
-    // Debounce forceUpdate to prevent infinite loops from rapid updates
-    handleUpdateRef.current = _.debounce(
-      () => {
-        forceUpdate();
-      },
-      16, // ~60fps - debounce to prevent excessive updates
-      {
-        leading: true,
-        trailing: true,
-      }
-    );
-  }
+  // User is now provided by useUser hook - no need for ref
 
   const handleChangeRef = useRef<_.DebouncedFunc<(options?: {isEdit?: boolean}) => Promise<void>>>();
   if (!handleChangeRef.current) {
     handleChangeRef.current = _.debounce(async ({isEdit = false}: {isEdit?: boolean} = {}) => {
-      if (!historyWrapperRef.current?.ready) {
+      const game = gameHook.gameState;
+      if (!game || !gameHook.ready) {
         return;
       }
-
-      const game = historyWrapperRef.current.getSnapshot();
-      if (isEdit && userRef.current) {
-        await userRef.current.joinGame(gid!, {
+      if (isEdit && user.id) {
+        await user.joinGame(gid!, {
           pid: game.pid,
           solved: false,
           v2: true,
@@ -158,12 +179,11 @@ const Game: React.FC = () => {
         // This functionality may need to be refactored if puzzleModel is still needed
         // Validate data before calling recordSolve to prevent 400 errors
         if (game.pid && gid && typeof game.clock?.totalTime === 'number' && game.clock.totalTime >= 0) {
-          try {
-            await recordSolve(game.pid, gid, game.clock.totalTime);
-          } catch (error) {
-            console.error('Failed to record solve:', error);
-            // Don't block UI if recording fails
-          }
+          recordSolveMutation.mutate({
+            pid: game.pid,
+            gid,
+            time_to_solve: game.clock.totalTime,
+          });
         } else {
           console.warn('Cannot record solve: invalid data', {
             pid: game.pid,
@@ -171,11 +191,11 @@ const Game: React.FC = () => {
             totalTime: game.clock?.totalTime,
           });
         }
-        if (userRef.current) {
-          userRef.current.markSolved(gid!);
+        if (user.id) {
+          user.markSolved(gid!);
         }
-        if (battleModelRef.current && team !== undefined) {
-          battleModelRef.current.setSolved(team);
+        if (battleHook && team !== undefined) {
+          battleHook.setSolved(team);
         }
       }
     });
@@ -185,215 +205,35 @@ const Game: React.FC = () => {
     handleChangeRef.current?.(options);
   }, []);
 
-  const initializeOpponentGame = useCallback(
-    (opponentGameId: string): void => {
-      // Validate opponentGameId following Firebase best practices
-      if (!isValidGid(opponentGameId)) {
-        console.warn('Invalid opponent game id, skipping initialization', opponentGameId);
-        return;
-      }
+  // Battle is handled by battleHook - no separate initialization needed
+  // Battle data comes from gameHook.onBattleData callback
+  const battlePath = bid ? `/battle/${bid}` : '';
 
-      if (opponentGameModelRef.current) {
-        opponentGameModelRef.current.detach();
-      }
-
-      const opponentPath = createSafePath('/game', opponentGameId);
-      opponentGameModelRef.current = new GameModel(opponentPath);
-      const opponentHistoryWrapper = new HistoryWrapper();
-      opponentHistoryWrapperRef.current = opponentHistoryWrapper;
-
-      opponentGameModelRef.current.on('createEvent', (event: any) => {
-        if (opponentHistoryWrapperRef.current) {
-          opponentHistoryWrapperRef.current.setCreateEvent(event);
-          handleUpdateRef.current?.();
-        }
-      });
-      opponentGameModelRef.current.on('event', (event: any) => {
-        if (opponentHistoryWrapperRef.current) {
-          opponentHistoryWrapperRef.current.addEvent(event);
-          handleUpdateRef.current?.();
-        }
-      });
-
-      // For now, every client spawns pickups. That makes sense maybe from a balance perpsective.
-      // It's just easier to write. Also for now you can have multiple in the same tile oops.
-      // TODO: fix these.
-      if (powerupIntervalRef.current) {
-        clearInterval(powerupIntervalRef.current);
-      }
+  // Opponent game is handled by opponentGameHook - no separate initialization needed
+  // Set up powerup spawning interval when both games are ready
+  useEffect(() => {
+    if (powerupIntervalRef.current) {
+      clearInterval(powerupIntervalRef.current);
+      powerupIntervalRef.current = null;
+    }
+    
+    if (battlePath && gameHook.gameState && opponentGameHook.gameState) {
       powerupIntervalRef.current = setInterval(() => {
-        const battlePath = bid !== undefined ? `/battle/${bid}` : undefined;
-        if (battlePath && historyWrapperRef.current && opponentHistoryWrapperRef.current) {
-          const game = historyWrapperRef.current.getSnapshot();
-          const opponentGame = opponentHistoryWrapperRef.current.getSnapshot();
-          if (battleModelRef.current) {
-            battleModelRef.current.spawnPowerups(1, [game, opponentGame]);
-          }
+        if (battleHook) {
+          battleHook.spawnPowerups(1, [gameHook.gameState, opponentGameHook.gameState]);
         }
       }, 6 * 1000);
-
-      opponentGameModelRef.current.attach();
-    },
-    [bid]
-  );
-
-  const initializeBattle = useCallback(
-    (battleData: any): void => {
-      if (!battleData) {
-        return;
-      }
-
-      const {bid: battleId, team: battleTeam} = battleData;
-      setBid(battleId);
-      setTeam(battleTeam);
-
-      const battlePath = `/battle/${battleId}`;
-      if (battleModelRef.current) {
-        battleModelRef.current.detach();
-      }
-
-      battleModelRef.current = new BattleModel(battlePath);
-
-      let gamesUnsubscribed = false;
-      battleModelRef.current.once('games', (games: string[]) => {
-        if (!gamesUnsubscribed) {
-          gamesUnsubscribed = true;
-          const opponentGame = games[1 - battleTeam!];
-          setOpponent(opponentGame);
-          initializeOpponentGame(opponentGame);
-        }
-      });
-
-      battleModelRef.current.on('usePowerup', (powerup: any) => {
-        if (gameComponentRef.current?.player) {
-          const selected = gameComponentRef.current.player.state?.selected;
-          try {
-            powerupLib.applyOneTimeEffects(powerup, {
-              gameModel: gameModelRef.current || undefined,
-              opponentGameModel: opponentGameModelRef.current || undefined,
-              selected,
-            });
-            handleChange();
-          } catch (error) {
-            console.error('Error applying powerup effects', error);
-          }
-        }
-      });
-
-      battleModelRef.current.on('powerups', (value: any) => {
-        setPowerups(value);
-      });
-      battleModelRef.current.on('startedAt', (value: any) => {
-        setStartedAt(value);
-      });
-      battleModelRef.current.on('winner', (value: any) => {
-        setWinner(value);
-      });
-      battleModelRef.current.on('players', (value: any) => {
-        setPlayers(value);
-      });
-      battleModelRef.current.on('pickups', (value: any) => {
-        setPickups(value);
-      });
-
-      battleModelRef.current.attach();
-    },
-    [initializeOpponentGame, handleChange]
-  );
-
-  const initializeGame = useCallback((): void => {
-    // Validate gid following Firebase best practices
-    if (!isValidGid(gid)) {
-      console.warn('Invalid gid, skipping initialization', gid);
-      return;
     }
-
-    // Clean up old game model if it exists
-    if (gameModelRef.current) {
-      gameModelRef.current.detach();
-    }
-
-    const gamePath = createSafePath('/game', gid);
-    gameModelRef.current = new GameModel(gamePath);
-    const historyWrapper = new HistoryWrapper();
-    historyWrapperRef.current = historyWrapper;
-
-    // Set up event listeners using EventEmitter pattern (like original)
-    // This is synchronous and doesn't cause re-renders
-    gameModelRef.current.once('battleData', (battleData: any) => {
-      initializeBattle(battleData);
-    });
-
-    console.log('listening ws');
-    gameModelRef.current.on('wsCreateEvent', (event: any) => {
-      console.log('create event', event);
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.setCreateEvent(event);
-        handleUpdateRef.current?.();
-      }
-    });
-    gameModelRef.current.on('wsEvent', (event: any) => {
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.addEvent(event);
-        handleChange();
-        handleUpdateRef.current?.();
-      }
-    });
-    gameModelRef.current.on('wsOptimisticEvent', (event: any) => {
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.addOptimisticEvent(event);
-        handleUpdateRef.current?.();
-      }
-    });
-    gameModelRef.current.on('reconnect', () => {
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.clearOptimisticEvents();
-        handleUpdateRef.current?.();
-      }
-    });
-    gameModelRef.current.on('archived', () => {
-      setArchived(true);
-    });
-
-    // Attach after listeners are set up (this matches original pattern)
-    gameModelRef.current.attach();
-
-    // Mark gameModel as ready to trigger re-render
-    // Use setTimeout to ensure the ref is set before triggering re-render
-    setTimeout(() => {
-      setGameModelReady(true);
-    }, 0);
-  }, [gid, initializeBattle, handleChange]);
-
-  // Main initialization effect - runs when gid changes
-  useEffect(() => {
-    if (gid) {
-      initializeGame();
-    }
-
-    // Cleanup on unmount or gid change
+    
     return () => {
-      setGameModelReady(false);
-      if (gameModelRef.current) {
-        gameModelRef.current.detach();
-        gameModelRef.current = null;
-      }
-      if (opponentGameModelRef.current) {
-        opponentGameModelRef.current.detach();
-        opponentGameModelRef.current = null;
-      }
-      if (battleModelRef.current) {
-        battleModelRef.current.detach();
-        battleModelRef.current = null;
-      }
       if (powerupIntervalRef.current) {
         clearInterval(powerupIntervalRef.current);
         powerupIntervalRef.current = null;
       }
     };
-  }, [gid, initializeGame]);
+  }, [battlePath, gameHook.gameState, opponentGameHook.gameState, battleHook]);
 
-  const prevWinnerRef = useRef<any>(undefined);
+  const prevWinnerRef = useRef<Winner | undefined>(undefined);
   useEffect(() => {
     if (prevWinnerRef.current !== winner && winner) {
       const {team: winnerTeam, completedAt} = winner;
@@ -403,8 +243,8 @@ const Game: React.FC = () => {
       const victoryMessage = `Team ${Number(winnerTeam) + 1} [${winningPlayersString}] won! `;
       const timeMessage = `Time taken: ${Number((completedAt - startedAt!) / 1000)} seconds.`;
 
-      if (gameModelRef.current) {
-        gameModelRef.current.chat('BattleBot', '', victoryMessage + timeMessage);
+      if (gameHook.ready) {
+        gameHook.chat('BattleBot', '', victoryMessage + timeMessage);
       }
     }
     prevWinnerRef.current = winner;
@@ -418,100 +258,148 @@ const Game: React.FC = () => {
     return !mobile || mode === 'chat';
   }, [mobile, mode]);
 
-  // Cache snapshots to avoid unnecessary recalculations
-  const gameSnapshotRef = useRef<any>(null);
-  const opponentGameSnapshotRef = useRef<any>(undefined);
-  const gameHistoryLengthRef = useRef<number>(0);
-  const opponentGameHistoryLengthRef = useRef<number>(0);
-  const lastUpdateTriggerRef = useRef<number>(0);
-
-  // Get game snapshot - only recalculate when history actually changes
-  const game = useMemo(() => {
-    if (!historyWrapperRef.current) {
-      gameSnapshotRef.current = null;
-      return null;
-    }
-
-    const currentLength = historyWrapperRef.current.history?.length ?? 0;
-    const needsRecalc =
-      currentLength !== gameHistoryLengthRef.current || lastUpdateTriggerRef.current !== updateCounter;
-
-    if (needsRecalc) {
-      gameHistoryLengthRef.current = currentLength;
-      lastUpdateTriggerRef.current = updateCounter;
-      gameSnapshotRef.current = historyWrapperRef.current.getSnapshot();
-    }
-
-    return gameSnapshotRef.current;
-  }, [updateCounter]);
-
-  const opponentGame = useMemo(() => {
-    if (!opponentHistoryWrapperRef.current?.ready || !opponentHistoryWrapperRef.current) {
-      opponentGameSnapshotRef.current = undefined;
-      return undefined;
-    }
-
-    const currentLength = opponentHistoryWrapperRef.current.history?.length ?? 0;
-    const needsRecalc =
-      currentLength !== opponentGameHistoryLengthRef.current ||
-      lastUpdateTriggerRef.current !== updateCounter;
-
-    if (needsRecalc) {
-      opponentGameHistoryLengthRef.current = currentLength;
-      opponentGameSnapshotRef.current = opponentHistoryWrapperRef.current.getSnapshot();
-    }
-
-    return opponentGameSnapshotRef.current;
-  }, [updateCounter]);
+  // Game state comes from useGameSetup hook
 
   const unreads = useMemo(() => {
     if (!game?.chat?.messages) return false;
-    const lastMessage = Math.max(...game.chat.messages.map((m: any) => m.timestamp));
+    const lastMessage = Math.max(...game.chat.messages.map((m: ChatMessage) => m.timestamp));
     return lastMessage > lastReadChat;
   }, [game, lastReadChat]);
 
   const userColor = useMemo(() => {
-    if (!game || !userRef.current) return rand_color();
-    const color = game.users[userRef.current.id]?.color || localStorage.getItem(userColorKey) || rand_color();
+    if (!game || !user.id) return rand_color();
+    const color = game.users[user.id]?.color || localStorage.getItem(userColorKey) || rand_color();
     localStorage.setItem(userColorKey, color);
     return color;
-  }, [game, userColorKey]);
+  }, [game, user.id, userColorKey]);
 
   const handleToggleChat = useCallback((): void => {
     setMode((prev) => (prev === 'game' ? 'chat' : 'game'));
   }, []);
 
   const handleChat = useCallback((username: string, id: string, message: string): void => {
-    if (gameModelRef.current) {
-      gameModelRef.current.chat(username, id, message);
+    if (gameHook.ready) {
+      gameHook.chat(username, id, message);
     }
-  }, []);
+  }, [gameHook]);
+
+  const gameHookRef = useRef(gameHook);
+  gameHookRef.current = gameHook;
+
+  // Extract primitive values to use in dependencies
+  const gameReady = gameHook.ready;
+  const gameState = gameHook.gameState;
+  const gameInstance = gameHook.game;
 
   const handleUpdateDisplayName = useCallback((id: string, displayName: string): void => {
-    if (gameModelRef.current) {
-      gameModelRef.current.updateDisplayName(id, displayName);
+    // Only update if game is ready, attached, and has gameState
+    // This ensures the game instance exists in the store before we try to add events
+    const hook = gameHookRef.current;
+    if (hook.ready && hook.gameState && hook.game) {
+      hook.updateDisplayName(id, displayName);
     }
   }, []);
 
-  // Update display name when gid or initialUsername changes (runs after handleUpdateDisplayName is defined)
+  // Reset display name tracking when game or user changes
   useEffect(() => {
-    if (gid && userRef.current) {
-      handleUpdateDisplayName(userRef.current.id, initialUsername);
+    displayNameSetRef.current = null;
+    updatingDisplayNameRef.current = false;
+  }, [gid, user.id]);
+
+  // Update display name - only runs when gid, user.id, or initialUsername changes
+  // Uses refs to check hook state without causing dependency loops
+  useEffect(() => {
+    // Prevent concurrent updates
+    if (updatingDisplayNameRef.current) {
+      return;
     }
-  }, [gid, initialUsername, handleUpdateDisplayName]);
+    
+    const key = `${gid}-${user.id}-${initialUsername}`;
+    
+    // Skip if we've already processed this exact combination
+    if (displayNameSetRef.current === key) {
+      return;
+    }
+    
+    // Get current values from hook (not from deps to avoid loops)
+    const hook = gameHookRef.current;
+    if (!gid || !user.id || !initialUsername) {
+      return;
+    }
+    
+    // Only proceed if hook is ready
+    if (!hook?.ready || !hook?.gameState || !hook?.game) {
+      // Not ready yet - don't mark as processed so we can retry when ready
+      return;
+    }
+    
+    // Check if display name is already set in game state
+    const currentDisplayName = hook.gameState?.users?.[user.id]?.displayName;
+    if (currentDisplayName === initialUsername) {
+      // Already correct - mark as processed without calling updateDisplayName
+      displayNameSetRef.current = key;
+      return;
+    }
+    
+    // Set flag to prevent concurrent calls
+    updatingDisplayNameRef.current = true;
+    
+    // Only update if different - this will trigger a store update
+    hook.updateDisplayName(user.id, initialUsername);
+    
+    // Mark as processed immediately to prevent retrying even if store updates
+    displayNameSetRef.current = key;
+    
+    // Reset flag after a short delay to allow store update to complete
+    setTimeout(() => {
+      updatingDisplayNameRef.current = false;
+    }, 100);
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gid, user.id, initialUsername]); // Only depend on these - check hook state inside
+  
+  // Also check when game becomes ready (using ref to track transition)
+  const prevReadyRef = useRef<boolean>(false);
+  useEffect(() => {
+    const hook = gameHookRef.current;
+    const currentReady = hook?.ready ?? false;
+    const previousReady = prevReadyRef.current;
+    
+    // Only act when ready transitions from false to true
+    if (!previousReady && currentReady && !updatingDisplayNameRef.current) {
+      const key = `${gid}-${user.id}-${initialUsername}`;
+      // Only update if we haven't already processed this combo
+      if (displayNameSetRef.current !== key && gid && user.id && initialUsername && hook?.gameState && hook?.game) {
+        const currentDisplayName = hook.gameState?.users?.[user.id]?.displayName;
+        if (currentDisplayName !== initialUsername) {
+          updatingDisplayNameRef.current = true;
+          hook.updateDisplayName(user.id, initialUsername);
+          displayNameSetRef.current = key;
+          setTimeout(() => {
+            updatingDisplayNameRef.current = false;
+          }, 100);
+        } else {
+          displayNameSetRef.current = key;
+        }
+      }
+    }
+    
+    prevReadyRef.current = currentReady;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }); // Check on every render but only act on ready transition
 
   const handleUpdateColor = useCallback(
     (id: string, color: string): void => {
-      if (gameModelRef.current) {
-        gameModelRef.current.updateColor(id, color);
+      if (gameHook.ready) {
+        gameHook.updateColor(id, color);
         localStorage.setItem(userColorKey, color);
       }
     },
-    [userColorKey]
+    [userColorKey, gameHook]
   );
 
   const updateSeenChatMessage = useCallback(
-    (message: any): void => {
+    (message: ChatMessage): void => {
       if (message.timestamp > lastReadChat) {
         setLastReadChat(message.timestamp);
       }
@@ -538,24 +426,26 @@ const Game: React.FC = () => {
   }, []);
 
   const handleUsePowerup = useCallback(
-    (powerup: any): void => {
-      if (battleModelRef.current && team !== undefined) {
-        battleModelRef.current.usePowerup(powerup.type, team);
+    (powerup: Powerup): void => {
+      if (battleHook && team !== undefined) {
+        battleHook.usePowerup(powerup.type, team);
       }
     },
-    [team]
+    [team, battleHook]
   );
 
   const renderGame = useCallback((): JSX.Element | undefined => {
-    if (!historyWrapperRef.current?.ready) {
+    // Use Zustand gameState instead of HistoryWrapper
+    if (!game) {
       return undefined;
     }
 
-    const userId = userRef.current?.id || '';
+    const userId = user.id || '';
     const ownPowerups = _.get(powerups, team);
     const opponentPowerups = _.get(powerups, team !== undefined ? 1 - team : undefined);
 
     // Pass gameModel even if it's null - the Game component will handle it
+    // Still pass historyWrapper for backward compatibility, but GameComponent uses Zustand
     return (
       <GameComponent
         ref={gameComponentRef}
@@ -563,17 +453,15 @@ const Game: React.FC = () => {
         id={userId}
         gid={gid}
         myColor={userColor}
-        historyWrapper={historyWrapperRef.current}
-        gameModel={gameModelRef.current as any}
+        gameModel={gameHook as unknown} // Pass hook methods as gameModel interface
         onUnfocus={handleUnfocusGame}
         onChange={handleChange}
         onToggleChat={handleToggleChat}
         mobile={mobile}
-        opponentHistoryWrapper={opponentHistoryWrapperRef.current?.ready && opponentHistoryWrapperRef.current}
         ownPowerups={ownPowerups}
         opponentPowerups={opponentPowerups}
         pickups={pickups}
-        battleModel={battleModelRef.current as any}
+        battleModel={battleHook as unknown} // Pass hook methods as battleModel interface
         team={team}
         unreads={unreads}
       />
@@ -590,15 +478,15 @@ const Game: React.FC = () => {
     handleUnfocusGame,
     handleChange,
     handleToggleChat,
-    gameModelReady, // Include to trigger re-render when gameModel becomes available
+    game, // Use game from Zustand
   ]);
 
   const renderChat = useCallback((): JSX.Element | undefined => {
-    if (!historyWrapperRef.current?.ready || !game) {
+    if (!gameHook.ready || !game) {
       return undefined;
     }
 
-    const userId = userRef.current?.id || '';
+    const userId = user.id || '';
     // Validate gid before creating path
     const gamePath = gid && isValidGid(gid) ? createSafePath('/game', gid) : undefined;
     return (
@@ -643,7 +531,7 @@ const Game: React.FC = () => {
   ]);
 
   const puzzleTitle = useMemo((): string => {
-    if (!historyWrapperRef.current?.ready || !game) {
+    if (!gameHook.ready || !game) {
       return '';
     }
     if (!game.info) return '';

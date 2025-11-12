@@ -2,9 +2,10 @@ import {gameWords} from '@crosswithfriends/shared/lib/names';
 import {makeGrid} from '@crosswithfriends/shared/lib/gameUtils';
 import {db} from './store/firebase';
 import {ref, push, set} from 'firebase/database';
-// eslint-disable-next-line import/no-cycle
-import {GameModel, PuzzleModel} from './store';
+import {useGameStore} from './store/gameStore';
+import {usePuzzleStore} from './store/puzzleStore';
 import {incrementGid, incrementPid} from './api/counters';
+import type {BattleData} from './types/rawGame';
 
 // for interfacing with firebase
 
@@ -14,7 +15,7 @@ function disconnect(): void {
 
 interface CreateGameForBattleParams {
   pid: number;
-  battleData?: any;
+  battleData?: BattleData;
 }
 
 interface CreateCompositionParams {
@@ -51,18 +52,37 @@ const actions = {
   },
 
   // TODO: this should probably be createGame and the above should be deleted but idk what it does...
-  createGameForBattle: ({pid, battleData}: CreateGameForBattleParams, cbk?: (gid: string) => void): void => {
-    actions.getNextGid((gid) => {
-      const game = new GameModel(`/game/${gid}`);
-      const puzzle = new PuzzleModel(`/puzzle/${pid}`);
-      puzzle.attach();
-      puzzle.once('ready', () => {
-        const rawGame = puzzle.toGame();
-        game.initialize(rawGame, {battleData}).then(() => {
-          cbk && cbk(gid);
-        });
-      });
-    });
+  createGameForBattle: async ({pid, battleData}: CreateGameForBattleParams, cbk?: (gid: string) => void): Promise<void> => {
+    const {gid} = await incrementGid();
+    const word = gameWords[Math.floor(Math.random() * gameWords.length)];
+    const finalGid = `${gid}-${word}`;
+    
+    const gamePath = `/game/${finalGid}`;
+    const puzzlePath = `/puzzle/${pid}`;
+    
+    const gameStore = useGameStore.getState();
+    const puzzleStore = usePuzzleStore.getState();
+    
+    // Get puzzle instance
+    const puzzle = puzzleStore.getPuzzle(puzzlePath, pid);
+    puzzleStore.attach(puzzlePath);
+    
+    // Wait for puzzle to be ready
+    await puzzleStore.waitForReady(puzzlePath);
+    
+    // Convert puzzle to game format
+    const rawGame = puzzleStore.toGame(puzzlePath);
+    
+    if (!rawGame) {
+      throw new Error('Failed to convert puzzle to game');
+    }
+    
+    // Initialize game using Zustand store
+    await gameStore.initialize(gamePath, rawGame, {battleData});
+    
+    if (cbk) {
+      cbk(finalGid);
+    }
   },
 
   createComposition: (

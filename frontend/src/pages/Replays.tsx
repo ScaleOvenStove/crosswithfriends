@@ -9,7 +9,7 @@ import {useParams} from 'react-router-dom';
 import Timestamp from '../components/common/Timestamp';
 import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
 import Nav from '../components/common/Nav';
-import {PuzzleModel} from '../store';
+import {usePuzzle} from '../hooks/usePuzzle';
 import {db} from '../store/firebase';
 import {ref, get} from 'firebase/database';
 
@@ -24,8 +24,14 @@ const TimeFormatter: React.FC<TimeFormatterProps> = ({millis}) =>
     </span>
   ) : null;
 
-function getTime(game: any): number | undefined {
-  if (game.stopTime) {
+interface GameWithTime {
+  stopTime?: number;
+  startTime?: number;
+  pauseTime?: number;
+}
+
+function getTime(game: GameWithTime): number | undefined {
+  if (game.stopTime && game.startTime) {
     let t = game.stopTime - game.startTime;
     if (game.pauseTime) t += game.pauseTime;
     return t;
@@ -33,20 +39,30 @@ function getTime(game: any): number | undefined {
   return undefined;
 }
 
-function getChatters(game: any): string[] {
+interface GameWithChat {
+  chat?: {
+    messages?: Record<string, {sender?: string}>;
+  };
+  events?: Record<string, {type?: string; params?: {sender?: string}}>;
+}
+
+function getChatters(game: GameWithChat | null | undefined): string[] {
   if (!game) return [];
   if (game.chat) {
     const {messages} = game.chat;
+    if (!messages) return [];
     const chatters: string[] = [];
-    _.values(messages).forEach((msg: any) => {
-      chatters.push(msg.sender);
+    _.values(messages).forEach((msg) => {
+      if (msg.sender) {
+        chatters.push(msg.sender);
+      }
     });
     return Array.from(new Set(chatters));
   }
   if (game.events) {
     const chatters: string[] = [];
-    _.values(game.events).forEach((event: any) => {
-      if (event.type === 'chat') {
+    _.values(game.events).forEach((event) => {
+      if (event.type === 'chat' && event.params?.sender) {
         chatters.push(event.params.sender);
       }
     });
@@ -77,11 +93,9 @@ const Replays: React.FC = () => {
   const params = useParams<{pid?: string}>();
   const [games, setGames] = useState<Record<string, GameInfo>>({});
   const [soloPlayers, setSoloPlayers] = useState<SoloPlayer[]>([]);
-  const [puzInfo, setPuzInfo] = useState<any>({});
+  const [puzInfo, setPuzInfo] = useState<GameInfo | null>(null);
   const [limit, setLimit] = useState<number>(20);
-  const [error, setError] = useState<any>(undefined);
-
-  const puzzleRef = useRef<PuzzleModel | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   const pid = useMemo(() => {
     if (!params.pid) {
@@ -90,7 +104,32 @@ const Replays: React.FC = () => {
     return Number(params.pid);
   }, [params.pid]);
 
-  const processGame = useCallback((rawGame: any, gid: string): GameInfo => {
+  const puzzlePath = useMemo(() => {
+    return pid ? `/puzzle/${pid}` : '';
+  }, [pid]);
+
+  const puzzle = usePuzzle({
+    path: puzzlePath,
+    pid: pid || 0,
+    onReady: (data) => {
+      if (data?.info) {
+        setPuzInfo(data.info);
+      }
+    },
+  });
+
+  interface RawGameData {
+    events?: Record<string, unknown>;
+    pid?: number;
+    solved?: boolean;
+    startTime?: number;
+    chat?: {
+      messages?: Record<string, {sender?: string}>;
+    };
+    [key: string]: unknown;
+  }
+
+  const processGame = useCallback((rawGame: RawGameData, gid: string): GameInfo => {
     if (rawGame.events) {
       const events = _.values(rawGame.events);
       const historyWrapper = new HistoryWrapper(events);
@@ -121,19 +160,17 @@ const Replays: React.FC = () => {
   }, []);
 
   const updatePuzzles = useCallback(() => {
-    if (pid) {
-      const puzzle = new PuzzleModel(`/puzzle/${pid}`, pid);
-      puzzleRef.current = puzzle;
+    if (pid && puzzlePath) {
       puzzle.attach();
-      puzzle.on('ready', () => {
-        if (puzzleRef.current) {
-          setPuzInfo(puzzleRef.current.info);
+      puzzle.waitForReady().then(() => {
+        if (puzzle.data?.info) {
+          setPuzInfo(puzzle.data.info);
         }
-      });
-
-      puzzle.listGames(limit).then((rawGames: any) => {
-        const processedGames = _.map(_.keys(rawGames), (gid) => processGame(rawGames[gid], gid));
-        setGames(_.keyBy(processedGames, 'gid'));
+        puzzle.listGames(limit).then((rawGames) => {
+          if (!rawGames) return;
+          const processedGames = _.map(_.keys(rawGames), (gid) => processGame(rawGames[gid], gid));
+          setGames(_.keyBy(processedGames, 'gid'));
+        });
       });
     } else {
       get(ref(db, '/counters/gid')).then((snapshot) => {
@@ -142,17 +179,22 @@ const Replays: React.FC = () => {
           _.range(gid - 1, gid - limit - 1, -1).map((g: number) =>
             get(ref(db, `/game/${g.toString()}`)).then((snapshot) => ({...snapshot.val(), gid: g}))
           )
-        ).then((rawGames: any[]) => {
+        ).then((rawGames: Array<RawGameData & {gid: string}>) => {
           const processedGames = _.map(rawGames, (g) => processGame(g, g.gid));
           setGames(_.keyBy(processedGames, 'gid'));
         });
       });
     }
-  }, [pid, limit, processGame]);
+  }, [pid, limit, processGame, puzzle, puzzlePath]);
 
   useEffect(() => {
     updatePuzzles();
-  }, [updatePuzzles]);
+    return () => {
+      if (puzzlePath) {
+        puzzle.detach();
+      }
+    };
+  }, [updatePuzzles, puzzle, puzzlePath]);
 
   const linkToGame = useCallback(
     (gid: string, {v2, active, solved}: {v2: boolean; active: boolean; solved?: boolean}): JSX.Element => {
@@ -166,9 +208,9 @@ const Replays: React.FC = () => {
   );
 
   const puzzleTitle = useMemo(() => {
-    if (!puzzleRef.current || !puzzleRef.current.info) return '';
-    return puzzleRef.current.info.title;
-  }, [puzInfo]);
+    if (!puzzle.data?.info?.title) return '';
+    return puzzle.data.info.title;
+  }, [puzzle.data]);
 
   const list1Items = useMemo(() => {
     return _.values(games).map(

@@ -10,15 +10,14 @@ import withReactContent from 'sweetalert2-react-content';
 
 const swal = withReactContent(Swal);
 import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
-import {getUser} from '../../store/user';
-import User from '../../store/user';
+import {useUser} from '../../hooks/useUser';
 
 interface LogInProps {
-  user: User;
   style?: React.CSSProperties;
 }
 
-function LogIn({user, style}: LogInProps): JSX.Element | null {
+function LogIn({style}: LogInProps): JSX.Element | null {
+  const user = useUser();
   if (!user.attached) {
     return null;
   }
@@ -117,7 +116,6 @@ export default function Nav({
 }: NavProps): JSX.Element | null {
   const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
   if (hidden) return null; // no nav for mobile
-  const user = getUser();
   const fencing = window.location.href.includes('fencing');
   return (
     <div className={classnames('nav', {mobile})} ref={divRef}>
@@ -138,7 +136,7 @@ export default function Nav({
         <div className="nav--info" onClick={showInfo}>
           <i className="fa fa-info-circle" />
         </div>
-        {canLogin && <LogIn user={user} />}
+        {canLogin && <LogIn />}
       </div>
     </div>
   );

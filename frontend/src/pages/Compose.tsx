@@ -8,45 +8,41 @@ import redirect from '@crosswithfriends/shared/lib/redirect';
 import actions from '../actions';
 
 import Nav from '../components/common/Nav';
-import {getUser, CompositionModel} from '../store';
-import User from '../store/user';
+import {useUser} from '../hooks/useUser';
+import {useCompositionStore} from '../store';
 
 const Compose: React.FC = () => {
   const [compositions, setCompositions] = useState<Record<string, {title: string; author: string}>>({});
   const [limit, setLimit] = useState<number>(20);
 
-  const userRef = useRef<User | null>(null);
+  const user = useUser();
+  const compositionStore = useCompositionStore();
 
   const handleAuth = useCallback((): void => {
-    if (userRef.current) {
-      userRef.current.listCompositions().then((comps) => {
+    if (user.id) {
+      user.listCompositions().then((comps) => {
         setCompositions(comps);
       });
     }
-  }, []);
+  }, [user]);
 
   const handleCreateClick = useCallback((e: React.MouseEvent): void => {
     e.preventDefault();
-    actions.getNextCid((cid: string) => {
-      const composition = new CompositionModel(`/composition/${cid}`);
-      composition.initialize().then(() => {
-        redirect(`/composition/${cid}`);
-      });
+    actions.getNextCid(async (cid: string) => {
+      const path = `/composition/${cid}`;
+      await compositionStore.initialize(path);
+      redirect(`/composition/${cid}`);
     });
-  }, []);
+  }, [compositionStore]);
 
   useEffect(() => {
-    const user = getUser();
-    userRef.current = user;
-    user.onAuth(handleAuth);
+    const unsubscribe = user.onAuth(handleAuth);
     handleAuth();
 
     return () => {
-      if (userRef.current) {
-        userRef.current.offAuth(handleAuth);
-      }
+      unsubscribe();
     };
-  }, [handleAuth]);
+  }, [handleAuth, user]);
 
   const linkToComposition = useCallback(
     (cid: string, {title, author}: {title: string; author: string}): JSX.Element => {

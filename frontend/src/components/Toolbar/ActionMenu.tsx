@@ -61,7 +61,7 @@ const ActionMenu: React.FC<Props> = ({label, actions, onBlur}) => {
   );
 
   return (
-    <div ref={containerRef} className={`${active ? 'active ' : ''}action-menu`} onBlur={handleBlur}>
+    <div ref={containerRef} className={`${active ? 'active ' : ''}action-menu`}>
       <button
         tabIndex={-1}
         className="action-menu--button"
@@ -77,6 +77,7 @@ const ActionMenu: React.FC<Props> = ({label, actions, onBlur}) => {
           <div
             key={i}
             className="action-menu--list--action"
+            tabIndex={-1}
             onPointerDown={(ev) => {
               ev.stopPropagation();
             }}

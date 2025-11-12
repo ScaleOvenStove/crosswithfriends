@@ -1,4 +1,5 @@
 import React, {Component, ErrorInfo, ReactNode} from 'react';
+import {IS_DEVELOPMENT} from '../../config';
 
 interface Props {
   children: ReactNode;
@@ -71,7 +72,7 @@ class ErrorBoundary extends Component<Props, State> {
           >
             Try again
           </button>
-          {import.meta.env.DEV && this.state.error && (
+          {IS_DEVELOPMENT && this.state.error && (
             <details style={{marginTop: '20px', textAlign: 'left'}}>
               <summary style={{cursor: 'pointer'}}>Error details</summary>
               <pre

@@ -11,7 +11,7 @@ import {transformGameToPlayerProps} from './transformGameToPlayerProps';
 import {usePlayerActions} from './usePlayerActions';
 import {useToolbarActions} from './useToolbarActions';
 import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
-import {getUser} from '../../store/user';
+import {useUser} from '../../hooks/useUser';
 import {FencingScoreboard} from './FencingScoreboard';
 import {TEAM_IDS} from '@crosswithfriends/shared/fencingGameEvents/constants';
 import {FencingToolbar} from './FencingToolbar';
@@ -39,13 +39,15 @@ function subscribeToGameEvents(
   eventsHook: GameEventsHook
 ) {
   let connected = false;
+  const gameEventHandler = (event: any) => {
+    if (!connected) return;
+    eventsHook.addEvent(event);
+  };
+
   async function joinAndSync() {
     if (!socket) return;
     await emitAsync(socket, 'join_game', gid);
-    socket.on('game_event', (event: any) => {
-      if (!connected) return;
-      eventsHook.addEvent(event);
-    });
+    socket.on('game_event', gameEventHandler);
     const allEvents: GameEvent[] = (await emitAsync(socket, 'sync_all_game_events', gid)) as any;
     eventsHook.setEvents(allEvents);
 
@@ -53,6 +55,8 @@ function subscribeToGameEvents(
   }
   function unsubscribe() {
     if (!socket) return;
+    // Remove the event listener to prevent memory leaks
+    socket.off('game_event', gameEventHandler);
     emitAsync(socket, 'leave_game', gid);
   }
   const syncPromise = joinAndSync();
@@ -100,9 +104,10 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
     return unsubscribe;
   }, [gid, socket]);
   const gameState = eventsHook.gameState;
+  const user = useUser();
 
-  const id = getUser().id;
-  const teamId = gameState.users[id]?.teamId;
+  const id = user.id;
+  const teamId = id ? gameState.users[id]?.teamId : undefined;
   const isGameComplete =
     gameState.game?.grid.every((row) => row.every((cell) => cell.good || cell.black)) ?? false;
   const [hasRevealedAll, setHasRevealedAll] = useState(false);

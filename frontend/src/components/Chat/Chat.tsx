@@ -97,8 +97,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       if (!usernameInputRef.current?.focused) {
         finalUsername = finalUsername || nameGenerator();
       }
-      const {id} = props;
-      props.onUpdateDisplayName(id, finalUsername);
+      const {id, onUpdateDisplayName} = props;
+      onUpdateDisplayName(id, finalUsername);
       setUsername(finalUsername);
       localStorage.setItem(usernameKey, finalUsername);
       // Check if localStorage has username_default, if not set it to the last
@@ -110,7 +110,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         localStorage.setItem('username_default', finalUsername);
       }
     },
-    [props, usernameKey]
+    [props.id, props.onUpdateDisplayName, usernameKey]
   );
 
   useEffect(() => {
@@ -123,8 +123,11 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     } else {
       setUsername(initialUsername || '');
     }
-    handleUpdateDisplayName(initialUsername || '');
-  }, [props.initialUsername, props.bid, handleUpdateDisplayName]);
+    // Only call updateDisplayName if we have a valid username and the callback is available
+    if (initialUsername && props.onUpdateDisplayName) {
+      handleUpdateDisplayName(initialUsername);
+    }
+  }, [props.initialUsername, props.bid, props.onUpdateDisplayName, handleUpdateDisplayName]);
 
   const handleSendMessage = useCallback(
     (message: string) => {
@@ -536,4 +539,5 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
 Chat.displayName = 'Chat';
 
-export default Chat;
+// Memoize Chat component to prevent unnecessary re-renders
+export default React.memo(Chat);

@@ -1,6 +1,7 @@
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
+import {useGameStore} from '../../store/gameStore';
 import Confetti from './Confetti';
 
 import * as powerups from '@crosswithfriends/shared/lib/powerups';
@@ -12,23 +13,39 @@ import {toHex, darken, GREENISH} from '@crosswithfriends/shared/lib/colors';
 const vimModeKey = 'vim-mode';
 const vimModeRegex = /^\d+(a|d)*$/;
 
+import type {Powerup, Pickup} from '../../types/battle';
+
+interface GameModel {
+  updateCell: (r: number, c: number, id: string, color: string, pencil: boolean, value: string, autocheck: boolean) => void;
+  updateCursor: (r: number, c: number, id: string) => void;
+  addPing: (r: number, c: number, id: string) => void;
+  updateColor: (id: string, color: string) => void;
+  updateClock: (action: string) => void;
+  check: (scope: {r: number; c: number}[]) => void;
+  reveal: (scope: {r: number; c: number}[]) => void;
+  reset: (scope: {r: number; c: number}[], force: boolean) => void;
+  chat: (username: string, id: string, text: string) => void;
+}
+
+interface BattleModel {
+  checkPickups: (r: number, c: number, game: unknown, team: number) => void;
+}
+
 interface GameProps {
-  historyWrapper?: any;
-  opponentHistoryWrapper?: any;
-  ownPowerups?: any;
-  opponentPowerups?: any;
-  gameModel: any;
+  ownPowerups?: Powerup[];
+  opponentPowerups?: Powerup[];
+  gameModel: GameModel | null;
   id: string;
   myColor: string;
   onChange: (options?: {isEdit?: boolean}) => void;
-  battleModel?: any;
+  battleModel?: BattleModel | null;
   team?: number;
   onToggleChat: () => void;
   onUnfocus: () => void;
   mobile?: boolean;
   beta?: boolean;
   gid?: string;
-  pickups?: any;
+  pickups?: Record<string, Pickup>;
   unreads?: number;
 }
 
@@ -43,7 +60,7 @@ const Game: React.FC<GameProps> = (props) => {
   const [colorAttributionMode, setColorAttributionMode] = useState<boolean>(false);
   const [expandMenu, setExpandMenu] = useState<boolean>(false);
 
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<{getSelectedSquares: () => unknown[]; getSelectedAndHighlightedSquares: () => unknown[]; getAllSquares: () => unknown[]; selectClue: (direction: string, number: number) => void; focus: () => void} | null>(null);
   const prevMyColorRef = useRef<string | undefined>(props.myColor);
 
   useEffect(() => {
@@ -71,13 +88,13 @@ const Game: React.FC<GameProps> = (props) => {
     }
   }, [props.myColor, props.id, props.gameModel, handleUpdateColor]);
 
-  const rawGame = useMemo(() => {
-    return props.historyWrapper && props.historyWrapper.getSnapshot();
-  }, [props.historyWrapper]);
+  // Use Zustand store as primary source
+  const gamePath = props.gid ? `/game/${props.gid}` : '';
+  const rawGame = useGameStore((state) => state.games[gamePath]?.gameState ?? null);
 
-  const rawOpponentGame = useMemo(() => {
-    return props.opponentHistoryWrapper && props.opponentHistoryWrapper.getSnapshot();
-  }, [props.opponentHistoryWrapper]);
+  // Opponent game state would come from a separate hook if needed
+  // For now, opponent game effects are handled via powerups
+  const rawOpponentGame = null;
 
   // TODO: this should be cached, sigh...
   const games = useMemo(() => {
@@ -171,8 +188,8 @@ const Game: React.FC<GameProps> = (props) => {
   const handleCheck = useCallback(
     (scopeString: string) => {
       if (!props.gameModel) return;
-      const scope = scope(scopeString);
-      props.gameModel.check(scope);
+      const scopeValue = scope(scopeString);
+      props.gameModel.check(scopeValue);
     },
     [props.gameModel, scope]
   );

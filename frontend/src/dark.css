@@ -158,6 +158,10 @@
   color: rgb(102, 187, 106);
 }
 
+.dark .cell--value {
+  color: var(--dark-primary-text) !important;
+}
+
 .dark input {
   background-color: var(--dark-background);
   color: var(--dark-primary-text);

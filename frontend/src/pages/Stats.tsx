@@ -2,14 +2,14 @@ import React, {useEffect, useState} from 'react';
 import _ from 'lodash';
 import {fetchStats} from '../api/stats';
 import type {ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
-import {getUser} from '../store/user';
+import {useUser} from '../hooks/useUser';
 import {Stack, Box} from '@mui/material';
 import {Helmet} from 'react-helmet';
 import Nav from '../components/common/Nav';
 import {formatMilliseconds} from '../components/Toolbar/Clock';
 
 const Stats: React.FC<{}> = () => {
-  const user = getUser();
+  const user = useUser();
 
   const [stats, setStats] = useState<ListPuzzleStatsResponse | null>(null);
 

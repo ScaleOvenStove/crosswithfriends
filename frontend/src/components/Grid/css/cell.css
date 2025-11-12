@@ -81,6 +81,7 @@ div:focus .cell.referenced {
 
 .cell--value {
   background-color: transparent;
+  color: var(--main-black) !important;
 }
 
 .cell.pencil .cell--value {

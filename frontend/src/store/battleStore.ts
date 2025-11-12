@@ -1,14 +1,14 @@
 import {create} from 'zustand';
 import _ from 'lodash';
 import {db, type DatabaseReference} from './firebase';
-import {ref, onValue, off, get, set, push, remove} from 'firebase/database';
+import {ref, onValue, get, set, push, remove, runTransaction} from 'firebase/database';
 // eslint-disable-next-line import/no-cycle
 import actions from '../actions';
 
 import powerupData from '@crosswithfriends/shared/lib/powerups';
 import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 // eslint-disable-next-line import/no-cycle
-import {PuzzleModel} from './index';
+import {usePuzzleStore} from './puzzleStore';
 
 const STARTING_POWERUPS = 1;
 const NUM_PICKUPS = 10;
@@ -19,22 +19,13 @@ interface BattleInstance {
   path: string;
   ref: DatabaseReference;
   gids?: string[];
-  listeners: {
-    games?: (games: string[]) => void;
-    powerups?: (powerups: any) => void;
-    startedAt?: (startedAt: number) => void;
-    players?: (players: any) => void;
-    winner?: (winner: any) => void;
-    pickups?: (pickups: any) => void;
-    usePowerup?: (powerup: any) => void;
-    ready?: () => void;
-  };
+  subscriptions: Map<string, Set<(data: unknown) => void>>; // Map-based subscription system
   unsubscribes: Record<string, () => void>;
 }
 
 interface BattleStore {
   battles: Record<string, BattleInstance>;
-  getBattle: (path: string) => BattleInstance;
+    getBattle: (path: string) => BattleInstance | undefined;
   attach: (path: string) => void;
   detach: (path: string) => void;
   start: (path: string) => void;
@@ -47,9 +38,28 @@ interface BattleStore {
   spawnPowerups: (path: string, n: number, games: any[], cbk?: () => void) => void;
   initialize: (path: string, pid: number, bid: number, teams?: number) => void;
   subscribe: (path: string, event: string, callback: (...args: any[]) => void) => () => void;
+  once: (path: string, event: string, callback: (...args: any[]) => void) => () => void; // Subscribe once, auto-unsubscribe after first call
 }
 
 export const useBattleStore = create<BattleStore>((setState, getState) => {
+  // Helper function to emit events to subscribers
+  const emit = (path: string, event: string, data: unknown): void => {
+    const state = getState();
+    const battle = state.battles[path];
+    if (!battle) return;
+    
+    const subscribers = battle.subscriptions.get(event);
+    if (subscribers) {
+      subscribers.forEach((callback) => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`Error in subscription callback for ${event}:`, error);
+        }
+      });
+    }
+  };
+
   return {
     battles: {},
 
@@ -63,7 +73,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
             [path]: {
               path,
               ref: battleRef,
-              listeners: {},
+              subscriptions: new Map(),
               unsubscribes: {},
             },
           },
@@ -78,17 +88,18 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       if (!battle) {
         battle = state.getBattle(path);
       }
+      
+      if (!battle) {
+        console.error('Failed to get battle instance for path:', path);
+        return;
+      }
 
       const unsubscribes: Record<string, () => void> = {};
 
       VALUE_LISTENERS.forEach((subpath) => {
         const subRef = ref(db, `${path}/${subpath}`);
         const unsubscribe = onValue(subRef, (snapshot) => {
-          const currentState = getState();
-          const currentBattle = currentState.battles[path];
-          if (currentBattle?.listeners[subpath as keyof typeof currentBattle.listeners]) {
-            (currentBattle.listeners[subpath as keyof typeof currentBattle.listeners] as any)(snapshot.val());
-          }
+          emit(path, subpath, snapshot.val());
         });
         unsubscribes[subpath] = unsubscribe;
       });
@@ -117,31 +128,25 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
           [path]: {
             ...battle,
             unsubscribes: {},
-            listeners: {},
+            subscriptions: new Map(),
           },
         },
       });
     },
 
-    subscribe: (path: string, event: string, callback: (...args: any[]) => void) => {
+    subscribe: (path: string, event: string, callback: (data: unknown) => void) => {
       const state = getState();
       const battle = state.battles[path];
       if (!battle) return () => {};
 
-      const listeners = {
-        ...battle.listeners,
-        [event]: callback as any,
-      };
-
-      setState({
-        battles: {
-          ...state.battles,
-          [path]: {
-            ...battle,
-            listeners,
-          },
-        },
-      });
+      // Get or create subscription set for this event
+      if (!battle.subscriptions.has(event)) {
+        battle.subscriptions.set(event, new Set());
+      }
+      const subscribers = battle.subscriptions.get(event)!;
+      
+      // Add callback to subscribers
+      subscribers.add(callback);
 
       // Return unsubscribe function
       return () => {
@@ -149,18 +154,63 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
         const currentBattle = currentState.battles[path];
         if (!currentBattle) return;
 
-        const newListeners = {...currentBattle.listeners};
-        delete newListeners[event as keyof typeof newListeners];
+        const currentSubscribers = currentBattle.subscriptions.get(event);
+        if (currentSubscribers) {
+          currentSubscribers.delete(callback);
+          // Clean up empty sets
+          if (currentSubscribers.size === 0) {
+            currentBattle.subscriptions.delete(event);
+          }
+        }
+      };
+    },
 
-        setState({
-          battles: {
-            ...currentState.battles,
-            [path]: {
-              ...currentBattle,
-              listeners: newListeners,
-            },
-          },
-        });
+    once: (path: string, event: string, callback: (data: unknown) => void) => {
+      const state = getState();
+      const battle = state.battles[path];
+      if (!battle) return () => {};
+
+      // Wrap callback to auto-unsubscribe after first call
+      let called = false;
+      const wrappedCallback = (data: unknown) => {
+        if (!called) {
+          called = true;
+          callback(data);
+          // Auto-unsubscribe
+          const currentState = getState();
+          const currentBattle = currentState.battles[path];
+          if (currentBattle) {
+            const subscribers = currentBattle.subscriptions.get(event);
+            if (subscribers) {
+              subscribers.delete(wrappedCallback);
+              if (subscribers.size === 0) {
+                currentBattle.subscriptions.delete(event);
+              }
+            }
+          }
+        }
+      };
+
+      // Get or create subscription set for this event
+      if (!battle.subscriptions.has(event)) {
+        battle.subscriptions.set(event, new Set());
+      }
+      const subscribers = battle.subscriptions.get(event)!;
+      subscribers.add(wrappedCallback);
+
+      // Return unsubscribe function
+      return () => {
+        const currentState = getState();
+        const currentBattle = currentState.battles[path];
+        if (!currentBattle) return;
+
+        const currentSubscribers = currentBattle.subscriptions.get(event);
+        if (currentSubscribers) {
+          currentSubscribers.delete(wrappedCallback);
+          if (currentSubscribers.size === 0) {
+            currentBattle.subscriptions.delete(event);
+          }
+        }
       };
     },
 
@@ -170,7 +220,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
 
     setSolved: (path: string, team: number) => {
       // Use transaction to atomically check and set winner
-      runTransaction(ref(db, `${path}/winner`), (current) => {
+      runTransaction(ref(db, `${path}/winner`), (current: unknown) => {
         // If winner already exists, don't overwrite
         if (current) {
           return current;
@@ -203,11 +253,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
         const ownPowerups = allPowerups[team];
         const toUse = _.find(ownPowerups, (powerup: any) => powerup.type === type && !powerup.used);
         if (toUse) {
-          const state = getState();
-          const battle = state.battles[path];
-          if (battle?.listeners.usePowerup) {
-            battle.listeners.usePowerup(toUse);
-          }
+          emit(path, 'usePowerup', toUse);
           toUse.used = Date.now();
           toUse.target = 1 - team; // For now use on other team.
           set(ref(db, `${path}/powerups`), allPowerups);
@@ -215,28 +261,29 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       });
     },
 
-    checkPickups: (path: string, r: number, c: number, game: any, team: number) => {
+    checkPickups: (path: string, r: number, c: number, game: {grid: unknown[][]; solution: string[][]}, team: number) => {
       const {grid, solution} = game;
       const gridObj = new GridObject(grid);
 
       // Use transactions to atomically update both pickups and powerups
       // First, get the current state to determine what needs to be updated
       Promise.all([get(ref(db, `${path}/pickups`)), get(ref(db, `${path}/powerups`))]).then(
-        ([pickupsSnapshot, powerupsSnapshot]) => {
-          const pickups = pickupsSnapshot.val() || {};
-          const powerups = powerupsSnapshot.val() || {[team]: []};
+        ([pickupsSnapshot]) => {
+          const pickups = (pickupsSnapshot.val() || {}) as Record<string, {pickedUp?: boolean; type: string; i: number; j: number}>;
 
           const {across, down} = gridObj.getCrossingWords(r, c);
           const cellsToCheck = [...across, ...down];
 
           // Determine which pickups should be collected
           const pickupsToMark: string[] = [];
-          const powerupsToAdd: any[] = [];
+          const powerupsToAdd: Array<{type: string}> = [];
 
           cellsToCheck.forEach(({i, j}: {i: number; j: number}) => {
-            if (grid[i][j].value !== solution[i][j]) return;
+            const gridCell = grid[i]?.[j] as {value?: string} | undefined;
+            const solutionCell = solution[i]?.[j];
+            if (!gridCell || gridCell.value !== solutionCell) return;
 
-            _.forEach(pickups, (pickup: any, key: string) => {
+            _.forEach(pickups, (pickup, key: string) => {
               if (pickup.pickedUp) return;
               if (pickup.i === i && pickup.j === j) {
                 pickupsToMark.push(key);
@@ -249,26 +296,31 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
           if (pickupsToMark.length === 0) return;
 
           // Atomically update pickups
-          runTransaction(ref(db, `${path}/pickups`), (currentPickups) => {
-            const updated = {...(currentPickups || {})};
+          runTransaction(ref(db, `${path}/pickups`), (currentPickups: unknown) => {
+            const updated = {...((currentPickups as Record<string, unknown>) || {})};
             pickupsToMark.forEach((key) => {
-              if (updated[key] && !updated[key].pickedUp) {
-                updated[key] = {...updated[key], pickedUp: true};
+              const pickup = updated[key] as {pickedUp?: boolean} | undefined;
+              if (pickup && !pickup.pickedUp) {
+                updated[key] = {...pickup, pickedUp: true};
               }
             });
             return updated;
           });
 
           // Atomically update powerups
-          runTransaction(ref(db, `${path}/powerups`), (currentPowerups) => {
-            const updated = {...(currentPowerups || {})};
+          runTransaction(ref(db, `${path}/powerups`), (currentPowerups: unknown) => {
+            const updated = {...((currentPowerups as Record<number, unknown[]>) || {})};
             if (!updated[team]) {
               updated[team] = [];
             }
             // Only add powerups that weren't already added
+            const existingPowerups = updated[team] as Array<{type: string}>;
             powerupsToAdd.forEach((powerup) => {
-              updated[team] = [...updated[team], powerup];
+              if (!existingPowerups.some((p) => p.type === powerup.type)) {
+                existingPowerups.push(powerup);
+              }
             });
+            updated[team] = existingPowerups;
             return updated;
           });
         }
@@ -325,11 +377,16 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
         _.map(_.sampleSize(powerupTypes, STARTING_POWERUPS), (type) => ({type}))
       );
 
-      const puzzle = new PuzzleModel(`/puzzle/${pid}`);
-      puzzle.attach();
-      puzzle.once('ready', () => {
-        const rawGame = puzzle.toGame();
-        puzzle.detach();
+      // Use Zustand puzzleStore instead of EventEmitter PuzzleModel
+      const puzzleStore = usePuzzleStore.getState();
+      const puzzlePath = `/puzzle/${pid}`;
+      puzzleStore.getPuzzle(puzzlePath, pid);
+      puzzleStore.attach(puzzlePath);
+      
+      // Wait for puzzle to be ready
+      puzzleStore.waitForReady(puzzlePath).then(() => {
+        const rawGame = puzzleStore.toGame(puzzlePath);
+        puzzleStore.detach(puzzlePath);
 
         // Need to wait for all of these to finish otherwise the redirect on emit(ready) kills things.
         Promise.all(
@@ -347,11 +404,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
             set(ref(db, `${path}/powerups`), powerups).then(() => {
               const currentState = getState();
               currentState.spawnPowerups(path, NUM_PICKUPS, [rawGame], () => {
-                const finalState = getState();
-                const finalBattle = finalState.battles[path];
-                if (finalBattle?.listeners.ready) {
-                  finalBattle.listeners.ready();
-                }
+                emit(path, 'ready', undefined);
               });
             });
           });

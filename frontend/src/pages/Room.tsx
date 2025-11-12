@@ -1,45 +1,15 @@
-import React, {Dispatch, SetStateAction, useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {useUpdateEffect} from 'react-use';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
 
 import {Box} from '@mui/material';
-import {SetGameRoomEvent, UserPingRoomEvent} from '@crosswithfriends/shared/roomEvents';
 import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
-import {useSocket} from '../sockets/useSocket';
 import {initialRoomState, roomReducer} from '@crosswithfriends/shared/lib/reducers/room';
-import {emitAsync} from '../sockets/emitAsync';
-import {getUser} from '../store';
+import {useRoom} from '../hooks/useRoom';
 
 const ACTIVE_SECONDS_TIMEOUT = 60;
-
-function subscribeToRoomEvents(
-  socket: SocketIOClient.Socket | undefined,
-  rid: string,
-  setEvents: Dispatch<SetStateAction<RoomEvent[]>>
-) {
-  let connected = false;
-  async function joinAndSync() {
-    if (!socket) return;
-    await emitAsync(socket, 'join_room', rid);
-    socket.on('room_event', (event: any) => {
-      if (!connected) return;
-      setEvents((events) => [...events, event]);
-    });
-    const allEvents: RoomEvent[] = (await emitAsync(socket, 'sync_all_room_events', rid)) as any;
-    setEvents(allEvents);
-    connected = true;
-  }
-  function unsubscribe() {
-    if (!socket) return;
-    console.log('unsubscribing from room events...');
-    emitAsync(socket, 'leave_room', rid);
-  }
-  const syncPromise = joinAndSync();
-
-  return {syncPromise, unsubscribe};
-}
 
 function useRoomState(events: RoomEvent[]) {
   // TODO history manager for perf optimization
@@ -62,30 +32,13 @@ const useTimer = (interval = 1000): number => {
 const Room: React.FC = () => {
   const params = useParams<{rid: string}>();
   const rid = params.rid || '';
-  const socket = useSocket();
-  const [events, setEvents] = useState<RoomEvent[]>([]);
+  const {events, sendUserPing, setGame} = useRoom({rid});
   const roomState = useRoomState(events);
 
-  async function sendUserPing() {
-    if (socket) {
-      const uid = getUser().id;
-      const event = UserPingRoomEvent(uid);
-      emitAsync(socket, 'room_event', {rid, event});
-    }
-  }
-  async function setGame(gid: string) {
-    if (socket) {
-      const uid = getUser().id;
-      const event = SetGameRoomEvent(gid, uid);
-      emitAsync(socket, 'room_event', {rid, event});
-    }
-  }
   useUpdateEffect(() => {
-    setEvents([]);
-    const {syncPromise, unsubscribe} = subscribeToRoomEvents(socket, rid, setEvents);
-    syncPromise.then(sendUserPing);
-    return unsubscribe;
-  }, [rid, socket]);
+    sendUserPing();
+  }, [rid, sendUserPing]);
+
   useUpdateEffect(() => {
     const renewActivity = _.throttle(sendUserPing, 1000 * 10);
     window.addEventListener('mousemove', renewActivity);
@@ -94,7 +47,7 @@ const Room: React.FC = () => {
       window.removeEventListener('mousemove', renewActivity);
       window.removeEventListener('keydown', renewActivity);
     };
-  }, [rid, socket]);
+  }, [rid, sendUserPing]);
   const handleAddGame = () => {
     const gameLink = window.prompt('Enter new game link');
     const gid = _.last(gameLink?.split('/'));

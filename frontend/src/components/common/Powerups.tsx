@@ -5,10 +5,11 @@ import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
 import Emoji from './Emoji';
 import powerups, {hasExpired, inUse, timeLeft} from '@crosswithfriends/shared/lib/powerups';
+import type {Powerup} from '../../types/battle';
 
 interface Props {
-  powerups: any[];
-  handleUsePowerup: (powerup: any) => void;
+  powerups: Powerup[];
+  handleUsePowerup: (powerup: Powerup) => void;
 }
 
 const Powerups: React.FC<Props> = ({powerups: powerupsList, handleUsePowerup}) => {
@@ -25,7 +26,7 @@ const Powerups: React.FC<Props> = ({powerups: powerupsList, handleUsePowerup}) =
     };
   }, []);
 
-  const renderPowerup = (powerup: any, count: number): JSX.Element | undefined => {
+  const renderPowerup = (powerup: Powerup, count: number): JSX.Element | undefined => {
     if (hasExpired(powerup)) {
       return undefined;
     }
@@ -68,9 +69,9 @@ const Powerups: React.FC<Props> = ({powerups: powerupsList, handleUsePowerup}) =
         POWERUPS
       </Box>
       {_.values(_.groupBy(powerupsList, 'type'))
-        .map((powerupGroup) => powerupGroup.filter((powerup: any) => !hasExpired(powerup)))
+        .map((powerupGroup) => powerupGroup.filter((powerup: Powerup) => !hasExpired(powerup)))
         .map(
-          (powerupGroup: any[]) =>
+          (powerupGroup: Powerup[]) =>
             // only render the first powerup of a given type
             powerupGroup.length > 0 && renderPowerup(powerupGroup[0], powerupGroup.length)
         )}

@@ -314,6 +314,8 @@ const reducers = {
       fencingUsers: _.uniq([...(game.fencingUsers || []), params.id]),
     };
   },
+  // sendChatMessage is for fencing games only - no-op for regular games
+  sendChatMessage: (game) => game,
 };
 
 const incrementOptimisticCounter = (game) => ({

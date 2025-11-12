@@ -1,16 +1,6 @@
-// ========== GET /api/puzzlelist ============
-
+import apiClient from './client';
 import type {CreateGameRequest, CreateGameResponse} from '@crosswithfriends/shared/types';
-import {SERVER_URL} from './constants';
 
 export async function createGame(data: CreateGameRequest): Promise<CreateGameResponse> {
-  const url = `${SERVER_URL}/api/game`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-  return await resp.json();
+  return apiClient.post<CreateGameResponse>('/api/game', data);
 }

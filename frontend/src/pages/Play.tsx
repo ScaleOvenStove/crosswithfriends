@@ -1,14 +1,14 @@
-import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import _ from 'lodash';
 import Timestamp from '../components/common/Timestamp';
 import {Link, useParams, useLocation} from 'react-router-dom';
 
 import Nav from '../components/common/Nav';
 import actions from '../actions';
-import {getUser, useBattleStore} from '../store';
+import {useBattleStore} from '../store';
 import redirect from '@crosswithfriends/shared/lib/redirect';
 import {createGame} from '../api/create_game';
-import User from '../store/user';
+import {useUser} from '../hooks/useUser';
 
 interface GameInfo {
   gid: string;
@@ -25,7 +25,7 @@ const Play: React.FC = () => {
   const [creating, setCreating] = useState<boolean>(false);
 
   const battleStore = useBattleStore();
-  const userRef = useRef<User | null>(null);
+  const user = useUser();
 
   const pid = useMemo(() => {
     return Number(params.pid);
@@ -62,18 +62,18 @@ const Play: React.FC = () => {
   }, [userHistory, pid]);
 
   const create = useCallback((): void => {
-    if (!userRef.current) return;
+    if (!user.id) return;
     setCreating(true);
     actions.getNextGid(async (gid: string) => {
       await createGame({gid, pid});
-      await userRef.current!.joinGame(gid, {
+      await user.joinGame(gid, {
         pid,
         solved: false,
         v2: true,
       });
       redirect(is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`);
     });
-  }, [pid, is_fencing]);
+  }, [pid, is_fencing, user]);
 
   const createAndJoinBattle = useCallback((): void => {
     actions.getNextBid((bid: number) => {
@@ -87,11 +87,9 @@ const Play: React.FC = () => {
   }, [pid, battleStore]);
 
   useEffect(() => {
-    const user = getUser();
-    userRef.current = user;
-    user.onAuth(() => {
-      if (userRef.current) {
-        userRef.current.listUserHistory().then((history) => {
+    const unsubscribe = user.onAuth(() => {
+      if (user.id) {
+        user.listUserHistory().then((history) => {
           setUserHistory(history);
         });
       }
@@ -100,7 +98,11 @@ const Play: React.FC = () => {
     if (query.mode === 'battle') {
       createAndJoinBattle();
     }
-  }, [query.mode, createAndJoinBattle]);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [query.mode, createAndJoinBattle, user]);
 
   useEffect(() => {
     if (query.mode === 'battle') {

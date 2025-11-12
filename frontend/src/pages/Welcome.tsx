@@ -9,11 +9,10 @@ import _ from 'lodash';
 import classnames from 'classnames';
 import Nav from '../components/common/Nav';
 import Upload from '../components/Upload';
-import {getUser} from '../store';
 import PuzzleList from '../components/PuzzleList';
 import {WelcomeVariantsControl} from '../components/WelcomeVariantsControl';
 import {isMobile, colorAverage} from '@crosswithfriends/shared/lib/jsUtils';
-import User from '../store/user';
+import {useUser} from '../hooks/useUser';
 
 const BLUE = '#6aa9f4';
 const WHITE = '#FFFFFF';
@@ -44,7 +43,7 @@ const Welcome: React.FC<Props> = (props) => {
   const [motion, setMotion] = useState<number | undefined>(undefined);
   const [searchFocused, setSearchFocused] = useState<boolean>(false);
 
-  const userRef = useRef<User | null>(null);
+  const user = useUser();
   const uploadedPuzzlesRef = useRef<number>(0);
   const navHeightRef = useRef<number>(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -52,28 +51,24 @@ const Welcome: React.FC<Props> = (props) => {
   const mobile = useMemo(() => isMobile(), []);
 
   const handleAuth = useCallback((): void => {
-    if (userRef.current) {
-      userRef.current.listUserHistory().then((history) => {
+    if (user.id) {
+      user.listUserHistory().then((history) => {
         setUserHistory(history);
       });
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    const user = getUser();
-    userRef.current = user;
-    user.onAuth(handleAuth);
+    const unsubscribe = user.onAuth(handleAuth);
 
     if (navRef.current) {
       navHeightRef.current = navRef.current.getBoundingClientRect().height;
     }
 
     return () => {
-      if (userRef.current) {
-        userRef.current.offAuth(handleAuth);
-      }
+      unsubscribe();
     };
-  }, [handleAuth]);
+  }, [handleAuth, user]);
 
   const showingSidebar = useMemo(() => {
     return !mobile;

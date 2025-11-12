@@ -1,12 +1,12 @@
 import './css/battle.css';
 
-import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet';
 import {Box, Stack} from '@mui/material';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
-import {useBattleStore} from '../store';
+import {useBattle} from '../hooks/useBattle';
 import redirect from '@crosswithfriends/shared/lib/redirect';
 import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
 import {useParams} from 'react-router-dom';
@@ -25,22 +25,35 @@ const Battle: React.FC = () => {
   const [name, setName] = useState<string | undefined>(undefined);
   const [players, setPlayers] = useState<Player[] | undefined>(undefined);
 
-  const battleStore = useBattleStore();
   const mobile = useMemo(() => isMobile(), []);
 
   const bid = useMemo(() => {
     return Number(params.bid);
   }, [params.bid]);
 
+  const path = useMemo(() => `/battle/${bid}`, [bid]);
+
+  const battle = useBattle({
+    path,
+    onGames: (gamesList: string[]) => {
+      setGames(gamesList);
+    },
+    onStartedAt: (startedAtTime: number) => {
+      setStartedAt(startedAtTime);
+    },
+    onPlayers: (playersRecord: unknown) => {
+      setPlayers(_.values(playersRecord as Record<string, Player>));
+    },
+  });
+
   const handleTeamSelect = useCallback(
     (teamNum: number): void => {
       if (name) {
-        const path = `/battle/${bid}`;
-        battleStore.addPlayer(path, name, teamNum);
+        battle.addPlayer(name, teamNum);
         setTeam(teamNum);
       }
     },
-    [name, bid, battleStore]
+    [name, battle]
   );
 
   const handleChangeName = useCallback(
@@ -53,38 +66,19 @@ const Battle: React.FC = () => {
 
   const handleUnload = useCallback((): void => {
     if (name && _.isNumber(team) && !redirecting) {
-      const path = `/battle/${bid}`;
-      battleStore.removePlayer(path, name, team);
+      battle.removePlayer(name, team);
     }
-  }, [name, team, redirecting, bid, battleStore]);
+  }, [name, team, redirecting, battle]);
 
   useEffect(() => {
-    const path = `/battle/${bid}`;
-    const unsubscribeGames = battleStore.subscribe(path, 'games', (gamesList: string[]) => {
-      setGames(gamesList);
-    });
-    const unsubscribeStartedAt = battleStore.subscribe(path, 'startedAt', (startedAtTime: number) => {
-      setStartedAt(startedAtTime);
-    });
-    const unsubscribePlayers = battleStore.subscribe(
-      path,
-      'players',
-      (playersRecord: Record<string, Player>) => {
-        setPlayers(_.values(playersRecord));
-      }
-    );
-    battleStore.attach(path);
-
+    battle.attach();
     window.addEventListener('beforeunload', handleUnload);
 
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
-      unsubscribeGames();
-      unsubscribeStartedAt();
-      unsubscribePlayers();
-      battleStore.detach(path);
+      battle.detach();
     };
-  }, [bid, handleUnload, battleStore]);
+  }, [battle, handleUnload]);
 
   useEffect(() => {
     if (startedAt && team !== undefined && games && !redirecting) {
@@ -187,7 +181,7 @@ const Battle: React.FC = () => {
                 <Box
                   className="battle--button"
                   sx={{display: 'flex', justifyContent: 'center'}}
-                  onClick={() => battleStore.start(`/battle/${bid}`)}
+                  onClick={() => battle.start()}
                 >
                   Start
                 </Box>

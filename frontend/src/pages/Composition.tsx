@@ -10,7 +10,6 @@ import {useParams} from 'react-router-dom';
 import actions from '../actions';
 import Editor from '../components/Player/Editor';
 import FileUploader from '../components/Upload/FileUploader';
-import {useCompositionStore, getUser} from '../store';
 import ComposeHistoryWrapper from '@crosswithfriends/shared/lib/wrappers/ComposeHistoryWrapper';
 import EditableSpan from '../components/common/EditableSpan';
 import redirect from '@crosswithfriends/shared/lib/redirect';
@@ -23,22 +22,40 @@ import {
 } from '@crosswithfriends/shared/lib/gameUtils';
 import format from '@crosswithfriends/shared/lib/format';
 import * as xwordFiller from '../components/Compose/lib/xword-filler';
-import User from '../store/user';
+import {useUser} from '../hooks/useUser';
+import {useComposition} from '../hooks/useComposition';
 
 const Composition: React.FC = () => {
   const params = useParams<{cid: string}>();
   const [mobile] = useState<boolean>(isMobile());
   const [, forceUpdate] = useState({});
 
-  const compositionStore = useCompositionStore();
   const historyWrapperRef = useRef<ComposeHistoryWrapper | null>(null);
-  const userRef = useRef<User | null>(null);
+  const user = useUser();
   const editorRef = useRef<any>(null);
   const chatRef = useRef<any>(null);
 
   const cid = useMemo(() => {
     return Number(params.cid);
   }, [params.cid]);
+
+  const path = useMemo(() => `/composition/${cid}`, [cid]);
+
+  const compositionHook = useComposition({
+    path,
+    onCreateEvent: (event) => {
+      if (historyWrapperRef.current) {
+        historyWrapperRef.current.setCreateEvent(event);
+        handleUpdate.current?.();
+      }
+    },
+    onEvent: (event) => {
+      if (historyWrapperRef.current) {
+        historyWrapperRef.current.addEvent(event);
+        handleUpdate.current?.();
+      }
+    },
+  });
 
   const composition = useMemo(() => {
     if (!historyWrapperRef.current) return null;
@@ -63,11 +80,11 @@ const Composition: React.FC = () => {
   if (!handleChangeRef.current) {
     handleChangeRef.current = _.debounce(
       ({isEdit = true, isPublished = false}: {isEdit?: boolean; isPublished?: boolean} = {}) => {
-        if (!historyWrapperRef.current || !userRef.current) return;
+        if (!historyWrapperRef.current || !user.id) return;
         const comp = historyWrapperRef.current.getSnapshot();
         if (isEdit) {
           const {title, author} = comp.info;
-          userRef.current.joinComposition(cid, {
+          user.joinComposition(cid.toString(), {
             title,
             author,
             published: isPublished,
@@ -79,38 +96,34 @@ const Composition: React.FC = () => {
 
   const handleUpdateGrid = useCallback(
     (r: number, c: number, value: string): void => {
-      const path = `/composition/${cid}`;
-      compositionStore.updateCellText(path, r, c, value);
+      compositionHook.updateCellText(r, c, value);
     },
-    [cid, compositionStore]
+    [compositionHook]
   );
 
   const handleFlipColor = useCallback(
     (r: number, c: number): void => {
       if (!composition) return;
-      const path = `/composition/${cid}`;
       const color = composition.grid[r][c].value === '.' ? 'white' : 'black';
-      compositionStore.updateCellColor(path, r, c, color);
+      compositionHook.updateCellColor(r, c, color);
     },
-    [composition, cid, compositionStore]
+    [composition, compositionHook]
   );
 
   const handleUpdateClue = useCallback(
     (r: number, c: number, dir: string, value: string): void => {
-      const path = `/composition/${cid}`;
-      compositionStore.updateClue(path, r, c, dir, value);
+      compositionHook.updateClue(r, c, dir, value);
     },
-    [cid, compositionStore]
+    [compositionHook]
   );
 
   const handleUploadSuccess = useCallback(
     (puzzle: any, filename: string = ''): void => {
-      const path = `/composition/${cid}`;
       const {info, grid, circles, clues} = puzzle;
       const convertedGrid = convertGridForComposition(grid);
       const gridObject = makeGridFromComposition(convertedGrid);
       const convertedClues = convertCluesForComposition(clues, gridObject);
-      compositionStore.import(path, filename, {
+      compositionHook.import(filename, {
         info,
         grid: convertedGrid,
         circles,
@@ -118,36 +131,33 @@ const Composition: React.FC = () => {
       });
       handleChangeRef.current?.();
     },
-    [cid, compositionStore]
+    [compositionHook]
   );
 
   const handleUploadFail = useCallback((): void => {}, []);
 
   const handleChat = useCallback(
     (username: string, id: string, message: string): void => {
-      const path = `/composition/${cid}`;
-      compositionStore.chat(path, username, id, message);
+      compositionHook.chat(username, id, message);
       handleChangeRef.current?.();
     },
-    [cid, compositionStore]
+    [compositionHook]
   );
 
   const handleUpdateTitle = useCallback(
     (title: string): void => {
-      const path = `/composition/${cid}`;
-      compositionStore.updateTitle(path, title);
+      compositionHook.updateTitle(title);
       handleChangeRef.current?.();
     },
-    [cid, compositionStore]
+    [compositionHook]
   );
 
   const handleUpdateAuthor = useCallback(
     (author: string): void => {
-      const path = `/composition/${cid}`;
-      compositionStore.updateAuthor(path, author);
+      compositionHook.updateAuthor(author);
       handleChangeRef.current?.();
     },
-    [cid, compositionStore]
+    [compositionHook]
   );
 
   const handleUnfocusHeader = useCallback((): void => {
@@ -176,37 +186,33 @@ const Composition: React.FC = () => {
 
   const handleUpdateCursor = useCallback(
     (selected: {r: number; c: number}): void => {
-      if (!userRef.current) return;
-      const path = `/composition/${cid}`;
+      if (!user.id) return;
       const {r, c} = selected;
-      const {id, color} = userRef.current;
-      compositionStore.updateCursor(path, r, c, id, color);
+      compositionHook.updateCursor(r, c, user.id, user.color);
     },
-    [cid, compositionStore]
+    [user, compositionHook]
   );
 
   const handleAutofill = useCallback((): void => {
     if (!composition) return;
-    const path = `/composition/${cid}`;
     console.log('c.grid', composition.grid);
     const grid = xwordFiller.fillGrid(composition.grid);
     console.log('grid', grid);
-    compositionStore.setGrid(path, grid);
-  }, [composition, cid, compositionStore]);
+    compositionHook.setGrid(grid);
+  }, [composition, compositionHook]);
 
   const handleChangeSize = useCallback(
     (newRows: number, newCols: number): void => {
       if (!composition) return;
-      const path = `/composition/${cid}`;
       const oldGrid = composition.grid;
       const oldRows = oldGrid.length;
       const oldCols = oldGrid[0].length;
       const newGrid = _.range(newRows).map((i) =>
         _.range(newCols).map((j) => (i < oldRows && j < oldCols ? oldGrid[i][j] : {value: ''}))
       );
-      compositionStore.setGrid(path, newGrid);
+      compositionHook.setGrid(newGrid);
     },
-    [composition, cid, compositionStore]
+    [composition, compositionHook]
   );
 
   const handleChangeRows = useCallback(
@@ -241,70 +247,29 @@ const Composition: React.FC = () => {
   }, [composition]);
 
   const handleClearPencil = useCallback((): void => {
-    const path = `/composition/${cid}`;
-    compositionStore.clearPencil(path);
-  }, [cid, compositionStore]);
+    compositionHook.clearPencil();
+  }, [compositionHook]);
 
   const getCellSize = useCallback((): number => {
     if (!composition || !composition.grid[0]) return 30;
     return (30 * 15) / composition.grid[0].length;
   }, [composition]);
 
-  useEffect(() => {
-    const user = getUser();
-    userRef.current = user;
-    user.onAuth(() => {
-      forceUpdate({});
-    });
-
-    const path = `/composition/${cid}`;
-    const historyWrapper = new ComposeHistoryWrapper();
-    historyWrapperRef.current = historyWrapper;
-
-    const unsubscribeCreate = compositionStore.subscribe(path, 'createEvent', (event: any) => {
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.setCreateEvent(event);
-        handleUpdate.current?.();
-      }
-    });
-    const unsubscribeEvent = compositionStore.subscribe(path, 'event', (event: any) => {
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.addEvent(event);
-        handleUpdate.current?.();
-      }
-    });
-    compositionStore.attach(path);
-
-    return () => {
-      unsubscribeCreate();
-      unsubscribeEvent();
-      compositionStore.detach(path);
-      if (userRef.current) {
-        userRef.current.offAuth(() => {
-          forceUpdate({});
-        });
-      }
-    };
-  }, [cid, compositionStore]);
 
   const title = useMemo((): string | undefined => {
-    const path = `/composition/${cid}`;
-    const compositionInstance = compositionStore.getComposition(path);
-    if (!compositionInstance || !compositionInstance.attached || !composition) {
+    if (!compositionHook.ready || !composition) {
       return undefined;
     }
     const info = composition.info;
     return `Compose: ${info.title}`;
-  }, [composition, forceUpdate, cid, compositionStore]);
+  }, [composition, compositionHook.ready]);
 
   const otherCursors = useMemo(() => {
-    if (!composition || !userRef.current) return [];
-    return _.filter(composition.cursors, ({id}: {id: string}) => id !== userRef.current!.id);
-  }, [composition]);
+    if (!composition || !user.id) return [];
+    return _.filter(composition.cursors, ({id}: {id: string}) => id !== user.id);
+  }, [composition, user.id]);
 
-  const path = `/composition/${cid}`;
-  const compositionInstance = compositionStore.getComposition(path);
-  if (!compositionInstance || !compositionInstance.attached || !composition) {
+  if (!compositionHook.ready || !composition) {
     return (
       <Stack
         className="composition"
@@ -381,7 +346,7 @@ const Composition: React.FC = () => {
             onPublish={handlePublish}
             onChangeRows={handleChangeRows}
             onChangeColumns={handleChangeColumns}
-            myColor={userRef.current?.color || '#000000'}
+            myColor={user.color || '#000000'}
             onUnfocus={handleUnfocusEditor}
           />
         </Stack>

@@ -11,6 +11,7 @@ import {db, SERVER_TIME, getTime} from './firebase';
 import app from './firebase';
 import getLocalId from '../localAuth';
 import {rand_color} from '@crosswithfriends/shared/lib/jsUtils';
+import type {UserHistory, UserCompositions} from '../types/user';
 
 const disableFbLogin = true;
 
@@ -22,8 +23,8 @@ interface UserState {
   id: string | null;
   attach: () => void;
   logIn: () => void;
-  listUserHistory: () => Promise<any>;
-  listCompositions: () => Promise<any>;
+  listUserHistory: () => Promise<UserHistory | null>;
+  listCompositions: () => Promise<UserCompositions | null>;
   joinComposition: (
     cid: string,
     params: {title: string; author: string; published?: boolean}
@@ -73,14 +74,14 @@ export const useUserStore = create<UserState>((setState, getState) => {
       const state = getState();
       if (!state.id) return null;
       const snapshot = await get(ref(db, `user/${state.id}/history`));
-      return snapshot.val();
+      return snapshot.val() as UserHistory | null;
     },
 
     listCompositions: async () => {
       const state = getState();
       if (!state.id) return null;
       const snapshot = await get(ref(db, `user/${state.id}/compositions`));
-      return snapshot.val();
+      return snapshot.val() as UserCompositions | null;
     },
 
     joinComposition: async (cid: string, {title, author, published = false}) => {
@@ -109,12 +110,13 @@ export const useUserStore = create<UserState>((setState, getState) => {
     markSolved: (gid: string) => {
       const state = getState();
       if (!state.id) return;
-      runTransaction(ref(db, `user/${state.id}/history/${gid}`), (item) => {
+      runTransaction(ref(db, `user/${state.id}/history/${gid}`), (item: unknown) => {
         if (!item) {
           return null;
         }
+        const historyItem = item as {solved?: boolean; [key: string]: unknown};
         return {
-          ...item,
+          ...historyItem,
           solved: true,
         };
       });

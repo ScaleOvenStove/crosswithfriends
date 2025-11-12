@@ -2,6 +2,7 @@ import {create} from 'zustand';
 import _ from 'lodash';
 import {db, SERVER_TIME, type DatabaseReference} from './firebase';
 import {ref, onChildAdded, off, push, set} from 'firebase/database';
+import type {CompositionEvent, RawComposition, CompositionImportContents, CompositionGrid} from '../types/composition';
 
 export const CURRENT_VERSION = 1.0;
 
@@ -9,12 +10,9 @@ interface CompositionInstance {
   ref: DatabaseReference;
   events: DatabaseReference;
   path: string;
-  createEvent: any;
+  createEvent: CompositionEvent | null;
   attached: boolean;
-  listeners: {
-    createEvent?: (event: any) => void;
-    event?: (event: any) => void;
-  };
+  subscriptions: Map<string, Set<(data: unknown) => void>>; // Map-based subscription system
   unsubscribe?: () => void;
 }
 
@@ -30,8 +28,8 @@ interface CompositionStore {
   updateTitle: (path: string, text: string) => void;
   updateAuthor: (path: string, text: string) => void;
   chat: (path: string, username: string, id: string, text: string) => void;
-  import: (path: string, filename: string, contents: any) => void;
-  setGrid: (path: string, grid: any) => void;
+  import: (path: string, filename: string, contents: CompositionImportContents) => void;
+  setGrid: (path: string, grid: CompositionGrid) => void;
   clearPencil: (path: string) => void;
   updateDimensions: (
     path: string,
@@ -39,11 +37,29 @@ interface CompositionStore {
     height: number,
     options?: {fromX?: string; fromY?: string}
   ) => void;
-  initialize: (path: string, rawComposition?: any) => Promise<void>;
-  subscribe: (path: string, event: string, callback: (...args: any[]) => void) => () => void;
+  initialize: (path: string, rawComposition?: RawComposition) => Promise<void>;
+  subscribe: (path: string, event: string, callback: (event: CompositionEvent) => void) => () => void;
 }
 
 export const useCompositionStore = create<CompositionStore>((setState, getState) => {
+  // Helper function to emit events to subscribers
+  const emit = (path: string, event: string, data: unknown): void => {
+    const state = getState();
+    const composition = state.compositions[path];
+    if (!composition) return;
+    
+    const subscribers = composition.subscriptions.get(event);
+    if (subscribers) {
+      subscribers.forEach((callback) => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`Error in subscription callback for ${event}:`, error);
+        }
+      });
+    }
+  };
+
   return {
     compositions: {},
 
@@ -61,7 +77,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
               path,
               createEvent: null,
               attached: false,
-              listeners: {},
+              subscriptions: new Map(),
             },
           },
         });
@@ -77,7 +93,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
       }
 
       const unsubscribe = onChildAdded(composition.events, (snapshot) => {
-        const event = snapshot.val();
+        const event = snapshot.val() as CompositionEvent;
         const currentState = getState();
         const currentComposition = currentState.compositions[path];
         if (!currentComposition) return;
@@ -93,13 +109,9 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
               },
             },
           });
-          if (currentComposition.listeners.createEvent) {
-            currentComposition.listeners.createEvent(event);
-          }
+          emit(path, 'createEvent', event);
         } else {
-          if (currentComposition.listeners.event) {
-            currentComposition.listeners.event(event);
-          }
+          emit(path, 'event', event);
         }
       });
 
@@ -132,31 +144,25 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
             ...composition,
             unsubscribe: undefined,
             attached: false,
-            listeners: {},
+            subscriptions: new Map(),
           },
         },
       });
     },
 
-    subscribe: (path: string, event: string, callback: (...args: any[]) => void) => {
+    subscribe: (path: string, event: string, callback: (event: CompositionEvent) => void) => {
       const state = getState();
       const composition = state.compositions[path];
       if (!composition) return () => {};
 
-      const listeners = {
-        ...composition.listeners,
-        [event]: callback as any,
-      };
-
-      setState({
-        compositions: {
-          ...state.compositions,
-          [path]: {
-            ...composition,
-            listeners,
-          },
-        },
-      });
+      // Get or create subscription set for this event
+      if (!composition.subscriptions.has(event)) {
+        composition.subscriptions.set(event, new Set());
+      }
+      const subscribers = composition.subscriptions.get(event)!;
+      
+      // Add callback to subscribers
+      subscribers.add(callback);
 
       // Return unsubscribe function
       return () => {
@@ -164,18 +170,14 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
         const currentComposition = currentState.compositions[path];
         if (!currentComposition) return;
 
-        const newListeners = {...currentComposition.listeners};
-        delete newListeners[event as keyof typeof newListeners];
-
-        setState({
-          compositions: {
-            ...currentState.compositions,
-            [path]: {
-              ...currentComposition,
-              listeners: newListeners,
-            },
-          },
-        });
+        const currentSubscribers = currentComposition.subscriptions.get(event);
+        if (currentSubscribers) {
+          currentSubscribers.delete(callback);
+          // Clean up empty sets
+          if (currentSubscribers.size === 0) {
+            currentComposition.subscriptions.delete(event);
+          }
+        }
       };
     },
 
@@ -286,7 +288,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
       });
     },
 
-    import: (path: string, filename: string, contents: any) => {
+    import: (path: string, filename: string, contents: CompositionImportContents) => {
       const state = getState();
       const composition = state.compositions[path];
       if (!composition) return;
@@ -305,7 +307,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
       });
     },
 
-    setGrid: (path: string, grid: any) => {
+    setGrid: (path: string, grid: CompositionGrid) => {
       const state = getState();
       const composition = state.compositions[path];
       if (!composition) return;
@@ -353,7 +355,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
       });
     },
 
-    initialize: async (path: string, rawComposition: any = {}) => {
+    initialize: async (path: string, rawComposition: RawComposition = {}) => {
       const {
         info = {
           title: 'Untitled',
