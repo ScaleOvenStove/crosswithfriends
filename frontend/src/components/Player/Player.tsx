@@ -161,35 +161,51 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
         }
       },
       getSelectedSquares: () => {
-        return gridObj
-          .keys()
-          .map(([r, c]) => ({r, c}))
-          .filter(({r, c}) => {
-            if (gridRef.current) {
-              return gridRef.current.isSelected(r, c);
-            }
-            return false;
-          });
+        // A cell is selected if it matches the current selected cell
+        const result = [];
+        if (selectedAdjusted) {
+          result.push({r: selectedAdjusted.r, c: selectedAdjusted.c});
+        }
+        return result;
       },
       getSelectedAndHighlightedSquares: () => {
-        return gridObj
-          .keys()
-          .map(([r, c]) => ({r, c}))
-          .filter(({r, c}) => {
-            if (gridRef.current) {
-              return gridRef.current.isSelected(r, c) || gridRef.current.isHighlighted(r, c);
+        // A cell is selected if it matches the current selected cell
+        // A cell is highlighted if it's in the same word (same clue number) as the selected cell
+        const result: Array<{r: number; c: number}> = [];
+        if (!selectedAdjusted) {
+          return result;
+        }
+
+        const selectedClueNumber = gridObj.getParent(selectedAdjusted.r, selectedAdjusted.c, direction);
+        if (selectedClueNumber === 0) {
+          // If no clue number, just return the selected cell
+          result.push({r: selectedAdjusted.r, c: selectedAdjusted.c});
+          return result;
+        }
+
+        // Get all cells in the same word (same clue number in the current direction)
+        const keys = gridObj.keys();
+        keys.forEach(([r, c]) => {
+          if (gridObj.isWhite(r, c)) {
+            const clueNumber = gridObj.getParent(r, c, direction);
+            if (clueNumber === selectedClueNumber) {
+              result.push({r, c});
             }
-            return false;
-          });
+          }
+        });
+
+        return result;
       },
       getAllSquares: () => {
-        return gridObj.keys().map(([r, c]) => ({r, c}));
+        // Return all white squares in the grid
+        const keys = gridObj.keys();
+        return keys.map(([r, c]) => ({r, c})).filter(({r, c}) => gridObj.isWhite(r, c));
       },
       setSelected: (sel: {r: number; c: number}) => {
         setSelected(sel);
       },
     }),
-    [gridObj]
+    [gridObj, selectedAdjusted, direction]
   );
 
   const updateSize = useCallback(() => {

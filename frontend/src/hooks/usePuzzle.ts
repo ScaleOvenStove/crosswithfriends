@@ -97,4 +97,3 @@ export function usePuzzle(options: UsePuzzleOptions): UsePuzzleReturn {
     data: puzzle?.data ?? null,
   };
 }
-

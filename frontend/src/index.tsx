@@ -2,7 +2,8 @@
 import classnames from 'classnames';
 import {createRoot} from 'react-dom/client';
 import React, {lazy, Suspense} from 'react';
-import {useMediaQuery, ThemeProvider, createTheme} from '@mui/material';
+import {useMediaQuery, ThemeProvider, CssBaseline} from '@mui/material';
+import {createAppTheme} from './theme/theme';
 import {QueryClientProvider} from '@tanstack/react-query';
 
 import {BrowserRouter as Router, Route, Routes} from 'react-router-dom';
@@ -81,94 +82,96 @@ const Root: React.FC = () => {
   const systemDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const darkMode = darkModePreference === '2' ? systemDarkMode : darkModePreference === '1';
 
-  const theme = createTheme();
+  // Create theme with dynamic breakpoints and dark mode support
+  const theme = React.useMemo(() => createAppTheme(darkMode), [darkMode]);
 
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
+          <CssBaseline />
           <Router>
             <GlobalContext.Provider value={{toggleMolesterMoons, darkModePreference}}>
               <div className={classnames('router-wrapper', {mobile: isMobile(), dark: darkMode})}>
                 <Suspense fallback={<RouteLoading />}>
                   <Routes>
-                  <Route path="/" element={<WrappedWelcome fencing={false} />} />
-                  <Route path="/fencing" element={<WrappedWelcome fencing={true} />} />
-                  {/* <Route path="/stats" element={<Stats />} /> */}
-                  <Route
-                    path="/game/:gid"
-                    element={
-                      <ErrorBoundary fallback={<GameError />}>
-                        <Game />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route
-                    path="/embed/game/:gid"
-                    element={
-                      <ErrorBoundary fallback={<GameError />}>
-                        <Game />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route
-                    path="/room/:rid"
-                    element={
-                      <ErrorBoundary fallback={<RoomError />}>
-                        <Room />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route
-                    path="/embed/room/:rid"
-                    element={
-                      <ErrorBoundary fallback={<RoomError />}>
-                        <Room />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route path="/replay/:gid" element={<Replay />} />
-                  <Route path="/beta/replay/:gid" element={<Replay />} />
-                  <Route path="/replays/:pid" element={<Replays />} />
-                  <Route path="/replays" element={<Replays />} />
-                  <Route path="/beta" element={<WrappedWelcome fencing={false} />} />
-                  <Route
-                    path="/beta/game/:gid"
-                    element={
-                      <ErrorBoundary fallback={<GameError />}>
-                        <Game />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route path="/beta/battle/:bid" element={<Battle />} />
-                  <Route path="/beta/play/:pid" element={<Play />} />
-                  <Route
-                    path="/account"
-                    element={
-                      <ErrorBoundary fallback={<AccountError />}>
-                        <Account />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route path="/compose" element={<Compose />} />
-                  <Route path="/composition/:cid" element={<Composition />} />
-                  <Route
-                    path="/fencing/:gid"
-                    element={
-                      <ErrorBoundary fallback={<GameError />}>
-                        <Fencing />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route
-                    path="/beta/fencing/:gid"
-                    element={
-                      <ErrorBoundary fallback={<GameError />}>
-                        <Fencing />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route path="/discord" element={<DiscordRedirect />} />
+                    <Route path="/" element={<WrappedWelcome fencing={false} />} />
+                    <Route path="/fencing" element={<WrappedWelcome fencing={true} />} />
+                    {/* <Route path="/stats" element={<Stats />} /> */}
+                    <Route
+                      path="/game/:gid"
+                      element={
+                        <ErrorBoundary fallback={<GameError />}>
+                          <Game />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route
+                      path="/embed/game/:gid"
+                      element={
+                        <ErrorBoundary fallback={<GameError />}>
+                          <Game />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route
+                      path="/room/:rid"
+                      element={
+                        <ErrorBoundary fallback={<RoomError />}>
+                          <Room />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route
+                      path="/embed/room/:rid"
+                      element={
+                        <ErrorBoundary fallback={<RoomError />}>
+                          <Room />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route path="/replay/:gid" element={<Replay />} />
+                    <Route path="/beta/replay/:gid" element={<Replay />} />
+                    <Route path="/replays/:pid" element={<Replays />} />
+                    <Route path="/replays" element={<Replays />} />
+                    <Route path="/beta" element={<WrappedWelcome fencing={false} />} />
+                    <Route
+                      path="/beta/game/:gid"
+                      element={
+                        <ErrorBoundary fallback={<GameError />}>
+                          <Game />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route path="/beta/battle/:bid" element={<Battle />} />
+                    <Route path="/beta/play/:pid" element={<Play />} />
+                    <Route
+                      path="/account"
+                      element={
+                        <ErrorBoundary fallback={<AccountError />}>
+                          <Account />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route path="/compose" element={<Compose />} />
+                    <Route path="/composition/:cid" element={<Composition />} />
+                    <Route
+                      path="/fencing/:gid"
+                      element={
+                        <ErrorBoundary fallback={<GameError />}>
+                          <Fencing />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route
+                      path="/beta/fencing/:gid"
+                      element={
+                        <ErrorBoundary fallback={<GameError />}>
+                          <Fencing />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route path="/discord" element={<DiscordRedirect />} />
                   </Routes>
                 </Suspense>
               </div>

@@ -88,12 +88,22 @@ div:focus .cell.referenced {
   color: var(--pencil-color);
 }
 
+.cell.bad {
+  background-color: rgba(255, 0, 0, 0.15) !important;
+}
+
 .cell.bad .cell--value {
-  color: red;
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.cell.good {
+  background-color: rgba(0, 0, 255, 0.1) !important;
 }
 
 .cell.good .cell--value {
-  color: blue;
+  color: #1976d2;
+  font-weight: 600;
 }
 
 .cell.revealed .cell--value {

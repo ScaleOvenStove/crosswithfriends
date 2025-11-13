@@ -1,6 +1,7 @@
 .welcome {
   background-color: #ffffff;
   color: var(--main-gray-1);
+  transition: background-color 0.3s ease;
 }
 
 .welcome--browse {
@@ -34,7 +35,10 @@
 
 .welcome--sidebar {
   padding-bottom: 40px;
-  border-right: 2px solid var(--main-blue);
+  border-right: 1px solid rgba(106, 169, 244, 0.2);
+  background-color: rgba(106, 169, 244, 0.02);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
 }
 
 .welcome--sidebar > div {
@@ -44,7 +48,9 @@
 
 .welcome--searchbar--container {
   padding: 25px;
-  border-bottom: 2px solid var(--main-blue);
+  border-bottom: 1px solid rgba(106, 169, 244, 0.2);
+  background-color: rgba(106, 169, 244, 0.02);
+  transition: all 0.3s ease;
 }
 
 .welcome.mobile .welcome--searchbar--container {
@@ -68,8 +74,17 @@
   padding-top: 10px;
   padding-bottom: 10px;
   width: 100%;
-  border-radius: 3px;
-  border: 1px solid silver;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  outline: none;
+}
+.welcome--searchbar:focus {
+  border-color: var(--main-blue);
+  box-shadow: 0 0 0 3px rgba(106, 169, 244, 0.1);
+}
+.welcome--searchbar:hover {
+  border-color: rgba(106, 169, 244, 0.5);
 }
 
 .welcome--searchbar--wrapper {
@@ -82,6 +97,14 @@
   width: 24px;
   padding: 8px;
   position: absolute;
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
+  cursor: pointer;
+}
+.welcome--searchicon:hover {
+  transform: scale(1.1);
+  color: var(--main-blue-2);
 }
 
 .filters label {
@@ -108,14 +131,14 @@
 
 .quickplay {
   padding-top: 10px;
-  border-top: 2px solid #6aa9f4;
+  border-top: 1px solid rgba(106, 169, 244, 0.2);
+  margin-top: 16px;
 }
 
 .entry {
   cursor: pointer;
-  white-space: nowrap;
   position: relative;
-  border: 1px solid silver;
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -123,6 +146,15 @@
   padding: 25px;
   font-size: 15px;
   width: 330px;
+  min-height: 120px;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.entry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--main-blue);
 }
 
 .mobile .entry {
@@ -157,10 +189,20 @@
 
 .entry.started {
   border-color: #a0d9fc;
+  background-color: rgba(160, 217, 252, 0.05);
+}
+.entry.started:hover {
+  border-color: #6aa9f4;
+  background-color: rgba(160, 217, 252, 0.1);
 }
 
 .entry.solved {
   border-color: #8df79d;
+  background-color: rgba(141, 247, 157, 0.05);
+}
+.entry.solved:hover {
+  border-color: #5dd973;
+  background-color: rgba(141, 247, 157, 0.1);
 }
 
 @keyframes slidein {

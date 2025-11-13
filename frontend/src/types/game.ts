@@ -58,4 +58,3 @@ export interface GameState {
 }
 
 // BattleData moved to rawGame.ts to avoid circular dependencies
-

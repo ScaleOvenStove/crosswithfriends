@@ -1,6 +1,6 @@
 import React from 'react';
 import _ from 'lodash';
-import {Box, Stack} from '@mui/material';
+import {Box, Stack, Chip, Tooltip} from '@mui/material';
 import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {Link} from 'react-router-dom';
@@ -51,34 +51,85 @@ const Entry: React.FC<EntryProps> = ({title, author, pid, status, stats, fencing
       style={{textDecoration: 'none', color: 'initial'}}
     >
       <Stack className="entry" direction="column" onClick={handleClick} onMouseLeave={handleMouseLeave}>
-        <Box className="entry--top--left" sx={{display: 'flex'}}>
-          <Box sx={{flexGrow: 0, display: 'flex'}}>
-            <p
-              style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}
-              title={displayName}
-            >
-              {displayName}
-            </p>
+        <Box className="entry--top--left" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+          <Box sx={{flexGrow: 1, minWidth: 0, display: 'flex'}}>
+            <Tooltip title={displayName} arrow>
+              <p
+                style={{
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  margin: 0,
+                  flex: 1,
+                }}
+              >
+                {displayName}
+              </p>
+            </Tooltip>
           </Box>
-          <Box sx={{display: 'flex'}}>
-            {status === 'started' && <MdRadioButtonUnchecked className="entry--icon" />}
-            {status === 'solved' && <MdCheckCircle className="entry--icon" />}
+          <Box sx={{display: 'flex', flexShrink: 0, gap: 0.5}}>
+            {status === 'started' && (
+              <Tooltip title="In Progress" arrow>
+                <Chip
+                  icon={<MdRadioButtonUnchecked />}
+                  label="In Progress"
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  sx={{height: 24, fontSize: '0.7rem'}}
+                />
+              </Tooltip>
+            )}
+            {status === 'solved' && (
+              <Tooltip title="Solved" arrow>
+                <Chip
+                  icon={<MdCheckCircle />}
+                  label="Solved"
+                  size="small"
+                  variant="outlined"
+                  color="success"
+                  sx={{height: 24, fontSize: '0.7rem'}}
+                />
+              </Tooltip>
+            )}
             {status !== 'started' && status !== 'solved' && fencing && (
-              <GiCrossedSwords className="entry--icon fencing" />
+              <Tooltip title="Fencing Available" arrow>
+                <Chip
+                  icon={<GiCrossedSwords />}
+                  label="Fencing"
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  sx={{height: 24, fontSize: '0.7rem'}}
+                />
+              </Tooltip>
             )}
           </Box>
         </Box>
-        <Box className="entry--main" sx={{display: 'flex'}}>
-          <Box sx={{flexGrow: 0, display: 'flex'}}>
-            <p style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}} title={title}>
-              {title}
-            </p>
+        <Box className="entry--main" sx={{display: 'flex', minHeight: '40px', alignItems: 'center'}}>
+          <Box sx={{flexGrow: 1, minWidth: 0, display: 'flex'}}>
+            <Tooltip title={title} arrow>
+              <p
+                style={{
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  margin: 0,
+                  width: '100%',
+                }}
+              >
+                {title}
+              </p>
+            </Tooltip>
           </Box>
         </Box>
-        <Box className="entry--details" sx={{display: 'flex'}}>
-          <p>
-            Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
-          </p>
+        <Box className="entry--details" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+          <Chip
+            label={`${numSolves} ${numSolves === 1 ? 'solve' : 'solves'}`}
+            size="small"
+            variant="outlined"
+            sx={{height: 20, fontSize: '0.65rem'}}
+          />
         </Box>
       </Stack>
     </Link>

@@ -28,4 +28,3 @@ export const AccountError: React.FC = () => {
     </div>
   );
 };
-

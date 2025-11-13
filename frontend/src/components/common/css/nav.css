@@ -6,6 +6,10 @@
   align-content: center;
   justify-content: space-between;
   background-color: var(--main-blue);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+  position: relative;
+  z-index: 10;
 }
 .nav.mobile {
   padding-top: 10px;
@@ -45,17 +49,42 @@
 .nav--login {
   cursor: pointer;
   margin-left: 20px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+}
+.nav--login:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 .nav--left a {
   color: white;
   text-decoration: none;
   font-size: 17px;
+  transition: opacity 0.2s ease;
+}
+.nav--left a:hover {
+  opacity: 0.9;
 }
 
 .nav--info {
   cursor: pointer;
   margin-left: 20px;
+  padding: 6px;
+  border-radius: 50%;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav--info:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
 }
 
 .nav--v2 {

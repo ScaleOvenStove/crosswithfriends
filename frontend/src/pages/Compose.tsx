@@ -26,14 +26,17 @@ const Compose: React.FC = () => {
     }
   }, [user]);
 
-  const handleCreateClick = useCallback((e: React.MouseEvent): void => {
-    e.preventDefault();
-    actions.getNextCid(async (cid: string) => {
-      const path = `/composition/${cid}`;
-      await compositionStore.initialize(path);
-      redirect(`/composition/${cid}`);
-    });
-  }, [compositionStore]);
+  const handleCreateClick = useCallback(
+    (e: React.MouseEvent): void => {
+      e.preventDefault();
+      actions.getNextCid(async (cid: string) => {
+        const path = `/composition/${cid}`;
+        await compositionStore.initialize(path);
+        redirect(`/composition/${cid}`);
+      });
+    },
+    [compositionStore]
+  );
 
   useEffect(() => {
     const unsubscribe = user.onAuth(handleAuth);

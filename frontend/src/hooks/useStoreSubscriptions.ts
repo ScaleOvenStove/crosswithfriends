@@ -30,4 +30,3 @@ export function useStoreSubscriptions(
     };
   }, [store, path, ...Object.values(subscriptions)]);
 }
-

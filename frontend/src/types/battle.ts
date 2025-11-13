@@ -39,4 +39,3 @@ export interface ChatMessage {
   id?: string;
   [key: string]: unknown;
 }
-

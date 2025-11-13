@@ -100,4 +100,3 @@ export const useSocketContext = (): SocketContextValue => {
   }
   return context;
 };
-

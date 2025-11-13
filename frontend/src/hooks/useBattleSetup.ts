@@ -77,4 +77,3 @@ export function useBattleSetup({
     battle: battleHook.battle,
   };
 }
-

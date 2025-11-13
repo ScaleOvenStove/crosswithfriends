@@ -28,4 +28,3 @@ export const GameError: React.FC = () => {
     </div>
   );
 };
-

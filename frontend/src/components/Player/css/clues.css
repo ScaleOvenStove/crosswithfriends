@@ -2,6 +2,23 @@
   position: relative;
   display: flex;
   padding: 0px 20px 0px 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 900px) {
+  .clues {
+    flex-direction: column;
+    padding: 0px 10px 0px 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .clues {
+    padding: 0px 5px 0px 5px;
+    gap: 5px;
+  }
 }
 
 .clues--secret {
@@ -17,10 +34,28 @@
 
 .clues--list {
   width: 200px;
+  min-width: 180px;
   display: flex;
   flex-direction: column;
   margin-left: 5px;
   padding-right: 10px;
+  flex: 1 1 auto;
+}
+
+@media (max-width: 900px) {
+  .clues--list {
+    width: 100%;
+    min-width: 100%;
+    margin-left: 0;
+    padding-right: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .clues--list {
+    min-width: 100%;
+  }
 }
 
 .clues--list--title {
@@ -36,6 +71,23 @@
   border-top: 1px solid #e2e2e2;
   margin-top: 5px;
   padding-right: 10px;
+  max-height: calc(100vh - 300px);
+  min-height: 200px;
+}
+
+@media (max-width: 900px) {
+  .clues--list--scroll {
+    flex-basis: auto;
+    max-height: 300px;
+    min-height: 150px;
+  }
+}
+
+@media (max-width: 600px) {
+  .clues--list--scroll {
+    max-height: 250px;
+    min-height: 120px;
+  }
 }
 
 .clues--list--scroll--clue {

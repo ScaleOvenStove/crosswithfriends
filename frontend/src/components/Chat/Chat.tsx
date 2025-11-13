@@ -9,10 +9,10 @@ import React, {
   forwardRef,
 } from 'react';
 import _ from 'lodash';
-import {Box, Stack} from '@mui/material';
+import {Box, Stack, Snackbar, Alert, IconButton} from '@mui/material';
 import Linkify from 'react-linkify';
 import {Link} from 'react-router-dom';
-import {MdClose} from 'react-icons/md';
+import {MdClose, MdContentCopy} from 'react-icons/md';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
 import nameGenerator, {isFromNameGenerator} from '@crosswithfriends/shared/lib/nameGenerator';
@@ -68,6 +68,8 @@ export type ChatRef = {
 
 const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   const [username, setUsername] = useState<string>('');
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const chatBarRef = useRef<any>(null);
   const usernameInputRef = useRef<any>(null);
 
@@ -91,14 +93,19 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     },
   }));
 
+  const isEditingRef = useRef<boolean>(false);
+
   const handleUpdateDisplayName = useCallback(
     (newUsername: string) => {
       let finalUsername = newUsername;
-      if (!usernameInputRef.current?.focused) {
-        finalUsername = finalUsername || nameGenerator();
+      // Only auto-generate name if user is not actively editing and field is empty
+      if (!isEditingRef.current && !finalUsername) {
+        finalUsername = nameGenerator();
       }
       const {id, onUpdateDisplayName} = props;
-      onUpdateDisplayName(id, finalUsername);
+      if (onUpdateDisplayName && id) {
+        onUpdateDisplayName(id, finalUsername);
+      }
       setUsername(finalUsername);
       localStorage.setItem(usernameKey, finalUsername);
       // Check if localStorage has username_default, if not set it to the last
@@ -132,11 +139,17 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   const handleSendMessage = useCallback(
     (message: string) => {
       const {id} = props;
-      const displayName = props.users[id].displayName;
-      props.onChat(displayName, id, message);
+      if (!id || !props.users[id]) {
+        console.warn('Cannot send message: invalid user id or user not found');
+        return;
+      }
+      const displayName = props.users[id].displayName || username || 'Unknown';
+      if (props.onChat) {
+        props.onChat(displayName, id, message);
+      }
       localStorage.setItem(usernameKey, displayName);
     },
-    [props, usernameKey]
+    [props, usernameKey, username]
   );
 
   const handleUpdateColor = useCallback(
@@ -165,12 +178,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
   const handleCopyClick = useCallback(() => {
     navigator.clipboard.writeText(url);
-    const link = document.getElementById('pathText');
-    if (link) {
-      link.classList.remove('flashBlue');
-      void link.offsetWidth;
-      link.classList.add('flashBlue');
-    }
+    setSnackbarMessage('Link copied to clipboard!');
+    setSnackbarOpen(true);
   }, [url]);
 
   const handleShareScoreClick = useCallback(() => {
@@ -178,12 +187,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       props.game.info.title
     } in ${formatMilliseconds(props.game.clock.totalTime)}!\n\n${serverUrl}/beta/play/${props.game.pid}`;
     navigator.clipboard.writeText(text);
-    const link = document.getElementById('shareText');
-    if (link) {
-      link.classList.remove('flashBlue');
-      void link.offsetWidth;
-      link.classList.add('flashBlue');
-    }
+    setSnackbarMessage('Score copied to clipboard!');
+    setSnackbarOpen(true);
   }, [props.users, props.game, serverUrl]);
 
   const mergeMessages = useCallback((data: {messages?: any[]}, opponentData?: {messages?: any[]}) => {
@@ -282,9 +287,20 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
           ref={usernameInputRef}
           className="chat--username--input"
           value={username}
-          onChange={handleUpdateDisplayName}
-          onBlur={handleBlur}
+          onChange={(newValue) => {
+            isEditingRef.current = true;
+            handleUpdateDisplayName(newValue);
+            // Reset editing flag after a delay
+            setTimeout(() => {
+              isEditingRef.current = false;
+            }, 1000);
+          }}
+          onBlur={() => {
+            isEditingRef.current = false;
+            handleBlur();
+          }}
           onUnfocus={() => {
+            isEditingRef.current = false;
             if (chatBarRef.current) {
               chatBarRef.current.focus();
             }
@@ -337,7 +353,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   }, []);
 
   const renderMessageSender = useCallback((name: string, color?: string) => {
-    const style = color ? {color} : undefined;
+    // Always apply color if provided, otherwise use default text color
+    const style = color ? {color} : {color: '#333'};
     return (
       <span className="chat--message--sender" style={style}>
         {name}:
@@ -501,28 +518,38 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
           className="chat--messages"
         >
           <div className="chat--message chat--system-message">
-            <div>
+            <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
               <i>
                 Game created! Share the link to play with your friends:
                 <wbr />
               </i>
-              <b id="pathText" style={{marginLeft: '5px'}}>
+              <b id="pathText" style={{marginLeft: '5px', flex: 1, wordBreak: 'break-all'}}>
                 {url}
               </b>
-
-              <i className="fa fa-clone copyButton" title="Copy to Clipboard" onClick={handleCopyClick} />
+              <IconButton
+                size="small"
+                onClick={handleCopyClick}
+                title="Copy to Clipboard"
+                sx={{flexShrink: 0}}
+              >
+                <MdContentCopy fontSize="small" />
+              </IconButton>
             </div>
           </div>
           {props.game.solved && (
             <div className="chat--message chat--system-message">
-              <div className="copyText" onClick={handleShareScoreClick}>
-                <i id="shareText">
+              <div
+                style={{display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer'}}
+                onClick={handleShareScoreClick}
+              >
+                <i id="shareText" style={{flex: 1}}>
                   Congratulations! You solved the puzzle in{' '}
                   <b>{formatMilliseconds(props.game.clock.totalTime)}</b>. Click here to share your score.
                   <wbr />
                 </i>
-
-                <i className="fa fa-clone copyButton" title="Copy to Clipboard" />
+                <IconButton size="small" title="Copy to Clipboard" sx={{flexShrink: 0}}>
+                  <MdContentCopy fontSize="small" />
+                </IconButton>
               </div>
             </div>
           )}
@@ -533,6 +560,16 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         {renderChatBar()}
       </div>
       {renderMobileKeyboard()}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{width: '100%'}}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Stack>
   );
 });

@@ -2,8 +2,19 @@ import './css/welcome.css';
 
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
-import {Box, Stack} from '@mui/material';
-import {MdSearch, MdCheckBoxOutlineBlank, MdCheckBox} from 'react-icons/md';
+import {
+  Box,
+  Stack,
+  Autocomplete,
+  TextField,
+  Chip,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Typography,
+} from '@mui/material';
+import {MdSearch, MdExpandMore} from 'react-icons/md';
 import _ from 'lodash';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
@@ -201,54 +212,79 @@ const Welcome: React.FC<Props> = (props) => {
     e.stopPropagation();
   }, []);
 
-  const checkboxGroup = useCallback(
+  const filterGroup = useCallback(
     (
       header: string,
       items: Record<string, boolean>,
       handleChange: (header: string, name: string, on: boolean) => void
     ) => {
-      const headerStyle: React.CSSProperties = {
-        fontWeight: 600,
-        marginTop: 10,
-        marginBottom: 10,
-      };
-      const groupStyle: React.CSSProperties = {
-        padding: 20,
-      };
-      const inputStyle: React.CSSProperties = {
-        margin: 'unset',
-      };
-
       return (
-        <Stack direction="column" style={groupStyle} className="checkbox-group">
-          <span style={headerStyle}>{header}</span>
-          {_.keys(items).map((name, i) => (
-            <label
-              key={i}
-              onMouseDown={(e) => {
-                e.preventDefault();
-              }}
-            >
-              <input
-                type="checkbox"
-                style={inputStyle}
-                checked={items[name]}
-                onChange={(e) => {
-                  handleChange(header, name, e.target.checked);
-                }}
-              />
-              {items[name] ? (
-                <MdCheckBox className="checkbox-icon" />
-              ) : (
-                <MdCheckBoxOutlineBlank className="checkbox-icon" />
-              )}
-              <span>{name}</span>
-            </label>
-          ))}
-        </Stack>
+        <Accordion
+          defaultExpanded={!mobile}
+          sx={{
+            boxShadow: 'none',
+            '&:before': {display: 'none'},
+            '&.Mui-expanded': {
+              margin: '0 !important',
+            },
+            backgroundColor: 'transparent',
+            '&:hover': {
+              backgroundColor: 'rgba(106, 169, 244, 0.03)',
+            },
+            transition: 'background-color 0.2s ease',
+          }}
+        >
+          <AccordionSummary
+            expandIcon={<MdExpandMore />}
+            sx={{
+              px: 2,
+              minHeight: 48,
+              '&.Mui-expanded': {minHeight: 48},
+              '&:hover': {
+                backgroundColor: 'rgba(106, 169, 244, 0.05)',
+              },
+              transition: 'background-color 0.2s ease',
+            }}
+          >
+            <Typography variant="subtitle2" sx={{fontWeight: 600, color: 'text.primary'}}>
+              {header}
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{px: 2, pt: 1, pb: 2}}>
+            <Stack direction="row" spacing={1} sx={{flexWrap: 'wrap', gap: 1}}>
+              {_.keys(items).map((name) => (
+                <Chip
+                  key={name}
+                  label={name}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleChange(header, name, !items[name]);
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  color={items[name] ? 'primary' : 'default'}
+                  variant={items[name] ? 'filled' : 'outlined'}
+                  size="small"
+                  clickable
+                  sx={{
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: items[name]
+                        ? '0 2px 4px rgba(106, 169, 244, 0.3)'
+                        : '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    },
+                  }}
+                />
+              ))}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
       );
     },
-    []
+    [mobile]
   );
 
   return (
@@ -264,15 +300,30 @@ const Welcome: React.FC<Props> = (props) => {
           <Stack
             className="welcome--sidebar"
             direction="column"
-            sx={{flexShrink: 0, justifyContent: 'space-between'}}
+            sx={{
+              flexShrink: 0,
+              width: 240,
+              padding: 2,
+              gap: 1,
+            }}
           >
-            <Stack className="filters" direction="column" sx={{alignItems: 'left', flexShrink: 0}}>
-              {checkboxGroup('Size', props.sizeFilter, handleFilterChange)}
-              {checkboxGroup('Status', props.statusFilter, handleFilterChange)}
+            <Stack className="filters" direction="column" sx={{alignItems: 'left', flexShrink: 0, gap: 0.5}}>
+              {filterGroup('Size', props.sizeFilter, handleFilterChange)}
+              {filterGroup('Status', props.statusFilter, handleFilterChange)}
             </Stack>
             <WelcomeVariantsControl fencing={props.fencing} />
             {!mobile && (
-              <Box className="quickplay" sx={{width: 200, display: 'flex'}}>
+              <Box
+                className="quickplay"
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  marginTop: 2,
+                  paddingTop: 2,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
                 <Upload v2 fencing={props.fencing} onCreate={handleCreatePuzzle} />
               </Box>
             )}
@@ -281,23 +332,90 @@ const Welcome: React.FC<Props> = (props) => {
         <Stack className="welcome--main" direction="column" sx={{flex: 1}}>
           <Box
             className="welcome--searchbar--container"
-            sx={{flexShrink: 0, display: 'flex', justifyContent: mobile ? 'right' : 'left'}}
+            sx={{
+              flexShrink: 0,
+              display: 'flex',
+              justifyContent: mobile ? 'right' : 'left',
+              p: mobile ? 1.5 : 3,
+              transition: 'padding 0.3s ease',
+            }}
           >
             <Box
-              sx={{alignItems: 'center', display: 'flex', flexGrow: mobile ? 0 : 1, ...searchStyle}}
+              sx={{
+                alignItems: 'center',
+                display: 'flex',
+                flexGrow: mobile ? 0 : 1,
+                maxWidth: mobile ? 'none' : 600,
+                ...searchStyle,
+              }}
               className="welcome--searchbar--wrapper"
             >
-              <MdSearch className="welcome--searchicon" onTouchEnd={handleSearchIconTouchEnd} />
-              <input
-                ref={searchInputRef}
-                style={searchInputStyle}
-                placeholder=" "
-                onFocus={handleSearchFocus}
-                onBlur={handleSearchBlur}
-                onChange={handleSearchInput}
-                defaultValue={props.search}
-                className="welcome--searchbar"
-              />
+              {mobile ? (
+                <>
+                  <MdSearch className="welcome--searchicon" onTouchEnd={handleSearchIconTouchEnd} />
+                  <input
+                    ref={searchInputRef}
+                    style={searchInputStyle}
+                    placeholder=" "
+                    onFocus={handleSearchFocus}
+                    onBlur={handleSearchBlur}
+                    onChange={handleSearchInput}
+                    defaultValue={props.search}
+                    className="welcome--searchbar"
+                  />
+                </>
+              ) : (
+                <Autocomplete
+                  freeSolo
+                  options={[]}
+                  value={props.search}
+                  onInputChange={(event, newValue) => {
+                    if (typeof newValue === 'string') {
+                      updateSearchRef.current?.(newValue);
+                    }
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Search puzzles..."
+                      variant="outlined"
+                      size="small"
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              mr: 1,
+                              color: 'text.secondary',
+                            }}
+                          >
+                            <MdSearch />
+                          </Box>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                            },
+                          },
+                          '&.Mui-focused': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                              borderWidth: '2px',
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  )}
+                  sx={{flexGrow: 1}}
+                />
+              )}
             </Box>
           </Box>
           <PuzzleList

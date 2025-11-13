@@ -37,11 +37,12 @@ interface UseBattleReturn {
 }
 
 export function useBattle(options: UseBattleOptions): UseBattleReturn {
-  const {path, onGames, onPowerups, onStartedAt, onPlayers, onWinner, onPickups, onUsePowerup, onReady} = options;
+  const {path, onGames, onPowerups, onStartedAt, onPlayers, onWinner, onPickups, onUsePowerup, onReady} =
+    options;
   const battleStore = useBattleStore();
   // Use selector to get reactive updates when battle state changes
   const battle = useBattleStore((state) => state.battles[path]);
-  
+
   // Ensure battle instance exists (lazy initialization) - skip if path is empty
   useEffect(() => {
     if (path && !battle) {
@@ -133,4 +134,3 @@ export function useBattle(options: UseBattleOptions): UseBattleReturn {
     },
   };
 }
-

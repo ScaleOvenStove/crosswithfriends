@@ -2,7 +2,12 @@ import {create} from 'zustand';
 import _ from 'lodash';
 import {db, SERVER_TIME, type DatabaseReference} from './firebase';
 import {ref, onChildAdded, off, push, set} from 'firebase/database';
-import type {CompositionEvent, RawComposition, CompositionImportContents, CompositionGrid} from '../types/composition';
+import type {
+  CompositionEvent,
+  RawComposition,
+  CompositionImportContents,
+  CompositionGrid,
+} from '../types/composition';
 
 export const CURRENT_VERSION = 1.0;
 
@@ -47,7 +52,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
     const state = getState();
     const composition = state.compositions[path];
     if (!composition) return;
-    
+
     const subscribers = composition.subscriptions.get(event);
     if (subscribers) {
       subscribers.forEach((callback) => {
@@ -160,7 +165,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
         composition.subscriptions.set(event, new Set());
       }
       const subscribers = composition.subscriptions.get(event)!;
-      
+
       // Add callback to subscribers
       subscribers.add(callback);
 

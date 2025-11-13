@@ -68,8 +68,14 @@ const Replay: React.FC = () => {
 
   const game = useMemo(() => {
     // compute the game state corresponding to current playback time
-    if (!historyWrapperRef.current || !historyWrapperRef.current.ready) return null;
-    return historyWrapperRef.current.getSnapshotAt(positionToRender);
+    try {
+      if (!historyWrapperRef.current || !historyWrapperRef.current.ready) return null;
+      return historyWrapperRef.current.getSnapshotAt(positionToRender);
+    } catch (err) {
+      console.error('Error computing game state:', err);
+      setError(err);
+      return null;
+    }
   }, [positionToRender]);
 
   const recomputeHistory = useCallback((): void => {
@@ -121,18 +127,32 @@ const Replay: React.FC = () => {
     historyWrapperRef.current = historyWrapper;
 
     const unsubscribeWsEvent = gameStore.subscribe(path, 'wsEvent', (event: any) => {
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.addEvent(event);
-        debouncedRecomputeHistoryRef.current?.();
+      try {
+        if (historyWrapperRef.current) {
+          historyWrapperRef.current.addEvent(event);
+          debouncedRecomputeHistoryRef.current?.();
+        }
+      } catch (err) {
+        console.error('Error adding event to history wrapper:', err);
+        setError(err);
       }
     });
     const unsubscribeWsCreateEvent = gameStore.subscribe(path, 'wsCreateEvent', (event: any) => {
-      if (historyWrapperRef.current) {
-        historyWrapperRef.current.setCreateEvent(event);
-        debouncedRecomputeHistoryRef.current?.();
+      try {
+        if (historyWrapperRef.current) {
+          historyWrapperRef.current.setCreateEvent(event);
+          debouncedRecomputeHistoryRef.current?.();
+        }
+      } catch (err) {
+        console.error('Error setting create event:', err);
+        setError(err);
       }
     });
-    gameStore.attach(path);
+
+    gameStore.attach(path).catch((err) => {
+      console.error('Error attaching to game store:', err);
+      setError(err);
+    });
 
     // compute it here so the grid doesn't go crazy
     screenWidthRef.current = window.innerWidth - 1;

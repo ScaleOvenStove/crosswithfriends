@@ -125,7 +125,7 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
         })
         .then((result) => {
           if (result.isConfirmed) {
-            handleUpload();
+            handleUpload(true);
           }
         });
     },

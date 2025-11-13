@@ -19,7 +19,10 @@ interface UseUserReturn {
   logIn: () => void;
   listUserHistory: () => Promise<unknown>;
   listCompositions: () => Promise<unknown>;
-  joinComposition: (cid: string, params: {title: string; author: string; published?: boolean}) => Promise<void>;
+  joinComposition: (
+    cid: string,
+    params: {title: string; author: string; published?: boolean}
+  ) => Promise<void>;
   joinGame: (gid: string, params?: {pid?: number; solved?: boolean; v2?: boolean}) => Promise<void>;
   markSolved: (gid: string) => void;
   recordUsername: (username: string) => void;
@@ -29,7 +32,20 @@ interface UseUserReturn {
 export function useUser(options: UseUserOptions = {}): UseUserReturn {
   const {onAuth: onAuthCallback} = options;
   const userStore = useUserStore();
-  const {id, color, fb, attached, attach, logIn, listUserHistory, listCompositions, joinComposition, joinGame, markSolved, recordUsername} = userStore;
+  const {
+    id,
+    color,
+    fb,
+    attached,
+    attach,
+    logIn,
+    listUserHistory,
+    listCompositions,
+    joinComposition,
+    joinGame,
+    markSolved,
+    recordUsername,
+  } = userStore;
   const authCallbacksRef = useRef<Set<() => void>>(new Set());
 
   // Auto-attach on mount
@@ -83,4 +99,3 @@ export function useUser(options: UseUserOptions = {}): UseUserReturn {
     onAuth,
   };
 }
-

@@ -86,4 +86,3 @@ export function validateRoomEvent(event: unknown): {
 export function isValidRoomEvent(event: unknown): event is z.infer<typeof baseRoomEventSchema> {
   return validateRoomEvent(event).valid;
 }
-

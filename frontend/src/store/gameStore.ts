@@ -84,25 +84,25 @@ export const useGameStore = create<GameStore>((setState, getState) => {
   // Helper function to compute game state from events
   const computeGameState = (game: GameInstance): any | null => {
     if (!game.createEvent) return null;
-    
+
     // Start with the create event
     let state = gameReducer(null, game.createEvent);
-    
+
     // Sort events by timestamp to ensure correct order
     const sortedEvents = [...game.events].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-    
+
     // Apply all events in order (excluding create event which we already applied)
     for (const event of sortedEvents) {
       if (event.type !== 'create') {
         state = gameReducer(state, event);
       }
     }
-    
+
     // Apply optimistic events (they're already in order)
     for (const event of game.optimisticEvents) {
       state = gameReducer(state, event, {isOptimistic: true});
     }
-    
+
     return state;
   };
 
@@ -111,7 +111,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     const state = getState();
     const game = state.games[path];
     if (!game) return;
-    
+
     const subscribers = game.subscriptions.get(event);
     if (subscribers) {
       subscribers.forEach((callback) => {
@@ -181,7 +181,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       const updatedOptimisticEvents = currentGame.optimisticEvents.filter(
         (ev) => ev.id !== processedEvent.id
       );
-      
+
       // Add event to events array
       const updatedEvents = [...currentGame.events, processedEvent];
 
@@ -196,7 +196,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         updatedGame.createEvent = processedEvent;
         updatedGame.ready = true;
       }
-      
+
       updatedGame.gameState = computeGameState(updatedGame);
 
       setState({
@@ -205,7 +205,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           [path]: updatedGame,
         },
       });
-      
+
       if (processedEvent.type === 'create') {
         emit(path, 'wsCreateEvent', processedEvent);
       } else {
@@ -217,18 +217,18 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     const response = (await socketManager.emitAsync('sync_all_game_events', path.substring(6))) as unknown[];
     const allEvents: GameEvent[] = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
-    
+
     // Sort events by timestamp
     allEvents.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-    
+
     const currentState = getState();
     const currentGame = currentState.games[path];
     if (!currentGame) return;
-    
+
     // Find create event
     const createEvent = allEvents.find((e) => e.type === 'create') || null;
     const otherEvents = allEvents.filter((e) => e.type !== 'create');
-    
+
     // Update game with all events
     const updatedGame: GameInstance = {
       ...currentGame,
@@ -238,14 +238,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       optimisticEvents: [],
     };
     updatedGame.gameState = computeGameState(updatedGame);
-    
+
     setState({
       games: {
         ...currentState.games,
         [path]: updatedGame,
       },
     });
-    
+
     // Emit events to subscribers
     if (createEvent) {
       emit(path, 'wsCreateEvent', createEvent);
@@ -292,7 +292,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       optimisticEvents: updatedOptimisticEvents,
     };
     updatedGame.gameState = computeGameState(updatedGame);
-    
+
     setState({
       games: {
         ...state.games,
@@ -518,7 +518,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         game.subscriptions.set(event, new Set());
       }
       const subscribers = game.subscriptions.get(event)!;
-      
+
       // Add callback to subscribers
       subscribers.add(callback);
 
@@ -672,6 +672,10 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     },
 
     check: (path: string, scope: {r: number; c: number}[]) => {
+      if (!scope || scope.length === 0) {
+        console.warn('check called with empty scope');
+        return;
+      }
       addEvent(path, {
         timestamp: SERVER_TIME,
         type: 'check',
@@ -682,6 +686,10 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     },
 
     reveal: (path: string, scope: {r: number; c: number}[]) => {
+      if (!scope || scope.length === 0) {
+        console.warn('reveal called with empty scope');
+        return;
+      }
       addEvent(path, {
         timestamp: SERVER_TIME,
         type: 'reveal',
@@ -692,6 +700,10 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     },
 
     reset: (path: string, scope: {r: number; c: number}[], force: boolean) => {
+      if (!scope || scope.length === 0) {
+        console.warn('reset called with empty scope');
+        return;
+      }
       addEvent(path, {
         timestamp: SERVER_TIME,
         type: 'reset',
@@ -822,12 +834,12 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       const state = getState();
       const game = state.games[path];
       if (!game) return null;
-      
+
       // Recompute if needed (in case state is stale)
       if (!game.gameState && game.createEvent) {
         return computeGameState(game);
       }
-      
+
       return game.gameState || null;
     },
   };

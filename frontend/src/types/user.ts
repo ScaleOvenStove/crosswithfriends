@@ -25,4 +25,3 @@ export interface CompositionEntry {
 export interface UserCompositions {
   [cid: string]: CompositionEntry;
 }
-

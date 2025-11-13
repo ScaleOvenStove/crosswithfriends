@@ -45,6 +45,22 @@
   padding: 15px;
   display: flex;
   flex-direction: row;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 900px) {
+  .room--game-and-chat-wrapper {
+    flex-direction: column;
+    padding: 10px;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .room--game-and-chat-wrapper {
+    padding: 5px;
+    gap: 5px;
+  }
 }
 
 .room.mobile .room--game-and-chat-wrapper {

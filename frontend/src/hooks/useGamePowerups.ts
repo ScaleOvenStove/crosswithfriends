@@ -16,7 +16,15 @@ interface UseGamePowerupsOptions {
   } | null;
   gameHook: {
     gameState: unknown;
-    updateCell: (r: number, c: number, id: string, color: string, pencil: boolean, value: string, autocheck: boolean) => void;
+    updateCell: (
+      r: number,
+      c: number,
+      id: string,
+      color: string,
+      pencil: boolean,
+      value: string,
+      autocheck: boolean
+    ) => void;
     updateCursor: (r: number, c: number, id: string) => void;
     addPing: (r: number, c: number, id: string) => void;
     updateColor: (id: string, color: string) => void;
@@ -28,7 +36,15 @@ interface UseGamePowerupsOptions {
   };
   opponentGameHook: {
     gameState: unknown;
-    updateCell: (r: number, c: number, id: string, color: string, pencil: boolean, value: string, autocheck: boolean) => void;
+    updateCell: (
+      r: number,
+      c: number,
+      id: string,
+      color: string,
+      pencil: boolean,
+      value: string,
+      autocheck: boolean
+    ) => void;
     updateCursor: (r: number, c: number, id: string) => void;
     addPing: (r: number, c: number, id: string) => void;
     updateColor: (id: string, color: string) => void;
@@ -103,4 +119,3 @@ export function useGamePowerups({
   // This hook doesn't return anything - it just manages side effects
   // The powerup usage handler would need to be exposed differently if needed
 }
-

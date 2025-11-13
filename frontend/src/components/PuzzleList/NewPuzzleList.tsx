@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import React, {useEffect, useRef, useState, useMemo, useCallback} from 'react';
 import type {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '@crosswithfriends/shared/types';
+import {Box, Skeleton} from '@mui/material';
 import {fetchPuzzleList} from '../../api/puzzle_list';
 import './css/puzzleList.css';
 import Entry from './Entry';
@@ -179,6 +180,8 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         display: 'flex',
         flexWrap: 'wrap',
         overflowY: 'auto',
+        height: '100%',
+        flex: 1,
       }}
       className="puzzlelist"
       onScroll={handleScroll}
@@ -200,9 +203,15 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         </div>
       ))}
       {loading && (
-        <div style={{width: '100%', padding: '20px', textAlign: 'center', color: '#666'}}>
-          Loading more puzzles...
-        </div>
+        <Box sx={{width: '100%', p: 2}}>
+          {Array.from({length: 3}).map((_, i) => (
+            <Box key={i} sx={{mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1}}>
+              <Skeleton variant="text" width="60%" height={24} sx={{mb: 1}} />
+              <Skeleton variant="text" width="80%" height={32} sx={{mb: 1}} />
+              <Skeleton variant="text" width="40%" height={20} />
+            </Box>
+          ))}
+        </Box>
       )}
     </div>
   );
