@@ -32,7 +32,7 @@ export function useGameSetup({
 }: UseGameSetupOptions): UseGameSetupReturn {
   const gameHookRef = useRef<ReturnType<typeof useGame> | null>(null);
   const opponentGameHookRef = useRef<ReturnType<typeof useGame> | null>(null);
-  
+
   // Create paths
   const gamePath = gid ? createSafePath('/game', gid) : '';
   const opponentGamePath = opponent ? createSafePath('/game', opponent) : '';
@@ -93,4 +93,3 @@ export function useGameSetup({
     opponentGame: opponentGameHook.gameState,
   };
 }
-

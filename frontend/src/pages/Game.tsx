@@ -40,7 +40,7 @@ const Game: React.FC = () => {
   const [players, setPlayers] = useState<Record<string, BattlePlayer> | undefined>(undefined);
   const [pickups, setPickups] = useState<Record<string, Pickup> | undefined>(undefined);
   const [archived, setArchived] = useState<boolean>(false);
-  
+
   // Get initial username
   const usernameKey = useMemo(() => {
     return `username_${window.location.href}`;
@@ -110,13 +110,17 @@ const Game: React.FC = () => {
       }
     },
   });
-  const gameComponentRef = useRef<{player?: {state?: {selected?: unknown}}; handleSelectClue?: (direction: string, number: number) => void; focus?: () => void} | null>(null);
+  const gameComponentRef = useRef<{
+    player?: {state?: {selected?: unknown}};
+    handleSelectClue?: (direction: string, number: number) => void;
+    focus?: () => void;
+  } | null>(null);
   const chatRef = useRef<{focus?: () => void} | null>(null);
   const lastRecordedSolveRef = useRef<string | undefined>(undefined);
   const powerupIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const displayNameSetRef = useRef<string | null>(null); // Track if we've set display name for this user/game
   const updatingDisplayNameRef = useRef<boolean>(false); // Prevent concurrent updates
-  
+
   // Use Zustand user hook instead of EventEmitter User class
   const user = useUser();
 
@@ -139,7 +143,6 @@ const Game: React.FC = () => {
   }, [location.search]);
 
   const userColorKey = useMemo(() => 'user_color', []);
-
 
   useEffect(() => {
     setGid(params.gid);
@@ -216,7 +219,7 @@ const Game: React.FC = () => {
       clearInterval(powerupIntervalRef.current);
       powerupIntervalRef.current = null;
     }
-    
+
     if (battlePath && gameHook.gameState && opponentGameHook.gameState) {
       powerupIntervalRef.current = setInterval(() => {
         if (battleHook) {
@@ -224,7 +227,7 @@ const Game: React.FC = () => {
         }
       }, 6 * 1000);
     }
-    
+
     return () => {
       if (powerupIntervalRef.current) {
         clearInterval(powerupIntervalRef.current);
@@ -277,11 +280,14 @@ const Game: React.FC = () => {
     setMode((prev) => (prev === 'game' ? 'chat' : 'game'));
   }, []);
 
-  const handleChat = useCallback((username: string, id: string, message: string): void => {
-    if (gameHook.ready) {
-      gameHook.chat(username, id, message);
-    }
-  }, [gameHook]);
+  const handleChat = useCallback(
+    (username: string, id: string, message: string): void => {
+      if (gameHook.ready) {
+        gameHook.chat(username, id, message);
+      }
+    },
+    [gameHook]
+  );
 
   const gameHookRef = useRef(gameHook);
   gameHookRef.current = gameHook;
@@ -313,26 +319,26 @@ const Game: React.FC = () => {
     if (updatingDisplayNameRef.current) {
       return;
     }
-    
+
     const key = `${gid}-${user.id}-${initialUsername}`;
-    
+
     // Skip if we've already processed this exact combination
     if (displayNameSetRef.current === key) {
       return;
     }
-    
+
     // Get current values from hook (not from deps to avoid loops)
     const hook = gameHookRef.current;
     if (!gid || !user.id || !initialUsername) {
       return;
     }
-    
+
     // Only proceed if hook is ready
     if (!hook?.ready || !hook?.gameState || !hook?.game) {
       // Not ready yet - don't mark as processed so we can retry when ready
       return;
     }
-    
+
     // Check if display name is already set in game state
     const currentDisplayName = hook.gameState?.users?.[user.id]?.displayName;
     if (currentDisplayName === initialUsername) {
@@ -340,36 +346,43 @@ const Game: React.FC = () => {
       displayNameSetRef.current = key;
       return;
     }
-    
+
     // Set flag to prevent concurrent calls
     updatingDisplayNameRef.current = true;
-    
+
     // Only update if different - this will trigger a store update
     hook.updateDisplayName(user.id, initialUsername);
-    
+
     // Mark as processed immediately to prevent retrying even if store updates
     displayNameSetRef.current = key;
-    
+
     // Reset flag after a short delay to allow store update to complete
     setTimeout(() => {
       updatingDisplayNameRef.current = false;
     }, 100);
-    
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gid, user.id, initialUsername]); // Only depend on these - check hook state inside
-  
+
   // Also check when game becomes ready (using ref to track transition)
   const prevReadyRef = useRef<boolean>(false);
   useEffect(() => {
     const hook = gameHookRef.current;
     const currentReady = hook?.ready ?? false;
     const previousReady = prevReadyRef.current;
-    
+
     // Only act when ready transitions from false to true
     if (!previousReady && currentReady && !updatingDisplayNameRef.current) {
       const key = `${gid}-${user.id}-${initialUsername}`;
       // Only update if we haven't already processed this combo
-      if (displayNameSetRef.current !== key && gid && user.id && initialUsername && hook?.gameState && hook?.game) {
+      if (
+        displayNameSetRef.current !== key &&
+        gid &&
+        user.id &&
+        initialUsername &&
+        hook?.gameState &&
+        hook?.game
+      ) {
         const currentDisplayName = hook.gameState?.users?.[user.id]?.displayName;
         if (currentDisplayName !== initialUsername) {
           updatingDisplayNameRef.current = true;
@@ -383,7 +396,7 @@ const Game: React.FC = () => {
         }
       }
     }
-    
+
     prevReadyRef.current = currentReady;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }); // Check on every render but only act on ready transition
@@ -554,11 +567,37 @@ const Game: React.FC = () => {
     const desktopContent = (
       <>
         <Nav v2 />
-        <Box sx={{flex: 1, overflow: 'auto', display: 'flex'}}>
-          <Stack direction="column" sx={{flexShrink: 0}}>
+        <Box
+          sx={{
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            padding: {xs: '2px', sm: '5px', md: '8px'},
+            flexDirection: {xs: 'column', sm: 'row'},
+            gap: {xs: 0, sm: 1, md: 2},
+          }}
+        >
+          <Stack
+            direction="column"
+            sx={{
+              flexShrink: 0,
+              minWidth: {xs: '100%', sm: 'auto'},
+              maxWidth: {xs: '100%', sm: 'none'},
+              flex: {xs: '1 1 auto', sm: '0 0 auto'},
+            }}
+          >
             {gameElement}
           </Stack>
-          <Box sx={{flex: 1}}>{chatElement}</Box>
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: {xs: '100%', sm: '280px', md: '320px'},
+              maxWidth: {xs: '100%', sm: 'none'},
+              display: {xs: showingChat ? 'flex' : 'none', sm: 'flex'},
+            }}
+          >
+            {chatElement}
+          </Box>
         </Box>
         {teamPowerups && <Powerups powerups={teamPowerups} handleUsePowerup={handleUsePowerup} />}
       </>

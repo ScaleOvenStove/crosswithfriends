@@ -46,4 +46,3 @@ export interface CompositionImportContents {
 export interface CompositionGrid {
   [key: string]: unknown;
 }
-

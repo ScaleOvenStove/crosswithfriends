@@ -181,4 +181,3 @@ export function isUpdateCellEvent(event: GameEvent): event is UpdateCellEvent {
 export function isChatEvent(event: GameEvent): event is ChatEvent {
   return event.type === 'chat';
 }
-

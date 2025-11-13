@@ -160,6 +160,9 @@ const Grid: React.FC<GridProps> = (props) => {
           frozen: props.frozen,
           pickupType: pickupsByCell.get(cellKey)?.type,
           cellStyle,
+          // Explicitly pass through good and bad flags for visual feedback
+          good: cell.good,
+          bad: cell.bad,
         };
       })
     );

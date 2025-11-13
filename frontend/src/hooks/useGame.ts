@@ -24,7 +24,15 @@ interface UseGameReturn {
   gameState: any | null; // Computed game state (reactive in Zustand)
   attach: () => Promise<void>;
   detach: () => void;
-  updateCell: (r: number, c: number, id: string, color: string, pencil: boolean, value: string, autocheck: boolean) => void;
+  updateCell: (
+    r: number,
+    c: number,
+    id: string,
+    color: string,
+    pencil: boolean,
+    value: string,
+    autocheck: boolean
+  ) => void;
   updateCursor: (r: number, c: number, id: string) => void;
   addPing: (r: number, c: number, id: string) => void;
   updateDisplayName: (id: string, displayName: string) => void;
@@ -42,7 +50,16 @@ interface UseGameReturn {
 }
 
 export function useGame(options: UseGameOptions): UseGameReturn {
-  const {path, onEvent, onWsEvent, onWsCreateEvent, onWsOptimisticEvent, onReconnect, onArchived, onBattleData} = options;
+  const {
+    path,
+    onEvent,
+    onWsEvent,
+    onWsCreateEvent,
+    onWsOptimisticEvent,
+    onReconnect,
+    onArchived,
+    onBattleData,
+  } = options;
   const gameStore = useGameStore();
   // Use selector to get reactive updates when game state changes
   const game = useGameStore((state) => state.games[path]);
@@ -52,7 +69,7 @@ export function useGame(options: UseGameOptions): UseGameReturn {
     const gameInstance = state.games[path];
     return gameInstance?.gameState ?? null;
   });
-  
+
   // Ensure game instance exists (lazy initialization) - skip if path is empty
   useEffect(() => {
     if (path && !game) {
@@ -87,7 +104,15 @@ export function useGame(options: UseGameOptions): UseGameReturn {
         gameStore.detach(path);
       }
     },
-    updateCell: (r: number, c: number, id: string, color: string, pencil: boolean, value: string, autocheck: boolean) => {
+    updateCell: (
+      r: number,
+      c: number,
+      id: string,
+      color: string,
+      pencil: boolean,
+      value: string,
+      autocheck: boolean
+    ) => {
       if (path) {
         gameStore.updateCell(path, r, c, id, color, pencil, value, autocheck);
       }
@@ -164,4 +189,3 @@ export function useGame(options: UseGameOptions): UseGameReturn {
     ready: game?.ready ?? false,
   };
 }
-

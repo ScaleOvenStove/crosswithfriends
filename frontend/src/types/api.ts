@@ -24,4 +24,3 @@ export interface ApiErrorResponse {
   code?: string;
   details?: unknown;
 }
-

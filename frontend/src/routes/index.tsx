@@ -3,7 +3,7 @@
  * Centralized route definitions with metadata and guards
  */
 
-import {lazy, type ComponentType} from 'react';
+import React, {lazy, type ComponentType} from 'react';
 
 // Lazy load page components
 const Account = lazy(() => import('../pages/Account').then((m) => ({default: m.Account})));
@@ -20,10 +20,10 @@ const WrappedWelcome = lazy(() => import('../pages/WrappedWelcome').then((m) => 
 
 export interface RouteConfig {
   path: string;
-  component: ComponentType<unknown>;
+  component: ComponentType<any>;
   requiresAuth?: boolean;
   requiresBeta?: boolean;
-  errorBoundary?: ComponentType<unknown>;
+  errorBoundary?: ComponentType<any>;
   metadata?: {
     title?: string;
     description?: string;
@@ -115,7 +115,9 @@ export const routes: RouteConfig[] = [
     path: '/account',
     component: Account,
     requiresAuth: false, // TODO: Set to true when auth is implemented
-    errorBoundary: lazy(() => import('../components/common/AccountError').then((m) => ({default: m.AccountError}))),
+    errorBoundary: lazy(() =>
+      import('../components/common/AccountError').then((m) => ({default: m.AccountError}))
+    ),
   },
   {
     path: '/compose',
@@ -149,7 +151,7 @@ export const routes: RouteConfig[] = [
 export const RouteGuard: React.FC<{
   route: RouteConfig;
   children: React.ReactNode;
-}> = ({route, children}) => {
+}> = ({route: _route, children}) => {
   // TODO: Implement authentication check when auth is ready
   // if (route.requiresAuth && !isAuthenticated()) {
   //   return <Navigate to="/login" replace />;
@@ -162,4 +164,3 @@ export const RouteGuard: React.FC<{
 
   return <>{children}</>;
 };
-

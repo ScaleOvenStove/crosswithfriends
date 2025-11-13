@@ -16,7 +16,15 @@ const vimModeRegex = /^\d+(a|d)*$/;
 import type {Powerup, Pickup} from '../../types/battle';
 
 interface GameModel {
-  updateCell: (r: number, c: number, id: string, color: string, pencil: boolean, value: string, autocheck: boolean) => void;
+  updateCell: (
+    r: number,
+    c: number,
+    id: string,
+    color: string,
+    pencil: boolean,
+    value: string,
+    autocheck: boolean
+  ) => void;
   updateCursor: (r: number, c: number, id: string) => void;
   addPing: (r: number, c: number, id: string) => void;
   updateColor: (id: string, color: string) => void;
@@ -60,7 +68,13 @@ const Game: React.FC<GameProps> = (props) => {
   const [colorAttributionMode, setColorAttributionMode] = useState<boolean>(false);
   const [expandMenu, setExpandMenu] = useState<boolean>(false);
 
-  const playerRef = useRef<{getSelectedSquares: () => unknown[]; getSelectedAndHighlightedSquares: () => unknown[]; getAllSquares: () => unknown[]; selectClue: (direction: string, number: number) => void; focus: () => void} | null>(null);
+  const playerRef = useRef<{
+    getSelectedSquares: () => unknown[];
+    getSelectedAndHighlightedSquares: () => unknown[];
+    getAllSquares: () => unknown[];
+    selectClue: (direction: string, number: number) => void;
+    focus: () => void;
+  } | null>(null);
   const prevMyColorRef = useRef<string | undefined>(props.myColor);
 
   useEffect(() => {
@@ -110,17 +124,26 @@ const Game: React.FC<GameProps> = (props) => {
   }, [games]);
 
   const scope = useCallback((s: string) => {
-    if (!playerRef.current) return [];
+    console.log('[Game] scope function called with:', s);
+    console.log('[Game] playerRef.current exists:', !!playerRef.current);
+    if (!playerRef.current) {
+      console.warn('[Game] scope early return - playerRef.current is null');
+      return [];
+    }
+    let result: Array<{r: number; c: number}> = [];
     if (s === 'square') {
-      return playerRef.current.getSelectedSquares();
+      result = playerRef.current.getSelectedSquares();
+      console.log('[Game] getSelectedSquares returned:', result);
+    } else if (s === 'word') {
+      result = playerRef.current.getSelectedAndHighlightedSquares();
+      console.log('[Game] getSelectedAndHighlightedSquares returned:', result);
+    } else if (s === 'puzzle') {
+      result = playerRef.current.getAllSquares();
+      console.log('[Game] getAllSquares returned:', result);
+    } else {
+      console.warn('[Game] scope unknown scope string:', s);
     }
-    if (s === 'word') {
-      return playerRef.current.getSelectedAndHighlightedSquares();
-    }
-    if (s === 'puzzle') {
-      return playerRef.current.getAllSquares();
-    }
-    return [];
+    return result;
   }, []);
 
   const handleUpdateGrid = useCallback(
@@ -187,30 +210,90 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleCheck = useCallback(
     (scopeString: string) => {
-      if (!props.gameModel) return;
+      console.log('[Game] handleCheck called with scopeString:', scopeString);
+      console.log('[Game] props.gameModel exists:', !!props.gameModel);
+      console.log('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.log('[Game] game exists:', !!game);
+      if (!props.gameModel || !game || !props.gameModel.ready) {
+        console.warn(
+          '[Game] handleCheck early return - gameModel:',
+          !!props.gameModel,
+          'game:',
+          !!game,
+          'ready:',
+          props.gameModel?.ready
+        );
+        return;
+      }
       const scopeValue = scope(scopeString);
+      console.log('[Game] scope function returned:', scopeValue);
+      if (scopeValue.length === 0) {
+        console.warn('[Game] handleCheck early return - scopeValue is empty');
+        return;
+      }
+      console.log('[Game] Calling gameModel.check with scopeValue:', scopeValue);
       props.gameModel.check(scopeValue);
     },
-    [props.gameModel, scope]
+    [props.gameModel, scope, game]
   );
 
   const handleReveal = useCallback(
     (scopeString: string) => {
-      if (!props.gameModel) return;
+      console.log('[Game] handleReveal called with scopeString:', scopeString);
+      console.log('[Game] props.gameModel exists:', !!props.gameModel);
+      console.log('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.log('[Game] game exists:', !!game);
+      if (!props.gameModel || !game || !props.gameModel.ready) {
+        console.warn(
+          '[Game] handleReveal early return - gameModel:',
+          !!props.gameModel,
+          'game:',
+          !!game,
+          'ready:',
+          props.gameModel?.ready
+        );
+        return;
+      }
       const scopeValue = scope(scopeString);
+      console.log('[Game] scope function returned:', scopeValue);
+      if (scopeValue.length === 0) {
+        console.warn('[Game] handleReveal early return - scopeValue is empty');
+        return;
+      }
+      console.log('[Game] Calling gameModel.reveal with scopeValue:', scopeValue);
       props.gameModel.reveal(scopeValue);
       props.onChange();
     },
-    [props.gameModel, props.onChange, scope]
+    [props.gameModel, props.onChange, scope, game]
   );
 
   const handleReset = useCallback(
     (scopeString: string, force: boolean = false) => {
-      if (!props.gameModel) return;
+      console.log('[Game] handleReset called with scopeString:', scopeString, 'force:', force);
+      console.log('[Game] props.gameModel exists:', !!props.gameModel);
+      console.log('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.log('[Game] game exists:', !!game);
+      if (!props.gameModel || !game || !props.gameModel.ready) {
+        console.warn(
+          '[Game] handleReset early return - gameModel:',
+          !!props.gameModel,
+          'game:',
+          !!game,
+          'ready:',
+          props.gameModel?.ready
+        );
+        return;
+      }
       const scopeValue = scope(scopeString);
+      console.log('[Game] scope function returned:', scopeValue);
+      if (scopeValue.length === 0) {
+        console.warn('[Game] handleReset early return - scopeValue is empty');
+        return;
+      }
+      console.log('[Game] Calling gameModel.reset with scopeValue:', scopeValue, 'force:', force);
       props.gameModel.reset(scopeValue, force);
     },
-    [props.gameModel, scope]
+    [props.gameModel, scope, game]
   );
 
   const handleKeybind = useCallback((mode: string) => {
@@ -314,13 +397,34 @@ const Game: React.FC<GameProps> = (props) => {
     return result;
   }, [game]);
 
+  // Track window size for responsive grid sizing
+  const [windowWidth, setWindowWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth : 0
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Memoize screenWidth to avoid side effects in render
   const screenWidth = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth - 1; // this is important for mobile to fit on screen
+    if (windowWidth === 0) {
+      if (typeof window !== 'undefined') {
+        return window.innerWidth - 1;
+      }
+      return 0;
     }
-    return 0;
-  }, []);
+    // Account for padding and chat panel on different screen sizes
+    const isSmallScreen = windowWidth < 900;
+    const isMediumScreen = windowWidth >= 900 && windowWidth < 1200;
+    const padding = isSmallScreen ? 20 : isMediumScreen ? 40 : 60;
+    const chatWidth = isSmallScreen ? 0 : isMediumScreen ? 280 : 320;
+    return windowWidth - padding - chatWidth - 1;
+  }, [windowWidth]);
 
   const renderPlayer = useCallback(() => {
     const {id, myColor, mobile, beta} = props;
@@ -351,9 +455,12 @@ const Game: React.FC<GameProps> = (props) => {
     };
     const cols = grid[0].length;
     const rows = grid.length;
-    const width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
+    // Calculate responsive width based on available space
+    const availableWidth = screenWidth > 0 ? screenWidth - 20 : window.innerWidth - 40;
+    const maxWidth = Math.min((35 * 15 * cols) / rows, availableWidth);
     const minSize = props.mobile ? 1 : 20;
-    const size = Math.max(minSize, width / cols);
+    const calculatedSize = maxWidth / cols;
+    const size = Math.max(minSize, Math.min(calculatedSize, 35)); // Cap at 35px for very large screens
     return (
       <Player
         ref={playerRef}
@@ -499,14 +606,17 @@ const Game: React.FC<GameProps> = (props) => {
     handleRefocus,
   ]);
 
-  const padding = props.mobile ? 0 : 20;
   return (
     <Stack direction="column" sx={{flex: 1}}>
       {renderToolbar()}
       <Box
         sx={{
           flex: 1,
-          padding,
+          padding: {xs: 0, sm: 1, md: 2, lg: 3},
+          overflow: 'auto',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
         }}
       >
         {renderPlayer()}

@@ -44,12 +44,12 @@ class SocketManager {
   private async createConnection(): Promise<Socket> {
     const socket = io(SOCKET_HOST, {upgrade: false, transports: ['websocket']});
 
-    // Store socket on window for debugging (only in development)
-    if (typeof window !== 'undefined' && import.meta.env.DEV) {
+    // Store socket on window for debugging and connection stats
+    if (typeof window !== 'undefined') {
       (window as {socket?: Socket}).socket = socket;
     }
 
-    // Register global event handlers
+    // Register global event handlers for connection status
     socket.on('pong', (ms: number) => {
       if (typeof window !== 'undefined') {
         (window as {connectionStatus?: {latency: number; timestamp: number}}).connectionStatus = {
@@ -212,4 +212,3 @@ export const socketManager = new SocketManager();
 
 // Export default instance
 export default socketManager;
-

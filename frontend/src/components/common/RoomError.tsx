@@ -28,4 +28,3 @@ export const RoomError: React.FC = () => {
     </div>
   );
 };
-

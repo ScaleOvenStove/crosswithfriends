@@ -28,4 +28,3 @@ export function useCreatePuzzle(options: UseCreatePuzzleOptions = {}) {
     onError: options.onError,
   });
 }
-

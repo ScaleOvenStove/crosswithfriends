@@ -159,4 +159,3 @@ export function validateGameEvent(event: unknown): {
 export function isValidGameEvent(event: unknown): event is z.infer<typeof baseGameEventSchema> {
   return validateGameEvent(event).valid;
 }
-

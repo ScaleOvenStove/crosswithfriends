@@ -19,4 +19,3 @@ export function useRecordSolve(options: UseRecordSolveOptions = {}) {
     onError: options.onError,
   });
 }
-

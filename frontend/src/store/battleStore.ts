@@ -25,7 +25,7 @@ interface BattleInstance {
 
 interface BattleStore {
   battles: Record<string, BattleInstance>;
-    getBattle: (path: string) => BattleInstance | undefined;
+  getBattle: (path: string) => BattleInstance | undefined;
   attach: (path: string) => void;
   detach: (path: string) => void;
   start: (path: string) => void;
@@ -47,7 +47,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
     const state = getState();
     const battle = state.battles[path];
     if (!battle) return;
-    
+
     const subscribers = battle.subscriptions.get(event);
     if (subscribers) {
       subscribers.forEach((callback) => {
@@ -88,7 +88,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       if (!battle) {
         battle = state.getBattle(path);
       }
-      
+
       if (!battle) {
         console.error('Failed to get battle instance for path:', path);
         return;
@@ -144,7 +144,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
         battle.subscriptions.set(event, new Set());
       }
       const subscribers = battle.subscriptions.get(event)!;
-      
+
       // Add callback to subscribers
       subscribers.add(callback);
 
@@ -261,7 +261,13 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       });
     },
 
-    checkPickups: (path: string, r: number, c: number, game: {grid: unknown[][]; solution: string[][]}, team: number) => {
+    checkPickups: (
+      path: string,
+      r: number,
+      c: number,
+      game: {grid: unknown[][]; solution: string[][]},
+      team: number
+    ) => {
       const {grid, solution} = game;
       const gridObj = new GridObject(grid);
 
@@ -269,7 +275,10 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       // First, get the current state to determine what needs to be updated
       Promise.all([get(ref(db, `${path}/pickups`)), get(ref(db, `${path}/powerups`))]).then(
         ([pickupsSnapshot]) => {
-          const pickups = (pickupsSnapshot.val() || {}) as Record<string, {pickedUp?: boolean; type: string; i: number; j: number}>;
+          const pickups = (pickupsSnapshot.val() || {}) as Record<
+            string,
+            {pickedUp?: boolean; type: string; i: number; j: number}
+          >;
 
           const {across, down} = gridObj.getCrossingWords(r, c);
           const cellsToCheck = [...across, ...down];
@@ -382,7 +391,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       const puzzlePath = `/puzzle/${pid}`;
       puzzleStore.getPuzzle(puzzlePath, pid);
       puzzleStore.attach(puzzlePath);
-      
+
       // Wait for puzzle to be ready
       puzzleStore.waitForReady(puzzlePath).then(() => {
         const rawGame = puzzleStore.toGame(puzzlePath);

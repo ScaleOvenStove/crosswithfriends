@@ -116,8 +116,11 @@ const Play: React.FC = () => {
     }
     const shouldAutojoin = games && games.length > 0 && !creating;
     if (shouldAutojoin) {
-      const {gid} = games[0];
-      const {v2} = games[0];
+      // Prioritize solved games - if there's a solved game, redirect to it
+      const solvedGame = games.find((g) => g.solved);
+      const gameToJoin = solvedGame || games[0];
+      const {gid} = gameToJoin;
+      const {v2} = gameToJoin;
       const href = v2 ? (is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`) : `/game/${gid}`;
 
       if (games.length > 1) {

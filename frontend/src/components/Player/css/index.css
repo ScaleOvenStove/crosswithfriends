@@ -2,10 +2,26 @@
 .player--main--wrapper {
   margin-right: 2px;
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  transition: all 0.3s ease;
 }
 
 .player--main {
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .player--main {
+    flex-direction: column;
+  }
+
+  .player--main--wrapper {
+    margin-right: 0;
+  }
 }
 
 .player--main--list-view {
@@ -17,9 +33,18 @@
   padding: 10px 20px 10px 20px;
   display: flex;
   font-size: 15px;
-  /* width: 486px; */
-  height: 40px;
+  min-height: 40px;
+  height: auto;
   align-items: stretch;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 600px) {
+  .player--main--clue-bar {
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 36px;
+  }
 }
 
 .player--main--clue-bar--number {
@@ -52,6 +77,15 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .player--main--left {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .player--main--left--grid {
@@ -67,6 +101,16 @@
 
 .player--main--clues {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .player--main--clues {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .player--main--vim-bar {

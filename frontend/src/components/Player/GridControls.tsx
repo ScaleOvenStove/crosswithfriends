@@ -47,8 +47,12 @@ const GridControls: React.FC<GridControlsProps> = (props) => {
 
   const handleClick = useCallback(
     (ev: React.MouseEvent) => {
-      ev.preventDefault();
-      focus();
+      // Only prevent default and focus if clicking directly on the grid-controls div
+      // Allow clicks on child elements (like grid cells) to propagate normally
+      if (ev.target === ev.currentTarget) {
+        ev.preventDefault();
+        focus();
+      }
     },
     [focus]
   );

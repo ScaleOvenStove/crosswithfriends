@@ -44,4 +44,3 @@ export const queryKeys = {
     pid: ['counters', 'pid'] as const,
   },
 } as const;
-

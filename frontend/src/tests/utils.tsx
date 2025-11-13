@@ -3,7 +3,8 @@
  */
 import React from 'react';
 import {BrowserRouter} from 'react-router-dom';
-import {ThemeProvider, createTheme} from '@mui/material';
+import {ThemeProvider, CssBaseline} from '@mui/material';
+import {createAppTheme} from '../theme/theme';
 import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 
@@ -11,13 +12,14 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
  * Default test wrapper that provides all necessary context providers
  */
 export function TestWrapper({children}: {children: React.ReactNode}) {
-  const theme = createTheme();
+  const theme = createAppTheme(false);
   const mockToggleDarkMode = () => {};
   const mockDarkModePreference = '0';
 
   return (
     <ErrorBoundary>
       <ThemeProvider theme={theme}>
+        <CssBaseline />
         <BrowserRouter>
           <GlobalContext.Provider
             value={{toggleMolesterMoons: mockToggleDarkMode, darkModePreference: mockDarkModePreference}}
@@ -47,8 +49,13 @@ export function RouterWrapper({
  * Wrapper with MUI theme only
  */
 export function ThemeWrapper({children}: {children: React.ReactNode}) {
-  const theme = createTheme();
-  return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+  const theme = createAppTheme(false);
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
 }
 
 /**

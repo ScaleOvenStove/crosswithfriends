@@ -20,4 +20,3 @@ export function useCreateGame(options: UseCreateGameOptions = {}) {
     onError: options.onError,
   });
 }
-

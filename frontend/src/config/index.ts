@@ -47,8 +47,10 @@ const isDevelopment = import.meta.env.MODE === 'development';
 const isProduction = import.meta.env.MODE === 'production';
 
 // API Configuration
-const DEV_REMOTE_SERVER_URL =
-  getEnvVar('VITE_STAGING_API_URL', 'crosswithfriendsbackend-staging.onrender.com');
+const DEV_REMOTE_SERVER_URL = getEnvVar(
+  'VITE_STAGING_API_URL',
+  'crosswithfriendsbackend-staging.onrender.com'
+);
 const PROD_REMOTE_SERVER_URL = getEnvVar('VITE_API_URL', 'downforacross-com.onrender.com');
 const REMOTE_SERVER = isDevelopment ? DEV_REMOTE_SERVER_URL : PROD_REMOTE_SERVER_URL;
 
@@ -59,10 +61,14 @@ const REMOTE_SERVER_URL = REMOTE_SERVER.includes('localhost')
 
 // Warn about HTTPS in development (can cause issues with local servers)
 // Only warn if explicitly disallowed via environment flag
-if (window.location.protocol === 'https' && isDevelopment && import.meta.env.VITE_DISALLOW_HTTPS_IN_DEV === '1') {
+if (
+  window.location.protocol === 'https' &&
+  isDevelopment &&
+  import.meta.env.VITE_DISALLOW_HTTPS_IN_DEV === '1'
+) {
   console.warn(
     '⚠️ HTTPS detected in development mode. This may cause issues with local servers and WebSocket connections. ' +
-    'Consider using HTTP for local development. To disable this warning, remove VITE_DISALLOW_HTTPS_IN_DEV from your environment.'
+      'Consider using HTTP for local development. To disable this warning, remove VITE_DISALLOW_HTTPS_IN_DEV from your environment.'
   );
 }
 
@@ -121,4 +127,3 @@ export const SERVER_URL = apiConfig.baseURL;
 export const SOCKET_HOST = apiConfig.socketHost;
 export const IS_DEVELOPMENT = envConfig.isDevelopment;
 export const IS_PRODUCTION = envConfig.isProduction;
-

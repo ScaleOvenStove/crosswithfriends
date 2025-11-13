@@ -39,7 +39,7 @@ export function useComposition(options: UseCompositionOptions): UseCompositionRe
   const compositionStore = useCompositionStore();
   // Use selector to get reactive updates when composition state changes
   const composition = useCompositionStore((state) => state.compositions[path]);
-  
+
   // Ensure composition instance exists (lazy initialization)
   useEffect(() => {
     if (!composition) {
@@ -58,10 +58,14 @@ export function useComposition(options: UseCompositionOptions): UseCompositionRe
     composition,
     attach: () => compositionStore.attach(path),
     detach: () => compositionStore.detach(path),
-    updateCellText: (r: number, c: number, value: string) => compositionStore.updateCellText(path, r, c, value),
-    updateCellColor: (r: number, c: number, color: string) => compositionStore.updateCellColor(path, r, c, color),
-    updateClue: (r: number, c: number, dir: string, value: string) => compositionStore.updateClue(path, r, c, dir, value),
-    updateCursor: (r: number, c: number, id: string, color: string) => compositionStore.updateCursor(path, r, c, id, color),
+    updateCellText: (r: number, c: number, value: string) =>
+      compositionStore.updateCellText(path, r, c, value),
+    updateCellColor: (r: number, c: number, color: string) =>
+      compositionStore.updateCellColor(path, r, c, color),
+    updateClue: (r: number, c: number, dir: string, value: string) =>
+      compositionStore.updateClue(path, r, c, dir, value),
+    updateCursor: (r: number, c: number, id: string, color: string) =>
+      compositionStore.updateCursor(path, r, c, id, color),
     updateTitle: (text: string) => compositionStore.updateTitle(path, text),
     updateAuthor: (text: string) => compositionStore.updateAuthor(path, text),
     chat: (username: string, id: string, text: string) => compositionStore.chat(path, username, id, text),
@@ -76,4 +80,3 @@ export function useComposition(options: UseCompositionOptions): UseCompositionRe
     ready: composition?.attached ?? false,
   };
 }
-

@@ -118,4 +118,3 @@ export function useRoom(options: UseRoomOptions): UseRoomReturn {
     error,
   };
 }
-

@@ -312,4 +312,3 @@ export const apiClient = new ApiClient(apiConfig.baseURL);
 
 // Export default instance
 export default apiClient;
-

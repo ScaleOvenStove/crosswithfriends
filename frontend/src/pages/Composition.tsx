@@ -255,7 +255,6 @@ const Composition: React.FC = () => {
     return (30 * 15) / composition.grid[0].length;
   }, [composition]);
 
-
   const title = useMemo((): string | undefined => {
     if (!compositionHook.ready || !composition) {
       return undefined;

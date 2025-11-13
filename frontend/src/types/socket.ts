@@ -42,4 +42,3 @@ export interface KnownSocketEmitEvents {
   room_event: (data: SocketRoomEvent) => void;
   sync_all_game_events: (gid: string) => void;
 }
-

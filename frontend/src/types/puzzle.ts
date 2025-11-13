@@ -30,4 +30,3 @@ export interface GameListEntry {
   pid: number;
   [key: string]: unknown;
 }
-
