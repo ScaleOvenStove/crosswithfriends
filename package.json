@@ -42,7 +42,9 @@
     "test": "turbo run test",
     "test:backend": "turbo run test --filter=@crosswithfriends/server",
     "test:backend:watch": "yarn workspace @crosswithfriends/server test:watch",
-    "test:backend:coverage": "yarn workspace @crosswithfriends/server test:coverage"
+    "test:backend:coverage": "yarn workspace @crosswithfriends/server test:coverage",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\""
   },
   "lint-staged": {
     "*.{js,jsx, ts,tsx}": [
