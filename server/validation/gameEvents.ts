@@ -11,7 +11,7 @@ const createEventParamsSchema = z.object({
   pid: z.string().min(1),
   version: z.number().positive(),
   game: z.object({
-    info: z.record(z.unknown()).optional(),
+    info: z.record(z.string(), z.unknown()).optional(),
     grid: z.array(z.array(z.any())),
     solution: z.array(z.array(z.string())),
     circles: z.array(z.string()).optional(),
@@ -20,7 +20,7 @@ const createEventParamsSchema = z.object({
         messages: z.array(z.any()),
       })
       .optional(),
-    cursor: z.record(z.unknown()).optional(),
+    cursor: z.record(z.string(), z.unknown()).optional(),
     clock: z
       .object({
         lastUpdated: z.number(),
@@ -127,7 +127,8 @@ export function validateGameEvent(event: unknown): {
   const {type, params} = baseResult.data;
 
   // Check if event type is known
-  if (!(type in eventParamsSchemas)) {
+  const paramsSchema = eventParamsSchemas[type];
+  if (!paramsSchema) {
     return {
       valid: false,
       error: `Unknown event type: ${type}`,
@@ -135,7 +136,6 @@ export function validateGameEvent(event: unknown): {
   }
 
   // Validate type-specific params
-  const paramsSchema = eventParamsSchemas[type];
   const paramsResult = paramsSchema.safeParse(params);
   if (!paramsResult.success) {
     return {
