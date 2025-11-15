@@ -1,5 +1,6 @@
 import {makeGrid} from '@crosswithfriends/shared/lib/gameUtils';
 import {gameWords} from '@crosswithfriends/shared/lib/names';
+import type {PuzzleJson} from '@crosswithfriends/shared/types';
 import {ref, push, set} from 'firebase/database';
 
 import {incrementGid, incrementPid} from './api/counters';
@@ -26,7 +27,7 @@ interface CreateCompositionParams {
 
 const actions = {
   // puzzle: { title, type, grid, clues }
-  createPuzzle: async (puzzle: any, cbk?: (pid: number) => void): Promise<void> => {
+  createPuzzle: async (puzzle: PuzzleJson, cbk?: (pid: number) => void): Promise<void> => {
     const {pid} = await incrementPid();
     cbk && cbk(pid);
   },

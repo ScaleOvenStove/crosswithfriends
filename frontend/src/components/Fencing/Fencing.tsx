@@ -43,7 +43,7 @@ function subscribeToGameEvents(
   eventsHook: GameEventsHook
 ) {
   let connected = false;
-  const gameEventHandler = (event: any) => {
+  const gameEventHandler = (event: GameEvent) => {
     if (!connected) return;
     eventsHook.addEvent(event);
   };
@@ -52,7 +52,7 @@ function subscribeToGameEvents(
     if (!socket) return;
     await emitAsync(socket, 'join_game', gid);
     socket.on('game_event', gameEventHandler);
-    const allEvents: GameEvent[] = (await emitAsync(socket, 'sync_all_game_events', gid)) as any;
+    const allEvents = (await emitAsync(socket, 'sync_all_game_events', gid)) as GameEvent[];
     eventsHook.setEvents(allEvents);
 
     connected = true;
@@ -86,10 +86,13 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
 
   const eventsHook = useGameEvents();
   async function sendEvent(event: GameEvent) {
-    (event as any).timestamp = {
-      '.sv': 'timestamp',
+    const eventWithTimestamp: GameEvent & {timestamp?: {'.sv': string}; id?: string} = {
+      ...event,
+      timestamp: {
+        '.sv': 'timestamp',
+      },
+      id: uuid.v4(),
     };
-    (event as any).id = uuid.v4();
     eventsHook.addOptimisticEvent(event);
     if (socket) {
       emitAsync(socket, 'game_event', {gid, event});
@@ -218,11 +221,13 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
         message,
       },
     });
+    // Note: 'chat' event type is deprecated, using 'sendChatMessage' instead
+    // This legacy event is kept for backward compatibility
     sendEvent({
-      type: 'chat' as any,
+      type: 'sendChatMessage',
       params: {
         id,
-        text: message,
+        message,
       },
     });
   };

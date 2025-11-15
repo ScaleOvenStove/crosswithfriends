@@ -1,4 +1,3 @@
-import {Box} from '@mui/material';
 import React from 'react';
 import {CirclePicker} from 'react-color';
 import {useToggle} from 'react-use';

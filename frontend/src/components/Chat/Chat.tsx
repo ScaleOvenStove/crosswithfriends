@@ -29,6 +29,13 @@ const isEmojis = (str: string) => {
   return !res;
 };
 
+interface ChatMessage {
+  text: string;
+  senderId: string;
+  timestamp: number;
+  isOpponent?: boolean;
+}
+
 interface ChatProps {
   initialUsername?: string;
   bid?: number;
@@ -47,11 +54,11 @@ interface ChatProps {
     pid: number;
     solved?: boolean;
     clues: {across: string[]; down: string[]};
-    fencingUsers?: any[];
+    fencingUsers?: string[];
     isFencing?: boolean;
   };
-  data: {messages?: any[]};
-  opponentData?: {messages?: any[]};
+  data: {messages?: ChatMessage[]};
+  opponentData?: {messages?: ChatMessage[]};
   teams?: Record<string, {color?: string}>;
   mobile?: boolean;
   hideChatBar?: boolean;
@@ -75,8 +82,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const [showShareMessage, setShowShareMessage] = useState<boolean>(true);
-  const chatBarRef = useRef<any>(null);
-  const usernameInputRef = useRef<any>(null);
+  const chatBarRef = useRef<ChatBarRef | null>(null);
+  const usernameInputRef = useRef<HTMLInputElement | null>(null);
   const collapsedRef = useRef<boolean>(props.collapsed || false);
   const prevShowShareMessageRef = useRef<boolean>(true);
 
@@ -204,12 +211,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     setShowShareMessage(false);
   }, []);
 
-  const mergeMessages = useCallback((data: {messages?: any[]}, opponentData?: {messages?: any[]}) => {
+  const mergeMessages = useCallback((data: {messages?: ChatMessage[]}, opponentData?: {messages?: ChatMessage[]}) => {
     if (!opponentData) {
       return data.messages || [];
     }
 
-    const getMessages = (msgData: {messages?: any[]}, isOpponent: boolean) =>
+    const getMessages = (msgData: {messages?: ChatMessage[]}, isOpponent: boolean) =>
       _.map(msgData.messages, (message) => ({...message, isOpponent}));
 
     const messages = _.concat(getMessages(data, false), getMessages(opponentData, true));

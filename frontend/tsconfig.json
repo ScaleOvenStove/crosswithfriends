@@ -6,7 +6,10 @@
     "jsx": "react-jsx",
     "paths": {
       "@shared/*": ["../../shared/src/shared/*"],
-      "@lib/*": ["../../shared/src/lib/*"]
+      "@lib/*": ["../../shared/src/lib/*"],
+      "@crosswithfriends/shared/lib/*": ["../../shared/src/lib/*"],
+      "@crosswithfriends/shared/fencingGameEvents/*": ["../../shared/src/shared/fencingGameEvents/*"],
+      "@crosswithfriends/shared": ["../../shared/src/shared"]
     }
   },
   "include": ["src", "../shared/src", "src/vite-env.d.ts"]
