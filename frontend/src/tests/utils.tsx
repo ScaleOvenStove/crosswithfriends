@@ -1,12 +1,13 @@
 /**
  * Test utilities and helpers for component testing
  */
+import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
+import {ThemeProvider, CssBaseline} from '@mui/material';
 import React from 'react';
 import {BrowserRouter} from 'react-router-dom';
-import {ThemeProvider, CssBaseline} from '@mui/material';
-import {createAppTheme} from '../theme/theme';
-import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
+
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import {createAppTheme} from '../theme/theme';
 
 /**
  * Default test wrapper that provides all necessary context providers
@@ -37,7 +38,7 @@ export function TestWrapper({children}: {children: React.ReactNode}) {
  */
 export function RouterWrapper({
   children,
-  initialEntries = ['/'],
+  initialEntries: _initialEntries = ['/'],
 }: {
   children: React.ReactNode;
   initialEntries?: string[];

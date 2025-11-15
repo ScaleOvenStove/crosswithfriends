@@ -1,28 +1,32 @@
-import _ from 'lodash';
-import * as uuid from 'uuid';
-import React, {useState, useEffect} from 'react';
-import {useUpdateEffect} from 'react-use';
-import {Helmet} from 'react-helmet';
-import {Box, Stack} from '@mui/material';
-import {useSocket} from '../../sockets/useSocket';
-import {emitAsync} from '../../sockets/emitAsync';
-import Player from '../Player';
-import {transformGameToPlayerProps} from './transformGameToPlayerProps';
-import {usePlayerActions} from './usePlayerActions';
-import {useToolbarActions} from './useToolbarActions';
-import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
-import {useUser} from '../../hooks/useUser';
-import {FencingScoreboard} from './FencingScoreboard';
 import {TEAM_IDS} from '@crosswithfriends/shared/fencingGameEvents/constants';
-import {FencingToolbar} from './FencingToolbar';
+import {getStartingCursorPosition} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/create';
+import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
+import {Box, Stack} from '@mui/material';
+import _ from 'lodash';
+import React, {useState, useEffect} from 'react';
+import {Helmet} from 'react-helmet';
+import {useUpdateEffect} from 'react-use';
+import type {Socket as SocketIOClient} from 'socket.io-client';
+import * as uuid from 'uuid';
+
+import {useUser} from '../../hooks/useUser';
+import {emitAsync} from '../../sockets/emitAsync';
+import {useSocket} from '../../sockets/useSocket';
+import Chat from '../Chat';
+import LoadingSpinner from '../common/LoadingSpinner';
+import Nav from '../common/Nav';
+import Confetti from '../Game/Confetti';
+import Player from '../Player';
+
+import {FencingCountdown} from './FencingCountdown';
+import {FencingScoreboard} from './FencingScoreboard';
+import {FencingToolbar} from './FencingToolbar';
+import {transformGameToPlayerProps} from './transformGameToPlayerProps';
 import {useGameEvents} from './useGameEvents';
 import type {GameEventsHook} from './useGameEvents';
-import {getStartingCursorPosition} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/create';
-import Nav from '../common/Nav';
-import Chat from '../Chat';
-import {FencingCountdown} from './FencingCountdown';
-import Confetti from '../Game/Confetti';
+import {usePlayerActions} from './usePlayerActions';
+import {useToolbarActions} from './useToolbarActions';
 
 /**
  * Subscribes to Socket.io game events for a specific game.
@@ -160,8 +164,6 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
     }
   }, [isInitialized]);
 
-  const classes = useStyles();
-
   const toolbarActions = useToolbarActions(sendEvent, gameState, id);
   const playerActions = usePlayerActions(sendEvent, id);
 
@@ -263,7 +265,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
           </Box>
         </Box>
         <Stack direction="column" sx={{flexBasis: 500}}>
-          {!gameState.loaded && <div>Loading your game...</div>}
+          {!gameState.loaded && <LoadingSpinner message="Loading your game..." />}
           {gameState.game && (
             <Chat
               isFencing

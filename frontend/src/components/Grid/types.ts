@@ -1,6 +1,5 @@
-import {Brand} from 'utility-types';
-import type {CellData, Cursor} from '@crosswithfriends/shared/types';
 import powerups from '@crosswithfriends/shared/lib/powerups';
+import type {CellData, Cursor} from '@crosswithfriends/shared/types';
 
 export interface CellStyle {
   backgroundColor: string;

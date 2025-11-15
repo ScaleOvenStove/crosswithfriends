@@ -1,10 +1,11 @@
-import {gameWords} from '@crosswithfriends/shared/lib/names';
 import {makeGrid} from '@crosswithfriends/shared/lib/gameUtils';
-import {db} from './store/firebase';
+import {gameWords} from '@crosswithfriends/shared/lib/names';
 import {ref, push, set} from 'firebase/database';
+
+import {incrementGid, incrementPid} from './api/counters';
+import {db} from './store/firebase';
 import {useGameStore} from './store/gameStore';
 import {usePuzzleStore} from './store/puzzleStore';
-import {incrementGid, incrementPid} from './api/counters';
 import type {BattleData} from './types/rawGame';
 
 // for interfacing with firebase
@@ -67,7 +68,7 @@ const actions = {
     const puzzleStore = usePuzzleStore.getState();
 
     // Get puzzle instance
-    const puzzle = puzzleStore.getPuzzle(puzzlePath, pid);
+    puzzleStore.getPuzzle(puzzlePath, pid);
     puzzleStore.attach(puzzlePath);
 
     try {

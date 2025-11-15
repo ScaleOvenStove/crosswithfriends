@@ -1,5 +1,6 @@
 import './css/clues.css';
 import React, {useState} from 'react';
+
 import ClueText from './ClueText';
 
 interface CluesProps {

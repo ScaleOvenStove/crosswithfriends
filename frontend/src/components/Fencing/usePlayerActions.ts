@@ -1,5 +1,6 @@
 /* eslint @typescript-eslint/no-unused-vars : "warn" */
 import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
+
 import type {CellCoords} from '../Grid/types';
 
 export type PlayerActions = {

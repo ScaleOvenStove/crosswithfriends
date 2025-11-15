@@ -4,6 +4,7 @@
  */
 
 import {useEffect, useRef} from 'react';
+
 import {usePuzzleStore} from '../store/puzzleStore';
 import type {PuzzleData, GameListEntry} from '../types/puzzle';
 import type {RawGame} from '../types/rawGame';

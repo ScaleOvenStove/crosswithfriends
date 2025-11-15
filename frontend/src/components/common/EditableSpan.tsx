@@ -1,4 +1,6 @@
 import './css/editableSpan.css';
+import Caret from '@crosswithfriends/shared/lib/caret';
+import _ from 'lodash';
 import React, {
   useRef,
   useState,
@@ -8,8 +10,6 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import _ from 'lodash';
-import Caret from '@crosswithfriends/shared/lib/caret';
 
 interface Props {
   value?: string;
@@ -126,11 +126,19 @@ const EditableSpan = forwardRef<EditableSpanRef, Props>((props, ref) => {
     [props.onChange, props.onUnfocus, getText]
   );
 
-  const handleKeyUp = useCallback(
-    _.debounce(() => {
-      props.onChange(getText());
-    }, 500),
-    [props.onChange, getText]
+  const handleKeyUp = useMemo(
+    () =>
+      _.debounce(() => {
+        if (props.hidden || !spanRef.current) return;
+        let result = spanRef.current.textContent || '';
+        const nbsp = String.fromCharCode(160);
+        while (result.indexOf(nbsp) !== -1) {
+          result = result.replace(nbsp, ' ');
+        }
+        while (result.startsWith(' ')) result = result.substring(1);
+        props.onChange(result);
+      }, 500),
+    [props.onChange, props.hidden]
   );
 
   const {hidden, style, containerStyle, className} = props;

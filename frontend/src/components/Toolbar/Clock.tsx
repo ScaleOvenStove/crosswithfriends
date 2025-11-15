@@ -1,7 +1,8 @@
 import './css/clock.css';
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import {getTime} from '../../store/firebase';
 import {MAX_CLOCK_INCREMENT} from '@crosswithfriends/shared/lib/timing';
+import React, {useState, useEffect, useMemo, useCallback, useRef} from 'react';
+
+import {getTime} from '../../store/firebase';
 
 export const formatMilliseconds = (ms: number): string => {
   function pad2(num: number): string {
@@ -40,6 +41,39 @@ const Clock: React.FC<Props> = ({
   onPause,
 }) => {
   const [clock, setClock] = useState('00:00');
+  const lastVisibleTimeRef = useRef<number | null>(null);
+  const wasCappedRef = useRef(false);
+
+  // Track page visibility to detect when page goes to background
+  useEffect(() => {
+    if (!v2 || replayMode) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page went to background - record the time
+        lastVisibleTimeRef.current = getTime();
+      } else {
+        // Page came back to foreground - check if we need to pause
+        if (lastVisibleTimeRef.current && startTime && !propsIsPaused) {
+          const now = getTime();
+          const timeSinceLastVisible = now - lastVisibleTimeRef.current;
+          // If more than 1 minute passed while in background, we should be capped
+          if (timeSinceLastVisible > MAX_CLOCK_INCREMENT) {
+            // Auto-pause if timer was running and we've been away too long
+            if (onPause) {
+              onPause();
+            }
+          }
+        }
+        lastVisibleTimeRef.current = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [v2, replayMode, startTime, propsIsPaused, onPause]);
 
   const isCapped = useMemo(() => {
     if (!v2) return false;
@@ -47,6 +81,16 @@ const Clock: React.FC<Props> = ({
     const now = getTime();
     return now > startTime + MAX_CLOCK_INCREMENT;
   }, [v2, startTime]);
+
+  // Auto-pause when timer becomes capped
+  useEffect(() => {
+    if (isCapped && !propsIsPaused && !replayMode && onPause && !wasCappedRef.current) {
+      wasCappedRef.current = true;
+      onPause();
+    } else if (!isCapped) {
+      wasCappedRef.current = false;
+    }
+  }, [isCapped, propsIsPaused, replayMode, onPause]);
 
   const isPaused = useMemo(() => {
     if (replayMode) return false;
@@ -57,25 +101,31 @@ const Clock: React.FC<Props> = ({
   const updateClock = useCallback(() => {
     const now = getTime();
 
-    let clockMs = 0; // start with pausedTime
-    if (pausedTime) {
-      clockMs += pausedTime;
-    }
-
+    let clockMs = 0;
+    
     if (startTime && !replayMode && !propsIsPaused) {
-      // not paused
+      // Timer is running
       if (stopTime) {
-        // finished
-        clockMs += stopTime - startTime;
-      } else if (isCapped) {
-        clockMs += MAX_CLOCK_INCREMENT;
+        // Finished - use the stop time
+        clockMs = (pausedTime || 0) + (stopTime - startTime);
       } else {
-        clockMs += now - startTime;
+        // Calculate elapsed time since startTime, but cap it at MAX_CLOCK_INCREMENT
+        // This prevents the timer from showing more than 1 minute when page was in background
+        const elapsed = now - startTime;
+        const cappedElapsed = Math.min(elapsed, MAX_CLOCK_INCREMENT);
+        
+        // pausedTime is the accumulated time from previous sessions (from clock.totalTime)
+        // We add the capped elapsed time from the current session
+        clockMs = (pausedTime || 0) + cappedElapsed;
       }
+    } else {
+      // Timer is paused - use pausedTime directly (which is clock.totalTime)
+      // When paused after being capped, pausedTime should be MAX_CLOCK_INCREMENT (1 minute)
+      clockMs = pausedTime || 0;
     }
 
     setClock(formatMilliseconds(clockMs));
-  }, [pausedTime, startTime, stopTime, replayMode, propsIsPaused, isCapped]);
+  }, [pausedTime, startTime, stopTime, replayMode, propsIsPaused]);
 
   useEffect(() => {
     updateClock();

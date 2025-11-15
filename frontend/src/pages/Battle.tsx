@@ -1,15 +1,15 @@
 import './css/battle.css';
 
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import _ from 'lodash';
-import {Helmet} from 'react-helmet';
-import {Box, Stack} from '@mui/material';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import classnames from 'classnames';
-import {useBattle} from '../hooks/useBattle';
-import redirect from '@crosswithfriends/shared/lib/redirect';
 import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
+import redirect from '@crosswithfriends/shared/lib/redirect';
+import {Box, Stack} from '@mui/material';
+import classnames from 'classnames';
+import _ from 'lodash';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
+import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
+
+import {useBattle} from '../hooks/useBattle';
 
 interface Player {
   name: string;

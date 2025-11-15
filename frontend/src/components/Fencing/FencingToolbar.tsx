@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type {ToolbarActions} from './useToolbarActions';
 
 export const FencingToolbar: React.FC<{toolbarActions: ToolbarActions}> = (props) => {

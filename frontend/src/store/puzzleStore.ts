@@ -1,11 +1,12 @@
-import {create} from 'zustand';
-import {ref, onValue, off, get, set, query, orderByChild, equalTo, limitToLast} from 'firebase/database';
-import {db, getTime, type DatabaseReference} from './firebase';
 import {makeGrid} from '@crosswithfriends/shared/lib/gameUtils';
+import {ref, onValue, get, set, query, orderByChild, equalTo, limitToLast} from 'firebase/database';
 import _ from 'lodash';
+import {create} from 'zustand';
 
 import type {PuzzleData, PuzzleSolveStats, GameListEntry} from '../types/puzzle';
 import type {RawGame} from '../types/rawGame';
+
+import {db, type DatabaseReference} from './firebase';
 
 interface PuzzleInstance {
   ref: DatabaseReference;

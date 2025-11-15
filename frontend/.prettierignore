@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+.vite/
+
+# Generated files
+*.min.js
+*.min.css
+coverage/
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+

@@ -1,29 +1,29 @@
 import './css/composition.css';
 
-import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
-import _ from 'lodash';
-import {Helmet} from 'react-helmet';
-import {Box, Stack} from '@mui/material';
-import Nav from '../components/common/Nav';
-import {useParams} from 'react-router-dom';
-
-import actions from '../actions';
-import Editor from '../components/Player/Editor';
-import FileUploader from '../components/Upload/FileUploader';
-import ComposeHistoryWrapper from '@crosswithfriends/shared/lib/wrappers/ComposeHistoryWrapper';
-import EditableSpan from '../components/common/EditableSpan';
-import redirect from '@crosswithfriends/shared/lib/redirect';
-import {downloadBlob, isMobile} from '@crosswithfriends/shared/lib/jsUtils';
+import format from '@crosswithfriends/shared/lib/format';
 import {
   makeGridFromComposition,
   makeClues,
   convertCluesForComposition,
   convertGridForComposition,
 } from '@crosswithfriends/shared/lib/gameUtils';
-import format from '@crosswithfriends/shared/lib/format';
+import {downloadBlob, isMobile} from '@crosswithfriends/shared/lib/jsUtils';
+import redirect from '@crosswithfriends/shared/lib/redirect';
+import ComposeHistoryWrapper from '@crosswithfriends/shared/lib/wrappers/ComposeHistoryWrapper';
+import {Box, Stack} from '@mui/material';
+import _ from 'lodash';
+import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
+import {Helmet} from 'react-helmet';
+import {useParams} from 'react-router-dom';
+
+import actions from '../actions';
+import EditableSpan from '../components/common/EditableSpan';
+import Nav from '../components/common/Nav';
 import * as xwordFiller from '../components/Compose/lib/xword-filler';
-import {useUser} from '../hooks/useUser';
+import Editor from '../components/Player/Editor';
+import FileUploader from '../components/Upload/FileUploader';
 import {useComposition} from '../hooks/useComposition';
+import {useUser} from '../hooks/useUser';
 
 const Composition: React.FC = () => {
   const params = useParams<{cid: string}>();
@@ -57,42 +57,52 @@ const Composition: React.FC = () => {
     },
   });
 
-  const composition = useMemo(() => {
+  const [composition, setComposition] = useState(() => {
     if (!historyWrapperRef.current) return null;
     return historyWrapperRef.current.getSnapshot();
-  }, [forceUpdate]);
+  });
 
   const handleUpdate = useRef<_.DebouncedFunc<() => void>>();
-  if (!handleUpdate.current) {
-    handleUpdate.current = _.debounce(
-      () => {
-        forceUpdate({});
-      },
-      0,
-      {
-        leading: true,
-      }
-    );
-  }
+  useEffect(() => {
+    if (!handleUpdate.current) {
+      handleUpdate.current = _.debounce(
+        () => {
+          forceUpdate({});
+        },
+        0,
+        {
+          leading: true,
+        }
+      );
+    }
+  }, []);
 
   const handleChangeRef =
     useRef<_.DebouncedFunc<(options?: {isEdit?: boolean; isPublished?: boolean}) => void>>();
-  if (!handleChangeRef.current) {
-    handleChangeRef.current = _.debounce(
-      ({isEdit = true, isPublished = false}: {isEdit?: boolean; isPublished?: boolean} = {}) => {
-        if (!historyWrapperRef.current || !user.id) return;
-        const comp = historyWrapperRef.current.getSnapshot();
-        if (isEdit) {
-          const {title, author} = comp.info;
-          user.joinComposition(cid.toString(), {
-            title,
-            author,
-            published: isPublished,
-          });
+  useEffect(() => {
+    if (!handleChangeRef.current) {
+      handleChangeRef.current = _.debounce(
+        ({isEdit = true, isPublished = false}: {isEdit?: boolean; isPublished?: boolean} = {}) => {
+          if (!historyWrapperRef.current || !user.id) return;
+          const comp = historyWrapperRef.current.getSnapshot();
+          if (isEdit) {
+            const {title, author} = comp.info;
+            user.joinComposition(cid.toString(), {
+              title,
+              author,
+              published: isPublished,
+            });
+          }
         }
-      }
-    );
-  }
+      );
+    }
+  }, [cid, user.id]);
+
+  useEffect(() => {
+    if (historyWrapperRef.current) {
+      setComposition(historyWrapperRef.current.getSnapshot());
+    }
+  }, [forceUpdate]);
 
   const handleUpdateGrid = useCallback(
     (r: number, c: number, value: string): void => {
@@ -136,7 +146,7 @@ const Composition: React.FC = () => {
 
   const handleUploadFail = useCallback((): void => {}, []);
 
-  const handleChat = useCallback(
+  const _handleChat = useCallback(
     (username: string, id: string, message: string): void => {
       compositionHook.chat(username, id, message);
       handleChangeRef.current?.();
@@ -172,7 +182,7 @@ const Composition: React.FC = () => {
     }
   }, []);
 
-  const handleUnfocusChat = useCallback((): void => {
+  const _handleUnfocusChat = useCallback((): void => {
     if (editorRef.current) {
       editorRef.current.focus();
     }
@@ -310,8 +320,8 @@ const Composition: React.FC = () => {
         <title>{title}</title>
       </Helmet>
       <Nav v2 hidden={mobile} />
-      <Box sx={{...style, flex: 1, display: 'flex'}}>
-        <Stack direction="column" sx={{flexShrink: 0}}>
+      <Box sx={{...style, flex: 1, display: 'flex', minHeight: 0}}>
+        <Stack direction="column" sx={{flex: 1, display: 'flex', minHeight: 0}}>
           <div className="chat--header">
             <EditableSpan
               className="chat--header--title"
@@ -340,7 +350,7 @@ const Composition: React.FC = () => {
             onClearPencil={handleClearPencil}
             onUpdateClue={handleUpdateClue}
             onUpdateCursor={handleUpdateCursor}
-            onChange={handleChangeRef.current || (() => {})}
+            onChange={(...args) => handleChangeRef.current?.(...args)}
             onFlipColor={handleFlipColor}
             onPublish={handlePublish}
             onChangeRows={handleChangeRows}

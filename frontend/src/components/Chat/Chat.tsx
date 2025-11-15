@@ -1,4 +1,8 @@
 import './css/index.css';
+import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
+import nameGenerator, {isFromNameGenerator} from '@crosswithfriends/shared/lib/nameGenerator';
+import {Box, Stack, Snackbar, Alert, IconButton} from '@mui/material';
+import _ from 'lodash';
 import React, {
   useState,
   useRef,
@@ -8,19 +12,17 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import _ from 'lodash';
-import {Box, Stack, Snackbar, Alert, IconButton} from '@mui/material';
+import {MdClose, MdContentCopy, MdChevronRight, MdChevronLeft} from 'react-icons/md';
 import Linkify from 'react-linkify';
 import {Link} from 'react-router-dom';
-import {MdClose, MdContentCopy} from 'react-icons/md';
-import Emoji from '../common/Emoji';
-import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
-import nameGenerator, {isFromNameGenerator} from '@crosswithfriends/shared/lib/nameGenerator';
-import ChatBar from './ChatBar';
+
 import EditableSpan from '../common/EditableSpan';
+import Emoji from '../common/Emoji';
 import MobileKeyboard from '../Player/MobileKeyboard';
-import ColorPicker from './ColorPicker.tsx';
 import {formatMilliseconds} from '../Toolbar/Clock';
+
+import ChatBar from './ChatBar';
+import ColorPicker from './ColorPicker';
 
 const isEmojis = (str: string) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -60,6 +62,8 @@ interface ChatProps {
   isFencing?: boolean;
   onSelectClue?: (direction: 'across' | 'down', clueNumber: number) => void;
   info?: {title?: string; description?: string; author?: string; type?: string};
+  collapsed?: boolean;
+  onShareLinkDisappeared?: () => void;
 }
 
 export type ChatRef = {
@@ -70,8 +74,11 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   const [username, setUsername] = useState<string>('');
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [showShareMessage, setShowShareMessage] = useState<boolean>(true);
   const chatBarRef = useRef<any>(null);
   const usernameInputRef = useRef<any>(null);
+  const collapsedRef = useRef<boolean>(props.collapsed || false);
+  const prevShowShareMessageRef = useRef<boolean>(true);
 
   const usernameKey = useMemo(() => {
     return `username_${window.location.href}`;
@@ -148,6 +155,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         props.onChat(displayName, id, message);
       }
       localStorage.setItem(usernameKey, displayName);
+      // Dismiss share message when first message is sent
+      setShowShareMessage(false);
     },
     [props, usernameKey, username]
   );
@@ -191,6 +200,10 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     setSnackbarOpen(true);
   }, [props.users, props.game, serverUrl]);
 
+  const handleDismissShareMessage = useCallback(() => {
+    setShowShareMessage(false);
+  }, []);
+
   const mergeMessages = useCallback((data: {messages?: any[]}, opponentData?: {messages?: any[]}) => {
     if (!opponentData) {
       return data.messages || [];
@@ -219,7 +232,25 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   );
 
   const renderGameButton = useCallback(() => {
-    return <MdClose onClick={handleToggleChat} className="toolbar--game" />;
+    return (
+      <button
+        onClick={handleToggleChat}
+        className="toolbar--game"
+        aria-label="Close chat"
+        type="button"
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <MdClose />
+      </button>
+    );
   }, [handleToggleChat]);
 
   const renderToolbar = useCallback(() => {
@@ -258,25 +289,44 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
     return (
       <div className="chat--header">
-        <div className="chat--header--title">{title}</div>
-        <div className="chat--header--subtitle">{type && `${type} | By ${author}`}</div>
-        {desc && (
-          <div className="chat--header--description">
-            <strong>Note: </strong>
-            <Linkify>{desc}</Linkify>
-          </div>
-        )}
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1}}>
+            <div className="chat--header--title">{title}</div>
+            <div className="chat--header--subtitle">{type && `${type} | By ${author}`}</div>
+            {desc && (
+              <div className="chat--header--description">
+                <strong>Note: </strong>
+                <Linkify>{desc}</Linkify>
+              </div>
+            )}
 
-        {bid && (
-          <div className="chat--header--subtitle">
-            Battle
-            {bid}
+            {bid && (
+              <div className="chat--header--subtitle">
+                Battle
+                {bid}
+              </div>
+            )}
+            {renderFencingOptions()}
           </div>
-        )}
-        {renderFencingOptions()}
+          {!props.mobile && (
+            <IconButton
+              size="small"
+              onClick={handleToggleChat}
+              sx={{
+                flexShrink: 0,
+                marginLeft: 1,
+                color: '#666',
+                '&:hover': {backgroundColor: 'rgba(0, 0, 0, 0.04)'},
+              }}
+              title={props.collapsed ? 'Expand chat' : 'Collapse chat'}
+            >
+              {props.collapsed ? <MdChevronLeft /> : <MdChevronRight />}
+            </IconButton>
+          )}
+        </div>
       </div>
     );
-  }, [props.header, props.info, props.game.info, props.bid, renderFencingOptions]);
+  }, [props.header, props.info, props.game.info, props.bid, props.mobile, props.collapsed, renderFencingOptions, handleToggleChat]);
 
   const renderUsernameInput = useCallback(() => {
     return props.hideChatBar ? null : (
@@ -369,7 +419,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       let clueNumber: number;
       try {
         clueNumber = parseInt(clueref[1]);
-      } catch (e) {
+      } catch {
         // not in a valid format, so just return the pattern
         return defaultPattern;
       }
@@ -455,24 +505,67 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     [renderClueRef]
   );
 
+  const getAvatarInitials = useCallback((name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  }, []);
+
   const renderMessage = useCallback(
     (message: {text: string; senderId: string; isOpponent?: boolean; timestamp: number}) => {
       const {text, senderId: id, isOpponent, timestamp} = message;
       const big = text.length <= 10 && isEmojis(text);
       const color = getMessageColor(id, isOpponent);
       const users = props.users;
+      const displayName = users[id]?.displayName ?? 'Unknown';
+      const avatarInitials = getAvatarInitials(displayName);
 
       return (
-        <div className={`chat--message${big ? ' big' : ''}`}>
-          <div className="chat--message--content">
-            {renderMessageSender(users[id]?.displayName ?? 'Unknown', color)}
-            {renderMessageText(message.text)}
+        <div
+          className={`chat--message${big ? ' big' : ''} chat--user-message`}
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '8px 12px',
+            marginBottom: '4px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+          }}
+        >
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              backgroundColor: color || '#6aa9f4',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              flexShrink: 0,
+            }}
+            title={displayName}
+          >
+            {avatarInitials}
           </div>
-          <div className="chat--message--timestamp">{renderMessageTimestamp(timestamp)}</div>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div className="chat--message--content" style={{display: 'flex', gap: '6px', alignItems: 'baseline'}}>
+              {renderMessageSender(displayName, color)}
+              {renderMessageText(message.text)}
+            </div>
+            <div className="chat--message--timestamp" style={{fontSize: '0.75rem', color: '#666', marginTop: '2px'}}>
+              {renderMessageTimestamp(timestamp)}
+            </div>
+          </div>
         </div>
       );
     },
-    [props.users, getMessageColor, renderMessageSender, renderMessageText, renderMessageTimestamp]
+    [props.users, getMessageColor, renderMessageSender, renderMessageText, renderMessageTimestamp, getAvatarInitials]
   );
 
   const renderMobileKeyboard = useCallback(() => {
@@ -503,6 +596,42 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     return mergeMessages(props.data, props.opponentData);
   }, [props.data, props.opponentData, mergeMessages]);
 
+  // Auto-dismiss share message after 30 seconds
+  useEffect(() => {
+    if (showShareMessage) {
+      const timer = setTimeout(() => {
+        setShowShareMessage(false);
+      }, 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [showShareMessage]);
+
+  // Dismiss share message when first message is sent
+  useEffect(() => {
+    if (messages.length > 0 && showShareMessage) {
+      setShowShareMessage(false);
+    }
+  }, [messages.length, showShareMessage]);
+
+  // Auto-collapse sidebar when share link disappears
+  useEffect(() => {
+    // Only collapse if share message transitioned from true to false
+    if (prevShowShareMessageRef.current && !showShareMessage && !collapsedRef.current) {
+      // Share message just disappeared, collapse the sidebar
+      props.onToggleChat();
+      // Notify parent that share link disappeared (to scroll game window)
+      if (props.onShareLinkDisappeared) {
+        props.onShareLinkDisappeared();
+      }
+    }
+    prevShowShareMessageRef.current = showShareMessage;
+  }, [showShareMessage, props]);
+
+  // Update collapsed ref when collapsed state changes
+  useEffect(() => {
+    collapsedRef.current = props.collapsed || false;
+  }, [props.collapsed]);
+
   return (
     <Stack direction="column" sx={{flex: 1}}>
       {renderToolbar()}
@@ -517,30 +646,78 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
           }}
           className="chat--messages"
         >
-          <div className="chat--message chat--system-message">
-            <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-              <i>
-                Game created! Share the link to play with your friends:
-                <wbr />
-              </i>
-              <b id="pathText" style={{marginLeft: '5px', flex: 1, wordBreak: 'break-all'}}>
-                {url}
-              </b>
-              <IconButton
-                size="small"
-                onClick={handleCopyClick}
-                title="Copy to Clipboard"
-                sx={{flexShrink: 0}}
-              >
-                <MdContentCopy fontSize="small" />
-              </IconButton>
+          {showShareMessage && (
+            <div
+              className="chat--message chat--system-message"
+              style={{
+                padding: '12px',
+                marginBottom: '8px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(106, 169, 244, 0.1)',
+                border: '1px solid rgba(106, 169, 244, 0.3)',
+              }}
+            >
+              <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                <i style={{flex: 1}}>
+                  Game created! Share the link to play with your friends:
+                  <wbr />
+                </i>
+                <b id="pathText" style={{marginLeft: '5px', flex: 1, wordBreak: 'break-all'}}>
+                  {url}
+                </b>
+                <IconButton
+                  size="small"
+                  onClick={handleCopyClick}
+                  title="Copy to Clipboard"
+                  sx={{flexShrink: 0}}
+                >
+                  <MdContentCopy fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={handleDismissShareMessage}
+                  title="Dismiss"
+                  sx={{flexShrink: 0}}
+                >
+                  <MdClose fontSize="small" />
+                </IconButton>
+              </div>
             </div>
-          </div>
+          )}
           {props.game.solved && (
-            <div className="chat--message chat--system-message">
-              <div
-                style={{display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer'}}
+            <div
+              className="chat--message chat--system-message"
+              style={{
+                padding: '12px',
+                marginBottom: '8px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                border: '1px solid rgba(76, 175, 80, 0.3)',
+              }}
+            >
+              <button
                 onClick={handleShareScoreClick}
+                type="button"
+                aria-label="Share your score"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  width: '100%',
+                  textAlign: 'left',
+                  font: 'inherit',
+                  color: 'inherit',
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleShareScoreClick();
+                  }
+                }}
               >
                 <i id="shareText" style={{flex: 1}}>
                   Congratulations! You solved the puzzle in{' '}
@@ -550,7 +727,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                 <IconButton size="small" title="Copy to Clipboard" sx={{flexShrink: 0}}>
                   <MdContentCopy fontSize="small" />
                 </IconButton>
-              </div>
+              </button>
             </div>
           )}
           {messages.map((message, i) => (

@@ -2,8 +2,9 @@
 
 import type {RoomEvent} from '@shared/roomEvents';
 import {Server as SocketIOServer} from 'socket.io';
-import {addGameEvent, getGameEvents} from './model/game.js';
+
 import type {GameEvent} from './model/game.js';
+import {addGameEvent, getGameEvents} from './model/game.js';
 import {addRoomEvent, getRoomEvents} from './model/room.js';
 
 interface SocketEvent {
@@ -18,7 +19,6 @@ function assignTimestamp(event: unknown): unknown {
       return Date.now();
     }
     const result = event.constructor();
-    // eslint-disable-next-line guard-for-in
     for (const key in eventObj) {
       result[key] = assignTimestamp(eventObj[key]);
     }
@@ -50,46 +50,66 @@ class SocketManager {
 
   listen() {
     this.io.on('connection', (socket) => {
-      // ======== Game Events ========= //
-      socket.on('join_game', async (gid, ack) => {
-        socket.join(`game-${gid}`);
-        ack();
+      // ======== Ping/Pong for Latency Measurement ========= //
+      // Use 'latency_ping' to avoid conflict with Socket.IO's internal 'ping' event
+      socket.on('latency_ping', (clientTimestamp: number) => {
+        try {
+          if (typeof clientTimestamp !== 'number' || isNaN(clientTimestamp)) {
+            // eslint-disable-next-line no-console
+            console.warn('[socket] Invalid latency_ping timestamp:', clientTimestamp);
+            return;
+          }
+          const serverTimestamp = Date.now();
+          const latency = serverTimestamp - clientTimestamp;
+          socket.emit('latency_pong', latency);
+          // eslint-disable-next-line no-console
+          console.log('[socket] Received latency_ping, responding with latency:', latency, 'ms');
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('[socket] Error handling latency_ping:', error);
+        }
       });
 
-      socket.on('leave_game', async (gid, ack) => {
-        socket.leave(`game-${gid}`);
-        ack();
+      // ======== Game Events ========= //
+      socket.on('join_game', (gid, ack) => {
+        void socket.join(`game-${gid}`);
+        void ack();
+      });
+
+      socket.on('leave_game', (gid, ack) => {
+        void socket.leave(`game-${gid}`);
+        void ack();
       });
 
       socket.on('sync_all_game_events', async (gid, ack) => {
         const events = await getGameEvents(gid);
-        ack(events);
+        void ack(events);
       });
 
       socket.on('game_event', async (message, ack) => {
         await this.addGameEvent(message.gid, message.event);
-        ack();
+        void ack();
       });
 
       // ======== Room Events ========= //
 
-      socket.on('join_room', async (rid, ack) => {
-        socket.join(`room-${rid}`);
-        ack();
+      socket.on('join_room', (rid, ack) => {
+        void socket.join(`room-${rid}`);
+        void ack();
       });
-      socket.on('leave_room', async (rid, ack) => {
-        socket.leave(`room-${rid}`);
-        ack();
+      socket.on('leave_room', (rid, ack) => {
+        void socket.leave(`room-${rid}`);
+        void ack();
       });
 
       socket.on('sync_all_room_events', async (rid, ack) => {
         const events = await getRoomEvents(rid);
-        ack(events);
+        void ack(events);
       });
 
       socket.on('room_event', async (message, ack) => {
         await this.addRoomEvent(message.rid, message.event);
-        ack();
+        void ack();
       });
     });
   }

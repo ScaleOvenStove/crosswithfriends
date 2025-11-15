@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/experimental-ct-react';
-import React from 'react';
+
 import Clock from '../../../components/Toolbar/Clock';
 import {TestWrapper} from '../../utils';
 

@@ -1,7 +1,7 @@
-import React from 'react';
-import {useToggle} from 'react-use';
-import {CirclePicker} from 'react-color';
 import {Box} from '@mui/material';
+import React from 'react';
+import {CirclePicker} from 'react-color';
+import {useToggle} from 'react-use';
 
 interface ColorPickerProps {
   color: string;
@@ -11,10 +11,30 @@ const ColorPicker: React.FC<ColorPickerProps> = (props) => {
   const [isActive, toggleIsActive] = useToggle(false);
   return (
     <>
-      <Box component="span" onClick={toggleIsActive} sx={{color: props.color, cursor: 'pointer'}}>
+      <button
+        onClick={() => toggleIsActive()}
+        type="button"
+        aria-label="Change color"
+        aria-expanded={isActive}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          color: props.color,
+          font: 'inherit',
+          display: 'inline',
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleIsActive();
+          }
+        }}
+      >
         {' '}
         {'\u25CF '}
-      </Box>
+      </button>
       {isActive ? (
         <>
           <CirclePicker

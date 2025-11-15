@@ -1,12 +1,12 @@
-import React, {useEffect, useMemo, useState} from 'react';
-import {useUpdateEffect} from 'react-use';
+import {initialRoomState, roomReducer} from '@crosswithfriends/shared/lib/reducers/room';
+import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
+import {Box} from '@mui/material';
 import _ from 'lodash';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
+import {useUpdateEffect} from 'react-use';
 
-import {Box} from '@mui/material';
-import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
-import {initialRoomState, roomReducer} from '@crosswithfriends/shared/lib/reducers/room';
 import {useRoom} from '../hooks/useRoom';
 
 const ACTIVE_SECONDS_TIMEOUT = 60;
@@ -17,7 +17,7 @@ function useRoomState(events: RoomEvent[]) {
 }
 
 const useTimer = (interval = 1000): number => {
-  const [time, setTime] = useState(Date.now());
+  const [time, setTime] = useState(() => Date.now());
   useEffect(() => {
     const itvl = setInterval(() => {
       setTime(Date.now());

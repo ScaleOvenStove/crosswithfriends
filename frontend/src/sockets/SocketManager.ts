@@ -4,6 +4,7 @@
  */
 
 import io, {type Socket} from 'socket.io-client';
+
 import {SOCKET_HOST} from '../api/constants';
 
 // Helper to wait for a socket event once
@@ -20,6 +21,7 @@ class SocketManager {
   private socketPromise: Promise<Socket> | null = null;
   private subscriptions: Map<string, Set<EventHandler>> = new Map();
   private isConnecting = false;
+  private pingInterval: NodeJS.Timeout | null = null;
 
   /**
    * Get or create the socket connection
@@ -42,6 +44,12 @@ class SocketManager {
    * Create a new socket connection
    */
   private async createConnection(): Promise<Socket> {
+    // Clear any existing ping interval
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+
     const socket = io(SOCKET_HOST, {upgrade: false, transports: ['websocket']});
 
     // Store socket on window for debugging and connection stats
@@ -50,12 +58,24 @@ class SocketManager {
     }
 
     // Register global event handlers for connection status
-    socket.on('pong', (ms: number) => {
+    // Use 'latency_pong' to avoid conflict with Socket.IO's internal 'pong' event
+    socket.on('latency_pong', (ms: number) => {
       if (typeof window !== 'undefined') {
         (window as {connectionStatus?: {latency: number; timestamp: number}}).connectionStatus = {
           latency: ms,
           timestamp: Date.now(),
         };
+        if (import.meta.env.DEV) {
+          console.debug('[ws] Received latency_pong, latency:', ms, 'ms');
+        }
+      }
+    });
+
+    // Clean up interval on disconnect
+    socket.on('disconnect', () => {
+      if (this.pingInterval) {
+        clearInterval(this.pingInterval);
+        this.pingInterval = null;
       }
     });
 
@@ -77,8 +97,63 @@ class SocketManager {
     // Wait for connection
     if (!socket.connected) {
       await new Promise<void>((resolve) => {
-        socket.once('connect', resolve);
+        socket.once('connect', () => {
+          // Ensure ping is set up after connection
+          if (!this.pingInterval) {
+            const sendPing = () => {
+              if (socket.connected) {
+                const timestamp = Date.now();
+                try {
+                  socket.emit('latency_ping', timestamp);
+                  if (import.meta.env.DEV) {
+                    console.debug('[ws] Sending latency_ping', timestamp);
+                  }
+                } catch (error) {
+                  console.error('[ws] Error sending latency_ping:', error);
+                }
+              } else {
+                if (import.meta.env.DEV) {
+                  console.debug('[ws] Socket not connected, skipping ping');
+                }
+              }
+            };
+            // Small delay to ensure server handlers are registered
+            setTimeout(() => {
+              // Send initial ping
+              sendPing();
+              // Set up periodic pings
+              this.pingInterval = setInterval(sendPing, 2000);
+            }, 100);
+          }
+          resolve();
+        });
       });
+    } else {
+      // Already connected, set up ping immediately
+      if (!this.pingInterval) {
+        const sendPing = () => {
+          if (socket.connected) {
+            const timestamp = Date.now();
+            try {
+              socket.emit('latency_ping', timestamp);
+              if (import.meta.env.DEV) {
+                console.debug('[ws] Sending latency_ping', timestamp);
+              }
+            } catch (error) {
+              console.error('[ws] Error sending latency_ping:', error);
+            }
+          } else {
+            if (import.meta.env.DEV) {
+              console.debug('[ws] Socket not connected, skipping ping');
+            }
+          }
+        };
+        // Small delay to ensure server handlers are registered
+        setTimeout(() => {
+          sendPing();
+          this.pingInterval = setInterval(sendPing, 2000);
+        }, 100);
+      }
     }
 
     this.socket = socket;
@@ -159,8 +234,16 @@ class SocketManager {
       await onceAsync(socket, 'connect');
     }
 
-    return new Promise((resolve) => {
-      (socket as {emit: (...args: unknown[]) => void}).emit(event, ...args, resolve);
+    return new Promise((resolve, reject) => {
+      // Set up timeout (30 seconds default)
+      const timeout = setTimeout(() => {
+        reject(new Error(`emitAsync timeout for event "${event}" after 30000ms`));
+      }, 30000);
+
+      (socket as {emit: (...args: unknown[]) => void}).emit(event, ...args, (response: unknown) => {
+        clearTimeout(timeout);
+        resolve(response);
+      });
     });
   }
 
@@ -182,6 +265,11 @@ class SocketManager {
    * Disconnect the socket and clean up all subscriptions
    */
   disconnect(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();

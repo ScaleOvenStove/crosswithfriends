@@ -1,13 +1,12 @@
-import {create} from 'zustand';
-import _ from 'lodash';
-import {db, type DatabaseReference} from './firebase';
-import {ref, onValue, get, set, push, remove, runTransaction} from 'firebase/database';
-// eslint-disable-next-line import/no-cycle
-import actions from '../actions';
-
 import powerupData from '@crosswithfriends/shared/lib/powerups';
 import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
-// eslint-disable-next-line import/no-cycle
+import {ref, onValue, get, set, push, remove, runTransaction} from 'firebase/database';
+import _ from 'lodash';
+import {create} from 'zustand';
+
+import actions from '../actions';
+
+import {db, type DatabaseReference} from './firebase';
 import {usePuzzleStore} from './puzzleStore';
 
 const STARTING_POWERUPS = 1;

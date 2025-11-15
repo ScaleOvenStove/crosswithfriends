@@ -1,6 +1,10 @@
 /* eslint react/no-string-refs: "warn" */
 import './css/index.css';
 
+import {lightenHsl} from '@crosswithfriends/shared/lib/colors';
+import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
+import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import React, {
   useState,
   useRef,
@@ -10,23 +14,19 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
+
 import {getTime} from '../../store/firebase';
-import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
-
-import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
-
 import Grid from '../Grid';
 import ListView from '../ListView';
+
 import Clues from './Clues';
 import Clue from './ClueText';
+import ConnectionStats from './ConnectionStats';
+import ConnectionStatusIndicator from './ConnectionStatusIndicator';
 import GridControls from './GridControls';
+import ListViewControls from './ListViewControls';
 import MobileGridControls from './MobileGridControls';
 import MobileListViewControls from './MobileListViewControls';
-import ListViewControls from './ListViewControls';
-import ConnectionStats from './ConnectionStats';
-
-import {lightenHsl} from '@crosswithfriends/shared/lib/colors';
-import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
 import {VimCommandBar} from './VimCommandBar';
 
 const CURSOR_TIMEOUT = 60000;
@@ -715,6 +715,20 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
             <div className={`player--main--left--grid${frozen ? ' frozen' : ''} blurable`}>
               <Grid ref={gridRef} {...gridProps} />
             </div>
+            {props.beta && (
+              <div
+                className="connection-status-indicator-container"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 8px',
+                }}
+              >
+                <ConnectionStatusIndicator optimisticCounter={props.optimisticCounter} />
+              </div>
+            )}
             {vimMode && (
               <VimCommandBar
                 isVimCommandMode={props.vimCommand}
@@ -731,19 +745,6 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
           </div>
         </div>
       </GridControls>
-      {props.beta && (
-        <div
-          style={{
-            color: 'gray',
-            margin: '0 auto',
-          }}
-        >
-          <div>{props.optimisticCounter ? <>{props.optimisticCounter} ahead</> : <>Synced</>}</div>
-          <div>
-            <ConnectionStats />
-          </div>
-        </div>
-      )}
       {renderColorAttributionCounts()}
     </div>
   );

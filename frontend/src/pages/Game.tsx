@@ -1,35 +1,36 @@
-import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
+import {isMobile, rand_color} from '@crosswithfriends/shared/lib/jsUtils';
+import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
+import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
+import {Box, Stack, IconButton} from '@mui/material';
 import _ from 'lodash';
+import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
-import {Box, Stack} from '@mui/material';
-import Nav from '../components/common/Nav';
+import {MdChevronLeft} from 'react-icons/md';
 import {useParams, useLocation} from 'react-router-dom';
 
-import {useGameStore} from '../store';
-import {useGameSetup} from '../hooks/useGameSetup';
-import {useBattleSetup} from '../hooks/useBattleSetup';
-import {useUser} from '../hooks/useUser';
-import type {GameEvent} from '../types/events';
-import type {Powerup, Winner, BattlePlayer, Pickup, BattleData, ChatMessage} from '../types/battle';
-import GameComponent from '../components/Game';
-import MobilePanel from '../components/common/MobilePanel';
 import Chat from '../components/Chat';
+import GameSkeletonLoader from '../components/common/GameSkeletonLoader';
+import MobilePanel from '../components/common/MobilePanel';
+import Nav from '../components/common/Nav';
 import Powerups from '../components/common/Powerups';
-import {isMobile, rand_color} from '@crosswithfriends/shared/lib/jsUtils';
-import {isValidGid, createSafePath} from '../store/firebaseUtils';
-
-import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
+import GameComponent from '../components/Game';
 import {useRecordSolve} from '../hooks/api/useRecordSolve';
-import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
+import {useBattleSetup} from '../hooks/useBattleSetup';
+import {useGameSetup} from '../hooks/useGameSetup';
+import {useUser} from '../hooks/useUser';
+import {isValidGid, createSafePath} from '../store/firebaseUtils';
+import type {Powerup, Winner, BattlePlayer, Pickup, BattleData, ChatMessage} from '../types/battle';
 
 const Game: React.FC = () => {
   const params = useParams<{gid?: string; rid?: string}>();
   const location = useLocation();
 
   const [gid, setGid] = useState<string | undefined>(params.gid);
-  const [rid, setRid] = useState<string | undefined>(params.rid);
+  const [_rid, setRid] = useState<string | undefined>(params.rid);
   const [mobile, setMobile] = useState<boolean>(isMobile());
   const [mode, setMode] = useState<string>('game');
+  const [chatCollapsed, setChatCollapsed] = useState<boolean>(false);
+  const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState<number>(0);
   const [powerups, setPowerups] = useState<Record<number, Powerup[]> | undefined>(undefined);
   const [lastReadChat, setLastReadChat] = useState<number>(0);
   const [bid, setBid] = useState<number | undefined>(undefined);
@@ -39,7 +40,7 @@ const Game: React.FC = () => {
   const [winner, setWinner] = useState<Winner | undefined>(undefined);
   const [players, setPlayers] = useState<Record<string, BattlePlayer> | undefined>(undefined);
   const [pickups, setPickups] = useState<Record<string, Pickup> | undefined>(undefined);
-  const [archived, setArchived] = useState<boolean>(false);
+  const [_archived, setArchived] = useState<boolean>(false);
 
   // Get initial username
   const usernameKey = useMemo(() => {
@@ -133,7 +134,7 @@ const Game: React.FC = () => {
 
   const beta = useMemo(() => true, []);
 
-  const query = useMemo(() => {
+  const _query = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const result: Record<string, string> = {};
     params.forEach((value, key) => {
@@ -277,8 +278,12 @@ const Game: React.FC = () => {
   }, [game, user.id, userColorKey]);
 
   const handleToggleChat = useCallback((): void => {
-    setMode((prev) => (prev === 'game' ? 'chat' : 'game'));
-  }, []);
+    if (mobile) {
+      setMode((prev) => (prev === 'game' ? 'chat' : 'game'));
+    } else {
+      setChatCollapsed((prev) => !prev);
+    }
+  }, [mobile]);
 
   const handleChat = useCallback(
     (username: string, id: string, message: string): void => {
@@ -293,9 +298,9 @@ const Game: React.FC = () => {
   gameHookRef.current = gameHook;
 
   // Extract primitive values to use in dependencies
-  const gameReady = gameHook.ready;
-  const gameState = gameHook.gameState;
-  const gameInstance = gameHook.game;
+  const _gameReady = gameHook.ready;
+  const _gameState = gameHook.gameState;
+  const _gameInstance = gameHook.game;
 
   const handleUpdateDisplayName = useCallback((id: string, displayName: string): void => {
     // Only update if game is ready, attached, and has gameState
@@ -360,8 +365,6 @@ const Game: React.FC = () => {
     setTimeout(() => {
       updatingDisplayNameRef.current = false;
     }, 100);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gid, user.id, initialUsername]); // Only depend on these - check hook state inside
 
   // Also check when game becomes ready (using ref to track transition)
@@ -398,7 +401,6 @@ const Game: React.FC = () => {
     }
 
     prevReadyRef.current = currentReady;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }); // Check on every render but only act on ready transition
 
   const handleUpdateColor = useCallback(
@@ -477,6 +479,7 @@ const Game: React.FC = () => {
         battleModel={battleHook as unknown} // Pass hook methods as battleModel interface
         team={team}
         unreads={unreads}
+        scrollToBottomTrigger={scrollToBottomTrigger}
       />
     );
   }, [
@@ -493,6 +496,11 @@ const Game: React.FC = () => {
     handleToggleChat,
     game, // Use game from Zustand
   ]);
+
+  const handleShareLinkDisappeared = useCallback(() => {
+    // Trigger scroll to bottom in game component
+    setScrollToBottomTrigger((prev) => prev + 1);
+  }, []);
 
   const renderChat = useCallback((): JSX.Element | undefined => {
     if (!gameHook.ready || !game) {
@@ -524,6 +532,8 @@ const Game: React.FC = () => {
         bid={bid}
         updateSeenChatMessage={updateSeenChatMessage}
         initialUsername={initialUsername}
+        collapsed={chatCollapsed}
+        onShareLinkDisappeared={handleShareLinkDisappeared}
       />
     );
   }, [
@@ -541,6 +551,8 @@ const Game: React.FC = () => {
     handleToggleChat,
     handleSelectClue,
     updateSeenChatMessage,
+    chatCollapsed,
+    handleShareLinkDisappeared,
   ]);
 
   const puzzleTitle = useMemo((): string => {
@@ -552,6 +564,11 @@ const Game: React.FC = () => {
   }, [game]);
 
   const renderContent = useCallback((): JSX.Element => {
+    // Show skeleton loader while game is loading
+    if (!gameHook.ready || !game) {
+      return <GameSkeletonLoader />;
+    }
+
     const teamPowerups = _.get(powerups, team);
     const gameElement = showingGame ? renderGame() : null;
     const chatElement = showingChat ? renderChat() : null;
@@ -575,25 +592,67 @@ const Game: React.FC = () => {
             padding: {xs: '2px', sm: '5px', md: '8px'},
             flexDirection: {xs: 'column', sm: 'row'},
             gap: {xs: 0, sm: 1, md: 2},
+            minHeight: 0,
+            maxHeight: '100%',
           }}
         >
-          <Stack
-            direction="column"
-            sx={{
-              flexShrink: 0,
-              minWidth: {xs: '100%', sm: 'auto'},
-              maxWidth: {xs: '100%', sm: 'none'},
-              flex: {xs: '1 1 auto', sm: '0 0 auto'},
-            }}
-          >
-            {gameElement}
-          </Stack>
           <Box
             sx={{
-              flex: 1,
-              minWidth: {xs: '100%', sm: '280px', md: '320px'},
-              maxWidth: {xs: '100%', sm: 'none'},
+              flex: chatCollapsed ? 1 : {xs: 1, sm: '0 0 75%'},
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'flex 0.3s ease',
+              minWidth: 0, // Allow shrinking
+            }}
+          >
+            <Stack
+              direction="column"
+              sx={{
+                flex: 1,
+                minWidth: {xs: '100%', sm: 'auto'},
+                maxWidth: {xs: '100%', sm: 'none'},
+                width: '100%',
+              }}
+            >
+              {gameElement}
+            </Stack>
+            {chatCollapsed && !mobile && (
+              <IconButton
+                onClick={handleToggleChat}
+                sx={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'background.paper',
+                  boxShadow: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                    transform: 'translateY(-50%) translateX(-4px)',
+                  },
+                  transition: 'transform 0.2s ease',
+                  zIndex: 10,
+                  display: {xs: 'none', sm: 'flex'},
+                }}
+                title="Expand chat"
+              >
+                <MdChevronLeft />
+              </IconButton>
+            )}
+          </Box>
+          <Box
+            sx={{
+              flex: chatCollapsed ? '0 0 0' : {xs: '1 1 auto', sm: '0 0 25%'},
+              minWidth: chatCollapsed ? 0 : {xs: '100%', sm: '280px', md: '320px'},
+              maxWidth: chatCollapsed ? 0 : {xs: '100%', sm: 'none'},
               display: {xs: showingChat ? 'flex' : 'none', sm: 'flex'},
+              overflow: 'hidden',
+              opacity: {xs: 1, sm: chatCollapsed ? 0 : 1},
+              transition: 'flex 0.3s ease, min-width 0.3s ease, max-width 0.3s ease, opacity 0.3s ease',
+              pointerEvents: {xs: 'auto', sm: chatCollapsed ? 'none' : 'auto'},
             }}
           >
             {chatElement}
@@ -604,7 +663,7 @@ const Game: React.FC = () => {
     );
 
     return mobile ? mobileContent : desktopContent;
-  }, [mobile, showingGame, showingChat, powerups, team, renderGame, renderChat, handleUsePowerup]);
+  }, [mobile, showingGame, showingChat, chatCollapsed, powerups, team, renderGame, renderChat, handleUsePowerup, gameHook.ready, game]);
 
   return (
     <Stack
@@ -614,6 +673,9 @@ const Game: React.FC = () => {
         flex: 1,
         width: '100%',
         height: '100%',
+        maxHeight: '100vh',
+        overflow: 'hidden',
+        minHeight: 0,
       }}
     >
       <Helmet>

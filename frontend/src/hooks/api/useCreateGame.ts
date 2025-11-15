@@ -2,9 +2,10 @@
  * React Query hook for creating games
  */
 
-import {useMutation} from '@tanstack/react-query';
-import {createGame} from '../../api/create_game';
 import type {CreateGameRequest, CreateGameResponse} from '@crosswithfriends/shared/types';
+import {useMutation} from '@tanstack/react-query';
+
+import {createGame} from '../../api/create_game';
 
 interface UseCreateGameOptions {
   onSuccess?: (data: CreateGameResponse) => void;

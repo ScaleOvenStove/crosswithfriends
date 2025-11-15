@@ -1,9 +1,11 @@
-import _ from 'lodash';
+import type {ListPuzzleRequestFilters, PuzzleJson} from '@shared/types';
 import Joi from 'joi';
+import _ from 'lodash';
 import * as uuid from 'uuid';
-import type {PuzzleJson, ListPuzzleRequestFilters} from '@shared/types';
-import {pool} from './pool.js';
+
 import {logger} from '../utils/logger.js';
+
+import {pool} from './pool.js';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
@@ -190,7 +192,7 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
       [pid]
     );
     await client.query('COMMIT');
-  } catch (e) {
+  } catch {
     await client.query('ROLLBACK');
   } finally {
     client.release();

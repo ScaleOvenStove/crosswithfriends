@@ -1,21 +1,19 @@
 import './css/replay.css';
+import {isMobile, toArr} from '@crosswithfriends/shared/lib/jsUtils';
+import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
+import {Box, Stack, Tooltip} from '@mui/material';
+import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
-import {Box, Stack} from '@mui/material';
 import {Helmet} from 'react-helmet';
 import {MdPlayArrow, MdPause, MdChevronLeft, MdChevronRight} from 'react-icons/md';
-import _ from 'lodash';
 import {useParams} from 'react-router-dom';
 
-import {useGameStore} from '../store';
-
-import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
-import Player from '../components/Player';
 import Chat from '../components/Chat';
 import Nav from '../components/common/Nav';
+import Player from '../components/Player';
 import {Timeline} from '../components/Timeline/Timeline';
-import {isMobile, toArr} from '@crosswithfriends/shared/lib/jsUtils';
 import Toolbar from '../components/Toolbar';
-import {Tooltip} from '@mui/material';
+import {useGameStore} from '../store';
 
 const SCRUB_SPEED = 50; // 30 actions per second
 const AUTOPLAY_SPEEDS = (localStorage as any).premium ? [1, 10, 100, 1000] : [1, 10, 100];
@@ -295,6 +293,15 @@ const Replay: React.FC = () => {
     setRight(false);
   }, []);
 
+  const handleToggleAutoplay = useCallback((): void => {
+    const index = _.findIndex(history, (event) => event.gameTimestamp > position);
+    if (index === -1) {
+      // restart
+      handleSetPosition(0);
+    }
+    setAutoplayEnabled((prev) => !prev);
+  }, [history, position, handleSetPosition]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
       e.preventDefault();
@@ -307,7 +314,7 @@ const Replay: React.FC = () => {
         handleToggleAutoplay();
       }
     },
-    [scrubLeft, scrubRight]
+    [scrubLeft, scrubRight, handleToggleAutoplay]
   );
 
   const handleKeyUp = useCallback((e: React.KeyboardEvent): void => {
@@ -318,15 +325,6 @@ const Replay: React.FC = () => {
       setRight(false);
     }
   }, []);
-
-  const handleToggleAutoplay = useCallback((): void => {
-    const index = _.findIndex(history, (event) => event.gameTimestamp > position);
-    if (index === -1) {
-      // restart
-      handleSetPosition(0);
-    }
-    setAutoplayEnabled((prev) => !prev);
-  }, [history, position, handleSetPosition]);
 
   const renderHeader = useCallback((): JSX.Element | null => {
     if (!game || error) {
@@ -344,7 +342,7 @@ const Replay: React.FC = () => {
 
   const renderToolbar = useCallback((): JSX.Element | undefined => {
     if (!game) return undefined;
-    const {clock, solved} = game;
+    const {clock} = game;
     const {totalTime} = clock;
     return (
       <Toolbar
@@ -404,7 +402,7 @@ const Replay: React.FC = () => {
     );
   }, [error, game, colorAttributionMode, listMode, handleUpdateCursor]);
 
-  const renderChat = useCallback((): JSX.Element | null => {
+  const _renderChat = useCallback((): JSX.Element | null => {
     if (error || !game) {
       return null;
     }

@@ -6,4 +6,4 @@ import React from 'react';
 import './setup';
 
 // Export a default component wrapper if needed
-export const Wrapper = ({children}: {children: React.ReactNode}) => <>{children}</>;
+export const Wrapper = ({children}: {children: React.ReactNode}) => children;

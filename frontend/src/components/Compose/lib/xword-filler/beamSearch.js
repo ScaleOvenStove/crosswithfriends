@@ -47,11 +47,9 @@ export default (initialState, scoredWordlist) => {
     console.log('step', step, bestCandidate.computeHeuristic(scoredWordlist, true));
     console.log(bestCandidate.gridString.join(''));
     const cells = _.range(bestCandidate.width * bestCandidate.height).filter(
-      // eslint-disable-next-line
       (cell) => !bestCandidate.isCellComplete(cell)
     );
     const sortedCells = _.orderBy(
-      // eslint-disable-next-line
       cells.map((cell) => ({
         cell,
         score: bestCandidate.computeCellHeuristic(cell, scoredWordlist),

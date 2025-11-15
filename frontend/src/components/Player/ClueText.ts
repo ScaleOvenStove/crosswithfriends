@@ -57,7 +57,7 @@ const simpleRender = (tree: Tree, allowed: string[]): ReactNode => {
   }
 };
 
-export default ({text = ''}): JSX.Element => {
+const ClueText = ({text = ''}: {text?: string}): JSX.Element => {
   // case where we should italicize the whole clue
   if (text.startsWith('""') && text.endsWith('""')) {
     return createElement('i', {}, text.slice(1, -1));
@@ -71,3 +71,7 @@ export default ({text = ''}): JSX.Element => {
   const tree = simpleParse(text);
   return createElement('span', {}, simpleRender(tree, allowed));
 };
+
+ClueText.displayName = 'ClueText';
+
+export default ClueText;

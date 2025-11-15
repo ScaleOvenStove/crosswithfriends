@@ -1,16 +1,17 @@
 import './css/listView.css';
 
-import _ from 'lodash';
-import React, {useMemo, useCallback} from 'react';
+import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
 import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {toCellIndex} from '@crosswithfriends/shared/types';
+import _ from 'lodash';
+import React, {useMemo, useCallback} from 'react';
+
 import Cell from '../Grid/Cell';
 import type {GridProps} from '../Grid/Grid';
 import {hashGridRow} from '../Grid/hashGridRow';
 import type {ClueCoords, EnhancedGridData} from '../Grid/types';
-import RerenderBoundary from '../RerenderBoundary';
 import Clue from '../Player/ClueText';
-import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
+import RerenderBoundary from '../RerenderBoundary';
 
 interface ListViewProps extends GridProps {
   clues: {across: string[]; down: string[]};

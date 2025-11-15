@@ -1,5 +1,6 @@
 import {test, expect} from '@playwright/experimental-ct-react';
 import React from 'react';
+
 import MobilePanel from '../../../components/common/MobilePanel';
 import {TestWrapper} from '../../utils';
 

@@ -1,6 +1,7 @@
 html {
   height: 100%;
   width: 100%;
+  overflow: hidden;
 }
 
 html,
@@ -12,7 +13,18 @@ input,
   flex-direction: column;
   flex: 1;
   margin: 0;
+  padding: 0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
+}
+
+/* Allow scrolling within main content areas, but not the page itself */
+.router-wrapper > * {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 button {
@@ -20,14 +32,49 @@ button {
   font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
 }
 
-@media only screen and (max-device-width: 480px) {
-  body,
-  html {
-    overflow: hidden;
-    position: fixed;
-    height: 100%;
-    width: 100%;
-  }
+/* Accessibility: Focus indicators */
+*:focus-visible {
+  outline: 2px solid #6aa9f4;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #6aa9f4;
+  outline-offset: 2px;
+}
+
+/* Ensure interactive elements are keyboard accessible */
+button,
+a,
+input,
+select,
+textarea,
+[role='button'],
+[role='link'],
+[tabindex]:not([tabindex='-1']) {
+  cursor: pointer;
+}
+
+button:disabled,
+a:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Prevent page scrolling on all devices - but allow internal scrolling */
+body {
+  overflow: hidden;
+  height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  position: relative;
 }
 
 :root {

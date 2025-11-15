@@ -1,5 +1,4 @@
-import EventEmitter from './EventEmitter';
-import {db, SERVER_TIME, getTime} from './firebase';
+import {rand_color} from '@crosswithfriends/shared/lib/jsUtils';
 import {
   getAuth,
   onAuthStateChanged,
@@ -8,9 +7,11 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import {ref, get, set, runTransaction} from 'firebase/database';
-import app from './firebase';
+
 import getLocalId from '../localAuth';
-import {rand_color} from '@crosswithfriends/shared/lib/jsUtils';
+
+import EventEmitter from './EventEmitter';
+import app, {db, SERVER_TIME, getTime} from './firebase';
 
 const disableFbLogin = true;
 

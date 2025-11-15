@@ -11,12 +11,14 @@ It is hosted at https://crosswithfriends.com/.
 1. Install `nvm` and `yarn`
 
 2. Clone the repository:
+
    ```bash
    git clone https://github.com/ScaleOvenStove/crosswithfriends.git
    cd crosswithfriends
    ```
 
 3. Use Node.js v20:
+
    ```bash
    nvm install
    nvm use
@@ -24,6 +26,7 @@ It is hosted at https://crosswithfriends.com/.
    ```
 
 4. Install dependencies:
+
    ```bash
    yarn
    ```

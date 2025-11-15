@@ -8,6 +8,7 @@ import {
   type Database,
   type DatabaseReference,
 } from 'firebase/database';
+
 import {firebaseConfig} from '../config';
 
 const offline = firebaseConfig.offline;
@@ -40,7 +41,7 @@ try {
       if (val !== null && val !== undefined && typeof val === 'number') {
         offset = val;
       }
-    } catch (error) {
+    } catch {
       // Silently handle error - server time offset is not critical
       offset = 0;
     }
@@ -50,7 +51,7 @@ try {
       offsetListener = null;
     }
   });
-} catch (error) {
+} catch {
   // Handle initialization error gracefully - server time offset is not critical
   // Using local time is acceptable fallback
   offset = 0;

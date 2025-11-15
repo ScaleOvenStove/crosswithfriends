@@ -1,6 +1,7 @@
 .grid {
   border-collapse: collapse;
   table-layout: fixed;
+  margin: 0 auto;
 }
 
 .grid--cell {
@@ -9,4 +10,5 @@
   margin: 0px;
   border: 1px solid #aaaaaa;
   box-sizing: border-box;
+  overflow: hidden; /* Prevent cell content from overlapping borders */
 }

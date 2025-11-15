@@ -1,5 +1,6 @@
-import apiClient from './client';
 import type {IncrementGidResponse, IncrementPidResponse} from '@crosswithfriends/shared/types';
+
+import apiClient from './client';
 
 // ========== POST /api/counters/gid ============
 export async function incrementGid(): Promise<IncrementGidResponse> {

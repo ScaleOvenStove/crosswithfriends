@@ -1,8 +1,10 @@
+import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import type {ListPuzzleStatsResponse, ListPuzzleStatsRequest} from '@shared/types';
 import _ from 'lodash';
-import {getPuzzleSolves} from '../model/puzzle_solve.js';
+
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
+import {getPuzzleSolves} from '../model/puzzle_solve.js';
+
 import {createHttpError} from './errors.js';
 
 type PuzzleSummaryStat = {
@@ -39,6 +41,7 @@ export function computePuzzleStats(puzzle_solves: SolvedPuzzleType[]): PuzzleSum
   return stats.sort((a, b) => a.size.localeCompare(b.size));
 }
 
+// eslint-disable-next-line require-await
 async function statsRouter(fastify: FastifyInstance) {
   fastify.post<{Body: ListPuzzleStatsRequest; Reply: ListPuzzleStatsResponse}>(
     '/',

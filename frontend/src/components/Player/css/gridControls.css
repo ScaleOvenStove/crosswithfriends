@@ -1,6 +1,17 @@
 .grid-controls {
   outline: none;
   position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.grid--content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .grid-controls:focus-within .grid--content .blurable {

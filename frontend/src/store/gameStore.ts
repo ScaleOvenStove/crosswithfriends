@@ -1,16 +1,17 @@
-import {create} from 'zustand';
+import * as colors from '@crosswithfriends/shared/lib/colors';
+import {reduce as gameReducer} from '@crosswithfriends/shared/lib/reducers/game';
+import {ref, onValue, off, get, set} from 'firebase/database';
 import _ from 'lodash';
 import {type Socket} from 'socket.io-client';
 import * as uuid from 'uuid';
-import * as colors from '@crosswithfriends/shared/lib/colors';
+import {create} from 'zustand';
+
 import socketManager from '../sockets/SocketManager';
-import {db, SERVER_TIME, type DatabaseReference} from './firebase';
-import {ref, onValue, off, get, set} from 'firebase/database';
-import {isValidFirebasePath, extractAndValidateGid, createSafePath} from './firebaseUtils';
 import type {GameEvent} from '../types/events';
 import type {RawGame, BattleData} from '../types/rawGame';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import {reduce as gameReducer} from '@crosswithfriends/shared/lib/reducers/game';
+
+import {db, SERVER_TIME, type DatabaseReference} from './firebase';
+import {isValidFirebasePath, extractAndValidateGid} from './firebaseUtils';
 
 // ============ Serialize / Deserialize Helpers ========== //
 
@@ -132,13 +133,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     const socket = await socketManager.connect();
     const gid = path.substring(6); // Extract gid from path like "/game/39-vosk"
 
-    // Subscribe to socket events using SocketManager
+    // Subscribe to socket events using SocketManager for reconnection handling
     const unsubscribeReconnect = socketManager.subscribe('connect', async () => {
+      // Re-join game room on reconnect
       await socketManager.emitAsync('join_game', gid);
       emit(path, 'reconnect', undefined);
     });
 
-    // Join game after handlers are registered
+    // Join game room - this ensures we receive events for this game
     await socketManager.emitAsync('join_game', gid);
 
     // Update game with socket reference (for backward compatibility and event listeners)
@@ -170,12 +172,16 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       throw new Error('Not connected to websocket');
     }
 
-    // Use socket directly for game-specific events (maintains existing behavior)
-    const gameEventHandler = (event: unknown) => {
+    // Create a game-specific event handler that filters by path
+    // We need to use a closure to capture the path
+    const gameEventHandler = ((gamePath: string) => (event: unknown) => {
       const processedEvent = castNullsToUndefined(event) as GameEvent;
       const currentState = getState();
-      const currentGame = currentState.games[path];
-      if (!currentGame) return;
+      const currentGame = currentState.games[gamePath];
+      if (!currentGame) {
+        console.warn('[gameStore] Received event for game that no longer exists:', gamePath);
+        return;
+      }
 
       // Remove from optimistic events if it was optimistic
       const updatedOptimisticEvents = currentGame.optimisticEvents.filter(
@@ -195,6 +201,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       if (processedEvent.type === 'create') {
         updatedGame.createEvent = processedEvent;
         updatedGame.ready = true;
+        console.warn('[gameStore] Received create event via websocket, setting ready=true for:', gamePath);
       }
 
       updatedGame.gameState = computeGameState(updatedGame);
@@ -202,32 +209,76 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       setState({
         games: {
           ...currentState.games,
-          [path]: updatedGame,
+          [gamePath]: updatedGame,
         },
       });
+      if (processedEvent.type === 'create') {
+        console.warn('[gameStore] State updated after create event. Current ready state:', getState().games[gamePath]?.ready);
+      }
 
       if (processedEvent.type === 'create') {
-        emit(path, 'wsCreateEvent', processedEvent);
+        emit(gamePath, 'wsCreateEvent', processedEvent);
       } else {
-        emit(path, 'wsEvent', processedEvent);
+        emit(gamePath, 'wsEvent', processedEvent);
       }
-    };
+    })(path);
 
+    // Register handler directly on socket for immediate use
     socket.on('game_event', gameEventHandler);
+    
+    // Also subscribe via socketManager to ensure handler is re-registered on reconnect
+    // The handler will be automatically re-registered when socket reconnects
+    const unsubscribeGameEvent = socketManager.subscribe('game_event', gameEventHandler);
+    
+    // Ensure we re-join the game room and re-register handler after reconnect
+    const unsubscribeReconnectHandler = socketManager.subscribe('connect', async () => {
+      // Re-join game room on reconnect
+      const reconnectGid = path.substring(6);
+      await socketManager.emitAsync('join_game', reconnectGid);
+    });
 
-    const response = (await socketManager.emitAsync('sync_all_game_events', path.substring(6))) as unknown[];
-    const allEvents: GameEvent[] = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
+    // Sync all game events with error handling
+    let allEvents: GameEvent[] = [];
+    try {
+      const gid = path.substring(6);
+      console.warn('[gameStore] Syncing all game events for', gid);
+      const response = (await socketManager.emitAsync('sync_all_game_events', gid)) as unknown[];
+      
+      if (!response || !Array.isArray(response)) {
+        console.error('[gameStore] Invalid response from sync_all_game_events:', response);
+        throw new Error(`Invalid response from sync_all_game_events: expected array, got ${typeof response}`);
+      }
+
+      allEvents = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
+      console.warn('[gameStore] Received', allEvents.length, 'events from sync_all_game_events');
+    } catch (error) {
+      console.error('[gameStore] Error syncing game events:', error);
+      // Don't throw - allow the game to continue and wait for events via websocket
+      // The game will become ready when it receives a create event via websocket
+      allEvents = [];
+    }
 
     // Sort events by timestamp
     allEvents.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
     const currentState = getState();
     const currentGame = currentState.games[path];
-    if (!currentGame) return;
+    if (!currentGame) {
+      console.warn('[gameStore] Game was detached during sync');
+      return;
+    }
 
     // Find create event
     const createEvent = allEvents.find((e) => e.type === 'create') || null;
     const otherEvents = allEvents.filter((e) => e.type !== 'create');
+
+    if (createEvent) {
+      console.warn('[gameStore] Found create event, marking game as ready');
+    } else if (allEvents.length > 0) {
+      console.warn('[gameStore] Received events but no create event found. Game will wait for create event via websocket.');
+    } else {
+      console.warn('[gameStore] No events received from sync. Game will wait for create event via websocket.');
+    }
 
     // Update game with all events
     const updatedGame: GameInstance = {
@@ -236,15 +287,22 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       ready: createEvent ? true : currentGame.ready,
       events: otherEvents,
       optimisticEvents: [],
+      gameState: computeGameState({
+        ...currentGame,
+        createEvent: createEvent || currentGame.createEvent,
+        events: otherEvents,
+        optimisticEvents: [],
+      }),
     };
-    updatedGame.gameState = computeGameState(updatedGame);
 
+    console.warn('[gameStore] Setting ready state:', updatedGame.ready, 'for path:', path);
     setState({
       games: {
         ...currentState.games,
         [path]: updatedGame,
       },
     });
+    console.warn('[gameStore] State updated. Current ready state:', getState().games[path]?.ready);
 
     // Emit events to subscribers
     if (createEvent) {
@@ -266,8 +324,12 @@ export const useGameStore = create<GameStore>((setState, getState) => {
             ...finalGame,
             unsubscribeSocket: () => {
               existingUnsubscribe?.();
-              if (socket) {
-                socket.off('game_event', gameEventHandler);
+              unsubscribeGameEvent();
+              unsubscribeReconnectHandler();
+              // Also remove direct socket listener
+              const currentSocket = socketManager.getSocket();
+              if (currentSocket) {
+                currentSocket.off('game_event', gameEventHandler);
               }
             },
           },
@@ -377,6 +439,8 @@ export const useGameStore = create<GameStore>((setState, getState) => {
                 ref: gameRef,
                 eventsRef,
                 createEvent: null,
+                ready: false,
+                events: [],
                 gameState: null,
                 optimisticEvents: [],
                 subscriptions: new Map(),

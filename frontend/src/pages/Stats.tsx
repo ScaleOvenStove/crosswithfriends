@@ -1,14 +1,15 @@
-import React, {useEffect, useState} from 'react';
-import _ from 'lodash';
-import {fetchStats} from '../api/stats';
 import type {ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
-import {useUser} from '../hooks/useUser';
 import {Stack, Box} from '@mui/material';
+import _ from 'lodash';
+import React, {useEffect, useState} from 'react';
 import {Helmet} from 'react-helmet';
+
+import {fetchStats} from '../api/stats';
 import Nav from '../components/common/Nav';
 import {formatMilliseconds} from '../components/Toolbar/Clock';
+import {useUser} from '../hooks/useUser';
 
-const Stats: React.FC<{}> = () => {
+const Stats: React.FC<Record<string, never>> = () => {
   const user = useUser();
 
   const [stats, setStats] = useState<ListPuzzleStatsResponse | null>(null);

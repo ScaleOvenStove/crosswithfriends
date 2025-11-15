@@ -1,13 +1,15 @@
 import './css/index.css';
 
-import React, {useMemo} from 'react';
 import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
-import RerenderBoundary from '../RerenderBoundary';
-import {hashGridRow} from './hashGridRow';
-import Cell from './Cell';
-import type {GridDataWithColor, CellCoords, ClueCoords, BattlePickup, CellStyles, Ping} from './types';
 import {toCellIndex} from '@crosswithfriends/shared/types';
 import type {CellIndex, Cursor, GridData} from '@crosswithfriends/shared/types';
+import React, {useMemo} from 'react';
+
+import RerenderBoundary from '../RerenderBoundary';
+
+import Cell from './Cell';
+import {hashGridRow} from './hashGridRow';
+import type {GridDataWithColor, CellCoords, ClueCoords, BattlePickup, CellStyles, Ping} from './types';
 
 export interface GridProps {
   // Grid data

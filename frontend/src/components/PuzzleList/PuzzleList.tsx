@@ -1,5 +1,6 @@
-import React, {useMemo} from 'react';
 import _ from 'lodash';
+import React, {useMemo} from 'react';
+
 import './css/puzzleList.css';
 import NewPuzzleList from './NewPuzzleList';
 

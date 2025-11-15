@@ -10,10 +10,11 @@ interface OEmbedResponse {
   author_name: string;
 }
 
+// eslint-disable-next-line require-await
 async function oEmbedRouter(fastify: FastifyInstance) {
   fastify.get<{Querystring: OEmbedQuery; Reply: OEmbedResponse}>(
     '/',
-    async (request: FastifyRequest<{Querystring: OEmbedQuery}>, _reply: FastifyReply) => {
+    (request: FastifyRequest<{Querystring: OEmbedQuery}>, _reply: FastifyReply) => {
       request.log.debug({headers: request.headers, query: request.query}, 'got req');
 
       const author = request.query.author;

@@ -1,12 +1,14 @@
-import React from 'react';
-import * as _ from 'lodash';
-import clsx from 'clsx';
-import {Tooltip} from '@mui/material';
-import Emoji from '../common/Emoji';
 import powerups from '@crosswithfriends/shared/lib/powerups';
-import type {Ping, CellStyles, EnhancedCellData} from './types';
+import {Tooltip} from '@mui/material';
+import clsx from 'clsx';
+import * as _ from 'lodash';
+import React from 'react';
+
+import Emoji from '../common/Emoji';
+
+import type {EnhancedCellData} from './types';
+
 import './css/cell.css';
-import type {CellData, Cursor} from '@crosswithfriends/shared/types';
 
 interface Props extends EnhancedCellData {
   // Callbacks
@@ -256,7 +258,7 @@ const areEqual = (prevProps: Props, nextProps: Props) => {
   if (!_.isEqual(_.omit(nextProps, ...pathsToOmit), _.omit(prevProps, ...pathsToOmit))) {
     console.debug(
       'cell update',
-      // @ts-ignore
+      // @ts-expect-error - lodash filter with dynamic keys
       _.filter(_.keys(prevProps), (k) => prevProps[k] !== nextProps[k])
     );
     return false;

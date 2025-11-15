@@ -9,7 +9,7 @@ const RerenderBoundary: React.FC<{name: string; hash: string}> = (props) => {
     console.debug('rerendering', props.name);
   }
 
-  return <>{prevChildren.current}</>;
+  return prevChildren.current;
 };
 
 export default RerenderBoundary;

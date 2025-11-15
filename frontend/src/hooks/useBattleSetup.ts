@@ -4,8 +4,10 @@
  */
 
 import {useEffect} from 'react';
-import {useBattle} from './useBattle';
+
 import type {Powerup, Winner, BattlePlayer, Pickup} from '../types/battle';
+
+import {useBattle} from './useBattle';
 
 interface UseBattleSetupOptions {
   bid: number | undefined;
@@ -26,7 +28,7 @@ interface UseBattleSetupReturn {
 
 export function useBattleSetup({
   bid,
-  team,
+  team: _team,
   onGames,
   onPowerups,
   onStartedAt,
