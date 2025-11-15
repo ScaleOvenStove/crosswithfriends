@@ -2,28 +2,26 @@ name: PR Checks
 
 on:
   pull_request:
-    branches:
-      - '*'
 
 jobs:
   lint:
     name: Linting
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Node.js
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'yarn'
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Run ESLint (Frontend)
         run: yarn workspace @crosswithfriends/frontend exec eslint . --ext .ts,.tsx,.js,.jsx
@@ -38,20 +36,20 @@ jobs:
     name: Compile Checks
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'yarn'
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Build shared
         run: yarn build:shared
@@ -66,20 +64,20 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Node.js
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'yarn'
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Run backend tests
         run: yarn test:backend
