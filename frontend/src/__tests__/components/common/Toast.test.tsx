@@ -1,9 +1,11 @@
-import {render, screen, waitFor, act} from '@testing-library/react';
+import {screen, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 
 import Toast from '../../../components/common/Toast';
 import {renderWithProviders} from '../../utils';
+
+const noop = () => {};
 
 describe('Toast', () => {
   beforeEach(() => {
@@ -16,40 +18,40 @@ describe('Toast', () => {
   });
 
   it('should render when open is true', () => {
-    renderWithProviders(<Toast open message="Test message" onClose={() => {}} />);
+    renderWithProviders(<Toast open message="Test message" onClose={noop} />);
 
     expect(screen.getByText('Test message')).toBeInTheDocument();
   });
 
   it('should not render when open is false', () => {
-    renderWithProviders(<Toast open={false} message="Test message" onClose={() => {}} />);
+    renderWithProviders(<Toast open={false} message="Test message" onClose={noop} />);
 
     expect(screen.queryByText('Test message')).not.toBeInTheDocument();
   });
 
   it('should render with default severity (success)', () => {
-    renderWithProviders(<Toast open message="Success message" onClose={() => {}} />);
+    renderWithProviders(<Toast open message="Success message" onClose={noop} />);
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveClass('MuiAlert-standardSuccess');
   });
 
   it('should render with error severity', () => {
-    renderWithProviders(<Toast open message="Error message" severity="error" onClose={() => {}} />);
+    renderWithProviders(<Toast open message="Error message" severity="error" onClose={noop} />);
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveClass('MuiAlert-standardError');
   });
 
   it('should render with warning severity', () => {
-    renderWithProviders(<Toast open message="Warning message" severity="warning" onClose={() => {}} />);
+    renderWithProviders(<Toast open message="Warning message" severity="warning" onClose={noop} />);
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveClass('MuiAlert-standardWarning');
   });
 
   it('should render with info severity', () => {
-    renderWithProviders(<Toast open message="Info message" severity="info" onClose={() => {}} />);
+    renderWithProviders(<Toast open message="Info message" severity="info" onClose={noop} />);
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveClass('MuiAlert-standardInfo');
@@ -120,7 +122,7 @@ describe('Toast', () => {
   });
 
   it('should be positioned at bottom center', () => {
-    const {container} = renderWithProviders(<Toast open message="Test message" onClose={() => {}} />);
+    const {container} = renderWithProviders(<Toast open message="Test message" onClose={noop} />);
 
     const snackbar = container.querySelector('.MuiSnackbar-root');
     expect(snackbar).toBeInTheDocument();

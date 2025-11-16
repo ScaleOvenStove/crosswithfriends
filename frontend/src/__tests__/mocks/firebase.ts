@@ -11,7 +11,7 @@ export const mockFirebaseApp = {
 
 export const mockFirebaseAuth = {
   currentUser: null,
-  onAuthStateChanged: vi.fn((_callback: (user: any) => void) => {
+  onAuthStateChanged: vi.fn((_callback: (user: unknown) => void) => {
     // Return unsubscribe function
     return () => {};
   }),
@@ -32,13 +32,13 @@ export const mockFirebaseDatabase = {
     path,
     key: path.split('/').pop(),
   })),
-  get: vi.fn(async (_ref: any) => ({
+  get: vi.fn(async (_ref: unknown) => ({
     val: () => null,
     exists: () => false,
   })),
   set: vi.fn(async () => {}),
   runTransaction: vi.fn(async () => ({})),
-  onValue: vi.fn((_ref: any, _callback: (snapshot: any) => void) => {
+  onValue: vi.fn((_ref: unknown, _callback: (snapshot: unknown) => void) => {
     // Return unsubscribe function
     return () => {};
   }),

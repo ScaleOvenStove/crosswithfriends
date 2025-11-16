@@ -1,4 +1,3 @@
-import {render} from '@testing-library/react';
 import {describe, it, expect} from 'vitest';
 
 import GameSkeletonLoader from '../../../components/common/GameSkeletonLoader';

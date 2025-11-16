@@ -31,7 +31,7 @@ describe('useGame', () => {
         },
       },
     };
-    mockUseGameStore.mockImplementation((selector?: any) => {
+    mockUseGameStore.mockImplementation((selector?: (state: unknown) => unknown) => {
       if (selector) {
         return selector(mockState);
       }

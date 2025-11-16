@@ -65,7 +65,7 @@ Object.defineProperty(window, 'sessionStorage', {
 
 // Mock process.env for libraries that expect it
 if (typeof globalThis.process === 'undefined') {
-  (globalThis as any).process = {env: {}};
+  (globalThis as {process?: {env: Record<string, string>}}).process = {env: {}};
 }
 
 // Mock requestIdleCallback and cancelIdleCallback
@@ -80,7 +80,7 @@ window.requestIdleCallback =
           return Math.max(0, 50 - (Date.now() - start));
         },
       });
-    }, 1) as any;
+    }, 1) as unknown as number;
   });
 
 window.cancelIdleCallback =

@@ -33,9 +33,9 @@ describe('firebaseUtils', () => {
 
     it('should return false for empty or invalid input', () => {
       expect(isValidFirebasePath('')).toBe(false);
-      expect(isValidFirebasePath(null as any)).toBe(false);
-      expect(isValidFirebasePath(undefined as any)).toBe(false);
-      expect(isValidFirebasePath(123 as any)).toBe(false);
+      expect(isValidFirebasePath(null as unknown as string)).toBe(false);
+      expect(isValidFirebasePath(undefined as unknown as string)).toBe(false);
+      expect(isValidFirebasePath(123 as unknown as string)).toBe(false);
     });
 
     it('should allow forward slashes as path separators', () => {
@@ -63,9 +63,9 @@ describe('firebaseUtils', () => {
     it('should return false for empty or invalid input', () => {
       expect(isValidGid('')).toBe(false);
       expect(isValidGid('   ')).toBe(false);
-      expect(isValidGid(null as any)).toBe(false);
-      expect(isValidGid(undefined as any)).toBe(false);
-      expect(isValidGid(123 as any)).toBe(false);
+      expect(isValidGid(null as unknown as string)).toBe(false);
+      expect(isValidGid(undefined as unknown as string)).toBe(false);
+      expect(isValidGid(123 as unknown as string)).toBe(false);
     });
   });
 
@@ -90,8 +90,8 @@ describe('firebaseUtils', () => {
 
     it('should return null for empty or invalid input', () => {
       expect(extractAndValidateGid('')).toBe(null);
-      expect(extractAndValidateGid(null as any)).toBe(null);
-      expect(extractAndValidateGid(undefined as any)).toBe(null);
+      expect(extractAndValidateGid(null as unknown as string)).toBe(null);
+      expect(extractAndValidateGid(undefined as unknown as string)).toBe(null);
     });
   });
 

@@ -5,7 +5,7 @@ import {vi} from 'vitest';
 
 export const createMockGameStore = () => ({
   games: {},
-  getGame: vi.fn((path: string) => ({
+  getGame: vi.fn((_path: string) => ({
     gameState: null,
     ready: false,
   })),
@@ -29,7 +29,7 @@ export const createMockGameStore = () => ({
 
 export const createMockBattleStore = () => ({
   battles: {},
-  getBattle: vi.fn((path: string) => ({
+  getBattle: vi.fn((_path: string) => ({
     ready: false,
   })),
   attach: vi.fn(),

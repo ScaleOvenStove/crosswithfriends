@@ -1,6 +1,6 @@
 import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
 import {ThemeProvider, CssBaseline} from '@mui/material';
-import {render, screen, waitFor} from '@testing-library/react';
+import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import {BrowserRouter} from 'react-router-dom';

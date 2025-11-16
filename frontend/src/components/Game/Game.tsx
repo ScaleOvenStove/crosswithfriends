@@ -126,8 +126,8 @@ const Game: React.FC<GameProps> = (props) => {
   }, [games]);
 
   const scope = useCallback((s: string) => {
-    console.log('[Game] scope function called with:', s);
-    console.log('[Game] playerRef.current exists:', !!playerRef.current);
+    console.error('[Game] scope function called with:', s);
+    console.error('[Game] playerRef.current exists:', !!playerRef.current);
     if (!playerRef.current) {
       console.warn('[Game] scope early return - playerRef.current is null');
       return [];
@@ -135,13 +135,13 @@ const Game: React.FC<GameProps> = (props) => {
     let result: Array<{r: number; c: number}> = [];
     if (s === 'square') {
       result = playerRef.current.getSelectedSquares();
-      console.log('[Game] getSelectedSquares returned:', result);
+      console.error('[Game] getSelectedSquares returned:', result);
     } else if (s === 'word') {
       result = playerRef.current.getSelectedAndHighlightedSquares();
-      console.log('[Game] getSelectedAndHighlightedSquares returned:', result);
+      console.error('[Game] getSelectedAndHighlightedSquares returned:', result);
     } else if (s === 'puzzle') {
       result = playerRef.current.getAllSquares();
-      console.log('[Game] getAllSquares returned:', result);
+      console.error('[Game] getAllSquares returned:', result);
     } else {
       console.warn('[Game] scope unknown scope string:', s);
     }
@@ -212,10 +212,10 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleCheck = useCallback(
     (scopeString: string) => {
-      console.log('[Game] handleCheck called with scopeString:', scopeString);
-      console.log('[Game] props.gameModel exists:', !!props.gameModel);
-      console.log('[Game] props.gameModel?.ready:', props.gameModel?.ready);
-      console.log('[Game] game exists:', !!game);
+      console.error('[Game] handleCheck called with scopeString:', scopeString);
+      console.error('[Game] props.gameModel exists:', !!props.gameModel);
+      console.error('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.error('[Game] game exists:', !!game);
       if (!props.gameModel || !game || !props.gameModel.ready) {
         console.warn(
           '[Game] handleCheck early return - gameModel:',
@@ -228,12 +228,12 @@ const Game: React.FC<GameProps> = (props) => {
         return;
       }
       const scopeValue = scope(scopeString);
-      console.log('[Game] scope function returned:', scopeValue);
+      console.error('[Game] scope function returned:', scopeValue);
       if (scopeValue.length === 0) {
         console.warn('[Game] handleCheck early return - scopeValue is empty');
         return;
       }
-      console.log('[Game] Calling gameModel.check with scopeValue:', scopeValue);
+      console.error('[Game] Calling gameModel.check with scopeValue:', scopeValue);
       props.gameModel.check(scopeValue);
     },
     [props.gameModel, scope, game]
@@ -241,10 +241,10 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleReveal = useCallback(
     (scopeString: string) => {
-      console.log('[Game] handleReveal called with scopeString:', scopeString);
-      console.log('[Game] props.gameModel exists:', !!props.gameModel);
-      console.log('[Game] props.gameModel?.ready:', props.gameModel?.ready);
-      console.log('[Game] game exists:', !!game);
+      console.error('[Game] handleReveal called with scopeString:', scopeString);
+      console.error('[Game] props.gameModel exists:', !!props.gameModel);
+      console.error('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.error('[Game] game exists:', !!game);
       if (!props.gameModel || !game || !props.gameModel.ready) {
         console.warn(
           '[Game] handleReveal early return - gameModel:',
@@ -257,12 +257,12 @@ const Game: React.FC<GameProps> = (props) => {
         return;
       }
       const scopeValue = scope(scopeString);
-      console.log('[Game] scope function returned:', scopeValue);
+      console.error('[Game] scope function returned:', scopeValue);
       if (scopeValue.length === 0) {
         console.warn('[Game] handleReveal early return - scopeValue is empty');
         return;
       }
-      console.log('[Game] Calling gameModel.reveal with scopeValue:', scopeValue);
+      console.error('[Game] Calling gameModel.reveal with scopeValue:', scopeValue);
       props.gameModel.reveal(scopeValue);
       props.onChange();
     },
@@ -271,10 +271,10 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleReset = useCallback(
     (scopeString: string, force: boolean = false) => {
-      console.log('[Game] handleReset called with scopeString:', scopeString, 'force:', force);
-      console.log('[Game] props.gameModel exists:', !!props.gameModel);
-      console.log('[Game] props.gameModel?.ready:', props.gameModel?.ready);
-      console.log('[Game] game exists:', !!game);
+      console.error('[Game] handleReset called with scopeString:', scopeString, 'force:', force);
+      console.error('[Game] props.gameModel exists:', !!props.gameModel);
+      console.error('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.error('[Game] game exists:', !!game);
       if (!props.gameModel || !game || !props.gameModel.ready) {
         console.warn(
           '[Game] handleReset early return - gameModel:',
@@ -287,12 +287,12 @@ const Game: React.FC<GameProps> = (props) => {
         return;
       }
       const scopeValue = scope(scopeString);
-      console.log('[Game] scope function returned:', scopeValue);
+      console.error('[Game] scope function returned:', scopeValue);
       if (scopeValue.length === 0) {
         console.warn('[Game] handleReset early return - scopeValue is empty');
         return;
       }
-      console.log('[Game] Calling gameModel.reset with scopeValue:', scopeValue, 'force:', force);
+      console.error('[Game] Calling gameModel.reset with scopeValue:', scopeValue, 'force:', force);
       props.gameModel.reset(scopeValue, force);
     },
     [props.gameModel, scope, game]

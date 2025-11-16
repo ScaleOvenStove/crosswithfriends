@@ -110,6 +110,24 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
   const isEditingRef = useRef<boolean>(false);
 
+  const {
+    id,
+    onUpdateDisplayName,
+    onUnfocus,
+    onToggleChat,
+    onSelectClue,
+    header,
+    info,
+    bid,
+    mobile,
+    collapsed,
+    game,
+    users,
+    initialUsername,
+    onChat,
+    color,
+    onUpdateColor,
+  } = props;
   const handleUpdateDisplayName = useCallback(
     (newUsername: string) => {
       let finalUsername = newUsername;
@@ -117,7 +135,6 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       if (!isEditingRef.current && !finalUsername) {
         finalUsername = nameGenerator();
       }
-      const {id, onUpdateDisplayName} = props;
       if (onUpdateDisplayName && id) {
         onUpdateDisplayName(id, finalUsername);
       }
@@ -132,57 +149,55 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         localStorage.setItem('username_default', finalUsername);
       }
     },
-    [props.id, props.onUpdateDisplayName, usernameKey]
+    [id, onUpdateDisplayName, usernameKey]
   );
 
   useEffect(() => {
-    let initialUsername = props.initialUsername;
-    const battleName = localStorage.getItem(`battle_${props.bid}`);
+    let currentInitialUsername = initialUsername;
+    const battleName = localStorage.getItem(`battle_${bid}`);
     // HACK
-    if (battleName && !initialUsername) {
-      initialUsername = battleName;
+    if (battleName && !currentInitialUsername) {
+      currentInitialUsername = battleName;
       setUsername(battleName);
     } else {
-      setUsername(initialUsername || '');
+      setUsername(currentInitialUsername || '');
     }
     // Only call updateDisplayName if we have a valid username and the callback is available
-    if (initialUsername && props.onUpdateDisplayName) {
-      handleUpdateDisplayName(initialUsername);
+    if (currentInitialUsername && onUpdateDisplayName) {
+      handleUpdateDisplayName(currentInitialUsername);
     }
-  }, [props.initialUsername, props.bid, props.onUpdateDisplayName, handleUpdateDisplayName]);
+  }, [initialUsername, bid, onUpdateDisplayName, handleUpdateDisplayName]);
 
   const handleSendMessage = useCallback(
     (message: string) => {
-      const {id} = props;
-      if (!id || !props.users[id]) {
+      if (!id || !users[id]) {
         console.warn('Cannot send message: invalid user id or user not found');
         return;
       }
-      const displayName = props.users[id].displayName || username || 'Unknown';
-      if (props.onChat) {
-        props.onChat(displayName, id, message);
+      const displayName = users[id].displayName || username || 'Unknown';
+      if (onChat) {
+        onChat(displayName, id, message);
       }
       localStorage.setItem(usernameKey, displayName);
       // Dismiss share message when first message is sent
       setShowShareMessage(false);
     },
-    [props, usernameKey, username]
+    [id, users, username, usernameKey, onChat]
   );
 
   const handleUpdateColor = useCallback(
-    (color: string) => {
-      const finalColor = color || props.color;
-      const {id} = props;
-      props.onUpdateColor(id, finalColor);
+    (newColor: string) => {
+      const finalColor = newColor || color;
+      onUpdateColor(id, finalColor);
     },
-    [props]
+    [id, color, onUpdateColor]
   );
 
   const handleUnfocus = useCallback(() => {
-    if (props.onUnfocus) {
-      props.onUnfocus();
+    if (onUnfocus) {
+      onUnfocus();
     }
-  }, [props.onUnfocus]);
+  }, [onUnfocus]);
 
   const handleBlur = useCallback(() => {
     const finalUsername = username || nameGenerator();
@@ -190,14 +205,18 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   }, [username]);
 
   const handleToggleChat = useCallback(() => {
-    props.onToggleChat();
-  }, [props.onToggleChat]);
+    onToggleChat();
+  }, [onToggleChat]);
 
   const handleCopyClick = useCallback(() => {
     navigator.clipboard.writeText(url);
     setSnackbarMessage('Link copied to clipboard!');
     setSnackbarOpen(true);
   }, [url]);
+
+  const handleSnackbarClose = useCallback(() => {
+    setSnackbarOpen(false);
+  }, []);
 
   const handleShareScoreClick = useCallback(() => {
     const text = `${Object.keys(props.users).length > 1 ? 'We' : 'I'} solved ${
@@ -207,6 +226,13 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     setSnackbarMessage('Score copied to clipboard!');
     setSnackbarOpen(true);
   }, [props.users, props.game, serverUrl]);
+
+  const handleShareScoreKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleShareScoreClick();
+    }
+  }, [handleShareScoreClick]);
 
   const handleDismissShareMessage = useCallback(() => {
     setShowShareMessage(false);
@@ -292,9 +318,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   }, [props.gid, props.isFencing, props.game.fencingUsers]);
 
   const renderChatHeader = useCallback(() => {
-    if (props.header) return props.header;
-    const {info = {}, bid} = props;
-    const gameInfo = info || props.game.info;
+    if (header) return header;
+    const gameInfo = info || game.info;
     const {title, description, author, type} = gameInfo;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
 
@@ -319,7 +344,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
             )}
             {renderFencingOptions()}
           </div>
-          {!props.mobile && (
+          {!mobile && (
             <IconButton
               size="small"
               onClick={handleToggleChat}
@@ -329,24 +354,36 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                 color: '#666',
                 '&:hover': {backgroundColor: 'rgba(0, 0, 0, 0.04)'},
               }}
-              title={props.collapsed ? 'Expand chat' : 'Collapse chat'}
+              title={collapsed ? 'Expand chat' : 'Collapse chat'}
             >
-              {props.collapsed ? <MdChevronLeft /> : <MdChevronRight />}
+              {collapsed ? <MdChevronLeft /> : <MdChevronRight />}
             </IconButton>
           )}
         </div>
       </div>
     );
-  }, [
-    props.header,
-    props.info,
-    props.game.info,
-    props.bid,
-    props.mobile,
-    props.collapsed,
-    renderFencingOptions,
-    handleToggleChat,
-  ]);
+  }, [header, info, game.info, bid, mobile, collapsed, renderFencingOptions, handleToggleChat]);
+
+  const handleUsernameChange = useCallback((newValue: string) => {
+    isEditingRef.current = true;
+    handleUpdateDisplayName(newValue);
+    // Reset editing flag after a delay
+    setTimeout(() => {
+      isEditingRef.current = false;
+    }, 1000);
+  }, [handleUpdateDisplayName]);
+
+  const handleUsernameBlur = useCallback(() => {
+    isEditingRef.current = false;
+    handleBlur();
+  }, [handleBlur]);
+
+  const handleUsernameUnfocus = useCallback(() => {
+    isEditingRef.current = false;
+    if (chatBarRef.current) {
+      chatBarRef.current.focus();
+    }
+  }, []);
 
   const renderUsernameInput = useCallback(() => {
     return props.hideChatBar ? null : (
@@ -357,29 +394,14 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
           ref={usernameInputRef}
           className="chat--username--input"
           value={username}
-          onChange={(newValue) => {
-            isEditingRef.current = true;
-            handleUpdateDisplayName(newValue);
-            // Reset editing flag after a delay
-            setTimeout(() => {
-              isEditingRef.current = false;
-            }, 1000);
-          }}
-          onBlur={() => {
-            isEditingRef.current = false;
-            handleBlur();
-          }}
-          onUnfocus={() => {
-            isEditingRef.current = false;
-            if (chatBarRef.current) {
-              chatBarRef.current.focus();
-            }
-          }}
+          onChange={handleUsernameChange}
+          onBlur={handleUsernameBlur}
+          onUnfocus={handleUsernameUnfocus}
           style={{color: props.myColor}}
         />
       </div>
     );
-  }, [props.hideChatBar, props.myColor, username, handleUpdateColor, handleUpdateDisplayName, handleBlur]);
+  }, [props.hideChatBar, props.myColor, username, handleUpdateColor, handleUsernameChange, handleUsernameBlur, handleUsernameUnfocus]);
 
   const renderUserPresent = useCallback((id: string, displayName: string, color?: string) => {
     const style = color ? {color} : undefined;
@@ -446,13 +468,13 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
       const directionFirstChar = clueref[2][0];
       const isAcross = directionFirstChar === 'a' || directionFirstChar === 'A';
-      const clues = isAcross ? props.game.clues['across'] : props.game.clues['down'];
+      const clues = isAcross ? game.clues['across'] : game.clues['down'];
 
       if (clueNumber >= 0 && clueNumber < clues.length && clues[clueNumber] !== undefined) {
         const handleClick = () => {
           const directionStr = isAcross ? 'across' : 'down';
-          if (props.onSelectClue) {
-            props.onSelectClue(directionStr, clueNumber);
+          if (onSelectClue) {
+            onSelectClue(directionStr, clueNumber);
           }
         };
 
@@ -461,7 +483,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         return defaultPattern;
       }
     },
-    [props.game.clues, props.onSelectClue]
+    [game.clues, onSelectClue]
   );
 
   const renderMessageText = useCallback(
@@ -507,18 +529,21 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       const bigEmoji = tokens.length <= 3 && _.every(tokens, (token) => token.type === 'emoji');
       return (
         <span className="chat--message--text">
-          {tokens.map((token, i) => (
-            <React.Fragment key={i}>
-              {token.type === 'emoji' ? (
-                <Emoji emoji={token.data as string} big={bigEmoji} />
-              ) : token.type === 'clueref' ? (
-                renderClueRef(token.data as string[])
-              ) : (
-                token.data
-              )}
-              {token.type !== 'emoji' && ' '}
-            </React.Fragment>
-          ))}
+          {tokens.map((token, i) => {
+            const tokenKey = token.type === 'clueref' ? `clueref-${(token.data as string[]).join('-')}` : `${token.type}-${i}-${token.data}`;
+            return (
+              <React.Fragment key={tokenKey}>
+                {token.type === 'emoji' ? (
+                  <Emoji emoji={token.data as string} big={bigEmoji} />
+                ) : token.type === 'clueref' ? (
+                  renderClueRef(token.data as string[])
+                ) : (
+                  token.data
+                )}
+                {token.type !== 'emoji' && ' '}
+              </React.Fragment>
+            );
+          })}
         </span>
       );
     },
@@ -745,12 +770,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                   font: 'inherit',
                   color: 'inherit',
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleShareScoreClick();
-                  }
-                }}
+                onKeyDown={handleShareScoreKeyDown}
               >
                 <i id="shareText" style={{flex: 1}}>
                   Congratulations! You solved the puzzle in{' '}
@@ -763,8 +783,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
               </button>
             </div>
           )}
-          {messages.map((message, i) => (
-            <div key={i}>{renderMessage(message)}</div>
+          {messages.map((message) => (
+            <div key={`${message.senderId}-${message.timestamp}`}>{renderMessage(message)}</div>
           ))}
         </div>
         {renderChatBar()}
@@ -773,10 +793,10 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
+        onClose={handleSnackbarClose}
         anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
       >
-        <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{width: '100%'}}>
+        <Alert onClose={handleSnackbarClose} severity="success" sx={{width: '100%'}}>
           {snackbarMessage}
         </Alert>
       </Snackbar>

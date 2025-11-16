@@ -11,7 +11,7 @@ vi.mock('@mui/material', async () => {
   const actual = await vi.importActual('@mui/material');
   return {
     ...actual,
-    useMediaQuery: (query: any) => mockUseMediaQuery(query),
+    useMediaQuery: (query: unknown) => mockUseMediaQuery(query),
   };
 });
 
@@ -47,7 +47,7 @@ describe('useBreakpoints', () => {
     // Mock all queries to return false except one that would make isMobile true
     let callIndex = 0;
     mockUseMediaQuery.mockImplementation(() => {
-      callIndex++;
+      callIndex += 1;
       // Return true for the 18th call which corresponds to isMobile (theme.breakpoints.down('sm'))
       return callIndex === 18;
     });
@@ -66,7 +66,7 @@ describe('useBreakpoints', () => {
     // Mock all queries to return false except one that would make isDesktop true
     let callIndex = 0;
     mockUseMediaQuery.mockImplementation(() => {
-      callIndex++;
+      callIndex += 1;
       // Return true for the 20th call which corresponds to isDesktop (theme.breakpoints.up('md'))
       return callIndex === 20;
     });

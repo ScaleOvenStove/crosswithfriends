@@ -23,7 +23,7 @@ describe('useBattle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore = createMockBattleStore();
-    mockUseBattleStore.mockImplementation((selector?: any) => {
+    mockUseBattleStore.mockImplementation((selector?: (state: unknown) => unknown) => {
       if (selector) {
         return selector({
           battles: {
