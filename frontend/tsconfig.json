@@ -9,6 +9,7 @@
       "@lib/*": ["../../shared/src/lib/*"],
       "@crosswithfriends/shared/lib/*": ["../../shared/src/lib/*"],
       "@crosswithfriends/shared/fencingGameEvents/*": ["../../shared/src/shared/fencingGameEvents/*"],
+      "@crosswithfriends/shared/*": ["../../shared/src/shared/*"],
       "@crosswithfriends/shared": ["../../shared/src/shared"]
     }
   },
