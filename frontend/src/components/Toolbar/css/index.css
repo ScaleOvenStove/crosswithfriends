@@ -28,11 +28,11 @@ code {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .toolbar > * {
     margin: 4px 0;
   }
-  
+
   /* Ensure mobile touch targets are at least 44x44px */
   .toolbar button,
   .toolbar--color-attribution-toggle,
@@ -58,7 +58,10 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease,
+    box-shadow 0.2s ease;
 }
 
 .toolbar button:hover {
@@ -91,7 +94,10 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+  transition:
+    color 0.2s ease,
+    transform 0.1s ease,
+    opacity 0.2s ease;
   border-radius: 4px;
   padding: 4px;
 }
@@ -210,7 +216,9 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
   border-radius: 4px;
 }
 

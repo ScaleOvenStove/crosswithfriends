@@ -102,7 +102,7 @@ const Clock: React.FC<Props> = ({
     const now = getTime();
 
     let clockMs = 0;
-    
+
     if (startTime && !replayMode && !propsIsPaused) {
       // Timer is running
       if (stopTime) {
@@ -113,7 +113,7 @@ const Clock: React.FC<Props> = ({
         // This prevents the timer from showing more than 1 minute when page was in background
         const elapsed = now - startTime;
         const cappedElapsed = Math.min(elapsed, MAX_CLOCK_INCREMENT);
-        
+
         // pausedTime is the accumulated time from previous sessions (from clock.totalTime)
         // We add the capped elapsed time from the current session
         clockMs = (pausedTime || 0) + cappedElapsed;

@@ -3,7 +3,6 @@ import {IconButton, Tooltip} from '@mui/material';
 import React, {useContext} from 'react';
 import {MdDarkMode, MdLightMode, MdSettingsBrightness} from 'react-icons/md';
 
-
 import './css/darkModeToggle.css';
 
 export const DarkModeToggle: React.FC = () => {
@@ -53,4 +52,3 @@ export const DarkModeToggle: React.FC = () => {
     </Tooltip>
   );
 };
-

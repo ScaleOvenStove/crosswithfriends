@@ -1,14 +1,7 @@
 import './css/welcome.css';
 
 import {isMobile, colorAverage} from '@crosswithfriends/shared/lib/jsUtils';
-import {
-  Box,
-  Stack,
-  Autocomplete,
-  TextField,
-  Checkbox,
-  FormControlLabel,
-} from '@mui/material';
+import {Box, Stack, Autocomplete, TextField, Checkbox, FormControlLabel} from '@mui/material';
 import classnames from 'classnames';
 import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
@@ -137,7 +130,7 @@ const Welcome: React.FC<Props> = (props) => {
   );
 
   const handleCreatePuzzle = useCallback((): void => {
-      setUploadedPuzzles((prev) => prev + 1);
+    setUploadedPuzzles((prev) => prev + 1);
   }, []);
 
   const handleFilterChange = useCallback(

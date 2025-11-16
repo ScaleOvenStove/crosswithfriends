@@ -1,4 +1,4 @@
-import {Box, Tooltip,CircularProgress} from '@mui/material';
+import {Box, Tooltip, CircularProgress} from '@mui/material';
 import React, {useState, useEffect} from 'react';
 import {MdCheckCircle, MdSync, MdWarning} from 'react-icons/md';
 
@@ -114,7 +114,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({op
   };
 
   // Only show latency when synced and it's relevant (not too old)
-  const showLatency = status === 'synced' && connectionStatus && currentTime - connectionStatus.timestamp < 5000;
+  const showLatency =
+    status === 'synced' && connectionStatus && currentTime - connectionStatus.timestamp < 5000;
 
   return (
     <Tooltip title={getTooltipText()} arrow>
@@ -133,9 +134,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({op
           {getStatusText()}
         </span>
         {showLatency && connectionStatus && (
-          <span style={{fontSize: '0.7rem', opacity: 0.7}}>
-            ({connectionStatus.latency}ms)
-          </span>
+          <span style={{fontSize: '0.7rem', opacity: 0.7}}>({connectionStatus.latency}ms)</span>
         )}
         <style>
           {`
@@ -151,4 +150,3 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({op
 };
 
 export default ConnectionStatusIndicator;
-

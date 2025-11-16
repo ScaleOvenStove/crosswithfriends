@@ -13,15 +13,16 @@ import React, {
   forwardRef,
 } from 'react';
 import {MdClose, MdContentCopy, MdChevronRight, MdChevronLeft} from 'react-icons/md';
-import Linkify from 'react-linkify';
 import {Link} from 'react-router-dom';
+
+import Linkify from 'react-linkify';
 
 import EditableSpan from '../common/EditableSpan';
 import Emoji from '../common/Emoji';
 import MobileKeyboard from '../Player/MobileKeyboard';
 import {formatMilliseconds} from '../Toolbar/Clock';
 
-import ChatBar from './ChatBar';
+import ChatBar, {type ChatBarRef} from './ChatBar';
 import ColorPicker from './ColorPicker';
 
 const isEmojis = (str: string) => {
@@ -211,18 +212,21 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     setShowShareMessage(false);
   }, []);
 
-  const mergeMessages = useCallback((data: {messages?: ChatMessage[]}, opponentData?: {messages?: ChatMessage[]}) => {
-    if (!opponentData) {
-      return data.messages || [];
-    }
+  const mergeMessages = useCallback(
+    (data: {messages?: ChatMessage[]}, opponentData?: {messages?: ChatMessage[]}) => {
+      if (!opponentData) {
+        return data.messages || [];
+      }
 
-    const getMessages = (msgData: {messages?: ChatMessage[]}, isOpponent: boolean) =>
-      _.map(msgData.messages, (message) => ({...message, isOpponent}));
+      const getMessages = (msgData: {messages?: ChatMessage[]}, isOpponent: boolean) =>
+        _.map(msgData.messages, (message) => ({...message, isOpponent}));
 
-    const messages = _.concat(getMessages(data, false), getMessages(opponentData, true));
+      const messages = _.concat(getMessages(data, false), getMessages(opponentData, true));
 
-    return _.sortBy(messages, 'timestamp');
-  }, []);
+      return _.sortBy(messages, 'timestamp');
+    },
+    []
+  );
 
   const getMessageColor = useCallback(
     (senderId: string, isOpponent?: boolean) => {
@@ -333,7 +337,16 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         </div>
       </div>
     );
-  }, [props.header, props.info, props.game.info, props.bid, props.mobile, props.collapsed, renderFencingOptions, handleToggleChat]);
+  }, [
+    props.header,
+    props.info,
+    props.game.info,
+    props.bid,
+    props.mobile,
+    props.collapsed,
+    renderFencingOptions,
+    handleToggleChat,
+  ]);
 
   const renderUsernameInput = useCallback(() => {
     return props.hideChatBar ? null : (
@@ -561,18 +574,31 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
             {avatarInitials}
           </div>
           <div style={{flex: 1, minWidth: 0}}>
-            <div className="chat--message--content" style={{display: 'flex', gap: '6px', alignItems: 'baseline'}}>
+            <div
+              className="chat--message--content"
+              style={{display: 'flex', gap: '6px', alignItems: 'baseline'}}
+            >
               {renderMessageSender(displayName, color)}
               {renderMessageText(message.text)}
             </div>
-            <div className="chat--message--timestamp" style={{fontSize: '0.75rem', color: '#666', marginTop: '2px'}}>
+            <div
+              className="chat--message--timestamp"
+              style={{fontSize: '0.75rem', color: '#666', marginTop: '2px'}}
+            >
               {renderMessageTimestamp(timestamp)}
             </div>
           </div>
         </div>
       );
     },
-    [props.users, getMessageColor, renderMessageSender, renderMessageText, renderMessageTimestamp, getAvatarInitials]
+    [
+      props.users,
+      getMessageColor,
+      renderMessageSender,
+      renderMessageText,
+      renderMessageTimestamp,
+      getAvatarInitials,
+    ]
   );
 
   const renderMobileKeyboard = useCallback(() => {

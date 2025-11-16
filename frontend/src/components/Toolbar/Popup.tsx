@@ -94,7 +94,9 @@ const Popup: React.FC<Props> = ({icon, label, onBlur, children}) => {
       >
         {label ? label : ''}
       </button>
-      <div ref={contentRef} className="popup-menu--content">{children}</div>
+      <div ref={contentRef} className="popup-menu--content">
+        {children}
+      </div>
     </div>
   );
 };

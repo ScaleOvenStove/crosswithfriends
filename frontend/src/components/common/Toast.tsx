@@ -1,5 +1,5 @@
-import {Snackbar, Alert, AlertColor} from '@mui/material';
-import React, {useState, useEffect} from 'react';
+import {Snackbar, Alert, type AlertColor} from '@mui/material';
+import React from 'react';
 
 interface ToastProps {
   open: boolean;
@@ -25,4 +25,3 @@ const Toast: React.FC<ToastProps> = ({open, message, severity = 'success', durat
 };
 
 export default Toast;
-

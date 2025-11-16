@@ -663,7 +663,19 @@ const Game: React.FC = () => {
     );
 
     return mobile ? mobileContent : desktopContent;
-  }, [mobile, showingGame, showingChat, chatCollapsed, powerups, team, renderGame, renderChat, handleUsePowerup, gameHook.ready, game]);
+  }, [
+    mobile,
+    showingGame,
+    showingChat,
+    chatCollapsed,
+    powerups,
+    team,
+    renderGame,
+    renderChat,
+    handleUsePowerup,
+    gameHook.ready,
+    game,
+  ]);
 
   return (
     <Stack

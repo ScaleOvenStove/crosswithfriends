@@ -21,7 +21,6 @@ import ListView from '../ListView';
 
 import Clues from './Clues';
 import Clue from './ClueText';
-import ConnectionStats from './ConnectionStats';
 import ConnectionStatusIndicator from './ConnectionStatusIndicator';
 import GridControls from './GridControls';
 import ListViewControls from './ListViewControls';

@@ -51,7 +51,7 @@ class ErrorBoundary extends Component<Props, State> {
 
       const getUserFriendlyMessage = (error: Error | null): string => {
         if (!error) return 'An unexpected error occurred. Please try refreshing the page.';
-        
+
         const errorMessage = error.message.toLowerCase();
         if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
           return 'Unable to connect to the server. Please check your internet connection and try again.';
@@ -60,12 +60,12 @@ class ErrorBoundary extends Component<Props, State> {
           return 'The request took too long. Please try again.';
         }
         if (errorMessage.includes('permission') || errorMessage.includes('unauthorized')) {
-          return 'You don\'t have permission to perform this action.';
+          return "You don't have permission to perform this action.";
         }
         if (errorMessage.includes('not found')) {
           return 'The requested resource was not found.';
         }
-        
+
         return 'Something went wrong. Please try refreshing the page or contact support if the problem persists.';
       };
 

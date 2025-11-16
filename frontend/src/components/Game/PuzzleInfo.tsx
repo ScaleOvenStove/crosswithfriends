@@ -1,4 +1,16 @@
-import {Box, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,Snackbar, Alert} from '@mui/material';
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Snackbar,
+  Alert,
+} from '@mui/material';
 import React, {useState} from 'react';
 import {MdInfo, MdShare, MdContentCopy} from 'react-icons/md';
 
@@ -162,4 +174,3 @@ const PuzzleInfo: React.FC<PuzzleInfoProps> = ({title, author, type, pid, gid}) 
 };
 
 export default PuzzleInfo;
-

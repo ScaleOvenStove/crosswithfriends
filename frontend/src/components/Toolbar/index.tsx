@@ -10,7 +10,6 @@ import {
   Button,
   Menu,
   MenuItem,
-  IconButton,
   Tooltip,
 } from '@mui/material';
 import React, {useRef, useEffect, useCallback} from 'react';
@@ -788,93 +787,93 @@ const Toolbar: React.FC<Props> = (props) => {
       <div className="toolbar--info">
         <Tooltip title="Keyboard shortcuts (Click for full help)">
           <Popup icon="fa-info-circle" onBlur={handleBlur}>
-          <h3>How to Enter Answers</h3>
-          <ul>
-            <li>
-              Click a cell once to enter an answer, and click that same cell again to switch between
-              horizontal and vertical orientations
-            </li>
-            <li>Click the clues to move the cursor directly to the cell for that answer</li>
-            <li>
-              Hold down the <code>Shift</code> key to enter multiple characters for rebus answers
-            </li>
-          </ul>
-          <h4>Basic Keyboard Shortcuts</h4>
-          <table>
-            <tbody>
-              <tr>
-                <th>Shortcut</th>
-                <th>Description</th>
-              </tr>
-              <tr>
-                <td>Letter / Number</td>
-                <td>
-                  Fill in current cell and advance cursor to next unfilled cell in the same word, if any
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <code>.</code> (period)
-                </td>
-                <td>Toggle pencil mode on/off</td>
-              </tr>
-              <tr>
-                <td>Arrow keys</td>
-                <td>
-                  Either move cursor along current orientation or change orientation without moving cursor
-                </td>
-              </tr>
-              <tr>
-                <td>Space bar</td>
-                <td>Flip orientation between down/across</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Delete</code> or <code>Backspace</code>
-                </td>
-                <td>Clear current cell</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Alt</code> + <code>S</code>, <code>W</code>, or <code>P</code>
-                </td>
-                <td>
-                  Check <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Alt</code> + <code>Shift</code> + <code>S</code>, <code>W</code>, or <code>P</code>
-                </td>
-                <td>
-                  Reveal <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <h4>Advanced Keyboard Shortcuts</h4>
-          <table>
-            <tbody>
-              <tr>
-                <td>
-                  <code>[</code> and <code>]</code> OR <code>Shift</code> with arrow keys
-                </td>
-                <td>Move cursor perpendicular to current orientation without changing orientation</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Tab</code> and <code>Shift+Tab</code>
-                </td>
-                <td>Move cursor to first unfilled square of next or previous unfilled clue</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Home</code> OR <code>End</code>
-                </td>
-                <td>Move cursor to the beginning or end of a clue</td>
-              </tr>
-            </tbody>
-          </table>
+            <h3>How to Enter Answers</h3>
+            <ul>
+              <li>
+                Click a cell once to enter an answer, and click that same cell again to switch between
+                horizontal and vertical orientations
+              </li>
+              <li>Click the clues to move the cursor directly to the cell for that answer</li>
+              <li>
+                Hold down the <code>Shift</code> key to enter multiple characters for rebus answers
+              </li>
+            </ul>
+            <h4>Basic Keyboard Shortcuts</h4>
+            <table>
+              <tbody>
+                <tr>
+                  <th>Shortcut</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td>Letter / Number</td>
+                  <td>
+                    Fill in current cell and advance cursor to next unfilled cell in the same word, if any
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>.</code> (period)
+                  </td>
+                  <td>Toggle pencil mode on/off</td>
+                </tr>
+                <tr>
+                  <td>Arrow keys</td>
+                  <td>
+                    Either move cursor along current orientation or change orientation without moving cursor
+                  </td>
+                </tr>
+                <tr>
+                  <td>Space bar</td>
+                  <td>Flip orientation between down/across</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Delete</code> or <code>Backspace</code>
+                  </td>
+                  <td>Clear current cell</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Alt</code> + <code>S</code>, <code>W</code>, or <code>P</code>
+                  </td>
+                  <td>
+                    Check <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Alt</code> + <code>Shift</code> + <code>S</code>, <code>W</code>, or <code>P</code>
+                  </td>
+                  <td>
+                    Reveal <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <h4>Advanced Keyboard Shortcuts</h4>
+            <table>
+              <tbody>
+                <tr>
+                  <td>
+                    <code>[</code> and <code>]</code> OR <code>Shift</code> with arrow keys
+                  </td>
+                  <td>Move cursor perpendicular to current orientation without changing orientation</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Tab</code> and <code>Shift+Tab</code>
+                  </td>
+                  <td>Move cursor to first unfilled square of next or previous unfilled clue</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Home</code> OR <code>End</code>
+                  </td>
+                  <td>Move cursor to the beginning or end of a clue</td>
+                </tr>
+              </tbody>
+            </table>
           </Popup>
         </Tooltip>
       </div>

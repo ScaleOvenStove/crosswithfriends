@@ -96,4 +96,3 @@ const GameSkeletonLoader: React.FC = () => {
 };
 
 export default GameSkeletonLoader;
-

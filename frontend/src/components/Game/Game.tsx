@@ -415,7 +415,7 @@ const Game: React.FC<GameProps> = (props) => {
         setContainerHeight(entry.contentRect.height);
       }
     });
-    
+
     // Measure initial dimensions
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -465,8 +465,7 @@ const Game: React.FC<GameProps> = (props) => {
     if (typeof window !== 'undefined') {
       const windowWidth = window.innerWidth;
       const isSmallScreen = windowWidth < 600; // xs breakpoint
-      const isDesktop = windowWidth >= 600; // sm breakpoint and above
-      
+
       if (isSmallScreen) {
         // Mobile: full width minus padding
         const padding = 20;
@@ -511,33 +510,35 @@ const Game: React.FC<GameProps> = (props) => {
     };
     const cols = grid[0].length;
     const rows = grid.length;
-    
+
     // Calculate available dimensions
     // Account for clue bar height (~60px), gap (10px), and padding/margins (~40px total)
     const clueBarHeight = 60;
     const gap = 10;
     const verticalPadding = 40;
     const availableWidth = screenWidth > 0 ? Math.max(screenWidth * 0.9, 200) : window.innerWidth - 100;
-    
+
     // Use container height if available, otherwise estimate from viewport
     // Subtract toolbar (~60px), puzzle info (~60px), clue bar, gap, and padding
     const estimatedToolbarHeight = 60;
     const estimatedPuzzleInfoHeight = 60;
-    const totalVerticalOffset = estimatedToolbarHeight + estimatedPuzzleInfoHeight + clueBarHeight + gap + verticalPadding;
-    
-    const availableHeight = containerHeight > 0 
-      ? containerHeight - clueBarHeight - gap - verticalPadding
-      : window.innerHeight - totalVerticalOffset;
-    
+    const totalVerticalOffset =
+      estimatedToolbarHeight + estimatedPuzzleInfoHeight + clueBarHeight + gap + verticalPadding;
+
+    const availableHeight =
+      containerHeight > 0
+        ? containerHeight - clueBarHeight - gap - verticalPadding
+        : window.innerHeight - totalVerticalOffset;
+
     // Calculate size based on both width and height, use the smaller to ensure it fits
     const sizeByWidth = availableWidth / cols;
     const sizeByHeight = availableHeight / rows;
-    
+
     // Use the smaller dimension to ensure grid fits in both directions
     const maxCellSize = 35;
     const minSize = props.mobile ? 1 : 20;
     const calculatedSize = Math.min(sizeByWidth, sizeByHeight);
-    
+
     // For mini puzzles (5x5 or smaller), allow larger cells to fill the space better
     // For standard puzzles, cap at 35px per cell
     const maxAllowedSize = cols <= 5 ? 80 : maxCellSize;
@@ -586,11 +587,7 @@ const Game: React.FC<GameProps> = (props) => {
       />
     );
   }, [
-    props.id,
-    props.myColor,
-    props.mobile,
-    props.beta,
-    props.pickups,
+    props,
     game,
     opponentGame,
     clues,
@@ -689,7 +686,10 @@ const Game: React.FC<GameProps> = (props) => {
   ]);
 
   return (
-    <Stack direction="column" sx={{flex: 1, height: '100%', maxHeight: '100%', overflow: 'hidden', minHeight: 0}}>
+    <Stack
+      direction="column"
+      sx={{flex: 1, height: '100%', maxHeight: '100%', overflow: 'hidden', minHeight: 0}}
+    >
       {renderToolbar()}
       {game && game.info && (
         <Box sx={{padding: {xs: '8px', sm: '12px 16px'}, flexShrink: 0}}>

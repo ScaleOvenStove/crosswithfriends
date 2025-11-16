@@ -4,11 +4,10 @@ import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/G
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {useUpdateEffect} from 'react-use';
 import type {Socket as SocketIOClient} from 'socket.io-client';
-import * as uuid from 'uuid';
 
 import {useUser} from '../../hooks/useUser';
 import {emitAsync} from '../../sockets/emitAsync';
@@ -85,21 +84,17 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
   const socket = useSocket();
 
   const eventsHook = useGameEvents();
-  async function sendEvent(event: GameEvent) {
-    const eventWithTimestamp: GameEvent & {timestamp?: {'.sv': string}; id?: string} = {
-      ...event,
-      timestamp: {
-        '.sv': 'timestamp',
-      },
-      id: uuid.v4(),
-    };
-    eventsHook.addOptimisticEvent(event);
-    if (socket) {
-      emitAsync(socket, 'game_event', {gid, event});
-    } else {
-      console.warn('Cannot send event; not connected to server');
-    }
-  }
+  const sendEvent = useCallback(
+    async (event: GameEvent) => {
+      eventsHook.addOptimisticEvent(event);
+      if (socket) {
+        emitAsync(socket, 'game_event', {gid, event});
+      } else {
+        console.warn('Cannot send event; not connected to server');
+      }
+    },
+    [eventsHook, socket, gid]
+  );
 
   const [isInitialized, setIsInitialized] = useState(false);
   useUpdateEffect(() => {
@@ -129,7 +124,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
       });
       setHasRevealedAll(true);
     }
-  }, [isGameComplete, hasRevealedAll, gameState.loaded, gameState.started]);
+  }, [isGameComplete, hasRevealedAll, gameState.loaded, gameState.started, sendEvent]);
   useUpdateEffect(() => {
     if (isInitialized) {
       if (!gameState) {
@@ -145,10 +140,12 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
         });
       }
       if (!teamId) {
-        const nTeamId = _.minBy(
-          TEAM_IDS,
-          (t) => _.filter(_.values(gameState.users), (user) => user.teamId === t).length
-        )!;
+        if (!gameState.game) {
+          return; // game not loaded yet
+        }
+        const nTeamId =
+          _.minBy(TEAM_IDS, (t) => _.filter(_.values(gameState.users), (user) => user.teamId === t).length) ??
+          (TEAM_IDS[0] as number);
         sendEvent({
           type: 'updateTeamId',
           params: {
@@ -160,7 +157,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
           type: 'updateCursor',
           params: {
             id,
-            cell: getStartingCursorPosition(gameState.game!, nTeamId),
+            cell: getStartingCursorPosition(gameState.game, nTeamId),
           },
         });
       }

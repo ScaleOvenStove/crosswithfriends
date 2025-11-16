@@ -81,7 +81,6 @@ function showInfo(): void {
   });
 }
 
-
 interface NavProps {
   hidden?: boolean;
   v2?: boolean;

@@ -47,7 +47,6 @@ export const convertToCandidateGrid = (grid) => {
 
   const gridString = _.flatten(_.map(grid, (row) => _.map(row, ({value}) => value || ' ')));
 
-  // eslint-disable-next-line no-use-before-define
   return new CandidateGrid(gridString, width, height, entries, entryMap);
 };
 

@@ -213,7 +213,10 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         },
       });
       if (processedEvent.type === 'create') {
-        console.warn('[gameStore] State updated after create event. Current ready state:', getState().games[gamePath]?.ready);
+        console.warn(
+          '[gameStore] State updated after create event. Current ready state:',
+          getState().games[gamePath]?.ready
+        );
       }
 
       if (processedEvent.type === 'create') {
@@ -225,11 +228,11 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     // Register handler directly on socket for immediate use
     socket.on('game_event', gameEventHandler);
-    
+
     // Also subscribe via socketManager to ensure handler is re-registered on reconnect
     // The handler will be automatically re-registered when socket reconnects
     const unsubscribeGameEvent = socketManager.subscribe('game_event', gameEventHandler);
-    
+
     // Ensure we re-join the game room and re-register handler after reconnect
     const unsubscribeReconnectHandler = socketManager.subscribe('connect', async () => {
       // Re-join game room on reconnect
@@ -243,7 +246,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       const gid = path.substring(6);
       console.warn('[gameStore] Syncing all game events for', gid);
       const response = (await socketManager.emitAsync('sync_all_game_events', gid)) as unknown[];
-      
+
       if (!response || !Array.isArray(response)) {
         console.error('[gameStore] Invalid response from sync_all_game_events:', response);
         throw new Error(`Invalid response from sync_all_game_events: expected array, got ${typeof response}`);
@@ -275,9 +278,13 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     if (createEvent) {
       console.warn('[gameStore] Found create event, marking game as ready');
     } else if (allEvents.length > 0) {
-      console.warn('[gameStore] Received events but no create event found. Game will wait for create event via websocket.');
+      console.warn(
+        '[gameStore] Received events but no create event found. Game will wait for create event via websocket.'
+      );
     } else {
-      console.warn('[gameStore] No events received from sync. Game will wait for create event via websocket.');
+      console.warn(
+        '[gameStore] No events received from sync. Game will wait for create event via websocket.'
+      );
     }
 
     // Update game with all events
@@ -431,28 +438,36 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           const eventsRef = ref(db, `${path}/events`);
           (window as any).game = {path}; // For backward compatibility
 
+          const newGame: GameInstance = {
+            path,
+            ref: gameRef,
+            eventsRef,
+            createEvent: null,
+            ready: false,
+            events: [],
+            gameState: null,
+            optimisticEvents: [],
+            subscriptions: new Map(),
+          };
+
           setState({
             games: {
               ...state.games,
-              [path]: {
-                path,
-                ref: gameRef,
-                eventsRef,
-                createEvent: null,
-                ready: false,
-                events: [],
-                gameState: null,
-                optimisticEvents: [],
-                subscriptions: new Map(),
-              },
+              [path]: newGame,
             },
           });
+
+          return newGame;
         } catch (error) {
           console.error('Error creating game refs', error);
           throw error;
         }
       }
-      return getState().games[path];
+      const game = getState().games[path];
+      if (!game) {
+        throw new Error(`Failed to get or create game at path: ${path}`);
+      }
+      return game;
     },
 
     attach: async (path: string) => {
@@ -664,7 +679,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     ) => {
       addEvent(path, {
         id: '', // Will be set by addEvent
-        timestamp: SERVER_TIME,
+        timestamp: String(SERVER_TIME),
         type: 'updateCell',
         params: {
           cell: {r, c},
