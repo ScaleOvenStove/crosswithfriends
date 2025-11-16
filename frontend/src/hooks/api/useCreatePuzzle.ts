@@ -2,9 +2,10 @@
  * React Query hook for creating puzzles
  */
 
-import {useMutation} from '@tanstack/react-query';
-import {createNewPuzzle} from '../../api/puzzle';
 import type {AddPuzzleRequest, AddPuzzleResponse} from '@crosswithfriends/shared/types';
+import {useMutation} from '@tanstack/react-query';
+
+import {createNewPuzzle} from '../../api/puzzle';
 
 interface UseCreatePuzzleOptions {
   onSuccess?: (data: AddPuzzleResponse) => void;

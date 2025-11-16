@@ -1,5 +1,6 @@
-import socketManager from './SocketManager';
 import {type Socket} from 'socket.io-client';
+
+import socketManager from './SocketManager';
 
 /**
  * Gets or creates a Socket.io client connection to the server.

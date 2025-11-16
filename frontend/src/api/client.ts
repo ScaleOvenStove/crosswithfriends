@@ -102,7 +102,7 @@ class ApiClient {
   /**
    * Create timeout promise
    */
-  private createTimeout(timeout: number, signal?: AbortSignal): Promise<never> {
+  private static createTimeout(timeout: number, signal?: AbortSignal): Promise<never> {
     return new Promise((_, reject) => {
       const timeoutId = setTimeout(() => {
         const error = new Error(`Request timeout after ${timeout}ms`) as ApiError;
@@ -121,14 +121,14 @@ class ApiClient {
   /**
    * Sleep utility for retry delays
    */
-  private sleep(ms: number): Promise<void> {
+  private static sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Check if error is retryable
    */
-  private isRetryableError(error: ApiError): boolean {
+  private static isRetryableError(error: ApiError): boolean {
     // Retry on network errors or 5xx server errors
     if (!error.status) {
       return true; // Network error
@@ -139,7 +139,7 @@ class ApiClient {
   /**
    * Calculate exponential backoff delay
    */
-  private calculateRetryDelay(attempt: number, baseDelay: number): number {
+  private static calculateRetryDelay(attempt: number, baseDelay: number): number {
     return baseDelay * Math.pow(2, attempt);
   }
 
@@ -186,7 +186,7 @@ class ApiClient {
     try {
       // Create timeout race
       const fetchPromise = fetch(fullURL, fetchOptions);
-      const timeoutPromise = this.createTimeout(timeout, signal);
+      const timeoutPromise = ApiClient.createTimeout(timeout, signal);
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       // Apply response interceptors
@@ -209,9 +209,9 @@ class ApiClient {
       const retries = processedConfig.retries ?? this.defaultRetries;
       const retryDelay = processedConfig.retryDelay ?? this.defaultRetryDelay;
 
-      if (attempt < retries && this.isRetryableError(processedError)) {
-        const delay = this.calculateRetryDelay(attempt, retryDelay);
-        await this.sleep(delay);
+      if (attempt < retries && ApiClient.isRetryableError(processedError)) {
+        const delay = ApiClient.calculateRetryDelay(attempt, retryDelay);
+        await ApiClient.sleep(delay);
         return this.executeRequest(processedConfig, attempt + 1);
       }
 

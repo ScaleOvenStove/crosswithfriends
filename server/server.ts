@@ -1,11 +1,13 @@
-import fastify from 'fastify';
-import type {FastifyError, FastifyRequest, FastifyReply, FastifyInstance} from 'fastify';
-import cors from '@fastify/cors';
-import {Server as SocketIOServer} from 'socket.io';
 import {Server as HTTPServer} from 'http';
+
+import cors from '@fastify/cors';
+import fastify from 'fastify';
+import type {FastifyError, FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import _ from 'lodash';
-import SocketManager from './SocketManager.js';
+import {Server as SocketIOServer} from 'socket.io';
+
 import apiRouter from './api/router.js';
+import SocketManager from './SocketManager.js';
 
 const port = process.env.PORT || 3000;
 
@@ -15,7 +17,7 @@ function logAllEvents(io: SocketIOServer, log: typeof console.log): void {
   io.on('*', (event: string, ...args: unknown[]) => {
     try {
       log(`[${event}]`, _.truncate(JSON.stringify(args), {length: 100}));
-    } catch (e) {
+    } catch {
       log(`[${event}]`, args);
     }
   });
@@ -127,11 +129,13 @@ async function runServer() {
     await app.listen({port: Number(port), host: '0.0.0.0'});
     app.log.info(`Listening on port ${port}`);
 
-    process.once('SIGUSR2', async () => {
-      await app.close();
-      app.log.info('exiting...');
-      process.kill(process.pid, 'SIGUSR2');
-      app.log.info('exited');
+    process.once('SIGUSR2', () => {
+      void (async () => {
+        await app.close();
+        app.log.info('exiting...');
+        process.kill(process.pid, 'SIGUSR2');
+        app.log.info('exited');
+      })();
     });
   } catch (err) {
     console.error('Failed to start server:', err);
@@ -139,4 +143,4 @@ async function runServer() {
   }
 }
 
-runServer();
+void runServer();

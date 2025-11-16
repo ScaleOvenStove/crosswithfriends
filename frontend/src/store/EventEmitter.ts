@@ -1,8 +1,8 @@
 // Simple EventEmitter implementation for browser environment
 export default class EventEmitter {
-  private listeners: Map<string, Function[]> = new Map();
+  private listeners: Map<string, ((...args: any[]) => void)[]> = new Map();
 
-  on(event: string, listener: Function): this {
+  on(event: string, listener: (...args: any[]) => void): this {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
@@ -10,7 +10,7 @@ export default class EventEmitter {
     return this;
   }
 
-  once(event: string, listener: Function): this {
+  once(event: string, listener: (...args: any[]) => void): this {
     const onceWrapper = (...args: any[]) => {
       this.off(event, onceWrapper);
       listener(...args);
@@ -18,7 +18,7 @@ export default class EventEmitter {
     return this.on(event, onceWrapper);
   }
 
-  off(event: string, listener: Function): this {
+  off(event: string, listener: (...args: any[]) => void): this {
     const listeners = this.listeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener);
@@ -40,11 +40,11 @@ export default class EventEmitter {
     return false;
   }
 
-  removeListener(event: string, listener: Function): this {
+  removeListener(event: string, listener: (...args: any[]) => void): this {
     return this.off(event, listener);
   }
 
-  addListener(event: string, listener: Function): this {
+  addListener(event: string, listener: (...args: any[]) => void): this {
     return this.on(event, listener);
   }
 }

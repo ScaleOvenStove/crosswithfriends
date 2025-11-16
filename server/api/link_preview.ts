@@ -1,16 +1,18 @@
+import type {InfoJson} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import _ from 'lodash';
 
-import type {InfoJson} from '@shared/types';
 import {getGameInfo} from '../model/game.js';
-import {isLinkExpanderBot, isFBMessengerCrawler} from '../utils/link_preview_util.js';
 import {getPuzzleInfo} from '../model/puzzle.js';
+import {isFBMessengerCrawler, isLinkExpanderBot} from '../utils/link_preview_util.js';
+
 import {createHttpError} from './errors.js';
 
 interface LinkPreviewQuery {
   url: string;
 }
 
+// eslint-disable-next-line require-await
 async function linkPreviewRouter(fastify: FastifyInstance) {
   fastify.get<{Querystring: LinkPreviewQuery}>(
     '/',

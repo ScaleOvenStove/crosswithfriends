@@ -1,12 +1,12 @@
 import './css/compose.css';
 
-import {Helmet} from 'react-helmet';
-import _ from 'lodash';
-import React, {useState, useRef, useEffect, useCallback} from 'react';
-import {Box, Stack} from '@mui/material';
 import redirect from '@crosswithfriends/shared/lib/redirect';
-import actions from '../actions';
+import {Box, Stack} from '@mui/material';
+import _ from 'lodash';
+import React, {useState, useEffect, useCallback} from 'react';
+import {Helmet} from 'react-helmet';
 
+import actions from '../actions';
 import Nav from '../components/common/Nav';
 import {useUser} from '../hooks/useUser';
 import {useCompositionStore} from '../store';

@@ -1,28 +1,31 @@
-import _ from 'lodash';
-import * as uuid from 'uuid';
-import React, {useState, useEffect} from 'react';
-import {useUpdateEffect} from 'react-use';
-import {Helmet} from 'react-helmet';
-import {Box, Stack} from '@mui/material';
-import {useSocket} from '../../sockets/useSocket';
-import {emitAsync} from '../../sockets/emitAsync';
-import Player from '../Player';
-import {transformGameToPlayerProps} from './transformGameToPlayerProps';
-import {usePlayerActions} from './usePlayerActions';
-import {useToolbarActions} from './useToolbarActions';
-import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
-import {useUser} from '../../hooks/useUser';
-import {FencingScoreboard} from './FencingScoreboard';
 import {TEAM_IDS} from '@crosswithfriends/shared/fencingGameEvents/constants';
-import {FencingToolbar} from './FencingToolbar';
+import {getStartingCursorPosition} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/create';
+import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
+import {Box, Stack} from '@mui/material';
+import _ from 'lodash';
+import React, {useState, useEffect, useCallback} from 'react';
+import {Helmet} from 'react-helmet';
+import {useUpdateEffect} from 'react-use';
+import type {Socket as SocketIOClient} from 'socket.io-client';
+
+import {useUser} from '../../hooks/useUser';
+import {emitAsync} from '../../sockets/emitAsync';
+import {useSocket} from '../../sockets/useSocket';
+import Chat from '../Chat';
+import LoadingSpinner from '../common/LoadingSpinner';
+import Nav from '../common/Nav';
+import Confetti from '../Game/Confetti';
+import Player from '../Player';
+
+import {FencingCountdown} from './FencingCountdown';
+import {FencingScoreboard} from './FencingScoreboard';
+import {FencingToolbar} from './FencingToolbar';
+import {transformGameToPlayerProps} from './transformGameToPlayerProps';
 import {useGameEvents} from './useGameEvents';
 import type {GameEventsHook} from './useGameEvents';
-import {getStartingCursorPosition} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/create';
-import Nav from '../common/Nav';
-import Chat from '../Chat';
-import {FencingCountdown} from './FencingCountdown';
-import Confetti from '../Game/Confetti';
+import {usePlayerActions} from './usePlayerActions';
+import {useToolbarActions} from './useToolbarActions';
 
 /**
  * Subscribes to Socket.io game events for a specific game.
@@ -39,7 +42,7 @@ function subscribeToGameEvents(
   eventsHook: GameEventsHook
 ) {
   let connected = false;
-  const gameEventHandler = (event: any) => {
+  const gameEventHandler = (event: GameEvent) => {
     if (!connected) return;
     eventsHook.addEvent(event);
   };
@@ -48,7 +51,7 @@ function subscribeToGameEvents(
     if (!socket) return;
     await emitAsync(socket, 'join_game', gid);
     socket.on('game_event', gameEventHandler);
-    const allEvents: GameEvent[] = (await emitAsync(socket, 'sync_all_game_events', gid)) as any;
+    const allEvents = (await emitAsync(socket, 'sync_all_game_events', gid)) as GameEvent[];
     eventsHook.setEvents(allEvents);
 
     connected = true;
@@ -81,18 +84,17 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
   const socket = useSocket();
 
   const eventsHook = useGameEvents();
-  async function sendEvent(event: GameEvent) {
-    (event as any).timestamp = {
-      '.sv': 'timestamp',
-    };
-    (event as any).id = uuid.v4();
-    eventsHook.addOptimisticEvent(event);
-    if (socket) {
-      emitAsync(socket, 'game_event', {gid, event});
-    } else {
-      console.warn('Cannot send event; not connected to server');
-    }
-  }
+  const sendEvent = useCallback(
+    async (event: GameEvent) => {
+      eventsHook.addOptimisticEvent(event);
+      if (socket) {
+        emitAsync(socket, 'game_event', {gid, event});
+      } else {
+        console.warn('Cannot send event; not connected to server');
+      }
+    },
+    [eventsHook, socket, gid]
+  );
 
   const [isInitialized, setIsInitialized] = useState(false);
   useUpdateEffect(() => {
@@ -122,7 +124,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
       });
       setHasRevealedAll(true);
     }
-  }, [isGameComplete, hasRevealedAll, gameState.loaded, gameState.started]);
+  }, [isGameComplete, hasRevealedAll, gameState.loaded, gameState.started, sendEvent]);
   useUpdateEffect(() => {
     if (isInitialized) {
       if (!gameState) {
@@ -138,10 +140,12 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
         });
       }
       if (!teamId) {
-        const nTeamId = _.minBy(
-          TEAM_IDS,
-          (t) => _.filter(_.values(gameState.users), (user) => user.teamId === t).length
-        )!;
+        if (!gameState.game) {
+          return; // game not loaded yet
+        }
+        const nTeamId =
+          _.minBy(TEAM_IDS, (t) => _.filter(_.values(gameState.users), (user) => user.teamId === t).length) ??
+          (TEAM_IDS[0] as number);
         sendEvent({
           type: 'updateTeamId',
           params: {
@@ -153,14 +157,12 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
           type: 'updateCursor',
           params: {
             id,
-            cell: getStartingCursorPosition(gameState.game!, nTeamId),
+            cell: getStartingCursorPosition(gameState.game, nTeamId),
           },
         });
       }
     }
   }, [isInitialized]);
-
-  const classes = useStyles();
 
   const toolbarActions = useToolbarActions(sendEvent, gameState, id);
   const playerActions = usePlayerActions(sendEvent, id);
@@ -216,11 +218,13 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
         message,
       },
     });
+    // Note: 'chat' event type is deprecated, using 'sendChatMessage' instead
+    // This legacy event is kept for backward compatibility
     sendEvent({
-      type: 'chat' as any,
+      type: 'sendChatMessage',
       params: {
         id,
-        text: message,
+        message,
       },
     });
   };
@@ -263,7 +267,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
           </Box>
         </Box>
         <Stack direction="column" sx={{flexBasis: 500}}>
-          {!gameState.loaded && <div>Loading your game...</div>}
+          {!gameState.loaded && <LoadingSpinner message="Loading your game..." />}
           {gameState.game && (
             <Chat
               isFencing

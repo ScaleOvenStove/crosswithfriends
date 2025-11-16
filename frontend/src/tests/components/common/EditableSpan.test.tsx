@@ -1,5 +1,6 @@
 import {test, expect} from '@playwright/experimental-ct-react';
 import React, {useRef} from 'react';
+
 import EditableSpan from '../../../components/common/EditableSpan';
 import type {EditableSpanRef} from '../../../components/common/EditableSpan';
 import {TestWrapper} from '../../utils';

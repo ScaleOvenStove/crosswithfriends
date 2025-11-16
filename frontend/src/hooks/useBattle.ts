@@ -4,7 +4,9 @@
  */
 
 import {useEffect} from 'react';
+
 import {useBattleStore} from '../store/battleStore';
+
 import {useStoreSubscriptions} from './useStoreSubscriptions';
 
 interface UseBattleOptions {

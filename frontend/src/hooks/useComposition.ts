@@ -4,8 +4,10 @@
  */
 
 import {useEffect} from 'react';
+
 import {useCompositionStore} from '../store/compositionStore';
 import type {CompositionEvent} from '../types/composition';
+
 import {useStoreSubscriptions} from './useStoreSubscriptions';
 
 interface UseCompositionOptions {

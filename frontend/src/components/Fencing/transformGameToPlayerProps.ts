@@ -2,7 +2,6 @@
  * Transforms game state and user data into props suitable for the Player component.
  * Applies team-specific clue visibility and grid filtering for fencing games.
  */
-import _ from 'lodash';
 import type {
   CluesJson,
   GameJson,
@@ -11,7 +10,10 @@ import type {
   UserJson,
   CellIndex,
 } from '@crosswithfriends/shared/types';
+import _ from 'lodash';
+
 import type {CellCoords, Ping} from '../Grid/types';
+
 import type {PlayerActions} from './usePlayerActions';
 
 interface PlayerProps {

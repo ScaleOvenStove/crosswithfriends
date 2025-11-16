@@ -1,5 +1,6 @@
 import {test, expect} from '@playwright/experimental-ct-react';
 import React from 'react';
+
 import ConfettiComponent from '../../../components/Game/Confetti';
 import {TestWrapper} from '../../utils';
 

@@ -1,4 +1,4 @@
-import {create} from 'zustand';
+import {rand_color} from '@crosswithfriends/shared/lib/jsUtils';
 import {
   getAuth,
   onAuthStateChanged,
@@ -7,11 +7,12 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import {ref, get, set, runTransaction} from 'firebase/database';
-import {db, SERVER_TIME, getTime} from './firebase';
-import app from './firebase';
+import {create} from 'zustand';
+
 import getLocalId from '../localAuth';
-import {rand_color} from '@crosswithfriends/shared/lib/jsUtils';
 import type {UserHistory, UserCompositions} from '../types/user';
+
+import app, {db, SERVER_TIME, getTime} from './firebase';
 
 const disableFbLogin = true;
 

@@ -1,5 +1,8 @@
 import './css/mobileGridControls.css';
 
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
+import {Box} from '@mui/material';
+import _ from 'lodash';
 import React, {
   useState,
   useRef,
@@ -9,11 +12,9 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import {Box} from '@mui/material';
 import {MdKeyboardArrowLeft, MdKeyboardArrowRight} from 'react-icons/md';
-import _ from 'lodash';
+
 import Clue from './ClueText';
-import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {useGridControls} from './useGridControls';
 import type {UseGridControlsProps, GridControlsActions} from './useGridControls';
 
@@ -45,14 +46,18 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const zoomContainer = useRef<HTMLDivElement>(null);
-  const wasUnfocused = useRef<number>(Date.now() - 1000);
-  const lastTouchMove = useRef<number>(Date.now());
+  const wasUnfocused = useRef<number>(0);
+  const lastTouchMove = useRef<number>(0);
   const lastTouchStart = useRef<number>(0);
+
+  useEffect(() => {
+    wasUnfocused.current = Date.now() - 1000;
+    lastTouchMove.current = Date.now();
+  }, []);
   const touchingClueBarStart = useRef<any>(null);
 
   const gridControls = useGridControls(props, props.actions);
   const {
-    grid: gridInstance,
     getSelectedClueNumber,
     flipDirection,
     selectNextClue,

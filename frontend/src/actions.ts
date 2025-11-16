@@ -1,10 +1,12 @@
-import {gameWords} from '@crosswithfriends/shared/lib/names';
 import {makeGrid} from '@crosswithfriends/shared/lib/gameUtils';
-import {db} from './store/firebase';
+import {gameWords} from '@crosswithfriends/shared/lib/names';
+import type {PuzzleJson} from '@crosswithfriends/shared/types';
 import {ref, push, set} from 'firebase/database';
+
+import {incrementGid, incrementPid} from './api/counters';
+import {db} from './store/firebase';
 import {useGameStore} from './store/gameStore';
 import {usePuzzleStore} from './store/puzzleStore';
-import {incrementGid, incrementPid} from './api/counters';
 import type {BattleData} from './types/rawGame';
 
 // for interfacing with firebase
@@ -25,7 +27,7 @@ interface CreateCompositionParams {
 
 const actions = {
   // puzzle: { title, type, grid, clues }
-  createPuzzle: async (puzzle: any, cbk?: (pid: number) => void): Promise<void> => {
+  createPuzzle: async (puzzle: PuzzleJson, cbk?: (pid: number) => void): Promise<void> => {
     const {pid} = await incrementPid();
     cbk && cbk(pid);
   },
@@ -67,7 +69,7 @@ const actions = {
     const puzzleStore = usePuzzleStore.getState();
 
     // Get puzzle instance
-    const puzzle = puzzleStore.getPuzzle(puzzlePath, pid);
+    puzzleStore.getPuzzle(puzzlePath, pid);
     puzzleStore.attach(puzzlePath);
 
     try {

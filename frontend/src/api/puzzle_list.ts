@@ -1,5 +1,6 @@
-import apiClient from './client';
 import type {ListPuzzleRequest, ListPuzzleResponse} from '@crosswithfriends/shared/types';
+
+import apiClient from './client';
 
 export async function fetchPuzzleList(query: ListPuzzleRequest): Promise<ListPuzzleResponse> {
   // Build query string manually to handle nested objects properly

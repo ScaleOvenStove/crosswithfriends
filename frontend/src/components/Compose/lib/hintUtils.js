@@ -138,7 +138,13 @@ function heuristic(grid) {
 function evaluate(grid, ori, num, word) {
   let pos = 0;
   const ngrid = grid.map((row) =>
-    row.map((cell) => ({...cell, value: !cell.black && cell.parents[ori] === num ? word[pos++] : cell.value}))
+    row.map((cell) => {
+      const value = !cell.black && cell.parents[ori] === num ? word[pos] : cell.value;
+      if (!cell.black && cell.parents[ori] === num) {
+        pos += 1;
+      }
+      return {...cell, value};
+    })
   );
 
   const result = heuristic(ngrid);

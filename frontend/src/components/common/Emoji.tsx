@@ -1,5 +1,5 @@
-import React from 'react';
 import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
+import React from 'react';
 
 interface Props {
   emoji: string;

@@ -1,7 +1,8 @@
+import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
 import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
 import React from 'react';
-import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
+
 import EditableSpan from '../common/EditableSpan';
 import './css/fencingScoreboard.css';
 export const FencingScoreboard: React.FC<{

@@ -6,8 +6,9 @@ import withReactContent from 'sweetalert2-react-content';
 
 const swal = withReactContent(Swal);
 import actions from '../../actions';
-import FileUploader from './FileUploader';
 import {createNewPuzzle} from '../../api/puzzle';
+
+import FileUploader from './FileUploader';
 
 interface UploadProps {
   v2?: boolean;

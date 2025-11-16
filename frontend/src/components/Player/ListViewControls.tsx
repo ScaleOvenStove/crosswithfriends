@@ -1,19 +1,20 @@
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import React, {forwardRef, useCallback, useMemo} from 'react';
+
 import GridControls from './GridControls';
 import {useGridControls} from './useGridControls';
 import type {UseGridControlsProps, GridControlsActions} from './useGridControls';
-import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 
 interface ListViewControlsProps extends UseGridControlsProps {
   children?: React.ReactNode;
 }
 
-const ListViewControls = forwardRef<HTMLDivElement, ListViewControlsProps>((props, ref) => {
+const ListViewControls = forwardRef<HTMLDivElement, ListViewControlsProps>((props, _ref) => {
   const grid = useMemo(() => new GridObject(props.grid), [props.grid]);
 
   // Use the hook to get base methods
   const gridControls = useGridControls(props);
-  const {selectNextClue, flipDirection, moveToEdge, deleteCell: baseDeleteCell} = gridControls;
+  const {selectNextClue, flipDirection, moveToEdge} = gridControls;
 
   const moveToNextCell = useCallback(() => {
     const {r, c} = props.selected;

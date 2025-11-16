@@ -1,19 +1,21 @@
-import _ from 'lodash';
-import {makeGrid} from '../gameUtils.js';
-import {pool} from './pool.js';
-import {getPuzzle} from './puzzle.js';
-import type {GameJson} from '@shared/types';
-import {logger} from '../utils/logger.js';
+import type {CheckEvent} from '@shared/fencingGameEvents/eventDefs/check';
+import type {RevealEvent} from '@shared/fencingGameEvents/eventDefs/reveal';
+import type {RevealAllCluesEvent} from '@shared/fencingGameEvents/eventDefs/revealAllClues';
+import type {SendChatMessageEvent} from '@shared/fencingGameEvents/eventDefs/sendChatMessage';
+import type {StartEvent} from '@shared/fencingGameEvents/eventDefs/startGame';
 import type {UpdateCellEvent} from '@shared/fencingGameEvents/eventDefs/updateCell';
 import type {UpdateCursorEvent} from '@shared/fencingGameEvents/eventDefs/updateCursor';
 import type {UpdateDisplayNameEvent} from '@shared/fencingGameEvents/eventDefs/updateDisplayName';
-import type {CheckEvent} from '@shared/fencingGameEvents/eventDefs/check';
-import type {RevealEvent} from '@shared/fencingGameEvents/eventDefs/reveal';
-import type {SendChatMessageEvent} from '@shared/fencingGameEvents/eventDefs/sendChatMessage';
-import type {StartEvent} from '@shared/fencingGameEvents/eventDefs/startGame';
-import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamName';
 import type {UpdateTeamIdEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamId';
-import type {RevealAllCluesEvent} from '@shared/fencingGameEvents/eventDefs/revealAllClues';
+import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamName';
+import type {GameJson} from '@shared/types';
+import _ from 'lodash';
+
+import {makeGrid} from '../gameUtils';
+import {logger} from '../utils/logger.js';
+
+import {pool} from './pool.js';
+import {getPuzzle} from './puzzle.js';
 
 export async function getGameEvents(gid: string) {
   const startTime = Date.now();

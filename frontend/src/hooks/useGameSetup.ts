@@ -4,9 +4,11 @@
  */
 
 import {useEffect, useRef} from 'react';
-import {useGame} from './useGame';
-import type {BattleData} from '../types/battle';
+
 import {createSafePath} from '../store/firebaseUtils';
+import type {BattleData} from '../types/battle';
+
+import {useGame} from './useGame';
 
 interface UseGameSetupOptions {
   gid: string | undefined;
@@ -28,7 +30,7 @@ export function useGameSetup({
   opponent,
   onBattleData,
   onArchived,
-  initialUsername,
+  initialUsername: _initialUsername,
 }: UseGameSetupOptions): UseGameSetupReturn {
   const gameHookRef = useRef<ReturnType<typeof useGame> | null>(null);
   const opponentGameHookRef = useRef<ReturnType<typeof useGame> | null>(null);
@@ -56,8 +58,10 @@ export function useGameSetup({
   });
 
   // Store latest hook references
-  gameHookRef.current = gameHook;
-  opponentGameHookRef.current = opponentGameHook;
+  useEffect(() => {
+    gameHookRef.current = gameHook;
+    opponentGameHookRef.current = opponentGameHook;
+  }, [gameHook, opponentGameHook]);
 
   // Attach/detach game when gid changes
   useEffect(() => {

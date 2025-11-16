@@ -1,16 +1,9 @@
 /* eslint react/no-unescaped-entities: "warn" */
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-  useImperativeHandle,
-  forwardRef,
-} from 'react';
 
 import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
+import React, {useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef} from 'react';
+
 import Emoji from '../common/Emoji';
 
 const Kbd = ({children}: {children: React.ReactNode}) => <kbd>{children}</kbd>;
@@ -40,12 +33,6 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
         setSelectedEmoji(matches[0] || null);
       }
     }, [matches, selectedEmoji]);
-
-    useImperativeHandle(ref, () => ({
-      handleKeyDown: (e: KeyboardEvent) => {
-        handleKeyDown(e as any);
-      },
-    }));
 
     const getDomPosition = useCallback((emoji: string) => {
       const ref = emojiRefs.current[emoji];
@@ -196,6 +183,12 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
       },
       [selectedEmoji, matches, onEscape, onConfirm, selectEmoji, scrollEmojiIntoView, getDomPosition]
     );
+
+    useImperativeHandle(ref, () => ({
+      handleKeyDown: (e: KeyboardEvent) => {
+        handleKeyDown(e as any);
+      },
+    }));
 
     useEffect(() => {
       if (disableKeyListener) return;

@@ -2,6 +2,7 @@
  * E2E test fixtures
  */
 import {test as base} from '@playwright/test';
+
 import {createMockSocket} from './mocks/socket';
 import type {MockSocket} from './mocks/socket';
 
@@ -10,8 +11,9 @@ type TestFixtures = {
 };
 
 export const test = base.extend<TestFixtures>({
-  mockSocket: async ({}, use) => {
+  mockSocket: async (_fixtures, use) => {
     const socket = createMockSocket();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(socket);
   },
 });

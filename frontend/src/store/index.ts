@@ -1,6 +1,6 @@
+import {getUser as _demoGetUser} from './demoUser';
 import {offline} from './firebase';
-import demoUser, {getUser as _demoGetUser} from './demoUser';
-import user, {getUser as _getUser} from './user';
+import {getUser as _getUser} from './user';
 
 // Export new Zustand stores
 export {useGameStore} from './gameStore';

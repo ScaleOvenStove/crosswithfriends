@@ -1,7 +1,6 @@
 import React from 'react';
-import {useToggle} from 'react-use';
 import {CirclePicker} from 'react-color';
-import {Box} from '@mui/material';
+import {useToggle} from 'react-use';
 
 interface ColorPickerProps {
   color: string;
@@ -9,25 +8,54 @@ interface ColorPickerProps {
 }
 const ColorPicker: React.FC<ColorPickerProps> = (props) => {
   const [isActive, toggleIsActive] = useToggle(false);
+
+  const handleClick = React.useCallback(() => {
+    toggleIsActive();
+  }, [toggleIsActive]);
+
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleIsActive();
+    }
+  }, [toggleIsActive]);
+
+  const handleChangeComplete = React.useCallback((color: {hsl: {h: number; s: number; l: number}}) => {
+    const colorHSL = `hsl(${Math.floor(color.hsl.h)},${Math.floor(color.hsl.s * 100)}%,${Math.floor(
+      color.hsl.l * 100
+    )}%)`;
+    if (colorHSL !== props.color) {
+      props.onUpdateColor(colorHSL);
+    }
+    toggleIsActive(false);
+  }, [props.color, props.onUpdateColor, toggleIsActive]);
+
   return (
     <>
-      <Box component="span" onClick={toggleIsActive} sx={{color: props.color, cursor: 'pointer'}}>
+      <button
+        onClick={handleClick}
+        type="button"
+        aria-label="Change color"
+        aria-expanded={isActive}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          color: props.color,
+          font: 'inherit',
+          display: 'inline',
+        }}
+        onKeyDown={handleKeyDown}
+      >
         {' '}
         {'\u25CF '}
-      </Box>
+      </button>
       {isActive ? (
         <>
           <CirclePicker
             color={props.color}
-            onChangeComplete={(color) => {
-              const colorHSL = `hsl(${Math.floor(color.hsl.h)},${Math.floor(color.hsl.s * 100)}%,${Math.floor(
-                color.hsl.l * 100
-              )}%)`;
-              if (colorHSL !== props.color) {
-                props.onUpdateColor(colorHSL);
-              }
-              toggleIsActive(false);
-            }}
+            onChangeComplete={handleChangeComplete}
           />
           <br />
         </>

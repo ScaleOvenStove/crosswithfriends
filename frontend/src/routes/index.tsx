@@ -162,5 +162,5 @@ export const RouteGuard: React.FC<{
   //   return <Navigate to="/" replace />;
   // }
 
-  return <>{children}</>;
+  return children;
 };

@@ -1,9 +1,10 @@
-import React, {useState, useEffect, useCallback} from 'react';
 import {Box} from '@mui/material';
+import _ from 'lodash';
+import React, {useState, useEffect, useCallback} from 'react';
 import SimpleKeyboard from 'react-simple-keyboard';
 import 'react-simple-keyboard/build/css/index.css';
+
 import './css/mobileKeyboard.css';
-import _ from 'lodash';
 
 const globalKeyboardState = {
   setLayout: null as ((layout: string) => void) | null,

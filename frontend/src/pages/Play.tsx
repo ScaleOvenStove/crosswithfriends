@@ -1,14 +1,15 @@
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
+import redirect from '@crosswithfriends/shared/lib/redirect';
 import _ from 'lodash';
-import Timestamp from '../components/common/Timestamp';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {Link, useParams, useLocation} from 'react-router-dom';
 
-import Nav from '../components/common/Nav';
 import actions from '../actions';
-import {useBattleStore} from '../store';
-import redirect from '@crosswithfriends/shared/lib/redirect';
 import {createGame} from '../api/create_game';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import Nav from '../components/common/Nav';
+import Timestamp from '../components/common/Timestamp';
 import {useUser} from '../hooks/useUser';
+import {useBattleStore} from '../store';
 
 interface GameInfo {
   gid: string;
@@ -137,7 +138,7 @@ const Play: React.FC = () => {
     return (
       <div>
         <Nav v2 />
-        <div style={{padding: 20}}>Creating game...</div>
+        <LoadingSpinner message="Creating game..." />
       </div>
     );
   }
@@ -146,7 +147,7 @@ const Play: React.FC = () => {
     return (
       <div>
         <Nav v2 />
-        <div style={{padding: 20}}>Loading...</div>
+        <LoadingSpinner message="Loading puzzle..." />
       </div>
     );
   }

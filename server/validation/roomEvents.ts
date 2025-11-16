@@ -1,5 +1,5 @@
-import {z} from 'zod';
 import {RoomEventType} from '@shared/roomEvents';
+import {z} from 'zod';
 
 // Room event parameter schemas
 const userPingEventParamsSchema = z.object({

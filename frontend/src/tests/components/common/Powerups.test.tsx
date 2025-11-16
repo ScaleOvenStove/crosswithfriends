@@ -1,5 +1,6 @@
 import {test, expect} from '@playwright/experimental-ct-react';
 import React from 'react';
+
 import Powerups from '../../../components/common/Powerups';
 import {TestWrapper} from '../../utils';
 

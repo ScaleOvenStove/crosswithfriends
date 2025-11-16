@@ -1,8 +1,8 @@
-import React from 'react';
-import _ from 'lodash';
 import {Box, Stack, Chip, Tooltip} from '@mui/material';
-import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
+import _ from 'lodash';
+import React from 'react';
 import {GiCrossedSwords} from 'react-icons/gi';
+import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
 import {Link} from 'react-router-dom';
 
 export interface EntryProps {
@@ -125,7 +125,7 @@ const Entry: React.FC<EntryProps> = ({title, author, pid, status, stats, fencing
         </Box>
         <Box className="entry--details" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
           <Chip
-            label={`${numSolves} ${numSolves === 1 ? 'solve' : 'solves'}`}
+            label={`Solved ${numSolves} ${numSolves === 1 ? 'time' : 'times'}`}
             size="small"
             variant="outlined"
             sx={{height: 20, fontSize: '0.65rem'}}

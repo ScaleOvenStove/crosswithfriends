@@ -90,22 +90,46 @@ const Create: React.FC<CreateProps> = ({onCreate}) => {
     }
   }, [onCreate, dims, pattern]);
 
+  const handleHeightDecrease = useCallback(() => {
+    updateDimsDelta(-1, 0);
+  }, [updateDimsDelta]);
+
+  const handleHeightIncrease = useCallback(() => {
+    updateDimsDelta(+1, 0);
+  }, [updateDimsDelta]);
+
+  const handleWidthDecrease = useCallback(() => {
+    updateDimsDelta(0, -1);
+  }, [updateDimsDelta]);
+
+  const handleWidthIncrease = useCallback(() => {
+    updateDimsDelta(0, +1);
+  }, [updateDimsDelta]);
+
+  const handleHeightChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    updateDims(Number(e.target.value) || dims.r, dims.c);
+  }, [dims.r, dims.c, updateDims]);
+
+  const handleWidthChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    updateDims(dims.r, Number(e.target.value) || dims.c);
+  }, [dims.r, dims.c, updateDims]);
+
   const size = 180 / Math.max(dims.r, dims.c);
 
   return (
     <div className="create">
       <div className="create--options">
         <div className="create--options--height">
-          <button onClick={() => updateDimsDelta(-1, 0)}> - </button>
+          <button onClick={handleHeightDecrease}> - </button>
           <div className="create--options--label">Height:</div>
-          <input value={dims.r} onChange={(e) => updateDims(Number(e.target.value) || dims.r, dims.c)} />
-          <button onClick={() => updateDimsDelta(+1, 0)}> + </button>
+          <input value={dims.r} onChange={handleHeightChange} />
+          <button onClick={handleHeightIncrease}> + </button>
         </div>
         <div className="create--options--width">
-          <button onClick={() => updateDimsDelta(0, -1)}> - </button>
+          <button onClick={handleWidthDecrease}> - </button>
           <div className="create--options--label">Width:</div>
-          <input value={dims.c} onChange={(e) => updateDims(dims.r, Number(e.target.value) || dims.c)} />
-          <button onClick={() => updateDimsDelta(0, +1)}> + </button>
+          <input value={dims.c} onChange={handleWidthChange} />
+          <button onClick={handleWidthIncrease}> + </button>
         </div>
       </div>
 
@@ -113,37 +137,45 @@ const Create: React.FC<CreateProps> = ({onCreate}) => {
         <table className="create--pattern--grid">
           <tbody>
             {pattern.map((row, r) => (
-              <tr key={r}>
-                {row.map((cell, c) => (
-                  <td
-                    key={`${r}_${c}`}
-                    className="create--pattern--grid--cell--wrapper"
-                    style={{
-                      width: size,
-                      height: size,
-                    }}
-                  >
-                    <div
-                      onMouseMove={(e) => {
-                        if (e.buttons === 1) {
-                          if (paintColorRef.current === undefined) {
-                            paintColorRef.current = 1 - pattern[r][c];
-                          }
-                          paint(r, c, paintColorRef.current);
-                        }
+              <tr key={`row-${r}`}>
+                {row.map((cell, c) => {
+                  const cellKey = `cell-${r}-${c}`;
+                  const handleMouseMove = (e: React.MouseEvent) => {
+                    if (e.buttons === 1) {
+                      if (paintColorRef.current === undefined) {
+                        paintColorRef.current = 1 - pattern[r][c];
+                      }
+                      paint(r, c, paintColorRef.current);
+                    }
+                  };
+                  const handleMouseDown = () => {
+                    resetPaint();
+                  };
+                  const handleClick = () => {
+                    if (!paintedRef.current[cellKey]) {
+                      flipPattern(r, c);
+                    }
+                    resetPaint();
+                  };
+                  const handleDrag = (e: React.DragEvent) => {
+                    e.preventDefault();
+                  };
+                  return (
+                    <td
+                      key={cellKey}
+                      className="create--pattern--grid--cell--wrapper"
+                      style={{
+                        width: size,
+                        height: size,
                       }}
-                      onMouseDown={() => {
-                        resetPaint();
-                      }}
-                      onClick={() => {
-                        if (!paintedRef.current[`${r}_${c}`]) {
-                          flipPattern(r, c);
-                        }
-                        resetPaint();
-                      }}
-                      onDrag={(e) => e.preventDefault()}
-                      className={`${cell === 0 ? 'white ' : 'black '}create--pattern--grid--cell`}
-                    />
+                    >
+                      <div
+                        onMouseMove={handleMouseMove}
+                        onMouseDown={handleMouseDown}
+                        onClick={handleClick}
+                        onDrag={handleDrag}
+                        className={`${cell === 0 ? 'white ' : 'black '}create--pattern--grid--cell`}
+                      />
                   </td>
                 ))}
               </tr>

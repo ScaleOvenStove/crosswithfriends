@@ -1,11 +1,7 @@
 import './css/index.css';
-import React, {useRef, useEffect, useCallback} from 'react';
-import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo} from 'react-icons/md';
-import {AiOutlineMenuFold, AiOutlineMenuUnfold} from 'react-icons/ai';
-import {RiPaintFill, RiPaintLine} from 'react-icons/ri';
+import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
 import {
   Box,
-  Stack,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -14,13 +10,16 @@ import {
   Button,
   Menu,
   MenuItem,
-  IconButton,
   Tooltip,
 } from '@mui/material';
+import React, {useRef, useEffect, useCallback} from 'react';
+import {AiOutlineMenuFold, AiOutlineMenuUnfold} from 'react-icons/ai';
+import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo} from 'react-icons/md';
+import {RiPaintFill, RiPaintLine} from 'react-icons/ri';
 import {Link} from 'react-router-dom';
+
 import Clock from './Clock';
 import Popup from './Popup';
-import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
 
 const pencilColorKey = 'pencil-color';
 
@@ -246,29 +245,6 @@ const Toolbar: React.FC<Props> = (props) => {
     }
   }, [props.onToggleVimMode]);
 
-  const renderClockControl = useCallback((): JSX.Element => {
-    const {startTime, onStartClock, onPauseClock} = props;
-    return startTime ? (
-      <button
-        className="toolbar--btn pause"
-        tabIndex={-1}
-        onMouseDown={handleMouseDown}
-        onClick={onPauseClock}
-      >
-        Pause Clock
-      </button>
-    ) : (
-      <button
-        className="toolbar--btn start"
-        tabIndex={-1}
-        onMouseDown={handleMouseDown}
-        onClick={onStartClock}
-      >
-        Start Clock
-      </button>
-    );
-  }, [props.startTime, props.onStartClock, props.onPauseClock, handleMouseDown]);
-
   const handleCheckMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setCheckMenuAnchor(event.currentTarget);
   }, []);
@@ -291,13 +267,16 @@ const Toolbar: React.FC<Props> = (props) => {
 
     return (
       <>
-        <Tooltip title="Check answers">
+        <Tooltip title="Check (Alt+S/W/P)">
           <Button
             variant="outlined"
             size="small"
             onClick={handleCheckMenuOpen}
             onMouseDown={handleMouseDown}
             sx={{minWidth: 'auto', px: 1.5}}
+            aria-label="Check answers"
+            aria-haspopup="true"
+            aria-expanded={Boolean(checkMenuAnchor)}
           >
             Check
           </Button>
@@ -347,13 +326,16 @@ const Toolbar: React.FC<Props> = (props) => {
 
     return (
       <>
-        <Tooltip title="Reveal answers">
+        <Tooltip title="Reveal (Alt+Shift+S/W/P)">
           <Button
             variant="outlined"
             size="small"
             onClick={handleRevealMenuOpen}
             onMouseDown={handleMouseDown}
             sx={{minWidth: 'auto', px: 1.5}}
+            aria-label="Reveal answers"
+            aria-haspopup="true"
+            aria-expanded={Boolean(revealMenuAnchor)}
           >
             Reveal
           </Button>
@@ -411,13 +393,16 @@ const Toolbar: React.FC<Props> = (props) => {
 
     return (
       <>
-        <Tooltip title="Reset puzzle">
+        <Tooltip title="Reset">
           <Button
             variant="outlined"
             size="small"
             onClick={handleResetMenuOpen}
             onMouseDown={handleMouseDown}
             sx={{minWidth: 'auto', px: 1.5}}
+            aria-label="Reset answers"
+            aria-haspopup="true"
+            aria-expanded={Boolean(resetMenuAnchor)}
           >
             Reset
           </Button>
@@ -463,15 +448,18 @@ const Toolbar: React.FC<Props> = (props) => {
 
     return (
       <>
-        <Tooltip title="Extras">
+        <Tooltip title="More options">
           <Button
             variant="outlined"
             size="small"
             onClick={handleExtrasMenuOpen}
             onMouseDown={handleMouseDown}
             sx={{minWidth: 'auto', px: 1.5}}
+            aria-label="More options"
+            aria-haspopup="true"
+            aria-expanded={Boolean(extrasMenuAnchor)}
           >
-            Extras
+            More
           </Button>
         </Tooltip>
         <Menu
@@ -635,6 +623,7 @@ const Toolbar: React.FC<Props> = (props) => {
         href={replayLink}
         target="_blank"
         rel="noreferrer"
+        aria-label="Open replay in new tab"
       >
         <MdSlowMotionVideo />
       </a>
@@ -693,15 +682,40 @@ const Toolbar: React.FC<Props> = (props) => {
   }, [props.listMode, props.mobile, handleToggleListView, handleMouseDown]);
 
   const renderChatButton = useCallback((): JSX.Element => {
-    return <MdChatBubble onClick={handleToggleChat} className="toolbar--chat" />;
+    return (
+      <MdChatBubble
+        onClick={handleToggleChat}
+        className="toolbar--chat"
+        aria-label="Toggle chat"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggleChat();
+          }
+        }}
+      />
+    );
   }, [handleToggleChat]);
 
   const renderExpandMenuButton = useCallback((): JSX.Element => {
     const {expandMenu} = props;
-    return expandMenu ? (
-      <AiOutlineMenuFold onClick={handleToggleExpandMenu} className="toolbar--expand" />
-    ) : (
-      <AiOutlineMenuUnfold onClick={handleToggleExpandMenu} className="toolbar--expand" />
+    const Icon = expandMenu ? AiOutlineMenuFold : AiOutlineMenuUnfold;
+    return (
+      <Icon
+        onClick={handleToggleExpandMenu}
+        className="toolbar--expand"
+        aria-label={expandMenu ? 'Collapse menu' : 'Expand menu'}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggleExpandMenu();
+          }
+        }}
+      />
     );
   }, [props.expandMenu, handleToggleExpandMenu]);
 
@@ -712,7 +726,16 @@ const Toolbar: React.FC<Props> = (props) => {
         className={`toolbar--pencil${pencilMode ? ' on' : ''}`}
         onClick={handlePencilClick}
         onMouseDown={handleMouseDown}
-        title="Shortcut: ."
+        title="Pencil mode (Shortcut: .)"
+        aria-label="Toggle pencil mode"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handlePencilClick(e as any);
+          }
+        }}
       >
         <i className="fa fa-pencil" />
         {pencilMode && (
@@ -739,116 +762,120 @@ const Toolbar: React.FC<Props> = (props) => {
   const renderAutocheck = useCallback((): JSX.Element => {
     const {autocheckMode} = props;
     return (
-      <Tooltip title={autocheckMode ? 'Disable Autocheck' : 'Enable Autocheck'}>
-        <IconButton
-          size="small"
-          onClick={handleAutocheckClick}
-          onMouseDown={handleMouseDown}
-          color={autocheckMode ? 'primary' : 'default'}
-          sx={{
-            border: '1px solid',
-            borderColor: autocheckMode ? 'primary.main' : 'divider',
-            backgroundColor: autocheckMode ? 'action.selected' : 'transparent',
-          }}
-        >
-          <MdBorderAll />
-        </IconButton>
-      </Tooltip>
+      <div
+        className={`toolbar--autocheck${autocheckMode ? ' on' : ''}`}
+        onClick={handleAutocheckClick}
+        onMouseDown={handleMouseDown}
+        title="Autocheck mode"
+        aria-label="Toggle autocheck mode"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleAutocheckClick(e as any);
+          }
+        }}
+      >
+        <i className={autocheckMode ? 'fa fa-check-square' : 'fa fa-square'} />
+      </div>
     );
   }, [props.autocheckMode, handleAutocheckClick, handleMouseDown]);
 
   const renderInfo = useCallback((): JSX.Element => {
     return (
       <div className="toolbar--info">
-        <Popup icon="fa-info-circle" onBlur={handleBlur}>
-          <h3>How to Enter Answers</h3>
-          <ul>
-            <li>
-              Click a cell once to enter an answer, and click that same cell again to switch between
-              horizontal and vertical orientations
-            </li>
-            <li>Click the clues to move the cursor directly to the cell for that answer</li>
-            <li>
-              Hold down the <code>Shift</code> key to enter multiple characters for rebus answers
-            </li>
-          </ul>
-          <h4>Basic Keyboard Shortcuts</h4>
-          <table>
-            <tbody>
-              <tr>
-                <th>Shortcut</th>
-                <th>Description</th>
-              </tr>
-              <tr>
-                <td>Letter / Number</td>
-                <td>
-                  Fill in current cell and advance cursor to next unfilled cell in the same word, if any
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <code>.</code> (period)
-                </td>
-                <td>Toggle pencil mode on/off</td>
-              </tr>
-              <tr>
-                <td>Arrow keys</td>
-                <td>
-                  Either move cursor along current orientation or change orientation without moving cursor
-                </td>
-              </tr>
-              <tr>
-                <td>Space bar</td>
-                <td>Flip orientation between down/across</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Delete</code> or <code>Backspace</code>
-                </td>
-                <td>Clear current cell</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Alt</code> + <code>S</code>, <code>W</code>, or <code>P</code>
-                </td>
-                <td>
-                  Check <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Alt</code> + <code>Shift</code> + <code>S</code>, <code>W</code>, or <code>P</code>
-                </td>
-                <td>
-                  Reveal <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <h4>Advanced Keyboard Shortcuts</h4>
-          <table>
-            <tbody>
-              <tr>
-                <td>
-                  <code>[</code> and <code>]</code> OR <code>Shift</code> with arrow keys
-                </td>
-                <td>Move cursor perpendicular to current orientation without changing orientation</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Tab</code> and <code>Shift+Tab</code>
-                </td>
-                <td>Move cursor to first unfilled square of next or previous unfilled clue</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>Home</code> OR <code>End</code>
-                </td>
-                <td>Move cursor to the beginning or end of a clue</td>
-              </tr>
-            </tbody>
-          </table>
-        </Popup>
+        <Tooltip title="Keyboard shortcuts (Click for full help)">
+          <Popup icon="fa-info-circle" onBlur={handleBlur}>
+            <h3>How to Enter Answers</h3>
+            <ul>
+              <li>
+                Click a cell once to enter an answer, and click that same cell again to switch between
+                horizontal and vertical orientations
+              </li>
+              <li>Click the clues to move the cursor directly to the cell for that answer</li>
+              <li>
+                Hold down the <code>Shift</code> key to enter multiple characters for rebus answers
+              </li>
+            </ul>
+            <h4>Basic Keyboard Shortcuts</h4>
+            <table>
+              <tbody>
+                <tr>
+                  <th>Shortcut</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td>Letter / Number</td>
+                  <td>
+                    Fill in current cell and advance cursor to next unfilled cell in the same word, if any
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>.</code> (period)
+                  </td>
+                  <td>Toggle pencil mode on/off</td>
+                </tr>
+                <tr>
+                  <td>Arrow keys</td>
+                  <td>
+                    Either move cursor along current orientation or change orientation without moving cursor
+                  </td>
+                </tr>
+                <tr>
+                  <td>Space bar</td>
+                  <td>Flip orientation between down/across</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Delete</code> or <code>Backspace</code>
+                  </td>
+                  <td>Clear current cell</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Alt</code> + <code>S</code>, <code>W</code>, or <code>P</code>
+                  </td>
+                  <td>
+                    Check <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Alt</code> + <code>Shift</code> + <code>S</code>, <code>W</code>, or <code>P</code>
+                  </td>
+                  <td>
+                    Reveal <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <h4>Advanced Keyboard Shortcuts</h4>
+            <table>
+              <tbody>
+                <tr>
+                  <td>
+                    <code>[</code> and <code>]</code> OR <code>Shift</code> with arrow keys
+                  </td>
+                  <td>Move cursor perpendicular to current orientation without changing orientation</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Tab</code> and <code>Shift+Tab</code>
+                  </td>
+                  <td>Move cursor to first unfilled square of next or previous unfilled clue</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Home</code> OR <code>End</code>
+                  </td>
+                  <td>Move cursor to the beginning or end of a clue</td>
+                </tr>
+              </tbody>
+            </table>
+          </Popup>
+        </Tooltip>
       </div>
     );
   }, [handleBlur]);
@@ -914,12 +941,24 @@ const Toolbar: React.FC<Props> = (props) => {
           onPause={onPauseClock}
         />
       </div>
-      {!solved && !replayMode && renderCheckMenu()}
-      {!solved && !replayMode && renderRevealMenu()}
-      {!solved && !replayMode && renderResetMenu()}
+      {/* Group Check/Reveal/Reset with visual separation */}
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          alignItems: 'center',
+          padding: '0 8px',
+          borderRight: '1px solid',
+          borderColor: 'divider',
+          marginRight: '8px',
+        }}
+      >
+        {!solved && !replayMode && renderCheckMenu()}
+        {!solved && !replayMode && renderRevealMenu()}
+        {!solved && !replayMode && renderResetMenu()}
+      </Box>
       {solved && !replayMode && renderReplayLink()}
-      {renderColorAttributionToggle()}
-      {renderListViewButton()}
+      {/* Color Attribution and List View moved to Extras menu */}
       {!replayMode && renderPencil()}
       {!solved && !replayMode && renderAutocheck()}
       {!replayMode && renderExtrasMenu()}
@@ -935,14 +974,14 @@ const Toolbar: React.FC<Props> = (props) => {
         <DialogContent>
           <DialogContentText id="reveal-dialog-description">
             Are you sure you want to reveal the <strong>{revealScope}</strong>? All players will be able to
-            see the {revealScope}'s answer.
+            see the {revealScope}&apos;s answer.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleRevealCancel} color="inherit">
             Cancel
           </Button>
-          <Button onClick={handleRevealConfirm} color="warning" variant="contained" autoFocus>
+          <Button onClick={handleRevealConfirm} color="warning" variant="contained">
             Reveal
           </Button>
         </DialogActions>
@@ -963,7 +1002,7 @@ const Toolbar: React.FC<Props> = (props) => {
           <Button onClick={handleResetCancel} color="inherit">
             Cancel
           </Button>
-          <Button onClick={handleResetConfirm} color="error" variant="contained" autoFocus>
+          <Button onClick={handleResetConfirm} color="error" variant="contained">
             Reset
           </Button>
         </DialogActions>

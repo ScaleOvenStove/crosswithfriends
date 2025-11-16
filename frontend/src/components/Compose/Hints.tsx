@@ -35,7 +35,6 @@ const Hints: React.FC<HintsProps> = ({grid, direction, num}) => {
       let cnt = 0;
       const currentList = [...list];
       for (const word of currentList) {
-        // eslint-disable-next-line no-continue
         if (word in scoresRef.current) continue;
         scoresRef.current[word] = evaluate(grid, direction, num, word);
         cnt += 1;

@@ -1,8 +1,8 @@
-import {useRef, useState} from 'react';
-import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
 import gameReducer from '@crosswithfriends/shared/fencingGameEvents/gameReducer';
 import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
 import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
+import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
+import {useRef, useState} from 'react';
 
 export type GameEventsHook = {
   gameState: GameState;

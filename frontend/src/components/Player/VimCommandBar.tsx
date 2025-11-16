@@ -29,7 +29,7 @@ export const VimCommandBar: React.FC<VimCommandBarProps> = ({
     }
   };
 
-  const handleBlur: React.FocusEventHandler<HTMLElement> = (e) => {
+  const handleBlur: React.FocusEventHandler<HTMLElement> = () => {
     setCommand('');
     isVimCommandMode && onVimCommand();
   };

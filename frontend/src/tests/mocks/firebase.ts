@@ -10,7 +10,7 @@ export const mockFirebaseApp = {
 
 export const mockFirebaseAuth = {
   currentUser: null,
-  onAuthStateChanged: (callback: (user: any) => void) => {
+  onAuthStateChanged: (_callback: (user: any) => void) => {
     // Return unsubscribe function
     return () => {};
   },
@@ -30,13 +30,13 @@ export const mockFirebaseDatabase = {
     path,
     key: path.split('/').pop(),
   }),
-  get: async (ref: any) => ({
+  get: async (_ref: any) => ({
     val: () => null,
     exists: () => false,
   }),
   set: async () => {},
   runTransaction: async () => ({}),
-  onValue: (ref: any, callback: (snapshot: any) => void) => {
+  onValue: (_ref: any, _callback: (snapshot: any) => void) => {
     // Return unsubscribe function
     return () => {};
   },

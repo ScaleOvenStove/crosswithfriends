@@ -1,5 +1,9 @@
 import './css/fileUploader.css';
 
+import iPUZtoJSON from '@crosswithfriends/shared/lib/converter/iPUZtoJSON';
+import PUZtoJSON from '@crosswithfriends/shared/lib/converter/PUZtoJSON';
+import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
+import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
 import React, {useCallback} from 'react';
 import Dropzone from 'react-dropzone';
 import {MdFileUpload} from 'react-icons/md';
@@ -7,11 +11,6 @@ import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
 const swal = withReactContent(Swal);
-
-import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
-import PUZtoJSON from '@crosswithfriends/shared/lib/converter/PUZtoJSON';
-import iPUZtoJSON from '@crosswithfriends/shared/lib/converter/iPUZtoJSON';
-import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
 
 class UnknownFileTypeError extends Error {
   constructor(fileType: string) {

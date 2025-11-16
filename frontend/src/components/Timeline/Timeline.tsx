@@ -1,6 +1,6 @@
-import React, {useMemo, useRef, useState, useEffect, useCallback} from 'react';
-import _ from 'lodash';
 import {pure, isAncestor} from '@crosswithfriends/shared/lib/jsUtils';
+import _ from 'lodash';
+import React, {useMemo, useRef, useState, useEffect, useCallback} from 'react';
 import './timeline.css';
 
 const TIMELINE_COLORS = {
@@ -71,25 +71,26 @@ const Timeline: React.FC<TimelineProps> = ({history, position, width, onSetPosit
     return length > 0 ? width / length : 0;
   }, [end, begin, width]);
 
-  const updateScroll = useCallback(
-    _.throttle(() => {
-      if (!scrollContainer || !cursorRef.current || !timelineRef.current) {
-        return;
-      }
-      const center = cursorRef.current.offsetLeft;
+  const updateScroll = useMemo(
+    () =>
+      _.throttle(() => {
+        if (!scrollContainer || !cursorRef.current || !timelineRef.current) {
+          return;
+        }
+        const center = cursorRef.current.offsetLeft;
 
-      // scroll minimally so that the center is visible with 5px padding
-      const padding = 5;
-      const lo = Math.min(
-        timelineRef.current.clientWidth - scrollContainer.clientWidth,
-        center - scrollContainer.clientWidth + padding
-      );
-      const hi = Math.max(0, center - padding);
+        // scroll minimally so that the center is visible with 5px padding
+        const padding = 5;
+        const lo = Math.min(
+          timelineRef.current.clientWidth - scrollContainer.clientWidth,
+          center - scrollContainer.clientWidth + padding
+        );
+        const hi = Math.max(0, center - padding);
 
-      let scrollLeft = scrollContainer.scrollLeft;
-      scrollLeft = Math.max(lo, Math.min(hi, scrollLeft));
-      scrollContainer.scrollLeft = scrollLeft;
-    }, 50),
+        let scrollLeft = scrollContainer.scrollLeft;
+        scrollLeft = Math.max(lo, Math.min(hi, scrollLeft));
+        scrollContainer.scrollLeft = scrollLeft;
+      }, 50),
     [scrollContainer]
   );
 

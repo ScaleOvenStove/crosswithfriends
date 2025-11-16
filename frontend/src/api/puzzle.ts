@@ -1,10 +1,6 @@
+import type {AddPuzzleRequest, AddPuzzleResponse, RecordSolveResponse} from '@crosswithfriends/shared/types';
+
 import apiClient from './client';
-import type {
-  AddPuzzleRequest,
-  AddPuzzleResponse,
-  RecordSolveRequest,
-  RecordSolveResponse,
-} from '@crosswithfriends/shared/types';
 
 export async function createNewPuzzle(
   puzzle: AddPuzzleRequest,

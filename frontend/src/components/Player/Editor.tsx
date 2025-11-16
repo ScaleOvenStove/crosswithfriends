@@ -1,14 +1,15 @@
 /* eslint react/no-string-refs: "warn" */
 import './css/editor.css';
+import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {Box, Stack} from '@mui/material';
 import React, {useState, useRef, useMemo, useCallback, useImperativeHandle, forwardRef} from 'react';
-import Grid from '../Grid';
-import GridControls from './GridControls';
+
 import EditableSpan from '../common/EditableSpan';
 import Hints from '../Compose/Hints';
+import Grid from '../Grid';
 
-import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
-import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
+import GridControls from './GridControls';
 
 window.requestIdleCallback =
   window.requestIdleCallback ||
@@ -181,15 +182,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     [selectedParent, direction, props.onUpdateClue, props.onChange]
   );
 
-  const isClueFilled = useCallback(
-    (dir: 'across' | 'down', number: number) => {
-      const clueRoot = grid.getCellByNumber(number);
-      if (!clueRoot) return false;
-      return !grid.hasEmptyCells(clueRoot.r, clueRoot.c, dir);
-    },
-    [grid]
-  );
-
   const isClueSelected = useCallback(
     (dir: 'across' | 'down', number: number) => {
       return dir === direction && number === selectedClueNumber;
@@ -204,7 +196,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     [direction, halfSelectedClueNumber]
   );
 
-  const isSelected = useCallback(
+  const _isSelected = useCallback(
     (r: number, c: number) => {
       return r === selected.r && c === selected.c;
     },
@@ -266,7 +258,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   );
 
   return (
-    <Box className="editor--main--wrapper" sx={{display: 'flex'}}>
+    <Box className="editor--main--wrapper" sx={{display: 'flex', flex: 1, minHeight: 0, height: '100%'}}>
       <GridControls
         ref={gridControlsRef}
         selected={selected}

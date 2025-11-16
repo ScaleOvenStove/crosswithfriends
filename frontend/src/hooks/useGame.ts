@@ -4,8 +4,10 @@
  */
 
 import {useCallback, useEffect} from 'react';
+
 import {useGameStore} from '../store/gameStore';
 import type {GameEvent} from '../types/events';
+
 import {useStoreSubscriptions} from './useStoreSubscriptions';
 
 interface UseGameOptions {
@@ -68,6 +70,15 @@ export function useGame(options: UseGameOptions): UseGameReturn {
   const gameState = useGameStore((state) => {
     const gameInstance = state.games[path];
     return gameInstance?.gameState ?? null;
+  });
+  // Get ready state reactively - this ensures re-renders when ready changes
+  const ready = useGameStore((state) => {
+    const gameInstance = state.games[path];
+    const readyValue = gameInstance?.ready ?? false;
+    if (path && import.meta.env.DEV) {
+      console.warn('[useGame] Ready selector called for', path, 'ready:', readyValue);
+    }
+    return readyValue;
   });
 
   // Ensure game instance exists (lazy initialization) - skip if path is empty
@@ -186,6 +197,6 @@ export function useGame(options: UseGameOptions): UseGameReturn {
       }
       return null;
     },
-    ready: game?.ready ?? false,
+    ready,
   };
 }

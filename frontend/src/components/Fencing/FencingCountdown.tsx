@@ -1,6 +1,7 @@
+import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
 import {CircularProgress, Box} from '@mui/material';
 import React, {useEffect, useState} from 'react';
-import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
+
 import type {GameEventsHook} from './useGameEvents';
 import type {PlayerActions} from './usePlayerActions';
 
@@ -83,5 +84,5 @@ export const FencingCountdown: React.FC<{
       </Box>
     );
   }
-  return <>{props.children}</>;
+  return props.children;
 };

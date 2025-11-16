@@ -1,7 +1,9 @@
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import type {IncrementGidResponse, IncrementPidResponse} from '@shared/types';
+import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+
 import {incrementGid, incrementPid} from '../model/counters.js';
 
+// eslint-disable-next-line require-await
 async function countersRouter(fastify: FastifyInstance) {
   fastify.post<{Reply: IncrementGidResponse}>(
     '/gid',

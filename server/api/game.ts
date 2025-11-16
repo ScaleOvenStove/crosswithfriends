@@ -1,15 +1,17 @@
+import type {CreateGameRequest, GetGameResponse, InfoJson} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import type {CreateGameRequest, InfoJson, GetGameResponse} from '@shared/types';
 
 import {addInitialGameEvent} from '../model/game.js';
-import {getPuzzleSolves} from '../model/puzzle_solve.js';
 import {getPuzzleInfo} from '../model/puzzle.js';
+import {getPuzzleSolves} from '../model/puzzle_solve.js';
+
 import {createHttpError} from './errors.js';
 
 interface CreateGameResponseWithGid {
   gid: string;
 }
 
+// eslint-disable-next-line require-await
 async function gameRouter(fastify: FastifyInstance) {
   fastify.post<{Body: CreateGameRequest; Reply: CreateGameResponseWithGid}>(
     '/',
