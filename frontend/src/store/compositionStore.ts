@@ -1,13 +1,15 @@
-import {create} from 'zustand';
-import _ from 'lodash';
-import {db, SERVER_TIME, type DatabaseReference} from './firebase';
 import {ref, onChildAdded, off, push, set} from 'firebase/database';
+import _ from 'lodash';
+import {create} from 'zustand';
+
 import type {
   CompositionEvent,
   RawComposition,
   CompositionImportContents,
   CompositionGrid,
 } from '../types/composition';
+
+import {db, SERVER_TIME, type DatabaseReference} from './firebase';
 
 export const CURRENT_VERSION = 1.0;
 

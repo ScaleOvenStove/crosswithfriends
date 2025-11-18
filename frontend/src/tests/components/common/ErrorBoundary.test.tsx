@@ -1,10 +1,11 @@
 import {test, expect} from '@playwright/experimental-ct-react';
 import React from 'react';
+
 import ErrorBoundary from '../../../components/common/ErrorBoundary';
 import {TestWrapper} from '../../utils';
 
 // Component that throws an error
-const ThrowError: React.FC<{shouldThrow: boolean}> = ({shouldThrow}) => {
+const _ThrowError: React.FC<{shouldThrow: boolean}> = ({shouldThrow}) => {
   if (shouldThrow) {
     throw new Error('Test error');
   }

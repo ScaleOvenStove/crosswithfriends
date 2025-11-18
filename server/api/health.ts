@@ -3,8 +3,9 @@ import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 /**
  * Health check endpoint for Docker and monitoring
  */
-async function healthRouter(fastify: FastifyInstance) {
-  fastify.get('/', async (_request: FastifyRequest, _reply: FastifyReply) => {
+// eslint-disable-next-line require-await
+async function healthRouter(fastify: FastifyInstance): Promise<void> {
+  fastify.get('/', (_request: FastifyRequest, _reply: FastifyReply) => {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),

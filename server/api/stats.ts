@@ -1,8 +1,10 @@
+import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import type {ListPuzzleStatsResponse, ListPuzzleStatsRequest} from '@shared/types';
 import _ from 'lodash';
-import {getPuzzleSolves} from '../model/puzzle_solve.js';
+
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
+import {getPuzzleSolves} from '../model/puzzle_solve.js';
+
 import {createHttpError} from './errors.js';
 
 type PuzzleSummaryStat = {
@@ -23,12 +25,15 @@ export function computePuzzleStats(puzzle_solves: SolvedPuzzleType[]): PuzzleSum
       return;
     }
     const bestPuzzle = _.minBy(sizePuzzles, (p) => p.time_taken_to_solve);
+    if (!bestPuzzle) {
+      return;
+    }
     stats.push({
       size,
       n_puzzles_solved: sizePuzzles.length,
       avg_solve_time: _.mean(_.map(sizePuzzles, (p) => p.time_taken_to_solve)),
-      best_solve_time_game: bestPuzzle!.gid,
-      best_solve_time: bestPuzzle!.time_taken_to_solve,
+      best_solve_time_game: bestPuzzle.gid,
+      best_solve_time: bestPuzzle.time_taken_to_solve,
       avg_revealed_square_count:
         Math.round(_.mean(_.map(sizePuzzles, (p) => p.revealed_squares_count)) * 100) / 100,
       avg_checked_square_count:
@@ -39,7 +44,8 @@ export function computePuzzleStats(puzzle_solves: SolvedPuzzleType[]): PuzzleSum
   return stats.sort((a, b) => a.size.localeCompare(b.size));
 }
 
-async function statsRouter(fastify: FastifyInstance) {
+// eslint-disable-next-line require-await
+async function statsRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: ListPuzzleStatsRequest; Reply: ListPuzzleStatsResponse}>(
     '/',
     async (request: FastifyRequest<{Body: ListPuzzleStatsRequest}>, _reply: FastifyReply) => {

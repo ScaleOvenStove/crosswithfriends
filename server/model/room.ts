@@ -1,9 +1,11 @@
 import type {RoomEvent} from '@shared/roomEvents';
 import _ from 'lodash';
-import {pool} from './pool.js';
+
 import {logger} from '../utils/logger.js';
 
-export async function getRoomEvents(rid: string) {
+import {pool} from './pool.js';
+
+export async function getRoomEvents(rid: string): Promise<RoomEvent[]> {
   const startTime = Date.now();
   const res = await pool.query('SELECT event_payload FROM room_events WHERE rid=$1 ORDER BY ts ASC', [rid]);
   const events = _.map(res.rows, 'event_payload');
@@ -12,7 +14,7 @@ export async function getRoomEvents(rid: string) {
   return events;
 }
 
-export async function addRoomEvent(rid: string, event: RoomEvent) {
+export async function addRoomEvent(rid: string, event: RoomEvent): Promise<void> {
   const startTime = Date.now();
   await pool.query(
     `

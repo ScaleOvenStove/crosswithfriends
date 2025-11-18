@@ -3,7 +3,6 @@
  */
 
 import type {GameInfo} from './game';
-import type {RawGame} from './rawGame';
 
 export interface PuzzleData {
   info?: GameInfo;

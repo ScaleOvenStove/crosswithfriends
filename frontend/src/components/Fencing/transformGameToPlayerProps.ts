@@ -2,7 +2,6 @@
  * Transforms game state and user data into props suitable for the Player component.
  * Applies team-specific clue visibility and grid filtering for fencing games.
  */
-import _ from 'lodash';
 import type {
   CluesJson,
   GameJson,
@@ -11,7 +10,10 @@ import type {
   UserJson,
   CellIndex,
 } from '@crosswithfriends/shared/types';
+import _ from 'lodash';
+
 import type {CellCoords, Ping} from '../Grid/types';
+
 import type {PlayerActions} from './usePlayerActions';
 
 interface PlayerProps {
@@ -27,20 +29,20 @@ interface PlayerProps {
   currentCursor?: Cursor;
   id: string;
   updateCursor(nCursor: CellCoords): void;
-  users: any;
-  frozen: any;
-  myColor: any;
-  updateGrid: any;
-  addPing: any;
-  onPressEnter: any;
-  onPressPeriod: any;
-  vimMode: any;
-  vimInsert: any;
-  onVimInsert: any;
-  onVimNormal: any;
-  mobile: any;
-  pickups: any;
-  optimisticCounter: any;
+  users: UserJson[];
+  frozen: boolean | null;
+  myColor: string | null;
+  updateGrid: ((r: number, c: number, value: string) => void) | null;
+  addPing: ((coords: CellCoords) => void) | null;
+  onPressEnter: (() => void) | null;
+  onPressPeriod: (() => void) | null;
+  vimMode: boolean | null;
+  vimInsert: boolean | null;
+  onVimInsert: (() => void) | null;
+  onVimNormal: (() => void) | null;
+  mobile: boolean | null;
+  pickups: Record<string, unknown> | null;
+  optimisticCounter: number | null;
 }
 
 function applyClueVisibility(vis: {across: boolean[]; down: boolean[]}, clues: CluesJson) {

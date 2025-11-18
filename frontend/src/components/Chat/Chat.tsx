@@ -1,4 +1,8 @@
 import './css/index.css';
+import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
+import nameGenerator, {isFromNameGenerator} from '@crosswithfriends/shared/lib/nameGenerator';
+import {Box, Stack, Snackbar, Alert, IconButton} from '@mui/material';
+import _ from 'lodash';
 import React, {
   useState,
   useRef,
@@ -8,24 +12,30 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import _ from 'lodash';
-import {Box, Stack, Snackbar, Alert, IconButton} from '@mui/material';
-import Linkify from 'react-linkify';
+import {MdClose, MdContentCopy, MdChevronRight, MdChevronLeft} from 'react-icons/md';
 import {Link} from 'react-router-dom';
-import {MdClose, MdContentCopy} from 'react-icons/md';
-import Emoji from '../common/Emoji';
-import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
-import nameGenerator, {isFromNameGenerator} from '@crosswithfriends/shared/lib/nameGenerator';
-import ChatBar from './ChatBar';
+
+import Linkify from 'react-linkify';
+
 import EditableSpan from '../common/EditableSpan';
+import Emoji from '../common/Emoji';
 import MobileKeyboard from '../Player/MobileKeyboard';
-import ColorPicker from './ColorPicker.tsx';
 import {formatMilliseconds} from '../Toolbar/Clock';
+
+import ChatBar, {type ChatBarRef} from './ChatBar';
+import ColorPicker from './ColorPicker';
 
 const isEmojis = (str: string) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
   return !res;
 };
+
+interface ChatMessage {
+  text: string;
+  senderId: string;
+  timestamp: number;
+  isOpponent?: boolean;
+}
 
 interface ChatProps {
   initialUsername?: string;
@@ -45,11 +55,11 @@ interface ChatProps {
     pid: number;
     solved?: boolean;
     clues: {across: string[]; down: string[]};
-    fencingUsers?: any[];
+    fencingUsers?: string[];
     isFencing?: boolean;
   };
-  data: {messages?: any[]};
-  opponentData?: {messages?: any[]};
+  data: {messages?: ChatMessage[]};
+  opponentData?: {messages?: ChatMessage[]};
   teams?: Record<string, {color?: string}>;
   mobile?: boolean;
   hideChatBar?: boolean;
@@ -60,6 +70,8 @@ interface ChatProps {
   isFencing?: boolean;
   onSelectClue?: (direction: 'across' | 'down', clueNumber: number) => void;
   info?: {title?: string; description?: string; author?: string; type?: string};
+  collapsed?: boolean;
+  onShareLinkDisappeared?: () => void;
 }
 
 export type ChatRef = {
@@ -70,8 +82,11 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   const [username, setUsername] = useState<string>('');
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
-  const chatBarRef = useRef<any>(null);
-  const usernameInputRef = useRef<any>(null);
+  const [showShareMessage, setShowShareMessage] = useState<boolean>(true);
+  const chatBarRef = useRef<ChatBarRef | null>(null);
+  const usernameInputRef = useRef<HTMLInputElement | null>(null);
+  const collapsedRef = useRef<boolean>(props.collapsed || false);
+  const prevShowShareMessageRef = useRef<boolean>(true);
 
   const usernameKey = useMemo(() => {
     return `username_${window.location.href}`;
@@ -95,6 +110,24 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
   const isEditingRef = useRef<boolean>(false);
 
+  const {
+    id,
+    onUpdateDisplayName,
+    onUnfocus,
+    onToggleChat,
+    onSelectClue,
+    header,
+    info,
+    bid,
+    mobile,
+    collapsed,
+    game,
+    users,
+    initialUsername,
+    onChat,
+    color,
+    onUpdateColor,
+  } = props;
   const handleUpdateDisplayName = useCallback(
     (newUsername: string) => {
       let finalUsername = newUsername;
@@ -102,7 +135,6 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       if (!isEditingRef.current && !finalUsername) {
         finalUsername = nameGenerator();
       }
-      const {id, onUpdateDisplayName} = props;
       if (onUpdateDisplayName && id) {
         onUpdateDisplayName(id, finalUsername);
       }
@@ -117,55 +149,55 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         localStorage.setItem('username_default', finalUsername);
       }
     },
-    [props.id, props.onUpdateDisplayName, usernameKey]
+    [id, onUpdateDisplayName, usernameKey]
   );
 
   useEffect(() => {
-    let initialUsername = props.initialUsername;
-    const battleName = localStorage.getItem(`battle_${props.bid}`);
+    let currentInitialUsername = initialUsername;
+    const battleName = localStorage.getItem(`battle_${bid}`);
     // HACK
-    if (battleName && !initialUsername) {
-      initialUsername = battleName;
+    if (battleName && !currentInitialUsername) {
+      currentInitialUsername = battleName;
       setUsername(battleName);
     } else {
-      setUsername(initialUsername || '');
+      setUsername(currentInitialUsername || '');
     }
     // Only call updateDisplayName if we have a valid username and the callback is available
-    if (initialUsername && props.onUpdateDisplayName) {
-      handleUpdateDisplayName(initialUsername);
+    if (currentInitialUsername && onUpdateDisplayName) {
+      handleUpdateDisplayName(currentInitialUsername);
     }
-  }, [props.initialUsername, props.bid, props.onUpdateDisplayName, handleUpdateDisplayName]);
+  }, [initialUsername, bid, onUpdateDisplayName, handleUpdateDisplayName]);
 
   const handleSendMessage = useCallback(
     (message: string) => {
-      const {id} = props;
-      if (!id || !props.users[id]) {
+      if (!id || !users[id]) {
         console.warn('Cannot send message: invalid user id or user not found');
         return;
       }
-      const displayName = props.users[id].displayName || username || 'Unknown';
-      if (props.onChat) {
-        props.onChat(displayName, id, message);
+      const displayName = users[id].displayName || username || 'Unknown';
+      if (onChat) {
+        onChat(displayName, id, message);
       }
       localStorage.setItem(usernameKey, displayName);
+      // Dismiss share message when first message is sent
+      setShowShareMessage(false);
     },
-    [props, usernameKey, username]
+    [id, users, username, usernameKey, onChat]
   );
 
   const handleUpdateColor = useCallback(
-    (color: string) => {
-      const finalColor = color || props.color;
-      const {id} = props;
-      props.onUpdateColor(id, finalColor);
+    (newColor: string) => {
+      const finalColor = newColor || color;
+      onUpdateColor(id, finalColor);
     },
-    [props]
+    [id, color, onUpdateColor]
   );
 
   const handleUnfocus = useCallback(() => {
-    if (props.onUnfocus) {
-      props.onUnfocus();
+    if (onUnfocus) {
+      onUnfocus();
     }
-  }, [props.onUnfocus]);
+  }, [onUnfocus]);
 
   const handleBlur = useCallback(() => {
     const finalUsername = username || nameGenerator();
@@ -173,14 +205,18 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   }, [username]);
 
   const handleToggleChat = useCallback(() => {
-    props.onToggleChat();
-  }, [props.onToggleChat]);
+    onToggleChat();
+  }, [onToggleChat]);
 
   const handleCopyClick = useCallback(() => {
     navigator.clipboard.writeText(url);
     setSnackbarMessage('Link copied to clipboard!');
     setSnackbarOpen(true);
   }, [url]);
+
+  const handleSnackbarClose = useCallback(() => {
+    setSnackbarOpen(false);
+  }, []);
 
   const handleShareScoreClick = useCallback(() => {
     const text = `${Object.keys(props.users).length > 1 ? 'We' : 'I'} solved ${
@@ -191,27 +227,44 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     setSnackbarOpen(true);
   }, [props.users, props.game, serverUrl]);
 
-  const mergeMessages = useCallback((data: {messages?: any[]}, opponentData?: {messages?: any[]}) => {
-    if (!opponentData) {
-      return data.messages || [];
-    }
+  const handleShareScoreKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleShareScoreClick();
+      }
+    },
+    [handleShareScoreClick]
+  );
 
-    const getMessages = (msgData: {messages?: any[]}, isOpponent: boolean) =>
-      _.map(msgData.messages, (message) => ({...message, isOpponent}));
-
-    const messages = _.concat(getMessages(data, false), getMessages(opponentData, true));
-
-    return _.sortBy(messages, 'timestamp');
+  const handleDismissShareMessage = useCallback(() => {
+    setShowShareMessage(false);
   }, []);
+
+  const mergeMessages = useCallback(
+    (data: {messages?: ChatMessage[]}, opponentData?: {messages?: ChatMessage[]}) => {
+      if (!opponentData) {
+        return data.messages || [];
+      }
+
+      const getMessages = (msgData: {messages?: ChatMessage[]}, isOpponent: boolean) =>
+        _.map(msgData.messages, (message) => ({...message, isOpponent}));
+
+      const messages = _.concat(getMessages(data, false), getMessages(opponentData, true));
+
+      return _.sortBy(messages, 'timestamp');
+    },
+    []
+  );
 
   const getMessageColor = useCallback(
     (senderId: string, isOpponent?: boolean) => {
-      const {users, teams} = props;
+      const {users: allUsers, teams} = props;
       if (isOpponent === undefined) {
-        if (users[senderId]?.teamId) {
-          return teams?.[users[senderId].teamId]?.color;
+        if (allUsers[senderId]?.teamId) {
+          return teams?.[allUsers[senderId].teamId]?.color;
         }
-        return users[senderId]?.color;
+        return allUsers[senderId]?.color;
       }
       return isOpponent ? 'rgb(220, 107, 103)' : 'rgb(47, 137, 141)';
     },
@@ -219,7 +272,25 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   );
 
   const renderGameButton = useCallback(() => {
-    return <MdClose onClick={handleToggleChat} className="toolbar--game" />;
+    return (
+      <button
+        onClick={handleToggleChat}
+        className="toolbar--game"
+        aria-label="Close chat"
+        type="button"
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <MdClose />
+      </button>
+    );
   }, [handleToggleChat]);
 
   const renderToolbar = useCallback(() => {
@@ -250,33 +321,75 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   }, [props.gid, props.isFencing, props.game.fencingUsers]);
 
   const renderChatHeader = useCallback(() => {
-    if (props.header) return props.header;
-    const {info = {}, bid} = props;
-    const gameInfo = info || props.game.info;
+    if (header) return header;
+    const gameInfo = info || game.info;
     const {title, description, author, type} = gameInfo;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
 
     return (
       <div className="chat--header">
-        <div className="chat--header--title">{title}</div>
-        <div className="chat--header--subtitle">{type && `${type} | By ${author}`}</div>
-        {desc && (
-          <div className="chat--header--description">
-            <strong>Note: </strong>
-            <Linkify>{desc}</Linkify>
-          </div>
-        )}
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1}}>
+            <div className="chat--header--title">{title}</div>
+            <div className="chat--header--subtitle">{type && `${type} | By ${author}`}</div>
+            {desc && (
+              <div className="chat--header--description">
+                <strong>Note: </strong>
+                <Linkify>{desc}</Linkify>
+              </div>
+            )}
 
-        {bid && (
-          <div className="chat--header--subtitle">
-            Battle
-            {bid}
+            {bid && (
+              <div className="chat--header--subtitle">
+                Battle
+                {bid}
+              </div>
+            )}
+            {renderFencingOptions()}
           </div>
-        )}
-        {renderFencingOptions()}
+          {!mobile && (
+            <IconButton
+              size="small"
+              onClick={handleToggleChat}
+              sx={{
+                flexShrink: 0,
+                marginLeft: 1,
+                color: '#666',
+                '&:hover': {backgroundColor: 'rgba(0, 0, 0, 0.04)'},
+              }}
+              title={collapsed ? 'Expand chat' : 'Collapse chat'}
+            >
+              {collapsed ? <MdChevronLeft /> : <MdChevronRight />}
+            </IconButton>
+          )}
+        </div>
       </div>
     );
-  }, [props.header, props.info, props.game.info, props.bid, renderFencingOptions]);
+  }, [header, info, game.info, bid, mobile, collapsed, renderFencingOptions, handleToggleChat]);
+
+  const handleUsernameChange = useCallback(
+    (newValue: string) => {
+      isEditingRef.current = true;
+      handleUpdateDisplayName(newValue);
+      // Reset editing flag after a delay
+      setTimeout(() => {
+        isEditingRef.current = false;
+      }, 1000);
+    },
+    [handleUpdateDisplayName]
+  );
+
+  const handleUsernameBlur = useCallback(() => {
+    isEditingRef.current = false;
+    handleBlur();
+  }, [handleBlur]);
+
+  const handleUsernameUnfocus = useCallback(() => {
+    isEditingRef.current = false;
+    if (chatBarRef.current) {
+      chatBarRef.current.focus();
+    }
+  }, []);
 
   const renderUsernameInput = useCallback(() => {
     return props.hideChatBar ? null : (
@@ -287,34 +400,27 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
           ref={usernameInputRef}
           className="chat--username--input"
           value={username}
-          onChange={(newValue) => {
-            isEditingRef.current = true;
-            handleUpdateDisplayName(newValue);
-            // Reset editing flag after a delay
-            setTimeout(() => {
-              isEditingRef.current = false;
-            }, 1000);
-          }}
-          onBlur={() => {
-            isEditingRef.current = false;
-            handleBlur();
-          }}
-          onUnfocus={() => {
-            isEditingRef.current = false;
-            if (chatBarRef.current) {
-              chatBarRef.current.focus();
-            }
-          }}
+          onChange={handleUsernameChange}
+          onBlur={handleUsernameBlur}
+          onUnfocus={handleUsernameUnfocus}
           style={{color: props.myColor}}
         />
       </div>
     );
-  }, [props.hideChatBar, props.myColor, username, handleUpdateColor, handleUpdateDisplayName, handleBlur]);
+  }, [
+    props.hideChatBar,
+    props.myColor,
+    username,
+    handleUpdateColor,
+    handleUsernameChange,
+    handleUsernameBlur,
+    handleUsernameUnfocus,
+  ]);
 
-  const renderUserPresent = useCallback((id: string, displayName: string, color?: string) => {
-    const style = color ? {color} : undefined;
+  const renderUserPresent = useCallback((userId: string, displayName: string, userColor?: string) => {
+    const style = userColor ? {color: userColor} : undefined;
     return (
-      <span key={id} style={style}>
+      <span key={userId} style={style}>
         <span className="dot">{'\u25CF'}</span>
         {displayName}{' '}
       </span>
@@ -322,10 +428,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   }, []);
 
   const renderUsersPresent = useCallback(
-    (users: Record<string, {displayName: string; color?: string}>) => {
+    (usersList: Record<string, {displayName: string; color?: string}>) => {
       return props.hideChatBar ? null : (
         <div className="chat--users--present">
-          {Object.keys(users).map((id) => renderUserPresent(id, users[id].displayName, users[id].color))}
+          {Object.keys(usersList).map((userId) =>
+            renderUserPresent(userId, usersList[userId].displayName, usersList[userId].color)
+          )}
         </div>
       );
     },
@@ -352,9 +460,9 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     );
   }, []);
 
-  const renderMessageSender = useCallback((name: string, color?: string) => {
+  const renderMessageSender = useCallback((name: string, messageColor?: string) => {
     // Always apply color if provided, otherwise use default text color
-    const style = color ? {color} : {color: '#333'};
+    const style = messageColor ? {color: messageColor} : {color: '#333'};
     return (
       <span className="chat--message--sender" style={style}>
         {name}:
@@ -369,29 +477,33 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       let clueNumber: number;
       try {
         clueNumber = parseInt(clueref[1]);
-      } catch (e) {
+      } catch {
         // not in a valid format, so just return the pattern
         return defaultPattern;
       }
 
       const directionFirstChar = clueref[2][0];
       const isAcross = directionFirstChar === 'a' || directionFirstChar === 'A';
-      const clues = isAcross ? props.game.clues['across'] : props.game.clues['down'];
+      const clues = isAcross ? game.clues['across'] : game.clues['down'];
 
       if (clueNumber >= 0 && clueNumber < clues.length && clues[clueNumber] !== undefined) {
-        const handleClick = () => {
+        const handleClueRefClick = () => {
           const directionStr = isAcross ? 'across' : 'down';
-          if (props.onSelectClue) {
-            props.onSelectClue(directionStr, clueNumber);
+          if (onSelectClue) {
+            onSelectClue(directionStr, clueNumber);
           }
         };
 
-        return <button onClick={handleClick}> {defaultPattern} </button>;
+        return (
+          <button onClick={handleClueRefClick} type="button">
+            {defaultPattern}
+          </button>
+        );
       } else {
         return defaultPattern;
       }
     },
-    [props.game.clues, props.onSelectClue]
+    [game.clues, onSelectClue]
   );
 
   const renderMessageText = useCallback(
@@ -437,42 +549,106 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       const bigEmoji = tokens.length <= 3 && _.every(tokens, (token) => token.type === 'emoji');
       return (
         <span className="chat--message--text">
-          {tokens.map((token, i) => (
-            <React.Fragment key={i}>
-              {token.type === 'emoji' ? (
-                <Emoji emoji={token.data as string} big={bigEmoji} />
-              ) : token.type === 'clueref' ? (
-                renderClueRef(token.data as string[])
-              ) : (
-                token.data
-              )}
-              {token.type !== 'emoji' && ' '}
-            </React.Fragment>
-          ))}
+          {tokens.map((token, i) => {
+            const tokenKey =
+              token.type === 'clueref'
+                ? `clueref-${(token.data as string[]).join('-')}`
+                : `${token.type}-${i}-${token.data}`;
+            let tokenContent: React.ReactNode;
+            if (token.type === 'emoji') {
+              tokenContent = <Emoji emoji={token.data as string} big={bigEmoji} />;
+            } else if (token.type === 'clueref') {
+              tokenContent = renderClueRef(token.data as string[]);
+            } else {
+              tokenContent = token.data;
+            }
+            return (
+              <React.Fragment key={tokenKey}>
+                {tokenContent}
+                {token.type !== 'emoji' && ' '}
+              </React.Fragment>
+            );
+          })}
         </span>
       );
     },
     [renderClueRef]
   );
 
+  const getAvatarInitials = useCallback((name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  }, []);
+
   const renderMessage = useCallback(
     (message: {text: string; senderId: string; isOpponent?: boolean; timestamp: number}) => {
-      const {text, senderId: id, isOpponent, timestamp} = message;
+      const {text, senderId, isOpponent, timestamp} = message;
       const big = text.length <= 10 && isEmojis(text);
-      const color = getMessageColor(id, isOpponent);
-      const users = props.users;
+      const messageColor = getMessageColor(senderId, isOpponent);
+      const allUsers = props.users;
+      const displayName = allUsers[senderId]?.displayName ?? 'Unknown';
+      const avatarInitials = getAvatarInitials(displayName);
 
       return (
-        <div className={`chat--message${big ? ' big' : ''}`}>
-          <div className="chat--message--content">
-            {renderMessageSender(users[id]?.displayName ?? 'Unknown', color)}
-            {renderMessageText(message.text)}
+        <div
+          className={`chat--message${big ? ' big' : ''} chat--user-message`}
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '8px 12px',
+            marginBottom: '4px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+          }}
+        >
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              backgroundColor: messageColor || '#6aa9f4',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              flexShrink: 0,
+            }}
+            title={displayName}
+          >
+            {avatarInitials}
           </div>
-          <div className="chat--message--timestamp">{renderMessageTimestamp(timestamp)}</div>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div
+              className="chat--message--content"
+              style={{display: 'flex', gap: '6px', alignItems: 'baseline'}}
+            >
+              {renderMessageSender(displayName, messageColor)}
+              {renderMessageText(message.text)}
+            </div>
+            <div
+              className="chat--message--timestamp"
+              style={{fontSize: '0.75rem', color: '#666', marginTop: '2px'}}
+            >
+              {renderMessageTimestamp(timestamp)}
+            </div>
+          </div>
         </div>
       );
     },
-    [props.users, getMessageColor, renderMessageSender, renderMessageText, renderMessageTimestamp]
+    [
+      props.users,
+      getMessageColor,
+      renderMessageSender,
+      renderMessageText,
+      renderMessageTimestamp,
+      getAvatarInitials,
+    ]
   );
 
   const renderMobileKeyboard = useCallback(() => {
@@ -489,12 +665,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
   const renderChatSubheader = useCallback(() => {
     if (props.subheader) return props.subheader;
-    const users = props.users;
+    const allUsers = props.users;
 
     return (
       <>
         {renderUsernameInput()}
-        {renderUsersPresent(users)}
+        {renderUsersPresent(allUsers)}
       </>
     );
   }, [props.subheader, props.users, renderUsernameInput, renderUsersPresent]);
@@ -503,44 +679,123 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     return mergeMessages(props.data, props.opponentData);
   }, [props.data, props.opponentData, mergeMessages]);
 
+  const handleMessagesRef = useCallback((el: HTMLDivElement | null) => {
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
+
+  // Auto-dismiss share message after 30 seconds
+  useEffect(() => {
+    if (showShareMessage) {
+      const timer = setTimeout(() => {
+        setShowShareMessage(false);
+      }, 30000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [showShareMessage]);
+
+  // Dismiss share message when first message is sent
+  useEffect(() => {
+    if (messages.length > 0 && showShareMessage) {
+      setShowShareMessage(false);
+    }
+  }, [messages.length, showShareMessage]);
+
+  // Auto-collapse sidebar when share link disappears
+  useEffect(() => {
+    // Only collapse if share message transitioned from true to false
+    if (prevShowShareMessageRef.current && !showShareMessage && !collapsedRef.current) {
+      // Share message just disappeared, collapse the sidebar
+      props.onToggleChat();
+      // Notify parent that share link disappeared (to scroll game window)
+      if (props.onShareLinkDisappeared) {
+        props.onShareLinkDisappeared();
+      }
+    }
+    prevShowShareMessageRef.current = showShareMessage;
+  }, [showShareMessage, props]);
+
+  // Update collapsed ref when collapsed state changes
+  useEffect(() => {
+    collapsedRef.current = props.collapsed || false;
+  }, [props.collapsed]);
+
   return (
     <Stack direction="column" sx={{flex: 1}}>
       {renderToolbar()}
       <div className="chat">
         {renderChatHeader()}
         {renderChatSubheader()}
-        <div
-          ref={(el) => {
-            if (el) {
-              el.scrollTop = el.scrollHeight;
-            }
-          }}
-          className="chat--messages"
-        >
-          <div className="chat--message chat--system-message">
-            <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-              <i>
-                Game created! Share the link to play with your friends:
-                <wbr />
-              </i>
-              <b id="pathText" style={{marginLeft: '5px', flex: 1, wordBreak: 'break-all'}}>
-                {url}
-              </b>
-              <IconButton
-                size="small"
-                onClick={handleCopyClick}
-                title="Copy to Clipboard"
-                sx={{flexShrink: 0}}
-              >
-                <MdContentCopy fontSize="small" />
-              </IconButton>
+        <div ref={handleMessagesRef} className="chat--messages">
+          {showShareMessage && (
+            <div
+              className="chat--message chat--system-message"
+              style={{
+                padding: '12px',
+                marginBottom: '8px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(106, 169, 244, 0.1)',
+                border: '1px solid rgba(106, 169, 244, 0.3)',
+              }}
+            >
+              <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                <i style={{flex: 1}}>
+                  Game created! Share the link to play with your friends:
+                  <wbr />
+                </i>
+                <b id="pathText" style={{marginLeft: '5px', flex: 1, wordBreak: 'break-all'}}>
+                  {url}
+                </b>
+                <IconButton
+                  size="small"
+                  onClick={handleCopyClick}
+                  title="Copy to Clipboard"
+                  sx={{flexShrink: 0}}
+                >
+                  <MdContentCopy fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={handleDismissShareMessage}
+                  title="Dismiss"
+                  sx={{flexShrink: 0}}
+                >
+                  <MdClose fontSize="small" />
+                </IconButton>
+              </div>
             </div>
-          </div>
+          )}
           {props.game.solved && (
-            <div className="chat--message chat--system-message">
-              <div
-                style={{display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer'}}
+            <div
+              className="chat--message chat--system-message"
+              style={{
+                padding: '12px',
+                marginBottom: '8px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                border: '1px solid rgba(76, 175, 80, 0.3)',
+              }}
+            >
+              <button
                 onClick={handleShareScoreClick}
+                type="button"
+                aria-label="Share your score"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  width: '100%',
+                  textAlign: 'left',
+                  font: 'inherit',
+                  color: 'inherit',
+                }}
+                onKeyDown={handleShareScoreKeyDown}
               >
                 <i id="shareText" style={{flex: 1}}>
                   Congratulations! You solved the puzzle in{' '}
@@ -550,11 +805,11 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                 <IconButton size="small" title="Copy to Clipboard" sx={{flexShrink: 0}}>
                   <MdContentCopy fontSize="small" />
                 </IconButton>
-              </div>
+              </button>
             </div>
           )}
-          {messages.map((message, i) => (
-            <div key={i}>{renderMessage(message)}</div>
+          {messages.map((message) => (
+            <div key={`${message.senderId}-${message.timestamp}`}>{renderMessage(message)}</div>
           ))}
         </div>
         {renderChatBar()}
@@ -563,10 +818,10 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
+        onClose={handleSnackbarClose}
         anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
       >
-        <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{width: '100%'}}>
+        <Alert onClose={handleSnackbarClose} severity="success" sx={{width: '100%'}}>
           {snackbarMessage}
         </Alert>
       </Snackbar>

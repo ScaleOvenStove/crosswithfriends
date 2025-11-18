@@ -1,5 +1,6 @@
 /* eslint @typescript-eslint/no-unused-vars : "warn" */
 import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
+
 import type {CellCoords} from '../Grid/types';
 
 export type PlayerActions = {
@@ -28,7 +29,7 @@ export const usePlayerActions = (dispatch: DispatchFn, id: string): PlayerAction
     }, 10);
   },
   addPing() {},
-  updateTeamName(name: string) {
+  updateTeamName(_name: string) {
     dispatch({type: 'updateTeamName', params: {}});
   },
   startGame() {

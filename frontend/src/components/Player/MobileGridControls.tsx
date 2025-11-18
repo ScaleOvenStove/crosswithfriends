@@ -1,5 +1,8 @@
 import './css/mobileGridControls.css';
 
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
+import {Box} from '@mui/material';
+import _ from 'lodash';
 import React, {
   useState,
   useRef,
@@ -9,11 +12,9 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import {Box} from '@mui/material';
 import {MdKeyboardArrowLeft, MdKeyboardArrowRight} from 'react-icons/md';
-import _ from 'lodash';
+
 import Clue from './ClueText';
-import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {useGridControls} from './useGridControls';
 import type {UseGridControlsProps, GridControlsActions} from './useGridControls';
 
@@ -45,14 +46,18 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const zoomContainer = useRef<HTMLDivElement>(null);
-  const wasUnfocused = useRef<number>(Date.now() - 1000);
-  const lastTouchMove = useRef<number>(Date.now());
+  const wasUnfocused = useRef<number>(0);
+  const lastTouchMove = useRef<number>(0);
   const lastTouchStart = useRef<number>(0);
+
+  useEffect(() => {
+    wasUnfocused.current = Date.now() - 1000;
+    lastTouchMove.current = Date.now();
+  }, []);
   const touchingClueBarStart = useRef<any>(null);
 
   const gridControls = useGridControls(props, props.actions);
   const {
-    grid: gridInstance,
     getSelectedClueNumber,
     flipDirection,
     selectNextClue,
@@ -135,6 +140,8 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
     setTransform((prev) => ({...prev, scale: prev.scale, translateX, translateY}));
   }, [grid]);
 
+  const keepFocusRef = useRef<() => void>(() => {});
+
   const handleClueBarTouchEnd = useCallback(
     (e: TouchEvent) => {
       const countAsTapBuffer = 6; // px
@@ -142,7 +149,7 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
       touchingClueBarStart.current = null;
       if (touchTravelDist <= countAsTapBuffer) {
         flipDirection();
-        keepFocus();
+        keepFocusRef.current();
       }
     },
     [flipDirection]
@@ -276,19 +283,19 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
             props.onSetSelected({r, c});
           }
         }
-        focusKeyboard();
+        focusKeyboardRef.current();
       }
       e.preventDefault();
       handleTouchMove(e);
     },
-    [anchors.length, props, handleTouchMove, focusKeyboard]
+    [anchors.length, props, handleTouchMove]
   );
 
   const handleRightArrowTouchEnd = useCallback(
     (e: TouchEvent) => {
       e.preventDefault();
       handleAction('tab');
-      keepFocus();
+      keepFocusRef.current();
     },
     [handleAction]
   );
@@ -320,6 +327,8 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
     return {clueNumber: getSelectedClueNumber(), direction: props.direction};
   }, [getSelectedClueNumber, props.direction]);
 
+  const focusKeyboardRef = useRef<() => void>(() => {});
+
   const focusKeyboard = useCallback(() => {
     if (inputRef.current) {
       inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
@@ -327,15 +336,25 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
     }
   }, []);
 
+  // Update ref with latest focusKeyboard function
+  const focusKeyboardValue = focusKeyboard;
+  useEffect(() => {
+    focusKeyboardRef.current = focusKeyboardValue;
+  });
+
   useImperativeHandle(ref, () => ({
     focusKeyboard,
   }));
 
   const keepFocus = useCallback(() => {
     if (!wasUnfocused.current || wasUnfocused.current >= Date.now() - 500) {
-      focusKeyboard();
+      focusKeyboardRef.current();
     }
-  }, [focusKeyboard]);
+  }, []);
+
+  useEffect(() => {
+    keepFocusRef.current = keepFocus;
+  }, [keepFocus]);
 
   const handleInputFocus = useCallback(
     (e: React.FocusEvent<HTMLTextAreaElement>) => {

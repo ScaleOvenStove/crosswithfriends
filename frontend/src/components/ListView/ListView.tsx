@@ -1,16 +1,17 @@
 import './css/listView.css';
 
-import _ from 'lodash';
-import React, {useMemo, useCallback} from 'react';
+import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
 import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {toCellIndex} from '@crosswithfriends/shared/types';
+import _ from 'lodash';
+import React, {useMemo, useCallback} from 'react';
+
 import Cell from '../Grid/Cell';
 import type {GridProps} from '../Grid/Grid';
 import {hashGridRow} from '../Grid/hashGridRow';
 import type {ClueCoords, EnhancedGridData} from '../Grid/types';
-import RerenderBoundary from '../RerenderBoundary';
 import Clue from '../Player/ClueText';
-import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
+import RerenderBoundary from '../RerenderBoundary';
 
 interface ListViewProps extends GridProps {
   clues: {across: string[]; down: string[]};
@@ -19,101 +20,89 @@ interface ListViewProps extends GridProps {
 }
 
 const ListView: React.FC<ListViewProps> = (props) => {
-  const grid = useMemo(() => new GridWrapper(props.grid), [props.grid]);
+  // Destructure props to avoid dependency issues
+  const {
+    grid: gridData,
+    opponentGrid: opponentGridData,
+    solution,
+    selected,
+    direction,
+    circles,
+    shades,
+    pings,
+    cursors,
+    references,
+    pickups,
+    cellStyle,
+    myColor,
+    frozen,
+    canFlipColor,
+    size,
+    onChangeDirection,
+    onSetSelected,
+    onPing,
+    onFlipColor,
+    editMode,
+    clues,
+    isClueSelected,
+    selectClue,
+  } = props;
+
+  const grid = useMemo(() => new GridWrapper(gridData), [gridData]);
 
   const opponentGrid = useMemo(() => {
-    return props.opponentGrid ? new GridWrapper(props.opponentGrid) : null;
-  }, [props.opponentGrid]);
+    return opponentGridData ? new GridWrapper(opponentGridData) : null;
+  }, [opponentGridData]);
 
   const selectedIsWhite = useMemo(() => {
-    return grid.isWhite(props.selected.r, props.selected.c);
-  }, [grid, props.selected]);
+    return grid.isWhite(selected.r, selected.c);
+  }, [grid, selected]);
 
   const isSelected = useCallback(
-    (r: number, c: number, dir: 'across' | 'down' = props.direction) => {
-      return r === props.selected.r && c === props.selected.c && dir === props.direction;
+    (r: number, c: number, dir: 'across' | 'down' = direction) => {
+      return r === selected.r && c === selected.c && dir === direction;
     },
-    [props.selected, props.direction]
+    [selected, direction]
   );
 
   const isCircled = useCallback(
     (r: number, c: number) => {
-      const idx = toCellIndex(r, c, props.grid[0].length);
-      return (props.circles || []).indexOf(idx) !== -1;
+      const idx = toCellIndex(r, c, gridData[0].length);
+      return (circles || []).indexOf(idx) !== -1;
     },
-    [props.grid, props.circles]
+    [gridData, circles]
   );
 
   const isDoneByOpponent = useCallback(
     (r: number, c: number) => {
-      if (!opponentGrid || !props.solution) {
+      if (!opponentGrid || !solution) {
         return false;
       }
-      return opponentGrid.isFilled(r, c) && props.solution[r][c] === props.opponentGrid![r][c].value;
+      return opponentGrid.isFilled(r, c) && solution[r][c] === opponentGridData![r][c].value;
     },
-    [opponentGrid, props.solution, props.opponentGrid]
+    [opponentGrid, solution, opponentGridData]
   );
 
   const isShaded = useCallback(
     (r: number, c: number) => {
-      const idx = toCellIndex(r, c, props.grid[0].length);
-      return (props.shades || []).indexOf(idx) !== -1 || isDoneByOpponent(r, c);
+      const idx = toCellIndex(r, c, gridData[0].length);
+      return (shades || []).indexOf(idx) !== -1 || isDoneByOpponent(r, c);
     },
-    [props.grid, props.shades, isDoneByOpponent]
+    [gridData, shades, isDoneByOpponent]
   );
 
   const isHighlighted = useCallback(
-    (r: number, c: number, dir: 'across' | 'down' = props.direction) => {
+    (r: number, c: number, dir: 'across' | 'down' = direction) => {
       if (!selectedIsWhite) return false;
-      const selectedParent = grid.getParent(props.selected.r, props.selected.c, props.direction);
+      const selectedParent = grid.getParent(selected.r, selected.c, direction);
       return (
         !isSelected(r, c, dir) &&
         grid.isWhite(r, c) &&
         grid.getParent(r, c, dir) === selectedParent &&
-        dir === props.direction
+        dir === direction
       );
     },
-    [selectedIsWhite, grid, props.selected, props.direction, isSelected]
-  );
-
-  const isReferenced = useCallback(
-    (r: number, c: number, dir: 'across' | 'down') => {
-      return props.references.some((clue) => clueContainsSquare(clue, r, c, dir));
-    },
-    [props.references]
-  );
-
-  const getPickup = useCallback(
-    (r: number, c: number) => {
-      return (
-        props.pickups &&
-        _.get(
-          _.find(props.pickups, ({i, j, pickedUp}) => i === r && j === c && !pickedUp),
-          'type'
-        )
-      );
-    },
-    [props.pickups]
-  );
-
-  const handleClick = useCallback(
-    (r: number, c: number, dir: 'across' | 'down') => {
-      if (!grid.isWhite(r, c) && !props.editMode) return;
-      if (dir !== props.direction) {
-        props.onChangeDirection();
-      }
-      props.onSetSelected({r, c});
-    },
-    [grid, props.editMode, props.direction, props.onChangeDirection, props.onSetSelected]
-  );
-
-  const handleRightClick = useCallback(
-    (r: number, c: number) => {
-      if (props.onPing) {
-        props.onPing(r, c);
-      }
-    },
-    [props.onPing]
+    [selectedIsWhite, grid, selected, direction, isSelected]
   );
 
   const clueContainsSquare = useCallback(
@@ -121,6 +110,46 @@ const ListView: React.FC<ListViewProps> = (props) => {
       return grid.isWhite(r, c) && grid.getParent(r, c, ori) === num && ori === dir;
     },
     [grid]
+  );
+
+  const isReferenced = useCallback(
+    (r: number, c: number, dir: 'across' | 'down') => {
+      return references.some((clue) => clueContainsSquare(clue, r, c, dir));
+    },
+    [references, clueContainsSquare]
+  );
+
+  const getPickup = useCallback(
+    (r: number, c: number) => {
+      return (
+        pickups &&
+        _.get(
+          _.find(pickups, ({i, j, pickedUp}) => i === r && j === c && !pickedUp),
+          'type'
+        )
+      );
+    },
+    [pickups]
+  );
+
+  const handleClick = useCallback(
+    (r: number, c: number, dir: 'across' | 'down') => {
+      if (!grid.isWhite(r, c) && !editMode) return;
+      if (dir !== direction) {
+        onChangeDirection();
+      }
+      onSetSelected({r, c});
+    },
+    [grid, editMode, direction, onChangeDirection, onSetSelected]
+  );
+
+  const handleRightClick = useCallback(
+    (r: number, c: number) => {
+      if (onPing) {
+        onPing(r, c);
+      }
+    },
+    [onPing]
   );
 
   const getSizeClass = useCallback((size: number) => {
@@ -149,27 +178,27 @@ const ListView: React.FC<ListViewProps> = (props) => {
 
   const mapGridToClues = useCallback(() => {
     const cluesCells: {across: EnhancedGridData[]; down: EnhancedGridData[]} = {across: [], down: []};
-    props.grid.forEach((row, r) => {
+    gridData.forEach((row, r) => {
       row.forEach((cell, c) => {
         const enhancedCell = {
           ...cell,
           r,
           c,
           number: undefined,
-          solvedByIconSize: Math.round(props.size / 10),
+          solvedByIconSize: Math.round(size / 10),
           selected: false,
           highlighted: false,
           referenced: false,
           circled: isCircled(r, c),
           shaded: isShaded(r, c),
-          canFlipColor: !!props.canFlipColor?.(r, c),
-          cursors: (props.cursors || []).filter((cursor) => cursor.r === r && cursor.c === c),
-          pings: (props.pings || []).filter((ping) => ping.r === r && ping.c === c),
+          canFlipColor: !!canFlipColor?.(r, c),
+          cursors: (cursors || []).filter((cursor) => cursor.r === r && cursor.c === c),
+          pings: (pings || []).filter((ping) => ping.r === r && ping.c === c),
 
-          myColor: props.myColor,
-          frozen: props.frozen,
+          myColor,
+          frozen,
           pickupType: getPickup(r, c),
-          cellStyle: props.cellStyle,
+          cellStyle,
         };
         if (_.isNumber(cell.parents?.across)) {
           const acrossIdx = cell.parents?.across as number;
@@ -195,9 +224,23 @@ const ListView: React.FC<ListViewProps> = (props) => {
     });
 
     return cluesCells;
-  }, [props, isCircled, isShaded, getPickup, isSelected, isHighlighted, isReferenced]);
+  }, [
+    gridData,
+    size,
+    isCircled,
+    isShaded,
+    canFlipColor,
+    cursors,
+    pings,
+    myColor,
+    frozen,
+    getPickup,
+    cellStyle,
+    isSelected,
+    isHighlighted,
+    isReferenced,
+  ]);
 
-  const {size, clues} = props;
   const sizeClass = getSizeClass(size);
   const cluesCells = mapGridToClues();
 
@@ -213,8 +256,16 @@ const ListView: React.FC<ListViewProps> = (props) => {
                   <div
                     className="list-view--list--clue"
                     key={idx}
-                    ref={props.isClueSelected(dir, idx) ? (el) => scrollToClue(dir, idx, el) : null}
-                    onClick={() => props.selectClue(dir, idx)}
+                    ref={isClueSelected(dir, idx) ? (el) => scrollToClue(dir, idx, el) : null}
+                    onClick={() => selectClue(dir, idx)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectClue(dir, idx);
+                      }
+                    }}
                   >
                     <div className="list-view--list--clue--number">{idx}</div>
                     <div className="list-view--list--clue--text">
@@ -228,8 +279,8 @@ const ListView: React.FC<ListViewProps> = (props) => {
                             name={`${dir} clue ${idx}`}
                             key={idx}
                             hash={hashGridRow(cluesCells[dir][idx], {
-                              ...props.cellStyle,
-                              size: props.size,
+                              ...cellStyle,
+                              size,
                             })}
                           >
                             <tr>
@@ -246,9 +297,9 @@ const ListView: React.FC<ListViewProps> = (props) => {
                                 >
                                   <Cell
                                     {...cellProps}
-                                    onClick={(r, c) => handleClick(r, c, dir)}
+                                    onClick={handleClick.bind(null, cellProps.r, cellProps.c, dir) as any}
                                     onContextMenu={handleRightClick}
-                                    onFlipColor={props.onFlipColor}
+                                    onFlipColor={onFlipColor}
                                   />
                                 </td>
                               ))}

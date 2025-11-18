@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 
-const ConnectionStats: React.FC<{}> = () => {
+const ConnectionStats: React.FC<Record<string, never>> = () => {
   const [connectionStatus, setConnectionStatus] = useState<
     | {
         latency: number;
@@ -9,12 +9,14 @@ const ConnectionStats: React.FC<{}> = () => {
     | undefined
   >();
   const [socketConnected, setSocketConnected] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
 
   useEffect(() => {
     const it = setInterval(() => {
-      setConnectionStatus((window as any).connectionStatus);
-      const socket = (window as any).socket;
+      setConnectionStatus(window.connectionStatus);
+      const socket = window.socket;
       setSocketConnected(socket?.connected ?? false);
+      setCurrentTime(Date.now());
     }, 100);
     return () => {
       clearInterval(it);
@@ -26,7 +28,9 @@ const ConnectionStats: React.FC<{}> = () => {
       <div>
         <div>
           Ping: {connectionStatus?.latency}
-          ms ({Math.floor((Date.now() - connectionStatus?.timestamp) / 1000)}s ago)
+          ms (
+          {Math.floor((connectionStatus?.timestamp ? currentTime - connectionStatus.timestamp : 0) / 1000)}s
+          ago)
         </div>
       </div>
     );

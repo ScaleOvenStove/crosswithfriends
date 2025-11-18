@@ -1,16 +1,17 @@
 /* eslint react/no-string-refs: "warn", no-plusplus: "off" */
 import './css/gridControls.css';
 
+import type {GridData} from '@crosswithfriends/shared/types';
 import React, {useEffect, useCallback} from 'react';
 
 import {useGridControls} from './useGridControls';
 import type {GridControlsActions} from './useGridControls';
 
 interface GridControlsProps {
-  grid: any;
+  grid: GridData;
   selected: {r: number; c: number};
   direction: 'across' | 'down';
-  clues: any;
+  clues: {across: string[]; down: string[]};
   editMode: boolean;
   frozen: boolean;
   beta?: boolean;

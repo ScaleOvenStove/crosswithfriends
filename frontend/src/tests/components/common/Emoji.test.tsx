@@ -1,5 +1,6 @@
 import {test, expect} from '@playwright/experimental-ct-react';
 import React from 'react';
+
 import Emoji from '../../../components/common/Emoji';
 import {TestWrapper} from '../../utils';
 

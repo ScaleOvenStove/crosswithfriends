@@ -1,9 +1,10 @@
+import type {AddPuzzleRequest, AddPuzzleResponse} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import type {AddPuzzleResponse, AddPuzzleRequest} from '@shared/types';
 
 import {addPuzzle} from '../model/puzzle.js';
 
-async function puzzleRouter(fastify: FastifyInstance) {
+// eslint-disable-next-line require-await
+async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: AddPuzzleRequest; Reply: AddPuzzleResponse}>(
     '/',
     async (request: FastifyRequest<{Body: AddPuzzleRequest}>, _reply: FastifyReply) => {

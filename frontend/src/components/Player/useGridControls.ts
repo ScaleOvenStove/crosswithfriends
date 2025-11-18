@@ -1,5 +1,5 @@
-import {useRef, useMemo, useCallback} from 'react';
 import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
+import {useRef, useMemo, useCallback} from 'react';
 
 function safe_while(condition: () => boolean, step: () => void, cap = 500) {
   while (condition() && cap >= 0) {
@@ -114,8 +114,8 @@ export function useGridControls(
         if (isSelectable(r, c)) {
           return true;
         }
-        if (direction === 'across') c++;
-        else r++;
+        if (direction === 'across') c += 1;
+        else r += 1;
       }
       return false;
     },
@@ -276,16 +276,16 @@ export function useGridControls(
     const step = () => {
       if (props.direction === 'across') {
         if (c > 0) {
-          c--;
+          c -= 1;
         } else {
           c = gridData[0].length - 1;
-          r--;
+          r -= 1;
         }
       } else if (r > 0) {
-        r--;
+        r -= 1;
       } else {
         r = gridData.length - 1;
-        c--;
+        c -= 1;
       }
     };
     const ok = () => grid.isInBounds(r, c) && grid.isWhite(r, c);

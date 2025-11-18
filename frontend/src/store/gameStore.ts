@@ -1,30 +1,32 @@
-import {create} from 'zustand';
+import * as colors from '@crosswithfriends/shared/lib/colors';
+import {reduce as gameReducer} from '@crosswithfriends/shared/lib/reducers/game';
+import {ref, onValue, off, get, set} from 'firebase/database';
 import _ from 'lodash';
 import {type Socket} from 'socket.io-client';
 import * as uuid from 'uuid';
-import * as colors from '@crosswithfriends/shared/lib/colors';
+import {create} from 'zustand';
+
 import socketManager from '../sockets/SocketManager';
-import {db, SERVER_TIME, type DatabaseReference} from './firebase';
-import {ref, onValue, off, get, set} from 'firebase/database';
-import {isValidFirebasePath, extractAndValidateGid, createSafePath} from './firebaseUtils';
 import type {GameEvent} from '../types/events';
 import type {RawGame, BattleData} from '../types/rawGame';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import {reduce as gameReducer} from '@crosswithfriends/shared/lib/reducers/game';
+
+import {db, SERVER_TIME, type DatabaseReference} from './firebase';
+import {isValidFirebasePath, extractAndValidateGid} from './firebaseUtils';
 
 // ============ Serialize / Deserialize Helpers ========== //
 
 // Recursively walks obj and converts `null` to `undefined`
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const castNullsToUndefined = (obj: any): any => {
+const castNullsToUndefined = <T>(obj: T): T => {
   if (_.isNil(obj)) {
-    return undefined;
+    return undefined as T;
   }
   if (typeof obj === 'object') {
     return Object.assign(
-      obj.constructor(),
-      _.fromPairs(_.keys(obj).map((key) => [key, castNullsToUndefined(obj[key])]))
-    );
+      (obj as object).constructor(),
+      _.fromPairs(
+        _.keys(obj).map((key) => [key, castNullsToUndefined((obj as Record<string, unknown>)[key])])
+      )
+    ) as T;
   }
   return obj;
 };
@@ -40,7 +42,7 @@ interface GameInstance {
   battleData?: unknown;
   ready: boolean; // Whether the game has been initialized and is ready
   events: GameEvent[]; // All events for HistoryWrapper compatibility
-  gameState: any | null; // Computed game state from events (reactive in Zustand)
+  gameState: RawGame | null; // Computed game state from events (reactive in Zustand)
   optimisticEvents: GameEvent[]; // Optimistic events that haven't been confirmed
   subscriptions: Map<string, Set<(data: unknown) => void>>; // Map-based subscription system
   unsubscribeBattleData?: () => void;
@@ -82,14 +84,18 @@ interface GameStore {
 
 export const useGameStore = create<GameStore>((setState, getState) => {
   // Helper function to compute game state from events
-  const computeGameState = (game: GameInstance): any | null => {
+  const computeGameState = (game: GameInstance): RawGame | null => {
     if (!game.createEvent) return null;
 
     // Start with the create event
     let state = gameReducer(null, game.createEvent);
 
     // Sort events by timestamp to ensure correct order
-    const sortedEvents = [...game.events].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    const sortedEvents = [...game.events].sort((a, b) => {
+      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : a.timestamp || 0;
+      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : b.timestamp || 0;
+      return aTime - bTime;
+    });
 
     // Apply all events in order (excluding create event which we already applied)
     for (const event of sortedEvents) {
@@ -132,13 +138,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     const socket = await socketManager.connect();
     const gid = path.substring(6); // Extract gid from path like "/game/39-vosk"
 
-    // Subscribe to socket events using SocketManager
+    // Subscribe to socket events using SocketManager for reconnection handling
     const unsubscribeReconnect = socketManager.subscribe('connect', async () => {
+      // Re-join game room on reconnect
       await socketManager.emitAsync('join_game', gid);
       emit(path, 'reconnect', undefined);
     });
 
-    // Join game after handlers are registered
+    // Join game room - this ensures we receive events for this game
     await socketManager.emitAsync('join_game', gid);
 
     // Update game with socket reference (for backward compatibility and event listeners)
@@ -170,12 +177,16 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       throw new Error('Not connected to websocket');
     }
 
-    // Use socket directly for game-specific events (maintains existing behavior)
-    const gameEventHandler = (event: unknown) => {
+    // Create a game-specific event handler that filters by path
+    // We need to use a closure to capture the path
+    const gameEventHandler = ((gamePath: string) => (event: unknown) => {
       const processedEvent = castNullsToUndefined(event) as GameEvent;
       const currentState = getState();
-      const currentGame = currentState.games[path];
-      if (!currentGame) return;
+      const currentGame = currentState.games[gamePath];
+      if (!currentGame) {
+        console.warn('[gameStore] Received event for game that no longer exists:', gamePath);
+        return;
+      }
 
       // Remove from optimistic events if it was optimistic
       const updatedOptimisticEvents = currentGame.optimisticEvents.filter(
@@ -195,6 +206,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       if (processedEvent.type === 'create') {
         updatedGame.createEvent = processedEvent;
         updatedGame.ready = true;
+        console.warn('[gameStore] Received create event via websocket, setting ready=true for:', gamePath);
       }
 
       updatedGame.gameState = computeGameState(updatedGame);
@@ -202,32 +214,87 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       setState({
         games: {
           ...currentState.games,
-          [path]: updatedGame,
+          [gamePath]: updatedGame,
         },
       });
+      if (processedEvent.type === 'create') {
+        console.warn(
+          '[gameStore] State updated after create event. Current ready state:',
+          getState().games[gamePath]?.ready
+        );
+      }
 
       if (processedEvent.type === 'create') {
-        emit(path, 'wsCreateEvent', processedEvent);
+        emit(gamePath, 'wsCreateEvent', processedEvent);
       } else {
-        emit(path, 'wsEvent', processedEvent);
+        emit(gamePath, 'wsEvent', processedEvent);
       }
-    };
+    })(path);
 
+    // Register handler directly on socket for immediate use
     socket.on('game_event', gameEventHandler);
 
-    const response = (await socketManager.emitAsync('sync_all_game_events', path.substring(6))) as unknown[];
-    const allEvents: GameEvent[] = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
+    // Also subscribe via socketManager to ensure handler is re-registered on reconnect
+    // The handler will be automatically re-registered when socket reconnects
+    const unsubscribeGameEvent = socketManager.subscribe('game_event', gameEventHandler);
+
+    // Ensure we re-join the game room and re-register handler after reconnect
+    const unsubscribeReconnectHandler = socketManager.subscribe('connect', async () => {
+      // Re-join game room on reconnect
+      const reconnectGid = path.substring(6);
+      await socketManager.emitAsync('join_game', reconnectGid);
+    });
+
+    // Sync all game events with error handling
+    let allEvents: GameEvent[] = [];
+    try {
+      const gid = path.substring(6);
+      console.warn('[gameStore] Syncing all game events for', gid);
+      const response = (await socketManager.emitAsync('sync_all_game_events', gid)) as unknown[];
+
+      if (!response || !Array.isArray(response)) {
+        console.error('[gameStore] Invalid response from sync_all_game_events:', response);
+        throw new Error(`Invalid response from sync_all_game_events: expected array, got ${typeof response}`);
+      }
+
+      allEvents = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
+      console.warn('[gameStore] Received', allEvents.length, 'events from sync_all_game_events');
+    } catch (error) {
+      console.error('[gameStore] Error syncing game events:', error);
+      // Don't throw - allow the game to continue and wait for events via websocket
+      // The game will become ready when it receives a create event via websocket
+      allEvents = [];
+    }
 
     // Sort events by timestamp
-    allEvents.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    allEvents.sort((a, b) => {
+      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : a.timestamp || 0;
+      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : b.timestamp || 0;
+      return aTime - bTime;
+    });
 
     const currentState = getState();
     const currentGame = currentState.games[path];
-    if (!currentGame) return;
+    if (!currentGame) {
+      console.warn('[gameStore] Game was detached during sync');
+      return;
+    }
 
     // Find create event
     const createEvent = allEvents.find((e) => e.type === 'create') || null;
     const otherEvents = allEvents.filter((e) => e.type !== 'create');
+
+    if (createEvent) {
+      console.warn('[gameStore] Found create event, marking game as ready');
+    } else if (allEvents.length > 0) {
+      console.warn(
+        '[gameStore] Received events but no create event found. Game will wait for create event via websocket.'
+      );
+    } else {
+      console.warn(
+        '[gameStore] No events received from sync. Game will wait for create event via websocket.'
+      );
+    }
 
     // Update game with all events
     const updatedGame: GameInstance = {
@@ -236,15 +303,22 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       ready: createEvent ? true : currentGame.ready,
       events: otherEvents,
       optimisticEvents: [],
+      gameState: computeGameState({
+        ...currentGame,
+        createEvent: createEvent || currentGame.createEvent,
+        events: otherEvents,
+        optimisticEvents: [],
+      }),
     };
-    updatedGame.gameState = computeGameState(updatedGame);
 
+    console.warn('[gameStore] Setting ready state:', updatedGame.ready, 'for path:', path);
     setState({
       games: {
         ...currentState.games,
         [path]: updatedGame,
       },
     });
+    console.warn('[gameStore] State updated. Current ready state:', getState().games[path]?.ready);
 
     // Emit events to subscribers
     if (createEvent) {
@@ -266,8 +340,12 @@ export const useGameStore = create<GameStore>((setState, getState) => {
             ...finalGame,
             unsubscribeSocket: () => {
               existingUnsubscribe?.();
-              if (socket) {
-                socket.off('game_event', gameEventHandler);
+              unsubscribeGameEvent();
+              unsubscribeReconnectHandler();
+              // Also remove direct socket listener
+              const currentSocket = socketManager.getSocket();
+              if (currentSocket) {
+                currentSocket.off('game_event', gameEventHandler);
               }
             },
           },
@@ -369,26 +447,36 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           const eventsRef = ref(db, `${path}/events`);
           (window as any).game = {path}; // For backward compatibility
 
+          const newGame: GameInstance = {
+            path,
+            ref: gameRef,
+            eventsRef,
+            createEvent: null,
+            ready: false,
+            events: [],
+            gameState: null,
+            optimisticEvents: [],
+            subscriptions: new Map(),
+          };
+
           setState({
             games: {
               ...state.games,
-              [path]: {
-                path,
-                ref: gameRef,
-                eventsRef,
-                createEvent: null,
-                gameState: null,
-                optimisticEvents: [],
-                subscriptions: new Map(),
-              },
+              [path]: newGame,
             },
           });
+
+          return newGame;
         } catch (error) {
           console.error('Error creating game refs', error);
           throw error;
         }
       }
-      return getState().games[path];
+      const game = getState().games[path];
+      if (!game) {
+        throw new Error(`Failed to get or create game at path: ${path}`);
+      }
+      return game;
     },
 
     attach: async (path: string) => {
@@ -600,7 +688,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     ) => {
       addEvent(path, {
         id: '', // Will be set by addEvent
-        timestamp: SERVER_TIME,
+        timestamp: String(SERVER_TIME),
         type: 'updateCell',
         params: {
           cell: {r, c},
@@ -628,6 +716,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     addPing: (path: string, r: number, c: number, id: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'addPing',
         params: {
@@ -640,6 +729,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     updateDisplayName: (path: string, id: string, displayName: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'updateDisplayName',
         params: {
@@ -651,6 +741,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     updateColor: (path: string, id: string, color: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'updateColor',
         params: {
@@ -662,13 +753,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     updateClock: (path: string, action: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'updateClock',
         params: {
           action,
           timestamp: SERVER_TIME,
         },
-      });
+      } as GameEvent);
     },
 
     check: (path: string, scope: {r: number; c: number}[]) => {
@@ -677,12 +769,13 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         return;
       }
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'check',
         params: {
           scope,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     reveal: (path: string, scope: {r: number; c: number}[]) => {
@@ -691,12 +784,13 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         return;
       }
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'reveal',
         params: {
           scope,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     reset: (path: string, scope: {r: number; c: number}[], force: boolean) => {
@@ -705,26 +799,29 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         return;
       }
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'reset',
         params: {
           scope,
           force,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     chat: (path: string, username: string, id: string, text: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'chat',
         params: {
+          username,
+          id,
           text,
-          senderId: id,
-          sender: username,
         },
       });
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'sendChatMessage', // send to fencing too
         params: {
@@ -732,7 +829,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           id,
           sender: username,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     initialize: async (path: string, rawGame: RawGame, {battleData}: {battleData?: BattleData} = {}) => {
@@ -774,6 +871,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       await set(ref(db, `${path}/pid`), pid);
       await set(gameInstance.eventsRef, {});
       await addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'create',
         params: {
@@ -781,7 +879,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           version,
           game,
         },
-      });
+      } as unknown as GameEvent);
 
       if (battleData) {
         await set(ref(db, `${path}/battleData`), battleData);
@@ -830,7 +928,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       return game?.createEvent || null;
     },
 
-    getGameState: (path: string): any | null => {
+    getGameState: (path: string): RawGame | null => {
       const state = getState();
       const game = state.games[path];
       if (!game) return null;

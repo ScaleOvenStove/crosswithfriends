@@ -1,16 +1,18 @@
+import type {CreateGameRequest, GetGameResponse, InfoJson} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import type {CreateGameRequest, InfoJson, GetGameResponse} from '@shared/types';
 
 import {addInitialGameEvent} from '../model/game.js';
-import {getPuzzleSolves} from '../model/puzzle_solve.js';
 import {getPuzzleInfo} from '../model/puzzle.js';
+import {getPuzzleSolves} from '../model/puzzle_solve.js';
+
 import {createHttpError} from './errors.js';
 
 interface CreateGameResponseWithGid {
   gid: string;
 }
 
-async function gameRouter(fastify: FastifyInstance) {
+// eslint-disable-next-line require-await
+async function gameRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: CreateGameRequest; Reply: CreateGameResponseWithGid}>(
     '/',
     async (request: FastifyRequest<{Body: CreateGameRequest}>, _reply: FastifyReply) => {
@@ -33,7 +35,10 @@ async function gameRouter(fastify: FastifyInstance) {
       }
 
       // After the length check, puzzleSolves[0] is guaranteed to exist
-      const gameState = puzzleSolves[0]!;
+      const gameState = puzzleSolves[0];
+      if (!gameState) {
+        throw createHttpError('Game not found', 404);
+      }
       const puzzleInfo = (await getPuzzleInfo(gameState.pid)) as InfoJson;
 
       return {

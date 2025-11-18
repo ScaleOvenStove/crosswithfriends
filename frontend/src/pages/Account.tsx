@@ -1,6 +1,7 @@
 import './css/account.css';
 
 import React, {useState} from 'react';
+
 import Nav from '../components/common/Nav';
 
 function AccountHistory() {
@@ -38,6 +39,15 @@ const Account: React.FC = () => {
               key={panelKey}
               className={`account--sidebar--entry ${selected ? ' selected' : ''}`}
               onClick={() => selectPanel(panelKey)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  selectPanel(panelKey);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Select ${name} panel`}
             >
               {name}
             </div>

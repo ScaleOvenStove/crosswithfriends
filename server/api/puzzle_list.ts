@@ -1,7 +1,8 @@
+import type {ListPuzzleRequestFilters, ListPuzzleResponse} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import type {ListPuzzleResponse} from '@shared/types';
+
 import {listPuzzles} from '../model/puzzle.js';
-import type {ListPuzzleRequestFilters} from '@shared/types';
+
 import {createHttpError} from './errors.js';
 
 interface PuzzleListQuery {
@@ -16,7 +17,8 @@ interface PuzzleListQuery {
   };
 }
 
-async function puzzleListRouter(fastify: FastifyInstance) {
+// eslint-disable-next-line require-await
+async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzleResponse}>(
     '/',
     async (request: FastifyRequest<{Querystring: PuzzleListQuery}>, _reply: FastifyReply) => {

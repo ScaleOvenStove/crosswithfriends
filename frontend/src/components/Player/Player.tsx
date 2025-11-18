@@ -1,6 +1,11 @@
 /* eslint react/no-string-refs: "warn" */
 import './css/index.css';
 
+import {lightenHsl} from '@crosswithfriends/shared/lib/colors';
+import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
+import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
+import type {CellIndex, Cursor, GridData, UserJson} from '@crosswithfriends/shared/types';
 import React, {
   useState,
   useRef,
@@ -10,23 +15,20 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
+
 import {getTime} from '../../store/firebase';
-import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
-
-import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
-
+import type {Pickup} from '../../types/battle';
 import Grid from '../Grid';
+import type {CellStyles, Ping} from '../Grid/types';
 import ListView from '../ListView';
+
 import Clues from './Clues';
 import Clue from './ClueText';
+import ConnectionStatusIndicator from './ConnectionStatusIndicator';
 import GridControls from './GridControls';
+import ListViewControls from './ListViewControls';
 import MobileGridControls from './MobileGridControls';
 import MobileListViewControls from './MobileListViewControls';
-import ListViewControls from './ListViewControls';
-import ConnectionStats from './ConnectionStats';
-
-import {lightenHsl} from '@crosswithfriends/shared/lib/colors';
-import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
 import {VimCommandBar} from './VimCommandBar';
 
 const CURSOR_TIMEOUT = 60000;
@@ -35,7 +37,7 @@ const PING_TIMEOUT = 10000;
 interface PlayerProps {
   currentCursor?: {r: number; c: number};
   size?: number;
-  grid: any[][];
+  grid: GridData;
   clues: {across: string[]; down: string[]};
   updateGrid: (r: number, c: number, value: string) => void;
   updateCursor?: (selected: {r: number; c: number}) => void;
@@ -52,21 +54,21 @@ interface PlayerProps {
   onVimCommand?: () => void;
   onVimCommandPressEnter?: (command: string) => void;
   onVimCommandPressEscape?: () => void;
-  circles?: any[];
-  shades?: any[];
-  cursors?: any[];
-  pings?: any[];
+  circles?: CellIndex[];
+  shades?: CellIndex[];
+  cursors?: Cursor[];
+  pings?: Ping[];
   frozen?: boolean;
   myColor?: string;
-  users?: Record<string, {color?: string; displayName?: string}>;
+  users?: UserJson[];
   id?: string;
-  pickups?: any[];
+  pickups?: Record<string, Pickup>;
   clueBarStyle?: React.CSSProperties;
-  gridStyle?: {cellStyle?: any};
+  gridStyle?: {cellStyle?: CellStyles};
   colorAttributionMode?: boolean;
   beta?: boolean;
   solution?: string[][];
-  opponentGrid?: any[][];
+  opponentGrid?: GridData;
   onCheck?: (scope: string) => void;
   onReveal?: (scope: string) => void;
   optimisticCounter?: number;
@@ -202,7 +204,9 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
         return keys.map(([r, c]) => ({r, c})).filter(({r, c}) => gridObj.isWhite(r, c));
       },
       setSelected: (sel: {r: number; c: number}) => {
-        setSelected(sel);
+        if (setSelectedRef.current) {
+          setSelectedRef.current(sel);
+        }
       },
     }),
     [gridObj, selectedAdjusted, direction]
@@ -282,6 +286,8 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
     [isValidDirection, selectedAdjusted]
   );
 
+  const setSelectedRef = useRef<(sel: {r: number; c: number}) => void>(() => {});
+
   const setSelected = useCallback(
     (sel: {r: number; c: number}) => {
       if (cursorLockedRef.current) return;
@@ -314,6 +320,14 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
     },
     [gridObj, isValidDirection, direction, selectedAdjusted, props.updateCursor]
   );
+
+  // Update ref with latest setSelected function
+  const setSelectedRefValue = setSelected;
+  useEffect(() => {
+    if (setSelectedRef.current !== setSelectedRefValue) {
+      setSelectedRef.current = setSelectedRefValue;
+    }
+  });
 
   const handlePing = useCallback(
     (r: number, c: number) => {
@@ -715,6 +729,20 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
             <div className={`player--main--left--grid${frozen ? ' frozen' : ''} blurable`}>
               <Grid ref={gridRef} {...gridProps} />
             </div>
+            {props.beta && (
+              <div
+                className="connection-status-indicator-container"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 8px',
+                }}
+              >
+                <ConnectionStatusIndicator optimisticCounter={props.optimisticCounter} />
+              </div>
+            )}
             {vimMode && (
               <VimCommandBar
                 isVimCommandMode={props.vimCommand}
@@ -731,19 +759,6 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
           </div>
         </div>
       </GridControls>
-      {props.beta && (
-        <div
-          style={{
-            color: 'gray',
-            margin: '0 auto',
-          }}
-        >
-          <div>{props.optimisticCounter ? <>{props.optimisticCounter} ahead</> : <>Synced</>}</div>
-          <div>
-            <ConnectionStats />
-          </div>
-        </div>
-      )}
       {renderColorAttributionCounts()}
     </div>
   );

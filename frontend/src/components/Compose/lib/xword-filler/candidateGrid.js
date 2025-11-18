@@ -47,7 +47,6 @@ export const convertToCandidateGrid = (grid) => {
 
   const gridString = _.flatten(_.map(grid, (row) => _.map(row, ({value}) => value || ' ')));
 
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   return new CandidateGrid(gridString, width, height, entries, entryMap);
 };
 
@@ -98,7 +97,7 @@ export default class CandidateGrid {
         return -1000;
       }
       const best = getTopMatches(pattern, scoredWordlist, 100);
-      // eslint-disable-next-line no-restricted-properties
+
       const expectedScore = 0.1 * _.sum(best.map((word, i) => scoredWordlist[word] * Math.pow(0.9, i)));
       const fillability = Math.log10(countMatches(pattern, scoredWordlist));
       return Math.sqrt(expectedScore) + fillability;

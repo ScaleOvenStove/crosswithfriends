@@ -1,5 +1,6 @@
 import './css/clues.css';
-import React, {useState} from 'react';
+import React, {useState, useCallback} from 'react';
+
 import ClueText from './ClueText';
 
 interface CluesProps {
@@ -23,15 +24,28 @@ const Clues: React.FC<CluesProps> = ({
 }) => {
   const [showClueLengths, setShowClueLengths] = useState(false);
 
-  const toggleShowClueLengths = () => {
+  const toggleShowClueLengths = useCallback(() => {
     setShowClueLengths((prev) => !prev);
-  };
+  }, []);
+
+  const handleToggleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleShowClueLengths();
+      }
+    },
+    [toggleShowClueLengths]
+  );
 
   return (
     <div className="clues">
       <div
         className="clues--secret"
         onClick={toggleShowClueLengths}
+        onKeyDown={handleToggleKeyDown}
+        role="button"
+        tabIndex={0}
         title={showClueLengths ? '' : 'Show lengths'}
       />
       {
@@ -68,6 +82,8 @@ const Clues: React.FC<CluesProps> = ({
                           selectClue(dir as 'across' | 'down', idx);
                         }
                       }}
+                      role="button"
+                      tabIndex={0}
                     >
                       <div className="clues--list--scroll--clue--number">{idx}</div>
                       <div className="clues--list--scroll--clue--text">

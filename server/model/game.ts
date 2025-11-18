@@ -1,21 +1,23 @@
-import _ from 'lodash';
-import {makeGrid} from '../gameUtils.js';
-import {pool} from './pool.js';
-import {getPuzzle} from './puzzle.js';
-import type {GameJson} from '@shared/types';
-import {logger} from '../utils/logger.js';
+import type {CheckEvent} from '@shared/fencingGameEvents/eventDefs/check';
+import type {RevealEvent} from '@shared/fencingGameEvents/eventDefs/reveal';
+import type {RevealAllCluesEvent} from '@shared/fencingGameEvents/eventDefs/revealAllClues';
+import type {SendChatMessageEvent} from '@shared/fencingGameEvents/eventDefs/sendChatMessage';
+import type {StartEvent} from '@shared/fencingGameEvents/eventDefs/startGame';
 import type {UpdateCellEvent} from '@shared/fencingGameEvents/eventDefs/updateCell';
 import type {UpdateCursorEvent} from '@shared/fencingGameEvents/eventDefs/updateCursor';
 import type {UpdateDisplayNameEvent} from '@shared/fencingGameEvents/eventDefs/updateDisplayName';
-import type {CheckEvent} from '@shared/fencingGameEvents/eventDefs/check';
-import type {RevealEvent} from '@shared/fencingGameEvents/eventDefs/reveal';
-import type {SendChatMessageEvent} from '@shared/fencingGameEvents/eventDefs/sendChatMessage';
-import type {StartEvent} from '@shared/fencingGameEvents/eventDefs/startGame';
-import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamName';
 import type {UpdateTeamIdEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamId';
-import type {RevealAllCluesEvent} from '@shared/fencingGameEvents/eventDefs/revealAllClues';
+import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamName';
+import type {CellIndex, GameJson} from '@shared/types';
+import _ from 'lodash';
 
-export async function getGameEvents(gid: string) {
+import {makeGrid} from '../gameUtils';
+import {logger} from '../utils/logger.js';
+
+import {pool} from './pool.js';
+import {getPuzzle} from './puzzle.js';
+
+export async function getGameEvents(gid: string): Promise<GameEvent[]> {
   const startTime = Date.now();
   const res = await pool.query('SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC', [gid]);
   const events = _.map(res.rows, 'event_payload');
@@ -24,13 +26,18 @@ export async function getGameEvents(gid: string) {
   return events;
 }
 
-export async function getGameInfo(gid: string) {
+export async function getGameInfo(gid: string): Promise<GameJson['info']> {
   const res = await pool.query("SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create'", [
     gid,
   ]);
   if (res.rowCount != 1) {
     logger.warn(`Could not find info for game ${gid}`);
-    return {};
+    return {
+      title: '',
+      author: '',
+      copyright: '',
+      description: '',
+    };
   }
 
   const info = res.rows[0].event_payload.params.game.info;
@@ -156,7 +163,7 @@ export interface InitialGameEvent extends GameEvent {
   params: CreateEventParams;
 }
 
-export async function addGameEvent(gid: string, event: GameEvent) {
+export async function addGameEvent(gid: string, event: GameEvent): Promise<void> {
   await pool.query(
     `
       INSERT INTO game_events (gid, uid, ts, event_type, event_payload)
@@ -221,7 +228,7 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
         grid,
         solution,
         clues,
-        circles: circlesAsCellIndices.length > 0 ? (circlesAsCellIndices as any) : undefined, // CellIndex is a branded type, safe to cast here
+        circles: circlesAsCellIndices.length > 0 ? (circlesAsCellIndices as CellIndex[]) : undefined, // CellIndex is a branded type, safe to cast here
       },
     },
   };

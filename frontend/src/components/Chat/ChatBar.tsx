@@ -1,6 +1,7 @@
-import React, {useState, useRef, useMemo, useCallback, useImperativeHandle, forwardRef} from 'react';
-import EmojiPicker from './EmojiPicker';
 import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
+import React, {useState, useRef, useMemo, useCallback, useImperativeHandle, forwardRef} from 'react';
+
+import EmojiPicker from './EmojiPicker';
 
 const MAX_EMOJIS = 150;
 
@@ -17,9 +18,9 @@ export type ChatBarRef = {
 const ChatBar = forwardRef<ChatBarRef, ChatBarProps>(({mobile, onSendMessage, onUnfocus}, ref) => {
   const [message, setMessage] = useState('');
   const [escapedEmoji, setEscapedEmoji] = useState<string | null>(null);
-  const [enters, setEnters] = useState(0);
+  const [_enters, setEnters] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const emojiPickerRef = useRef<any>(null);
+  const emojiPickerRef = useRef<{handleKeyDown: (e: React.KeyboardEvent) => void} | null>(null);
 
   useImperativeHandle(ref, () => ({
     focus: () => {

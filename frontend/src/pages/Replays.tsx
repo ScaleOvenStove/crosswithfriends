@@ -1,17 +1,17 @@
 import './css/replays.css';
 
-import {Helmet} from 'react-helmet';
-import _ from 'lodash';
-import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
+import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
 import {Box, Stack} from '@mui/material';
+import {ref, get} from 'firebase/database';
+import _ from 'lodash';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
+import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
 
-import Timestamp from '../components/common/Timestamp';
-import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
 import Nav from '../components/common/Nav';
+import Timestamp from '../components/common/Timestamp';
 import {usePuzzle} from '../hooks/usePuzzle';
 import {db} from '../store/firebase';
-import {ref, get} from 'firebase/database';
 
 interface TimeFormatterProps {
   millis?: number;
@@ -92,10 +92,10 @@ interface SoloPlayer {
 const Replays: React.FC = () => {
   const params = useParams<{pid?: string}>();
   const [games, setGames] = useState<Record<string, GameInfo>>({});
-  const [soloPlayers, setSoloPlayers] = useState<SoloPlayer[]>([]);
+  const [soloPlayers, _setSoloPlayers] = useState<SoloPlayer[]>([]);
   const [puzInfo, setPuzInfo] = useState<GameInfo | null>(null);
   const [limit, setLimit] = useState<number>(20);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, _setError] = useState<Error | null>(null);
 
   const pid = useMemo(() => {
     if (!params.pid) {

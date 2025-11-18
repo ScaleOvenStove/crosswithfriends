@@ -14,6 +14,17 @@
   -webkit-user-select: none;
   -o-user-select: none;
   background-color: white;
+  box-sizing: border-box; /* Ensure cell respects borders */
+  /* Ensure minimum touch target size on mobile */
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@media (max-width: 600px) {
+  .grid--cell {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 .cell--wrapper {
@@ -89,7 +100,8 @@ div:focus .cell.referenced {
 }
 
 .cell.bad {
-  background-color: rgba(255, 0, 0, 0.15) !important;
+  background-color: rgba(244, 67, 54, 0.15) !important;
+  animation: checkError 0.4s ease-out;
 }
 
 .cell.bad .cell--value {
@@ -97,13 +109,67 @@ div:focus .cell.referenced {
   font-weight: 600;
 }
 
+@keyframes checkError {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
 .cell.good {
-  background-color: rgba(0, 0, 255, 0.1) !important;
+  background-color: rgba(76, 175, 80, 0.15) !important;
+  animation: checkSuccess 0.5s ease-out;
 }
 
 .cell.good .cell--value {
-  color: #1976d2;
+  color: #2e7d32;
   font-weight: 600;
+  position: relative;
+}
+
+.cell.good .cell--value::after {
+  content: '✓';
+  position: absolute;
+  right: -8px;
+  top: -2px;
+  color: #4caf50;
+  font-size: 0.6em;
+  font-weight: bold;
+  animation: checkmarkAppear 0.3s ease-out 0.2s both;
+}
+
+@keyframes checkSuccess {
+  0% {
+    transform: scale(1);
+    background-color: rgba(76, 175, 80, 0.15);
+  }
+  50% {
+    transform: scale(1.05);
+    background-color: rgba(76, 175, 80, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    background-color: rgba(76, 175, 80, 0.15);
+  }
+}
+
+@keyframes checkmarkAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .cell.revealed .cell--value {

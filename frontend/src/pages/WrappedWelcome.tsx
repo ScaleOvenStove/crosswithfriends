@@ -1,8 +1,9 @@
+import useStateParams from '@crosswithfriends/shared/lib/hooks/useStateParams';
 import React from 'react';
 
-import useStateParams from '@crosswithfriends/shared/lib/hooks/useStateParams';
-import Welcome from './Welcome';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+
+import Welcome from './Welcome';
 
 interface UseFencing {
   fencing: boolean;

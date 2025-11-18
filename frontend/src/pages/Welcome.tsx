@@ -1,28 +1,17 @@
 import './css/welcome.css';
 
+import {isMobile, colorAverage} from '@crosswithfriends/shared/lib/jsUtils';
+import {Box, Stack, Autocomplete, TextField, Checkbox, FormControlLabel} from '@mui/material';
+import classnames from 'classnames';
+import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
-import {
-  Box,
-  Stack,
-  Autocomplete,
-  TextField,
-  Chip,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography,
-} from '@mui/material';
-import {MdSearch, MdExpandMore} from 'react-icons/md';
-import _ from 'lodash';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import classnames from 'classnames';
+import {MdSearch} from 'react-icons/md';
+
 import Nav from '../components/common/Nav';
-import Upload from '../components/Upload';
 import PuzzleList from '../components/PuzzleList';
+import Upload from '../components/Upload';
 import {WelcomeVariantsControl} from '../components/WelcomeVariantsControl';
-import {isMobile, colorAverage} from '@crosswithfriends/shared/lib/jsUtils';
 import {useUser} from '../hooks/useUser';
 
 const BLUE = '#6aa9f4';
@@ -55,7 +44,8 @@ const Welcome: React.FC<Props> = (props) => {
   const [searchFocused, setSearchFocused] = useState<boolean>(false);
 
   const user = useUser();
-  const uploadedPuzzlesRef = useRef<number>(0);
+  const [uploadedPuzzles, setUploadedPuzzles] = useState<number>(0);
+  const [navHeight, setNavHeight] = useState<number>(0);
   const navHeightRef = useRef<number>(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
@@ -73,7 +63,9 @@ const Welcome: React.FC<Props> = (props) => {
     const unsubscribe = user.onAuth(handleAuth);
 
     if (navRef.current) {
-      navHeightRef.current = navRef.current.getBoundingClientRect().height;
+      const height = navRef.current.getBoundingClientRect().height;
+      navHeightRef.current = height;
+      setNavHeight(height);
     }
 
     return () => {
@@ -99,34 +91,34 @@ const Welcome: React.FC<Props> = (props) => {
   const navStyle = useMemo((): React.CSSProperties | undefined => {
     if (!mobile) return undefined;
     const offset = motionValue;
-    const top = -navHeightRef.current * offset;
-    const height = navHeightRef.current * (1 - offset);
+    const top = -navHeight * offset;
+    const height = navHeight * (1 - offset);
     return {
       position: 'relative',
       top,
       height,
       opacity: searchFocused && motionValue === 1 ? 0 : 1,
     };
-  }, [mobile, motionValue, searchFocused]);
+  }, [mobile, motionValue, searchFocused, navHeight]);
 
   const navTextStyle = useMemo((): React.CSSProperties | undefined => {
     if (!mobile) return undefined;
     const opacity = _.clamp(1 - 3 * motionValue, 0, 1);
-    const translateY = navHeightRef.current * motionValue;
+    const translateY = navHeight * motionValue;
     return {
       opacity,
       transform: `translateY(${translateY}px)`,
     };
-  }, [mobile, motionValue]);
+  }, [mobile, motionValue, navHeight]);
 
   const navLinkStyle = useMemo((): React.CSSProperties | undefined => {
     if (!mobile) return undefined;
-    const translateY = navHeightRef.current * motionValue;
+    const translateY = navHeight * motionValue;
     return {
       transform: `translateY(${translateY}px)`,
       zIndex: 2,
     };
-  }, [mobile, motionValue]);
+  }, [mobile, motionValue, navHeight]);
 
   const handleScroll = useCallback(
     (top: number): void => {
@@ -138,7 +130,7 @@ const Welcome: React.FC<Props> = (props) => {
   );
 
   const handleCreatePuzzle = useCallback((): void => {
-    uploadedPuzzlesRef.current += 1;
+    setUploadedPuzzles((prev) => prev + 1);
   }, []);
 
   const handleFilterChange = useCallback(
@@ -159,11 +151,13 @@ const Welcome: React.FC<Props> = (props) => {
   );
 
   const updateSearchRef = useRef<_.DebouncedFunc<(search: string) => void>>();
-  if (!updateSearchRef.current) {
-    updateSearchRef.current = _.debounce((search: string) => {
-      props.setSearch(search);
-    }, 250);
-  }
+  useEffect(() => {
+    if (!updateSearchRef.current) {
+      updateSearchRef.current = _.debounce((search: string) => {
+        props.setSearch(search);
+      }, 250);
+    }
+  }, [props.setSearch]);
 
   const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
     const search = e.target.value;
@@ -219,72 +213,33 @@ const Welcome: React.FC<Props> = (props) => {
       handleChange: (header: string, name: string, on: boolean) => void
     ) => {
       return (
-        <Accordion
-          defaultExpanded={!mobile}
-          sx={{
-            boxShadow: 'none',
-            '&:before': {display: 'none'},
-            '&.Mui-expanded': {
-              margin: '0 !important',
-            },
-            backgroundColor: 'transparent',
-            '&:hover': {
-              backgroundColor: 'rgba(106, 169, 244, 0.03)',
-            },
-            transition: 'background-color 0.2s ease',
-          }}
-        >
-          <AccordionSummary
-            expandIcon={<MdExpandMore />}
-            sx={{
-              px: 2,
-              minHeight: 48,
-              '&.Mui-expanded': {minHeight: 48},
-              '&:hover': {
-                backgroundColor: 'rgba(106, 169, 244, 0.05)',
-              },
-              transition: 'background-color 0.2s ease',
-            }}
-          >
-            <Typography variant="subtitle2" sx={{fontWeight: 600, color: 'text.primary'}}>
-              {header}
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails sx={{px: 2, pt: 1, pb: 2}}>
-            <Stack direction="row" spacing={1} sx={{flexWrap: 'wrap', gap: 1}}>
-              {_.keys(items).map((name) => (
-                <Chip
-                  key={name}
-                  label={name}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleChange(header, name, !items[name]);
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  color={items[name] ? 'primary' : 'default'}
-                  variant={items[name] ? 'filled' : 'outlined'}
-                  size="small"
-                  clickable
-                  sx={{
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: items[name]
-                        ? '0 2px 4px rgba(106, 169, 244, 0.3)'
-                        : '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    },
-                  }}
-                />
-              ))}
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
+        <Box sx={{mb: 1}}>
+          <Box sx={{fontWeight: 600, mb: 0.5, color: 'text.primary'}}>{header}</Box>
+          <Stack direction="column" spacing={0.5}>
+            {_.keys(items).map((name) => (
+              <FormControlLabel
+                key={name}
+                control={
+                  <Checkbox
+                    checked={items[name]}
+                    onChange={(e) => handleChange(header, name, e.target.checked)}
+                    size="small"
+                  />
+                }
+                label={name}
+                sx={{
+                  margin: 0,
+                  '& .MuiFormControlLabel-label': {
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+            ))}
+          </Stack>
+        </Box>
       );
     },
-    [mobile]
+    []
   );
 
   return (
@@ -420,7 +375,7 @@ const Welcome: React.FC<Props> = (props) => {
           </Box>
           <PuzzleList
             fencing={props.fencing}
-            uploadedPuzzles={uploadedPuzzlesRef.current}
+            uploadedPuzzles={uploadedPuzzles}
             userHistory={userHistory}
             sizeFilter={props.sizeFilter}
             statusFilter={props.statusFilter}

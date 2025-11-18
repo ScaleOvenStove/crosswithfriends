@@ -8,6 +8,7 @@ import {
   type Database,
   type DatabaseReference,
 } from 'firebase/database';
+
 import {firebaseConfig} from '../config';
 
 const offline = firebaseConfig.offline;
@@ -23,7 +24,9 @@ if (getApps().length === 0) {
 
 const db = getDatabase(app);
 
-const SERVER_TIME = serverTimestamp();
+// SERVER_TIME is a Firebase sentinel value that becomes a timestamp when written to the database
+// TypeScript sees it as 'object' but it will be a number in the database
+const SERVER_TIME = serverTimestamp() as unknown as number;
 
 // Get server time offset - use onValue for better connection handling
 // This will wait for the connection to be established before reading
@@ -40,7 +43,7 @@ try {
       if (val !== null && val !== undefined && typeof val === 'number') {
         offset = val;
       }
-    } catch (error) {
+    } catch {
       // Silently handle error - server time offset is not critical
       offset = 0;
     }
@@ -50,7 +53,7 @@ try {
       offsetListener = null;
     }
   });
-} catch (error) {
+} catch {
   // Handle initialization error gracefully - server time offset is not critical
   // Using local time is acceptable fallback
   offset = 0;

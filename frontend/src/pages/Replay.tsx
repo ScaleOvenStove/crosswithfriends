@@ -1,24 +1,22 @@
 import './css/replay.css';
+import {isMobile, toArr} from '@crosswithfriends/shared/lib/jsUtils';
+import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
+import {Box, Stack, Tooltip} from '@mui/material';
+import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
-import {Box, Stack} from '@mui/material';
 import {Helmet} from 'react-helmet';
 import {MdPlayArrow, MdPause, MdChevronLeft, MdChevronRight} from 'react-icons/md';
-import _ from 'lodash';
 import {useParams} from 'react-router-dom';
 
-import {useGameStore} from '../store';
-
-import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
-import Player from '../components/Player';
 import Chat from '../components/Chat';
 import Nav from '../components/common/Nav';
+import Player from '../components/Player';
 import {Timeline} from '../components/Timeline/Timeline';
-import {isMobile, toArr} from '@crosswithfriends/shared/lib/jsUtils';
 import Toolbar from '../components/Toolbar';
-import {Tooltip} from '@mui/material';
+import {useGameStore} from '../store';
 
 const SCRUB_SPEED = 50; // 30 actions per second
-const AUTOPLAY_SPEEDS = (localStorage as any).premium ? [1, 10, 100, 1000] : [1, 10, 100];
+const AUTOPLAY_SPEEDS = (localStorage as {premium?: boolean}).premium ? [1, 10, 100, 1000] : [1, 10, 100];
 
 const formatTime = (seconds: number): string => {
   const hr = Math.floor(seconds / 3600);
@@ -47,36 +45,48 @@ const Replay: React.FC = () => {
   const [listMode, setListMode] = useState<boolean>(false);
   const [left, setLeft] = useState<boolean>(false);
   const [right, setRight] = useState<boolean>(false);
-  const [error, setError] = useState<any>(undefined);
+  const [error, setError] = useState<Error | undefined>(undefined);
 
   const gameStore = useGameStore();
   const historyWrapperRef = useRef<HistoryWrapper | null>(null);
   const followCursorRef = useRef<number | undefined>(-1);
   const autoplayIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const screenWidthRef = useRef<number>(0);
-  const colorRef = useRef<string>('#000000');
+  const [screenWidth, setScreenWidth] = useState<number>(0);
+  const [myColor, _setMyColor] = useState<string>('#000000');
   const controlsRef = useRef<HTMLDivElement | null>(null);
-  const gameRef = useRef<any>(null);
-  const chatRef = useRef<any>(null);
-  const scrubLeftRef = useRef<any>(null);
-  const scrubRightRef = useRef<any>(null);
+  const gameRef = useRef<{setSelected: (selected: {r: number; c: number}) => void} | null>(null);
+  const chatRef = useRef<{focus: () => void} | null>(null);
+  const scrubLeftRef = useRef<SVGElement | null>(null);
+  const scrubRightRef = useRef<SVGElement | null>(null);
 
   const gid = useMemo(() => {
     return params.gid || '';
   }, [params.gid]);
 
-  const game = useMemo(() => {
+  const [gameState, setGameState] = useState<ReturnType<HistoryWrapper['getSnapshotAt']> | null>(null);
+
+  useEffect(() => {
     // compute the game state corresponding to current playback time
     try {
-      if (!historyWrapperRef.current || !historyWrapperRef.current.ready) return null;
-      return historyWrapperRef.current.getSnapshotAt(positionToRender);
+      if (!historyWrapperRef.current || !historyWrapperRef.current.ready) {
+        // Use setTimeout to avoid calling setState synchronously in effect
+        setTimeout(() => {
+          setGameState(null);
+        }, 0);
+        return;
+      }
+      const snapshot = historyWrapperRef.current.getSnapshotAt(positionToRender);
+      setGameState(snapshot);
     } catch (err) {
-      console.error('Error computing game state:', err);
-      setError(err);
-      return null;
+      setError(err as Error);
+      setTimeout(() => {
+        setGameState(null);
+      }, 0);
     }
   }, [positionToRender]);
+
+  const game = gameState;
 
   const recomputeHistory = useCallback((): void => {
     if (!historyWrapperRef.current) return;
@@ -94,19 +104,29 @@ const Replay: React.FC = () => {
   }, [position]);
 
   const debouncedRecomputeHistoryRef = useRef<_.DebouncedFunc<() => void>>();
-  if (!debouncedRecomputeHistoryRef.current) {
-    debouncedRecomputeHistoryRef.current = _.debounce(recomputeHistory);
-  }
+  useEffect(() => {
+    if (!debouncedRecomputeHistoryRef.current) {
+      debouncedRecomputeHistoryRef.current = _.debounce(recomputeHistory);
+    }
+    return () => {
+      debouncedRecomputeHistoryRef.current?.cancel();
+    };
+  }, [recomputeHistory]);
 
   const setPositionToRenderThrottledRef = useRef<_.DebouncedFunc<(positionToRender: number) => void>>();
-  if (!setPositionToRenderThrottledRef.current) {
-    setPositionToRenderThrottledRef.current = _.throttle((positionToRender: number) => {
-      setPositionToRender(positionToRender);
-      if (controlsRef.current) {
-        controlsRef.current.focus();
-      }
-    }, 200);
-  }
+  useEffect(() => {
+    if (!setPositionToRenderThrottledRef.current) {
+      setPositionToRenderThrottledRef.current = _.throttle((newPositionToRender: number) => {
+        setPositionToRender(newPositionToRender);
+        if (controlsRef.current) {
+          controlsRef.current.focus();
+        }
+      }, 200);
+    }
+    return () => {
+      setPositionToRenderThrottledRef.current?.cancel();
+    };
+  }, []);
 
   const handleSetPosition = useCallback(
     (newPosition: number, isAutoplay: boolean = false): void => {
@@ -126,36 +146,36 @@ const Replay: React.FC = () => {
     const historyWrapper = new HistoryWrapper();
     historyWrapperRef.current = historyWrapper;
 
-    const unsubscribeWsEvent = gameStore.subscribe(path, 'wsEvent', (event: any) => {
+    const unsubscribeWsEvent = gameStore.subscribe(path, 'wsEvent', (event: GameEvent) => {
       try {
         if (historyWrapperRef.current) {
           historyWrapperRef.current.addEvent(event);
           debouncedRecomputeHistoryRef.current?.();
         }
       } catch (err) {
-        console.error('Error adding event to history wrapper:', err);
-        setError(err);
+        setError(err as Error);
       }
     });
-    const unsubscribeWsCreateEvent = gameStore.subscribe(path, 'wsCreateEvent', (event: any) => {
+    const unsubscribeWsCreateEvent = gameStore.subscribe(path, 'wsCreateEvent', (event: GameEvent) => {
       try {
         if (historyWrapperRef.current) {
           historyWrapperRef.current.setCreateEvent(event);
           debouncedRecomputeHistoryRef.current?.();
         }
       } catch (err) {
-        console.error('Error setting create event:', err);
-        setError(err);
+        setError(err as Error);
       }
     });
 
     gameStore.attach(path).catch((err) => {
-      console.error('Error attaching to game store:', err);
-      setError(err);
+      setError(err as Error);
     });
 
     // compute it here so the grid doesn't go crazy
-    screenWidthRef.current = window.innerWidth - 1;
+    // Use setTimeout to avoid calling setState synchronously in effect
+    setTimeout(() => {
+      setScreenWidth(window.innerWidth - 1);
+    }, 0);
     if (controlsRef.current) {
       setTimeout(() => {
         if (controlsRef.current) {
@@ -199,7 +219,7 @@ const Replay: React.FC = () => {
     }
 
     if (followCursorRef.current !== undefined) {
-      const cursor = _.find(gameCursors, (cursor: any) => cursor.id === followCursorRef.current);
+      const cursor = _.find(gameCursors, (c) => c.id === followCursorRef.current);
       if (cursor && gameRef.current) {
         gameRef.current.setSelected({
           r: cursor.r,
@@ -219,9 +239,9 @@ const Replay: React.FC = () => {
     ({r, c}: {r: number; c: number}): void => {
       if (!game || !game.cursors) return;
       const gameCursors = game.cursors;
-      const cursor = _.find(gameCursors, (cursor: any) => cursor.r === r && cursor.c === c);
-      if (cursor !== undefined) {
-        followCursorRef.current = cursor.id;
+      const foundCursor = _.find(gameCursors, (cursorItem) => cursorItem.r === r && cursorItem.c === c);
+      if (foundCursor !== undefined) {
+        followCursorRef.current = foundCursor.id;
       } else {
         followCursorRef.current = undefined;
       }
@@ -295,6 +315,15 @@ const Replay: React.FC = () => {
     setRight(false);
   }, []);
 
+  const handleToggleAutoplay = useCallback((): void => {
+    const index = _.findIndex(history, (event) => event.gameTimestamp > position);
+    if (index === -1) {
+      // restart
+      handleSetPosition(0);
+    }
+    setAutoplayEnabled((prev) => !prev);
+  }, [history, position, handleSetPosition]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
       e.preventDefault();
@@ -307,7 +336,7 @@ const Replay: React.FC = () => {
         handleToggleAutoplay();
       }
     },
-    [scrubLeft, scrubRight]
+    [scrubLeft, scrubRight, handleToggleAutoplay]
   );
 
   const handleKeyUp = useCallback((e: React.KeyboardEvent): void => {
@@ -318,15 +347,6 @@ const Replay: React.FC = () => {
       setRight(false);
     }
   }, []);
-
-  const handleToggleAutoplay = useCallback((): void => {
-    const index = _.findIndex(history, (event) => event.gameTimestamp > position);
-    if (index === -1) {
-      // restart
-      handleSetPosition(0);
-    }
-    setAutoplayEnabled((prev) => !prev);
-  }, [history, position, handleSetPosition]);
 
   const renderHeader = useCallback((): JSX.Element | null => {
     if (!game || error) {
@@ -344,7 +364,7 @@ const Replay: React.FC = () => {
 
   const renderToolbar = useCallback((): JSX.Element | undefined => {
     if (!game) return undefined;
-    const {clock, solved} = game;
+    const {clock} = game;
     const {totalTime} = clock;
     return (
       <Toolbar
@@ -365,7 +385,7 @@ const Replay: React.FC = () => {
     );
   }, [game, gid, colorAttributionMode, listMode]);
 
-  const renderPlayer = useCallback((): JSX.Element => {
+  const renderPlayer = useMemo((): JSX.Element => {
     if (error) {
       return <div>Error loading replay</div>;
     }
@@ -374,7 +394,6 @@ const Replay: React.FC = () => {
     }
 
     const {grid, circles, shades, cursors, clues, solved, users} = game;
-    const screenWidth = screenWidthRef.current;
     const cols = grid[0].length;
     const rows = grid.length;
     const width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
@@ -392,7 +411,7 @@ const Replay: React.FC = () => {
         }}
         cursors={cursors}
         frozen={solved}
-        myColor={colorRef.current}
+        myColor={myColor}
         updateGrid={_.noop}
         updateCursor={handleUpdateCursor}
         onPressEnter={_.noop}
@@ -402,9 +421,9 @@ const Replay: React.FC = () => {
         listMode={listMode}
       />
     );
-  }, [error, game, colorAttributionMode, listMode, handleUpdateCursor]);
+  }, [error, game, colorAttributionMode, listMode, handleUpdateCursor, screenWidth]);
 
-  const renderChat = useCallback((): JSX.Element | null => {
+  const _renderChat = useCallback((): JSX.Element | null => {
     if (error || !game) {
       return null;
     }
@@ -416,8 +435,8 @@ const Replay: React.FC = () => {
     );
   }, [error, game]);
 
-  const renderControls = useCallback((): JSX.Element => {
-    const width = isMobile() ? screenWidthRef.current - 20 : 1000;
+  const renderControls = useMemo((): JSX.Element => {
+    const width = isMobile() ? screenWidth - 20 : 1000;
 
     // renders the controls / state
     return (
@@ -432,7 +451,7 @@ const Replay: React.FC = () => {
           outline: 'none',
           width,
         }}
-        tabIndex={1}
+        tabIndex={0}
         onKeyDown={handleKeyDown}
         onKeyUp={handleKeyUp}
       >
@@ -449,7 +468,19 @@ const Replay: React.FC = () => {
             onTouchEnd={handleMouseUpLeft}
             onMouseLeave={handleMouseUpLeft}
           />
-          <div className="scrub--autoplay" onClick={handleToggleAutoplay}>
+          <div
+            className="scrub--autoplay"
+            onClick={handleToggleAutoplay}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggleAutoplay();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Toggle autoplay"
+          >
             {autoplayEnabled && <MdPause />}
             {!autoplayEnabled && <MdPlayArrow />}
           </div>
@@ -468,7 +499,7 @@ const Replay: React.FC = () => {
         <div className="replay--time">
           {history.length > 0 && (
             <div>
-              {formatTime(position / 1000)} / {formatTime(_.last(history)!.gameTimestamp / 1000)}
+              {formatTime(position / 1000)} / {formatTime((_.last(history)?.gameTimestamp ?? 0) / 1000)}
             </div>
           )}
         </div>
@@ -479,6 +510,15 @@ const Replay: React.FC = () => {
               onClick={() => {
                 setAutoplaySpeed(speed);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setAutoplaySpeed(speed);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Set autoplay speed to ${speed}x`}
               key={speed}
             >
               {speed}x
@@ -502,6 +542,7 @@ const Replay: React.FC = () => {
     handleMouseDownRight,
     handleMouseUpRight,
     handleToggleAutoplay,
+    screenWidth,
   ]);
 
   const puzzleTitle = useMemo((): string => {

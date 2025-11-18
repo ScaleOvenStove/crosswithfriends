@@ -1,3 +1,5 @@
+import type {Socket as SocketIOClient} from 'socket.io-client';
+
 /**
  * Emits a Socket.io event and returns a Promise that resolves when the server acknowledges it.
  * This is a wrapper around socket.emit that provides promise-based async/await support.
@@ -11,7 +13,7 @@
  * await emitAsync(socket, 'join_game', gameId);
  * ```
  */
-export const emitAsync = (socket: SocketIOClient.Socket, ...args: any[]) =>
+export const emitAsync = (socket: SocketIOClient, ...args: any[]) =>
   new Promise((resolve) => {
     (socket as any).emit(...args, resolve);
   });
@@ -28,7 +30,7 @@ export const emitAsync = (socket: SocketIOClient.Socket, ...args: any[]) =>
  * const data = await onceAsync(socket, 'connect');
  * ```
  */
-export const onceAsync = (socket: SocketIOClient.Socket, event: string): Promise<any> =>
+export const onceAsync = (socket: SocketIOClient, event: string): Promise<any> =>
   new Promise((resolve) => {
     socket.once(event, resolve);
   });

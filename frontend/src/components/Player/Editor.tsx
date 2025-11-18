@@ -1,14 +1,24 @@
 /* eslint react/no-string-refs: "warn" */
 import './css/editor.css';
+import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
+import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
+import type {Cursor, GridData} from '@crosswithfriends/shared/types';
 import {Box, Stack} from '@mui/material';
-import React, {useState, useRef, useMemo, useCallback, useImperativeHandle, forwardRef} from 'react';
-import Grid from '../Grid';
-import GridControls from './GridControls';
+import React, {
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from 'react';
+
 import EditableSpan from '../common/EditableSpan';
 import Hints from '../Compose/Hints';
+import Grid from '../Grid';
 
-import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
-import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
+import GridControls from './GridControls';
 
 window.requestIdleCallback =
   window.requestIdleCallback ||
@@ -31,10 +41,10 @@ window.cancelIdleCallback =
   };
 
 interface EditorProps {
-  grid: any;
+  grid: GridData;
   clues: {across: string[]; down: string[]};
   size: number;
-  cursors: any[];
+  cursors: Cursor[];
   myColor: string;
   onUpdateGrid: (r: number, c: number, value: string) => void;
   onUpdateClue: (r: number, c: number, direction: 'across' | 'down', value: string) => void;
@@ -56,28 +66,58 @@ export type EditorRef = {
 };
 
 const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
+  // Destructure props to avoid dependency issues
+  const {
+    grid: gridData,
+    clues,
+    size,
+    cursors,
+    myColor,
+    onUpdateGrid,
+    onUpdateClue,
+    onUpdateCursor,
+    onChange,
+    onFlipColor,
+    onAutofill,
+    onPublish,
+    onChangeRows,
+    onChangeColumns,
+    onClearPencil,
+    onUnfocus,
+  } = props;
+
   const [selected, setSelected] = useState({r: 0, c: 0});
   const [direction, setDirection] = useState<'across' | 'down'>('across');
   const [frozen, setFrozen] = useState(false);
 
-  const gridControlsRef = useRef<any>(null);
-  const clueRef = useRef<any>(null);
+  const gridControlsRef = useRef<{
+    focus: () => void;
+    selectClue: (direction: string, number: number) => void;
+  } | null>(null);
+  const clueRef = useRef<{focus: () => void} | null>(null);
   const prvNumRef = useRef<Record<string, number>>({});
   const prvIdleIDRef = useRef<Record<string, number>>({});
   const clueScrollRef = useRef<number>(0);
 
   const grid = useMemo(() => {
-    const g = new GridObject(props.grid);
+    const g = new GridObject(gridData);
     g.assignNumbers();
     return g;
-  }, [props.grid]);
+  }, [gridData]);
+
+  const focusGridRef = useRef<() => void>(() => {});
+  const focusClueRef = useRef<() => void>(() => {});
 
   useImperativeHandle(ref, () => ({
     focus: () => {
-      focusGrid();
+      focusGridRef.current();
     },
-    focusGrid,
-    focusClue,
+    focusGrid: () => {
+      focusGridRef.current();
+    },
+    focusClue: () => {
+      focusClueRef.current();
+    },
   }));
 
   const focusGrid = useCallback(() => {
@@ -86,11 +126,19 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, []);
 
+  useEffect(() => {
+    focusGridRef.current = focusGrid;
+  }, [focusGrid]);
+
   const focusClue = useCallback(() => {
     if (clueRef.current) {
       clueRef.current.focus();
     }
   }, []);
+
+  useEffect(() => {
+    focusClueRef.current = focusClue;
+  }, [focusClue]);
 
   const canSetDirection = useCallback(() => true, []);
 
@@ -101,9 +149,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const handleSetSelected = useCallback(
     (sel: {r: number; c: number}) => {
       setSelected(sel);
-      props.onUpdateCursor(sel);
+      onUpdateCursor(sel);
     },
-    [props.onUpdateCursor]
+    [onUpdateCursor]
   );
 
   const handleChangeDirection = useCallback(() => {
@@ -118,29 +166,29 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   const handleUpdateGrid = useCallback(
     (r: number, c: number, value: string) => {
-      props.onUpdateGrid(r, c, value);
-      props.onChange();
+      onUpdateGrid(r, c, value);
+      onChange();
     },
-    [props.onUpdateGrid, props.onChange]
+    [onUpdateGrid, onChange]
   );
 
   const handlePressPeriod = useCallback(() => {
-    props.onFlipColor(selected.r, selected.c);
-    props.onChange();
-  }, [selected, props.onFlipColor, props.onChange]);
+    onFlipColor(selected.r, selected.c);
+    onChange();
+  }, [selected, onFlipColor, onChange]);
 
   const handleChangeRows = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      props.onChangeRows(Number(event.target.value));
+      onChangeRows(Number(event.target.value));
     },
-    [props.onChangeRows]
+    [onChangeRows]
   );
 
   const handleChangeColumns = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      props.onChangeColumns(Number(event.target.value));
+      onChangeColumns(Number(event.target.value));
     },
-    [props.onChangeColumns]
+    [onChangeColumns]
   );
 
   const handleToggleFreeze = useCallback(() => {
@@ -174,20 +222,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const handleChangeClue = useCallback(
     (value: string) => {
       if (selectedParent) {
-        props.onUpdateClue(selectedParent.r, selectedParent.c, direction, value);
-        props.onChange();
+        onUpdateClue(selectedParent.r, selectedParent.c, direction, value);
+        onChange();
       }
     },
-    [selectedParent, direction, props.onUpdateClue, props.onChange]
-  );
-
-  const isClueFilled = useCallback(
-    (dir: 'across' | 'down', number: number) => {
-      const clueRoot = grid.getCellByNumber(number);
-      if (!clueRoot) return false;
-      return !grid.hasEmptyCells(clueRoot.r, clueRoot.c, dir);
-    },
-    [grid]
+    [selectedParent, direction, onUpdateClue, onChange]
   );
 
   const isClueSelected = useCallback(
@@ -204,7 +243,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     [direction, halfSelectedClueNumber]
   );
 
-  const isSelected = useCallback(
+  const _isSelected = useCallback(
     (r: number, c: number) => {
       return r === selected.r && c === selected.c;
     },
@@ -230,7 +269,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   const renderClueList = useCallback(
     (dir: 'across' | 'down') => {
-      return props.clues[dir].map(
+      return clues[dir].map(
         (clue, i) =>
           clue !== undefined && (
             <Box
@@ -262,11 +301,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           )
       );
     },
-    [props.clues, isClueSelected, isClueHalfSelected, scrollToClue, handleSelectClue]
+    [clues, isClueSelected, isClueHalfSelected, scrollToClue, handleSelectClue]
   );
 
   return (
-    <Box className="editor--main--wrapper" sx={{display: 'flex'}}>
+    <Box className="editor--main--wrapper" sx={{display: 'flex', flex: 1, minHeight: 0, height: '100%'}}>
       <GridControls
         ref={gridControlsRef}
         selected={selected}
@@ -279,11 +318,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         onPressEnter={() => {
           focusClue();
         }}
-        onPressEscape={() => props.onUnfocus()}
+        onPressEscape={() => onUnfocus()}
         onPressPeriod={handlePressPeriod}
         updateGrid={handleUpdateGrid}
-        grid={props.grid}
-        clues={props.clues}
+        grid={gridData}
+        clues={clues}
       >
         <Box className="editor--main" sx={{display: 'flex'}}>
           <div className="editor--main--left">
@@ -293,7 +332,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 <EditableSpan
                   ref={clueRef}
                   key_={`${direction}${selectedClueNumber}`}
-                  value={props.clues[direction][selectedClueNumber || 0] || ''}
+                  value={clues[direction][selectedClueNumber || 0] || ''}
                   onChange={handleChangeClue}
                   onUnfocus={focusGrid}
                   hidden={!selectedIsWhite || selectedClueNumber === undefined}
@@ -303,14 +342,14 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
             <div className="editor--main--left--grid blurable">
               <Grid
-                size={props.size}
-                grid={props.grid}
-                cursors={props.cursors}
+                size={size}
+                grid={gridData}
+                cursors={cursors}
                 selected={selected}
                 direction={direction}
                 onSetSelected={handleSetSelected}
                 onChangeDirection={handleChangeDirection}
-                myColor={props.myColor}
+                myColor={myColor}
                 references={[]}
                 editMode
                 cellStyle={{}}
@@ -333,21 +372,21 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               <Box
                 className="editor--button"
                 sx={{display: 'flex', justifyContent: 'center'}}
-                onClick={props.onAutofill}
+                onClick={onAutofill}
               >
                 Autofill Grid
               </Box>
               <Box
                 className="editor--button"
                 sx={{display: 'flex', justifyContent: 'center'}}
-                onClick={props.onClearPencil}
+                onClick={onClearPencil}
               >
                 Clear Pencil
               </Box>
               <Box
                 className="editor--button"
                 sx={{display: 'flex', justifyContent: 'center'}}
-                onClick={props.onPublish}
+                onClick={onPublish}
               >
                 Publish
               </Box>
@@ -404,7 +443,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               }
             </Box>
             <Box className="editor--right--hints" sx={{display: 'flex'}}>
-              <Hints grid={props.grid} num={selectedClueNumber || 0} direction={direction} />
+              <Hints grid={gridData} num={selectedClueNumber || 0} direction={direction} />
             </Box>
           </Stack>
         </Box>

@@ -1,12 +1,14 @@
-import React from 'react';
-import * as _ from 'lodash';
-import clsx from 'clsx';
-import {Tooltip} from '@mui/material';
-import Emoji from '../common/Emoji';
 import powerups from '@crosswithfriends/shared/lib/powerups';
-import type {Ping, CellStyles, EnhancedCellData} from './types';
+import {Tooltip} from '@mui/material';
+import clsx from 'clsx';
+import * as _ from 'lodash';
+import React, {useCallback} from 'react';
+
+import Emoji from '../common/Emoji';
+
+import type {EnhancedCellData} from './types';
+
 import './css/cell.css';
-import type {CellData, Cursor} from '@crosswithfriends/shared/types';
 
 interface Props extends EnhancedCellData {
   // Callbacks
@@ -76,18 +78,19 @@ const Cell: React.FC<Props> = (props) => {
     );
   };
 
+  const handleFlipClick = useCallback(
+    (e: React.MouseEvent) => {
+      const {onFlipColor, r, c} = props;
+      e.stopPropagation();
+      onFlipColor?.(r, c);
+    },
+    [props]
+  );
+
   const renderFlipButton = () => {
-    const {canFlipColor, onFlipColor, r, c} = props;
+    const {canFlipColor} = props;
     if (canFlipColor) {
-      return (
-        <i
-          className="cell--flip fa fa-small fa-sticky-note"
-          onClick={(e) => {
-            e.stopPropagation();
-            onFlipColor?.(r, c);
-          }}
-        />
-      );
+      return <i className="cell--flip fa fa-small fa-sticky-note" onClick={handleFlipClick} />;
     }
     return null;
   };
@@ -146,15 +149,21 @@ const Cell: React.FC<Props> = (props) => {
     return {backgroundColor: attributionColor};
   };
 
-  const handleClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault?.();
-    props.onClick(props.r, props.c);
-  };
+  const handleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
+    (e) => {
+      e.preventDefault?.();
+      props.onClick(props.r, props.c);
+    },
+    [props]
+  );
 
-  const handleRightClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault?.();
-    props.onContextMenu(props.r, props.c);
-  };
+  const handleRightClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
+    (e) => {
+      e.preventDefault?.();
+      props.onContextMenu(props.r, props.c);
+    },
+    [props]
+  );
 
   const {
     black,
@@ -256,7 +265,7 @@ const areEqual = (prevProps: Props, nextProps: Props) => {
   if (!_.isEqual(_.omit(nextProps, ...pathsToOmit), _.omit(prevProps, ...pathsToOmit))) {
     console.debug(
       'cell update',
-      // @ts-ignore
+      // @ts-expect-error - lodash filter with dynamic keys
       _.filter(_.keys(prevProps), (k) => prevProps[k] !== nextProps[k])
     );
     return false;

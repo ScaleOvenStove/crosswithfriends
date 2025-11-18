@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+import type {Socket} from 'socket.io-client';
+
 interface ImportMetaEnv {
   readonly VITE_ENV?: string;
   readonly VITE_USE_LOCAL_SERVER?: string;
@@ -10,4 +12,16 @@ interface ImportMetaEnv {
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
+}
+
+interface ConnectionStatus {
+  latency: number;
+  timestamp: number;
+}
+
+declare global {
+  interface Window {
+    connectionStatus?: ConnectionStatus;
+    socket?: Socket;
+  }
 }

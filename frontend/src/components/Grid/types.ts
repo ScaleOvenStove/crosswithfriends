@@ -1,6 +1,5 @@
-import {Brand} from 'utility-types';
-import type {CellData, Cursor} from '@crosswithfriends/shared/types';
 import powerups from '@crosswithfriends/shared/lib/powerups';
+import type {CellData, Cursor} from '@crosswithfriends/shared/types';
 
 export interface CellStyle {
   backgroundColor: string;
@@ -53,5 +52,6 @@ export type ClueCoords = {
   num: number;
 };
 
-// XXX fixme
-export type BattlePickup = any;
+import type {Pickup} from '../../types/battle';
+
+export type BattlePickup = Pickup;

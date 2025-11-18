@@ -4,6 +4,7 @@
  */
 
 import {useEffect, useRef} from 'react';
+
 import {useUserStore} from '../store/userStore';
 
 interface UseUserOptions {

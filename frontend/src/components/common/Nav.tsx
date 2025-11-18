@@ -1,16 +1,16 @@
 import './css/nav.css';
 
-import {Link} from 'react-router-dom';
-import ReactDOMServer from 'react-dom/server';
-import React, {useContext} from 'react';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
+import React from 'react';
+import {Link} from 'react-router-dom';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
 const swal = withReactContent(Swal);
-import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
+
 import {useUser} from '../../hooks/useUser';
+
+import {DarkModeToggle} from './DarkModeToggle';
 
 interface LogInProps {
   style?: React.CSSProperties;
@@ -39,13 +39,26 @@ function LogIn({style}: LogInProps): JSX.Element | null {
     );
     */
   }
+  const handleLogin = () => {
+    user.logIn();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleLogin();
+    }
+  };
+
   return (
     <div className="nav--right" style={style}>
       <div
         className="nav--login"
-        onClick={() => {
-          user.logIn();
-        }}
+        onClick={handleLogin}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label="Log in"
       >
         Log in
       </div>
@@ -81,18 +94,6 @@ function showInfo(): void {
   });
 }
 
-function darkModePreferenceText(darkModePreference: string): string {
-  switch (darkModePreference) {
-    case '1':
-      return 'On';
-    case '2':
-      return 'System default';
-    case '0':
-    default:
-      return 'Off';
-  }
-}
-
 interface NavProps {
   hidden?: boolean;
   v2?: boolean;
@@ -106,15 +107,14 @@ interface NavProps {
 
 export default function Nav({
   hidden,
-  v2,
+  v2: _v2,
   canLogin,
   mobile,
   linkStyle,
   divRef,
-  composeEnabled,
+  composeEnabled: _composeEnabled,
   textStyle,
 }: NavProps): JSX.Element | null {
-  const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
   if (hidden) return null; // no nav for mobile
   const fencing = window.location.href.includes('fencing');
   return (
@@ -123,17 +123,23 @@ export default function Nav({
         <Link to={fencing ? '/fencing' : '/'}>Cross with Friends</Link>
       </div>
       <div className="nav--right">
-        <div
-          className="molester-moon"
-          style={darkModePreference !== '0' ? {opacity: 1} : {}}
-          onClick={toggleMolesterMoons}
-        >
-          Dark Mode (beta): {darkModePreferenceText(darkModePreference)}
-        </div>
+        <DarkModeToggle />
         {/* <div className="nav--right stats">
           <a href="/stats">Your stats</a>
         </div> */}
-        <div className="nav--info" onClick={showInfo}>
+        <div
+          className="nav--info"
+          onClick={showInfo}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              showInfo();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Show information"
+        >
           <i className="fa fa-info-circle" />
         </div>
         {canLogin && <LogIn />}

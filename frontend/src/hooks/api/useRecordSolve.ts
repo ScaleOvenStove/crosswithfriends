@@ -3,6 +3,7 @@
  */
 
 import {useMutation} from '@tanstack/react-query';
+
 import {recordSolve} from '../../api/puzzle';
 
 interface UseRecordSolveOptions {

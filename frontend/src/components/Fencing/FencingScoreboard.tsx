@@ -1,7 +1,8 @@
+import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
 import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
-import React from 'react';
-import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
+import React, {useCallback} from 'react';
+
 import EditableSpan from '../common/EditableSpan';
 import './css/fencingScoreboard.css';
 export const FencingScoreboard: React.FC<{
@@ -14,12 +15,19 @@ export const FencingScoreboard: React.FC<{
   isGameComplete: boolean;
 }> = (props) => {
   // TODO buttons need to be icons / dropdown menu once team names are editable
+  const handleSpectate = useCallback(() => {
+    props.spectate();
+  }, [props]);
+
+  const handleJoinTeam = useCallback(
+    (teamId: number) => {
+      props.joinTeam(teamId);
+    },
+    [props]
+  );
+
   const spectateButton = (
-    <button
-      onClick={() => {
-        props.spectate();
-      }}
-    >
+    <button onClick={handleSpectate} type="button">
       Leave Team
     </button>
   );
@@ -34,10 +42,16 @@ export const FencingScoreboard: React.FC<{
       })()
     : null;
 
-  const teamData = _.keys(props.gameState.teams).map((teamId) => ({
-    team: props.gameState.teams[teamId]!,
-    users: _.values(props.gameState.users).filter((user) => String(user.teamId) === teamId),
-  }));
+  const teamData = _.keys(props.gameState.teams)
+    .map((teamId) => {
+      const team = props.gameState.teams[teamId];
+      if (!team) return null;
+      return {
+        team,
+        users: _.values(props.gameState.users).filter((user) => String(user.teamId) === teamId),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
   const currentUser = _.values(props.gameState.users).find((user) => user.id === props.currentUserId);
   const rows: {
     nameEl: React.ReactNode;
@@ -73,11 +87,7 @@ export const FencingScoreboard: React.FC<{
           )}
           {currentUser?.teamId === team.id && spectateButton}
           {currentUser?.teamId === 0 && (
-            <button
-              onClick={() => {
-                props.joinTeam(team.id);
-              }}
-            >
+            <button onClick={handleJoinTeam.bind(null, team.id)} type="button">
               Join Team
             </button>
           )}

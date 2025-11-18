@@ -1,10 +1,11 @@
 import './css/hints.css';
+import type {GridData} from '@crosswithfriends/shared/types';
 import React, {useState, useEffect, useRef, useMemo, useCallback} from 'react';
 
 import {evaluate, findMatches, getPatterns, precompute} from './lib/hintUtils';
 
 interface HintsProps {
-  grid: any;
+  grid: GridData;
   direction: 'across' | 'down';
   num: number;
 }
@@ -12,6 +13,7 @@ interface HintsProps {
 const Hints: React.FC<HintsProps> = ({grid, direction, num}) => {
   const [list, setList] = useState<string[]>([]);
   const [hidden, setHidden] = useState(true);
+  const [scores, setScores] = useState<Record<string, number>>({});
   const scoresRef = useRef<Record<string, number>>({});
   const computingRef = useRef(false);
   const computing2Ref = useRef(false);
@@ -34,15 +36,22 @@ const Hints: React.FC<HintsProps> = ({grid, direction, num}) => {
       // call cbk if there's more work to be done
       let cnt = 0;
       const currentList = [...list];
+      const newScores: Record<string, number> = {};
       for (const word of currentList) {
-        // eslint-disable-next-line no-continue
-        if (word in scoresRef.current) continue;
-        scoresRef.current[word] = evaluate(grid, direction, num, word);
+        if (word in scoresRef.current) {
+          newScores[word] = scoresRef.current[word];
+          continue;
+        }
+        const score = evaluate(grid, direction, num, word);
+        scoresRef.current[word] = score;
+        newScores[word] = score;
         cnt += 1;
         if (cnt >= limit) {
           break;
         }
       }
+      // Update state with new scores
+      setScores((prev) => ({...prev, ...newScores}));
       currentList.sort((a, b) => -((scoresRef.current[a] || -10000) - (scoresRef.current[b] || -10000)));
       setList(currentList);
       if (cnt >= limit) {
@@ -74,6 +83,7 @@ const Hints: React.FC<HintsProps> = ({grid, direction, num}) => {
       findMatches(pattern, (matches: string[]) => {
         setList(matches);
         scoresRef.current = {}; // reset
+        setScores({}); // reset state
         computingRef.current = false;
         startComputing2();
       });
@@ -86,17 +96,42 @@ const Hints: React.FC<HintsProps> = ({grid, direction, num}) => {
     }
   }, [hidden, startComputing]);
 
-  const getScore = useCallback((word: string) => {
-    return scoresRef.current[word] && scoresRef.current[word].toFixed(2);
+  // Move useMemo outside conditional to follow rules of hooks
+  // Use scores state instead of ref to avoid accessing refs during render
+  const matchesList = useMemo(() => {
+    if (!list || list.length === 0) {
+      return null;
+    }
+    return list.slice(0, 100).map((word, i) => {
+      const score = scores[word];
+      const scoreText = score ? score.toFixed(2) : '';
+      return (
+        <div key={`${word}-${i}`} className="hints--matches--entry">
+          <div className="hints--matches--entry--word">{word}</div>
+          <div className="hints--matches--entry--score">{scoreText}</div>
+        </div>
+      );
+    });
+  }, [list, scores]);
+
+  const handlePatternClick = useCallback(() => {
+    setHidden((prev) => !prev);
   }, []);
 
   return (
     <div className="hints">
       <div
         className="hints--pattern"
-        onClick={() => {
-          setHidden((prev) => !prev);
+        onClick={handlePatternClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handlePatternClick();
+          }
         }}
+        role="button"
+        tabIndex={0}
+        aria-label="Toggle hints"
       >
         <span style={{float: 'left'}}>
           Pattern:
@@ -109,18 +144,7 @@ const Hints: React.FC<HintsProps> = ({grid, direction, num}) => {
       </div>
       {!hidden ? (
         <div className="hints--matches">
-          {list && list.length > 0 ? (
-            <div className="hints--matches--entries">
-              {list.slice(0, 100).map((word, i) => (
-                <div key={i} className="hints--matches--entry">
-                  <div className="hints--matches--entry--word">{word}</div>
-                  <div className="hints--matches--entry--score">{getScore(word) || ''}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            'No matches'
-          )}
+          {matchesList ? <div className="hints--matches--entries">{matchesList}</div> : 'No matches'}
         </div>
       ) : null}
     </div>

@@ -1,11 +1,12 @@
 import './css/powerups.css';
-import React, {useEffect, useState} from 'react';
-import {Box, Stack} from '@mui/material';
-
-import _ from 'lodash';
-import Emoji from './Emoji';
 import powerups, {hasExpired, inUse, timeLeft} from '@crosswithfriends/shared/lib/powerups';
+import {Box, Stack} from '@mui/material';
+import _ from 'lodash';
+import React, {useEffect, useState} from 'react';
+
 import type {Powerup} from '../../types/battle';
+
+import Emoji from './Emoji';
 
 interface Props {
   powerups: Powerup[];

@@ -1,1 +1,3 @@
-export const hashGridRow = (row: any, misc: object) => JSON.stringify([row, misc]);
+import type {CellData} from '@crosswithfriends/shared/types';
+
+export const hashGridRow = (row: CellData[], misc: object) => JSON.stringify([row, misc]);

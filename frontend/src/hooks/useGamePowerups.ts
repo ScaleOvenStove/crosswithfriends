@@ -3,9 +3,10 @@
  * Handles powerup spawning intervals and powerup effects
  */
 
-import {useEffect, useRef} from 'react';
-import type {Powerup} from '../types/battle';
 import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
+import {useEffect, useRef} from 'react';
+
+import type {Powerup} from '../types/battle';
 
 interface UseGamePowerupsOptions {
   battlePath: string;
@@ -100,7 +101,7 @@ export function useGamePowerups({
   }, [battlePath, gameState, opponentGameState, battleHook]);
 
   // Handle powerup usage
-  const handleUsePowerup = (powerup: Powerup) => {
+  const _handleUsePowerup = (powerup: Powerup) => {
     if (gameComponentRef.current?.player) {
       const selected = gameComponentRef.current.player.state?.selected;
       try {

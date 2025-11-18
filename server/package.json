@@ -13,7 +13,11 @@
     "start": "tsx server.ts",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
-    "test:coverage": "vitest run --coverage --config vitest.config.ts"
+    "test:coverage": "vitest run --coverage --config vitest.config.ts",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "format": "prettier --write \"**/*.{js,ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json,md}\""
   },
   "dependencies": {
     "@crosswithfriends/shared": "workspace:*",
@@ -27,6 +31,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@tsconfig/node20": "^20.1.6",
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.10.0",
@@ -37,7 +42,11 @@
     "@vitest/coverage-v8": "^4.0.8",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
     "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.10",
     "typescript": "^5.9.3",

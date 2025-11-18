@@ -1,15 +1,15 @@
 import './css/battle.css';
 
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import _ from 'lodash';
-import {Helmet} from 'react-helmet';
-import {Box, Stack} from '@mui/material';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import classnames from 'classnames';
-import {useBattle} from '../hooks/useBattle';
-import redirect from '@crosswithfriends/shared/lib/redirect';
 import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
+import redirect from '@crosswithfriends/shared/lib/redirect';
+import {Box, Stack} from '@mui/material';
+import classnames from 'classnames';
+import _ from 'lodash';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
+import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
+
+import {useBattle} from '../hooks/useBattle';
 
 interface Player {
   name: string;
@@ -83,8 +83,11 @@ const Battle: React.FC = () => {
   useEffect(() => {
     if (startedAt && team !== undefined && games && !redirecting) {
       const self = games[team];
-      setRedirecting(true);
-      redirect(`/beta/game/${self}`);
+      // Use setTimeout to avoid calling setState synchronously in effect
+      setTimeout(() => {
+        setRedirecting(true);
+        redirect(`/beta/game/${self}`);
+      }, 0);
     }
   }, [startedAt, team, games, redirecting]);
 
@@ -150,14 +153,36 @@ const Battle: React.FC = () => {
                 <Box
                   className={buttonClass}
                   sx={{display: 'flex', justifyContent: 'center'}}
-                  onClick={() => !disabled && handleTeamSelect(0)}
+                  onClick={() => {
+                    if (!disabled) handleTeamSelect(0);
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+                      e.preventDefault();
+                      handleTeamSelect(0);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={disabled ? -1 : 0}
+                  aria-label="Select Team 1"
                 >
                   Team 1
                 </Box>
                 <Box
                   className={buttonClass}
                   sx={{display: 'flex', justifyContent: 'center'}}
-                  onClick={() => !disabled && handleTeamSelect(1)}
+                  onClick={() => {
+                    if (!disabled) handleTeamSelect(1);
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+                      e.preventDefault();
+                      handleTeamSelect(1);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={disabled ? -1 : 0}
+                  aria-label="Select Team 2"
                 >
                   Team 2
                 </Box>
@@ -166,7 +191,9 @@ const Battle: React.FC = () => {
                 <input
                   className="battle--input"
                   placeholder="Name..."
-                  onChange={(event) => handleChangeName(event.target.value)}
+                  onChange={(event) => {
+                    handleChangeName(event.target.value);
+                  }}
                 />
               </Box>
               {renderTeams()}
@@ -181,7 +208,18 @@ const Battle: React.FC = () => {
                 <Box
                   className="battle--button"
                   sx={{display: 'flex', justifyContent: 'center'}}
-                  onClick={() => battle.start()}
+                  onClick={() => {
+                    battle.start();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      battle.start();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Start battle"
                 >
                   Start
                 </Box>

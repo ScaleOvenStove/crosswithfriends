@@ -23,7 +23,7 @@ export function isValidFirebasePath(path: string): boolean {
   // However, / is allowed as a path separator, so we check individual segments
   const segments = path.split('/').filter(Boolean);
   for (const segment of segments) {
-    if (/[.$\[\]#]/.test(segment)) {
+    if (/[.$[\]#]/.test(segment)) {
       return false;
     }
   }
@@ -42,7 +42,7 @@ export function isValidGid(gid: string): boolean {
   }
 
   // Gid cannot contain Firebase invalid characters
-  if (/[.$\[\]#\/]/.test(gid)) {
+  if (/[.$[\]#/]/.test(gid)) {
     return false;
   }
 

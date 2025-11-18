@@ -1,7 +1,7 @@
 import {Box, Stack} from '@mui/material';
+import clsx from 'clsx';
 import React from 'react';
 import {Link} from 'react-router-dom';
-import clsx from 'clsx';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -46,7 +46,7 @@ export const WelcomeVariantsControl: React.FC<{
         },
       }}
     >
-      <Box component="span" sx={{fontSize: '200%'}}>
+      <Box component="span" sx={{fontSize: '200%', color: 'text.primary', fontWeight: 600}}>
         Variants
       </Box>
       <Link to="/">
@@ -56,9 +56,9 @@ export const WelcomeVariantsControl: React.FC<{
             selected: !props.fencing,
           })}
           sx={{
-            color: 'gray',
+            color: 'text.secondary',
             '&.selected': {
-              color: 'blue',
+              color: 'primary.main',
             },
           }}
         >
@@ -73,16 +73,28 @@ export const WelcomeVariantsControl: React.FC<{
               selected: !!props.fencing,
             })}
             sx={{
-              color: 'gray',
+              color: 'text.secondary',
               '&.selected': {
-                color: 'blue',
+                color: 'primary.main',
               },
             }}
           >
             Fencing
           </Box>
         </Link>
-        <span className="nav--info" onClick={showFencingInfo}>
+        <span
+          className="nav--info"
+          onClick={showFencingInfo}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              showFencingInfo();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Show fencing information"
+        >
           <i className="fa fa-info-circle" />
         </span>
       </Box>
