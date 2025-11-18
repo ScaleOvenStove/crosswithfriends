@@ -8,7 +8,7 @@ import type {UpdateCursorEvent} from '@shared/fencingGameEvents/eventDefs/update
 import type {UpdateDisplayNameEvent} from '@shared/fencingGameEvents/eventDefs/updateDisplayName';
 import type {UpdateTeamIdEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamId';
 import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamName';
-import type {GameJson} from '@shared/types';
+import type {CellIndex, GameJson} from '@shared/types';
 import _ from 'lodash';
 
 import {makeGrid} from '../gameUtils';
@@ -32,7 +32,12 @@ export async function getGameInfo(gid: string): Promise<GameJson['info']> {
   ]);
   if (res.rowCount != 1) {
     logger.warn(`Could not find info for game ${gid}`);
-    return {};
+    return {
+      title: '',
+      author: '',
+      copyright: '',
+      description: '',
+    };
   }
 
   const info = res.rows[0].event_payload.params.game.info;
@@ -223,7 +228,7 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
         grid,
         solution,
         clues,
-        circles: circlesAsCellIndices.length > 0 ? (circlesAsCellIndices as unknown as number[]) : undefined, // CellIndex is a branded type, safe to cast here
+        circles: circlesAsCellIndices.length > 0 ? (circlesAsCellIndices as CellIndex[]) : undefined, // CellIndex is a branded type, safe to cast here
       },
     },
   };

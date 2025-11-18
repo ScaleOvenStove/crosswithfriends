@@ -208,6 +208,6 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
 
 export async function getPuzzleInfo(pid: string): Promise<PuzzleJson['info']> {
   const puzzle = await getPuzzle(pid);
-  const {info = {}} = puzzle;
+  const {info = {title: '', author: '', copyright: '', description: ''}} = puzzle;
   return info;
 }
