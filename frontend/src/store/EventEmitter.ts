@@ -1,8 +1,10 @@
 // Simple EventEmitter implementation for browser environment
-export default class EventEmitter {
-  private listeners: Map<string, ((...args: any[]) => void)[]> = new Map();
+type EventListener = (...args: unknown[]) => void;
 
-  on(event: string, listener: (...args: any[]) => void): this {
+export default class EventEmitter {
+  private listeners: Map<string, EventListener[]> = new Map();
+
+  on(event: string, listener: EventListener): this {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
@@ -10,15 +12,15 @@ export default class EventEmitter {
     return this;
   }
 
-  once(event: string, listener: (...args: any[]) => void): this {
-    const onceWrapper = (...args: any[]) => {
+  once(event: string, listener: EventListener): this {
+    const onceWrapper: EventListener = (...args: unknown[]) => {
       this.off(event, onceWrapper);
       listener(...args);
     };
     return this.on(event, onceWrapper);
   }
 
-  off(event: string, listener: (...args: any[]) => void): this {
+  off(event: string, listener: EventListener): this {
     const listeners = this.listeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener);
@@ -29,7 +31,7 @@ export default class EventEmitter {
     return this;
   }
 
-  emit(event: string, ...args: any[]): boolean {
+  emit(event: string, ...args: unknown[]): boolean {
     const listeners = this.listeners.get(event);
     if (listeners && listeners.length > 0) {
       listeners.forEach((listener) => {
@@ -40,11 +42,11 @@ export default class EventEmitter {
     return false;
   }
 
-  removeListener(event: string, listener: (...args: any[]) => void): this {
+  removeListener(event: string, listener: EventListener): this {
     return this.off(event, listener);
   }
 
-  addListener(event: string, listener: (...args: any[]) => void): this {
+  addListener(event: string, listener: EventListener): this {
     return this.on(event, listener);
   }
 }

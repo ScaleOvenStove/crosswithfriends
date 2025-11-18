@@ -10,7 +10,7 @@ import puzzleListRouter from './puzzle_list.js';
 import recordSolveRouter from './record_solve.js';
 import statsRouter from './stats.js';
 
-async function apiRouter(fastify: FastifyInstance) {
+async function apiRouter(fastify: FastifyInstance): Promise<void> {
   await fastify.register(healthRouter, {prefix: '/health'});
   await fastify.register(puzzleListRouter, {prefix: '/puzzle_list'});
   await fastify.register(puzzleRouter, {prefix: '/puzzle'});

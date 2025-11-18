@@ -2,7 +2,7 @@ import gameReducer from '@crosswithfriends/shared/fencingGameEvents/gameReducer'
 import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
 import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
 import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
-import {useRef, useState} from 'react';
+import {useRef, useState, useEffect} from 'react';
 
 export type GameEventsHook = {
   gameState: GameState;
@@ -24,21 +24,33 @@ const makeHistoryWrappper = (events: GameEvent[]): HistoryWrapper => {
 export const useGameEvents = (): GameEventsHook => {
   const historyWrapperRef = useRef<HistoryWrapper>(makeHistoryWrappper([]));
   const serverTimeOffsetRef = useRef<number>(0);
-  const [, setVersion] = useState(0);
+  const [version, setVersion] = useState(0);
+
+  // Initialize with empty state to avoid ref access during render
+  const [gameState, setGameState] = useState<GameState>(() => {
+    const initialWrapper = makeHistoryWrappper([]);
+    return initialWrapper.getSnapshot();
+  });
+
+  // Update gameState when version changes
+  useEffect(() => {
+    setGameState(historyWrapperRef.current.getSnapshot());
+  }, [version]);
+
   return {
-    gameState: historyWrapperRef.current.getSnapshot(),
+    gameState,
     setEvents(events) {
       historyWrapperRef.current = makeHistoryWrappper(events);
-      setVersion((version) => version + 1);
+      setVersion((v) => v + 1);
     },
     addEvent(event) {
       serverTimeOffsetRef.current = event.timestamp! - Date.now();
       historyWrapperRef.current.addEvent(event);
-      setVersion((version) => version + 1);
+      setVersion((v) => v + 1);
     },
     addOptimisticEvent(event) {
       historyWrapperRef.current.addOptimisticEvent(event);
-      setVersion((version) => version + 1);
+      setVersion((v) => v + 1);
     },
     getServerTime() {
       return Date.now() + serverTimeOffsetRef.current;

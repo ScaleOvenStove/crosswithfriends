@@ -5,6 +5,8 @@ import _ from 'lodash';
 import {create} from 'zustand';
 
 import actions from '../actions';
+import type {Powerup} from '../types/battle';
+import type {RawGame} from '../types/rawGame';
 
 import {db, type DatabaseReference} from './firebase';
 import {usePuzzleStore} from './puzzleStore';
@@ -32,12 +34,12 @@ interface BattleStore {
   addPlayer: (path: string, name: string, team: number) => void;
   removePlayer: (path: string, name: string, team: number) => void;
   usePowerup: (path: string, type: string, team: number) => void;
-  checkPickups: (path: string, r: number, c: number, game: any, team: number) => void;
+  checkPickups: (path: string, r: number, c: number, game: RawGame, team: number) => void;
   countLivePickups: (path: string, cbk: (count: number) => void) => void;
-  spawnPowerups: (path: string, n: number, games: any[], cbk?: () => void) => void;
+  spawnPowerups: (path: string, n: number, games: RawGame[], cbk?: () => void) => void;
   initialize: (path: string, pid: number, bid: number, teams?: number) => void;
-  subscribe: (path: string, event: string, callback: (...args: any[]) => void) => () => void;
-  once: (path: string, event: string, callback: (...args: any[]) => void) => () => void; // Subscribe once, auto-unsubscribe after first call
+  subscribe: (path: string, event: string, callback: (...args: unknown[]) => void) => () => void;
+  once: (path: string, event: string, callback: (...args: unknown[]) => void) => () => void; // Subscribe once, auto-unsubscribe after first call
 }
 
 export const useBattleStore = create<BattleStore>((setState, getState) => {
@@ -250,7 +252,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       get(ref(db, `${path}/powerups`)).then((snapshot) => {
         const allPowerups = snapshot.val();
         const ownPowerups = allPowerups[team];
-        const toUse = _.find(ownPowerups, (powerup: any) => powerup.type === type && !powerup.used);
+        const toUse = _.find(ownPowerups, (powerup: Powerup) => powerup.type === type && !powerup.used);
         if (toUse) {
           emit(path, 'usePowerup', toUse);
           toUse.used = Date.now();
@@ -338,7 +340,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
     countLivePickups: (path: string, cbk: (count: number) => void) => {
       get(ref(db, `${path}/pickups`)).then((snapshot) => {
         const pickups = snapshot.val();
-        const live = _.filter(pickups, (p: any) => !p.pickedUp);
+        const live = _.filter(pickups, (p: {pickedUp?: boolean}) => !p.pickedUp);
         cbk(live.length);
       });
     },
@@ -365,7 +367,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
         }));
 
         Promise.all(
-          pickups.map((pickup: any) => {
+          pickups.map((pickup: {i: number; j: number; type: string}) => {
             return push(ref(db, `${path}/pickups`), pickup).then(() => {});
           })
         ).then(() => {

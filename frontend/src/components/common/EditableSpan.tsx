@@ -20,7 +20,7 @@ interface Props {
   style?: React.CSSProperties;
   containerStyle?: React.CSSProperties;
   className?: string;
-  key_?: string;
+  keyProp?: string;
 }
 
 export type EditableSpanRef = {
@@ -30,7 +30,7 @@ export type EditableSpanRef = {
 const EditableSpan = forwardRef<EditableSpanRef, Props>((props, ref) => {
   const spanRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
-  const prevKeyRef = useRef<string | undefined>(props.key_);
+  const prevKeyRef = useRef<string | undefined>(props.keyProp);
   const caretStartRef = useRef<number>(0);
 
   useImperativeHandle(ref, () => ({
@@ -41,18 +41,20 @@ const EditableSpan = forwardRef<EditableSpanRef, Props>((props, ref) => {
     },
   }));
 
+  const {value: propValue, hidden, onChange, onBlur, onUnfocus, keyProp} = props;
+
   const displayValue = useMemo(() => {
-    const {value = '(blank)'} = props;
+    const value = propValue ?? '(blank)';
     let result = value;
     const nbsp = String.fromCharCode(160);
     while (result.indexOf(' ') !== -1) {
       result = result.replace(' ', nbsp);
     }
     return result;
-  }, [props.value]);
+  }, [propValue]);
 
   const getText = useCallback((): string => {
-    if (props.hidden) return '';
+    if (hidden) return '';
     if (!spanRef.current) return '';
     let result = spanRef.current.textContent || '';
     const nbsp = String.fromCharCode(160);
@@ -61,18 +63,18 @@ const EditableSpan = forwardRef<EditableSpanRef, Props>((props, ref) => {
     }
     while (result.startsWith(' ')) result = result.substring(1);
     return result;
-  }, [props.hidden]);
+  }, [hidden]);
 
   const setText = useCallback(
     (val: string) => {
-      if (props.hidden) return;
+      if (hidden) return;
       if (getText() === val) return;
       // set text while retaining cursor position
       if (spanRef.current) {
         spanRef.current.innerHTML = val;
       }
     },
-    [props.hidden, getText]
+    [hidden, getText]
   );
 
   useEffect(() => {
@@ -80,32 +82,38 @@ const EditableSpan = forwardRef<EditableSpanRef, Props>((props, ref) => {
   }, [displayValue, setText]);
 
   useEffect(() => {
-    if (prevKeyRef.current !== props.key_ || !focused) {
+    if (prevKeyRef.current !== keyProp || !focused) {
       setText(displayValue);
       if (spanRef.current && focused) {
-        const currentCaret = new Caret(spanRef.current.childNodes[0] as any);
-        if (caretStartRef.current !== currentCaret.startPosition) {
-          currentCaret.startPosition = caretStartRef.current;
+        const firstChild = spanRef.current.childNodes[0];
+        if (firstChild) {
+          const currentCaret = new Caret(firstChild as Node);
+          if (caretStartRef.current !== currentCaret.startPosition) {
+            currentCaret.startPosition = caretStartRef.current;
+          }
         }
       }
     }
-    prevKeyRef.current = props.key_;
-  }, [props.key_, displayValue, focused, setText]);
+    prevKeyRef.current = keyProp;
+  }, [keyProp, displayValue, focused, setText]);
 
   const handleFocus = useCallback((): void => {
     setFocused(true);
     if (spanRef.current) {
-      const currentCaret = new Caret(spanRef.current.childNodes[0] as any);
-      caretStartRef.current = currentCaret.startPosition;
+      const firstChild = spanRef.current.childNodes[0];
+      if (firstChild) {
+        const currentCaret = new Caret(firstChild as Node);
+        caretStartRef.current = currentCaret.startPosition;
+      }
     }
   }, []);
 
   const handleBlur = useCallback((): void => {
     setFocused(false);
-    if (props.onBlur) {
-      props.onBlur();
+    if (onBlur) {
+      onBlur();
     }
-  }, [props.onBlur]);
+  }, [onBlur]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
@@ -114,34 +122,42 @@ const EditableSpan = forwardRef<EditableSpanRef, Props>((props, ref) => {
       }
       e.stopPropagation();
       if (e.key === 'Enter' || e.key === 'Escape') {
-        props.onChange(getText());
+        onChange(getText());
         e.preventDefault();
         setTimeout(() => {
-          if (props.onUnfocus) {
-            props.onUnfocus();
+          if (onUnfocus) {
+            onUnfocus();
           }
         }, 100);
       }
     },
-    [props.onChange, props.onUnfocus, getText]
+    [onChange, onUnfocus, getText]
   );
 
-  const handleKeyUp = useMemo(
-    () =>
-      _.debounce(() => {
-        if (props.hidden || !spanRef.current) return;
-        let result = spanRef.current.textContent || '';
-        const nbsp = String.fromCharCode(160);
-        while (result.indexOf(nbsp) !== -1) {
-          result = result.replace(nbsp, ' ');
-        }
-        while (result.startsWith(' ')) result = result.substring(1);
-        props.onChange(result);
-      }, 500),
-    [props.onChange, props.hidden]
-  );
+  const debouncedHandleKeyUpRef = useRef<_.DebouncedFunc<() => void>>();
 
-  const {hidden, style, containerStyle, className} = props;
+  useEffect(() => {
+    debouncedHandleKeyUpRef.current = _.debounce(() => {
+      if (hidden || !spanRef.current) return;
+      let result = spanRef.current.textContent || '';
+      const nbsp = String.fromCharCode(160);
+      while (result.indexOf(nbsp) !== -1) {
+        result = result.replace(nbsp, ' ');
+      }
+      while (result.startsWith(' ')) result = result.substring(1);
+      onChange(result);
+    }, 500);
+
+    return () => {
+      debouncedHandleKeyUpRef.current?.cancel();
+    };
+  }, [onChange, hidden]);
+
+  const handleKeyUp = useCallback(() => {
+    debouncedHandleKeyUpRef.current?.();
+  }, []);
+
+  const {style, containerStyle, className} = props;
   if (hidden) return null;
 
   return (

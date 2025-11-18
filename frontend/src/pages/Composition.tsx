@@ -57,10 +57,9 @@ const Composition: React.FC = () => {
     },
   });
 
-  const [composition, setComposition] = useState(() => {
-    if (!historyWrapperRef.current) return null;
-    return historyWrapperRef.current.getSnapshot();
-  });
+  const [composition, setComposition] = useState<ReturnType<ComposeHistoryWrapper['getSnapshot']> | null>(
+    null
+  );
 
   const handleUpdate = useRef<_.DebouncedFunc<() => void>>();
   useEffect(() => {
@@ -96,13 +95,20 @@ const Composition: React.FC = () => {
         }
       );
     }
-  }, [cid, user.id]);
+  }, [cid, user]);
 
   useEffect(() => {
     if (historyWrapperRef.current) {
       setComposition(historyWrapperRef.current.getSnapshot());
     }
   }, [forceUpdate]);
+
+  // Initialize composition when historyWrapper is ready
+  useEffect(() => {
+    if (historyWrapperRef.current && !composition) {
+      setComposition(historyWrapperRef.current.getSnapshot());
+    }
+  }, [composition]);
 
   const handleUpdateGrid = useCallback(
     (r: number, c: number, value: string): void => {
@@ -128,7 +134,10 @@ const Composition: React.FC = () => {
   );
 
   const handleUploadSuccess = useCallback(
-    (puzzle: any, filename: string = ''): void => {
+    (
+      puzzle: {info: unknown; grid: unknown; circles: unknown; clues: unknown},
+      filename: string = ''
+    ): void => {
       const {info, grid, circles, clues} = puzzle;
       const convertedGrid = convertGridForComposition(grid);
       const gridObject = makeGridFromComposition(convertedGrid);
@@ -205,9 +214,7 @@ const Composition: React.FC = () => {
 
   const handleAutofill = useCallback((): void => {
     if (!composition) return;
-    console.log('c.grid', composition.grid);
     const grid = xwordFiller.fillGrid(composition.grid);
-    console.log('grid', grid);
     compositionHook.setGrid(grid);
   }, [composition, compositionHook]);
 
@@ -251,7 +258,6 @@ const Composition: React.FC = () => {
     const puzzle = {grid, clues, info};
 
     actions.createPuzzle(puzzle, (pid: number) => {
-      console.log('Puzzle path: ', `/beta/play/${pid}`);
       redirect(`/beta/play/${pid}`);
     });
   }, [composition]);
@@ -325,7 +331,7 @@ const Composition: React.FC = () => {
           <div className="chat--header">
             <EditableSpan
               className="chat--header--title"
-              key_="title"
+              keyProp="title"
               onChange={handleUpdateTitle}
               onBlur={handleUnfocusHeader}
               value={compTitle}
@@ -333,7 +339,7 @@ const Composition: React.FC = () => {
 
             <EditableSpan
               className="chat--header--subtitle"
-              key_="author"
+              keyProp="author"
               onChange={handleUpdateAuthor}
               onBlur={handleUnfocusHeader}
               value={author}
@@ -350,7 +356,7 @@ const Composition: React.FC = () => {
             onClearPencil={handleClearPencil}
             onUpdateClue={handleUpdateClue}
             onUpdateCursor={handleUpdateCursor}
-            onChange={(...args) => handleChangeRef.current?.(...args)}
+            onChange={(options) => handleChangeRef.current?.(options)}
             onFlipColor={handleFlipColor}
             onPublish={handlePublish}
             onChangeRows={handleChangeRows}

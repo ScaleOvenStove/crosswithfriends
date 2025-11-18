@@ -60,46 +60,54 @@ const ActionMenu: React.FC<Props> = ({label, actions, onBlur}) => {
     [actions, handleBlur]
   );
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
   return (
     <div ref={containerRef} className={`${active ? 'active ' : ''}action-menu`}>
       <button
         tabIndex={-1}
         className="action-menu--button"
-        onMouseDown={(e) => {
-          e.preventDefault();
-        }}
+        onMouseDown={handleMouseDown}
         onClick={handleClick}
       >
         {label}
       </button>
       <div className="action-menu--list">
-        {Object.keys(actions).map((key, i) => (
-          <div
-            key={i}
-            className="action-menu--list--action"
-            tabIndex={-1}
-            onPointerDown={(ev) => {
-              ev.stopPropagation();
-            }}
-            onMouseDown={(ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              handleAction(key);
-            }}
-            onClick={(ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              handleAction(key);
-            }}
-            onTouchStart={(ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              handleAction(key);
-            }}
-          >
-            <span> {key} </span>
-          </div>
-        ))}
+        {Object.keys(actions).map((key, i) => {
+          const handlePointerDownLocal = (ev: React.PointerEvent) => {
+            ev.stopPropagation();
+          };
+          const handleMouseDownLocal = (ev: React.MouseEvent) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            handleAction(key);
+          };
+          const handleClickLocal = (ev: React.MouseEvent) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            handleAction(key);
+          };
+          const handleTouchStartLocal = (ev: React.TouchEvent) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            handleAction(key);
+          };
+          return (
+            <div
+              key={i}
+              className="action-menu--list--action"
+              tabIndex={-1}
+              onPointerDown={handlePointerDownLocal}
+              onMouseDown={handleMouseDownLocal}
+              onClick={handleClickLocal}
+              onTouchStart={handleTouchStartLocal}
+            >
+              <span> {key} </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

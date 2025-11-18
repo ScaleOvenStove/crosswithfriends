@@ -36,26 +36,25 @@ class SocketManager {
     this.io = io;
   }
 
-  async addGameEvent(gid: string, event: SocketEvent) {
+  async addGameEvent(gid: string, event: SocketEvent): Promise<void> {
     const gameEvent: GameEvent = assignTimestamp(event) as GameEvent;
     await addGameEvent(gid, gameEvent);
     this.io.to(`game-${gid}`).emit('game_event', gameEvent);
   }
 
-  async addRoomEvent(rid: string, event: SocketEvent) {
+  async addRoomEvent(rid: string, event: SocketEvent): Promise<void> {
     const roomEvent: RoomEvent = assignTimestamp(event) as RoomEvent;
     await addRoomEvent(rid, roomEvent);
     this.io.to(`room-${rid}`).emit('room_event', roomEvent);
   }
 
-  listen() {
+  listen(): void {
     this.io.on('connection', (socket) => {
       // ======== Ping/Pong for Latency Measurement ========= //
       // Use 'latency_ping' to avoid conflict with Socket.IO's internal 'ping' event
       socket.on('latency_ping', (clientTimestamp: number) => {
         try {
           if (typeof clientTimestamp !== 'number' || isNaN(clientTimestamp)) {
-            // eslint-disable-next-line no-console
             console.warn('[socket] Invalid latency_ping timestamp:', clientTimestamp);
             return;
           }
@@ -65,7 +64,6 @@ class SocketManager {
           // eslint-disable-next-line no-console
           console.log('[socket] Received latency_ping, responding with latency:', latency, 'ms');
         } catch (error) {
-          // eslint-disable-next-line no-console
           console.error('[socket] Error handling latency_ping:', error);
         }
       });

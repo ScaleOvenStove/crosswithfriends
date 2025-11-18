@@ -1,5 +1,5 @@
 import './css/Popup.css';
-import React, {useState, useRef, useEffect, ReactNode} from 'react';
+import React, {useState, useRef, useEffect, ReactNode, useCallback} from 'react';
 
 /**
  * A popup menu component that displays a button and toggles visibility of its children.
@@ -24,14 +24,18 @@ const Popup: React.FC<Props> = ({icon, label, onBlur, children}) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const handleClick = (): void => {
+  const handleClick = useCallback((): void => {
     setActive((prev) => !prev);
-  };
+  }, []);
 
-  const handleBlur = (): void => {
+  const handleBlur = useCallback((): void => {
     setActive(false);
     onBlur();
-  };
+  }, [onBlur]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
 
   // Position popup to stay on screen
   useEffect(() => {
@@ -87,9 +91,7 @@ const Popup: React.FC<Props> = ({icon, label, onBlur, children}) => {
         ref={buttonRef}
         tabIndex={-1}
         className={`popup-menu--button fa ${icon ? icon : ''}`}
-        onMouseDown={(e) => {
-          e.preventDefault();
-        }}
+        onMouseDown={handleMouseDown}
         onClick={handleClick}
       >
         {label ? label : ''}

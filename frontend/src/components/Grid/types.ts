@@ -52,5 +52,6 @@ export type ClueCoords = {
   num: number;
 };
 
-// XXX fixme
-export type BattlePickup = any;
+import type {Pickup} from '../../types/battle';
+
+export type BattlePickup = Pickup;

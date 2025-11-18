@@ -227,12 +227,15 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     setSnackbarOpen(true);
   }, [props.users, props.game, serverUrl]);
 
-  const handleShareScoreKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleShareScoreClick();
-    }
-  }, [handleShareScoreClick]);
+  const handleShareScoreKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleShareScoreClick();
+      }
+    },
+    [handleShareScoreClick]
+  );
 
   const handleDismissShareMessage = useCallback(() => {
     setShowShareMessage(false);
@@ -256,12 +259,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
   const getMessageColor = useCallback(
     (senderId: string, isOpponent?: boolean) => {
-      const {users, teams} = props;
+      const {users: allUsers, teams} = props;
       if (isOpponent === undefined) {
-        if (users[senderId]?.teamId) {
-          return teams?.[users[senderId].teamId]?.color;
+        if (allUsers[senderId]?.teamId) {
+          return teams?.[allUsers[senderId].teamId]?.color;
         }
-        return users[senderId]?.color;
+        return allUsers[senderId]?.color;
       }
       return isOpponent ? 'rgb(220, 107, 103)' : 'rgb(47, 137, 141)';
     },
@@ -364,14 +367,17 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     );
   }, [header, info, game.info, bid, mobile, collapsed, renderFencingOptions, handleToggleChat]);
 
-  const handleUsernameChange = useCallback((newValue: string) => {
-    isEditingRef.current = true;
-    handleUpdateDisplayName(newValue);
-    // Reset editing flag after a delay
-    setTimeout(() => {
-      isEditingRef.current = false;
-    }, 1000);
-  }, [handleUpdateDisplayName]);
+  const handleUsernameChange = useCallback(
+    (newValue: string) => {
+      isEditingRef.current = true;
+      handleUpdateDisplayName(newValue);
+      // Reset editing flag after a delay
+      setTimeout(() => {
+        isEditingRef.current = false;
+      }, 1000);
+    },
+    [handleUpdateDisplayName]
+  );
 
   const handleUsernameBlur = useCallback(() => {
     isEditingRef.current = false;
@@ -401,12 +407,20 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         />
       </div>
     );
-  }, [props.hideChatBar, props.myColor, username, handleUpdateColor, handleUsernameChange, handleUsernameBlur, handleUsernameUnfocus]);
+  }, [
+    props.hideChatBar,
+    props.myColor,
+    username,
+    handleUpdateColor,
+    handleUsernameChange,
+    handleUsernameBlur,
+    handleUsernameUnfocus,
+  ]);
 
-  const renderUserPresent = useCallback((id: string, displayName: string, color?: string) => {
-    const style = color ? {color} : undefined;
+  const renderUserPresent = useCallback((userId: string, displayName: string, userColor?: string) => {
+    const style = userColor ? {color: userColor} : undefined;
     return (
-      <span key={id} style={style}>
+      <span key={userId} style={style}>
         <span className="dot">{'\u25CF'}</span>
         {displayName}{' '}
       </span>
@@ -414,10 +428,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   }, []);
 
   const renderUsersPresent = useCallback(
-    (users: Record<string, {displayName: string; color?: string}>) => {
+    (usersList: Record<string, {displayName: string; color?: string}>) => {
       return props.hideChatBar ? null : (
         <div className="chat--users--present">
-          {Object.keys(users).map((id) => renderUserPresent(id, users[id].displayName, users[id].color))}
+          {Object.keys(usersList).map((userId) =>
+            renderUserPresent(userId, usersList[userId].displayName, usersList[userId].color)
+          )}
         </div>
       );
     },
@@ -444,9 +460,9 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     );
   }, []);
 
-  const renderMessageSender = useCallback((name: string, color?: string) => {
+  const renderMessageSender = useCallback((name: string, messageColor?: string) => {
     // Always apply color if provided, otherwise use default text color
-    const style = color ? {color} : {color: '#333'};
+    const style = messageColor ? {color: messageColor} : {color: '#333'};
     return (
       <span className="chat--message--sender" style={style}>
         {name}:
@@ -471,14 +487,18 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       const clues = isAcross ? game.clues['across'] : game.clues['down'];
 
       if (clueNumber >= 0 && clueNumber < clues.length && clues[clueNumber] !== undefined) {
-        const handleClick = () => {
+        const handleClueRefClick = () => {
           const directionStr = isAcross ? 'across' : 'down';
           if (onSelectClue) {
             onSelectClue(directionStr, clueNumber);
           }
         };
 
-        return <button onClick={handleClick}> {defaultPattern} </button>;
+        return (
+          <button onClick={handleClueRefClick} type="button">
+            {defaultPattern}
+          </button>
+        );
       } else {
         return defaultPattern;
       }
@@ -530,16 +550,21 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       return (
         <span className="chat--message--text">
           {tokens.map((token, i) => {
-            const tokenKey = token.type === 'clueref' ? `clueref-${(token.data as string[]).join('-')}` : `${token.type}-${i}-${token.data}`;
+            const tokenKey =
+              token.type === 'clueref'
+                ? `clueref-${(token.data as string[]).join('-')}`
+                : `${token.type}-${i}-${token.data}`;
+            let tokenContent: React.ReactNode;
+            if (token.type === 'emoji') {
+              tokenContent = <Emoji emoji={token.data as string} big={bigEmoji} />;
+            } else if (token.type === 'clueref') {
+              tokenContent = renderClueRef(token.data as string[]);
+            } else {
+              tokenContent = token.data;
+            }
             return (
               <React.Fragment key={tokenKey}>
-                {token.type === 'emoji' ? (
-                  <Emoji emoji={token.data as string} big={bigEmoji} />
-                ) : token.type === 'clueref' ? (
-                  renderClueRef(token.data as string[])
-                ) : (
-                  token.data
-                )}
+                {tokenContent}
                 {token.type !== 'emoji' && ' '}
               </React.Fragment>
             );
@@ -561,11 +586,11 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
   const renderMessage = useCallback(
     (message: {text: string; senderId: string; isOpponent?: boolean; timestamp: number}) => {
-      const {text, senderId: id, isOpponent, timestamp} = message;
+      const {text, senderId, isOpponent, timestamp} = message;
       const big = text.length <= 10 && isEmojis(text);
-      const color = getMessageColor(id, isOpponent);
-      const users = props.users;
-      const displayName = users[id]?.displayName ?? 'Unknown';
+      const messageColor = getMessageColor(senderId, isOpponent);
+      const allUsers = props.users;
+      const displayName = allUsers[senderId]?.displayName ?? 'Unknown';
       const avatarInitials = getAvatarInitials(displayName);
 
       return (
@@ -585,7 +610,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              backgroundColor: color || '#6aa9f4',
+              backgroundColor: messageColor || '#6aa9f4',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -603,7 +628,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
               className="chat--message--content"
               style={{display: 'flex', gap: '6px', alignItems: 'baseline'}}
             >
-              {renderMessageSender(displayName, color)}
+              {renderMessageSender(displayName, messageColor)}
               {renderMessageText(message.text)}
             </div>
             <div
@@ -640,12 +665,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
   const renderChatSubheader = useCallback(() => {
     if (props.subheader) return props.subheader;
-    const users = props.users;
+    const allUsers = props.users;
 
     return (
       <>
         {renderUsernameInput()}
-        {renderUsersPresent(users)}
+        {renderUsersPresent(allUsers)}
       </>
     );
   }, [props.subheader, props.users, renderUsernameInput, renderUsersPresent]);
@@ -653,6 +678,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   const messages = useMemo(() => {
     return mergeMessages(props.data, props.opponentData);
   }, [props.data, props.opponentData, mergeMessages]);
+
+  const handleMessagesRef = useCallback((el: HTMLDivElement | null) => {
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
 
   // Auto-dismiss share message after 30 seconds
   useEffect(() => {
@@ -662,6 +693,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       }, 30000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [showShareMessage]);
 
   // Dismiss share message when first message is sent
@@ -697,11 +729,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         {renderChatHeader()}
         {renderChatSubheader()}
         <div
-          ref={(el) => {
-            if (el) {
-              el.scrollTop = el.scrollHeight;
-            }
-          }}
+          ref={handleMessagesRef}
           className="chat--messages"
         >
           {showShareMessage && (

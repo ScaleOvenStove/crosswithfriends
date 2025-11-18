@@ -47,7 +47,6 @@ function subscribeToRoomEvents(
   }
   function unsubscribe() {
     if (!socket) return;
-    console.log('unsubscribing from room events...');
     // Remove the event listener to prevent memory leaks
     socket.off('room_event', roomEventHandler);
     emitAsync(socket, 'leave_room', rid);
@@ -68,19 +67,32 @@ export function useRoom(options: UseRoomOptions): UseRoomReturn {
   useEffect(() => {
     if (!socket) return;
 
-    setEvents([]);
-    setLoading(true);
+    let mounted = true;
+    // Use setTimeout to avoid calling setState synchronously in effect
+    setTimeout(() => {
+      if (mounted) {
+        setLoading(true);
+      }
+    }, 0);
     const {syncPromise, unsubscribe} = subscribeToRoomEvents(socket, rid, setEvents);
     syncPromise
       .then(() => {
-        setLoading(false);
+        if (mounted) {
+          setEvents([]);
+          setLoading(false);
+        }
       })
       .catch((err) => {
-        setError(err instanceof Error ? err : new Error('Failed to sync room events'));
-        setLoading(false);
+        if (mounted) {
+          setError(err instanceof Error ? err : new Error('Failed to sync room events'));
+          setLoading(false);
+        }
       });
 
-    return unsubscribe;
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, [rid, socket]);
 
   useEffect(() => {

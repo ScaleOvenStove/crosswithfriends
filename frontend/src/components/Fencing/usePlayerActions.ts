@@ -29,7 +29,7 @@ export const usePlayerActions = (dispatch: DispatchFn, id: string): PlayerAction
     }, 10);
   },
   addPing() {},
-  updateTeamName(name: string) {
+  updateTeamName(_name: string) {
     dispatch({type: 'updateTeamName', params: {}});
   },
   startGame() {

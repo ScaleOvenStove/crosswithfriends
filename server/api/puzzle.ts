@@ -4,7 +4,7 @@ import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import {addPuzzle} from '../model/puzzle.js';
 
 // eslint-disable-next-line require-await
-async function puzzleRouter(fastify: FastifyInstance) {
+async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: AddPuzzleRequest; Reply: AddPuzzleResponse}>(
     '/',
     async (request: FastifyRequest<{Body: AddPuzzleRequest}>, _reply: FastifyReply) => {

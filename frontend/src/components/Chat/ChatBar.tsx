@@ -20,7 +20,7 @@ const ChatBar = forwardRef<ChatBarRef, ChatBarProps>(({mobile, onSendMessage, on
   const [escapedEmoji, setEscapedEmoji] = useState<string | null>(null);
   const [_enters, setEnters] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const emojiPickerRef = useRef<any>(null);
+  const emojiPickerRef = useRef<{handleKeyDown: (e: React.KeyboardEvent) => void} | null>(null);
 
   useImperativeHandle(ref, () => ({
     focus: () => {

@@ -2,7 +2,7 @@ import powerups from '@crosswithfriends/shared/lib/powerups';
 import {Tooltip} from '@mui/material';
 import clsx from 'clsx';
 import * as _ from 'lodash';
-import React from 'react';
+import React, {useCallback} from 'react';
 
 import Emoji from '../common/Emoji';
 
@@ -78,16 +78,19 @@ const Cell: React.FC<Props> = (props) => {
     );
   };
 
+  const handleFlipClick = useCallback((e: React.MouseEvent) => {
+    const {onFlipColor, r, c} = props;
+    e.stopPropagation();
+    onFlipColor?.(r, c);
+  }, [props]);
+
   const renderFlipButton = () => {
-    const {canFlipColor, onFlipColor, r, c} = props;
+    const {canFlipColor} = props;
     if (canFlipColor) {
       return (
         <i
           className="cell--flip fa fa-small fa-sticky-note"
-          onClick={(e) => {
-            e.stopPropagation();
-            onFlipColor?.(r, c);
-          }}
+          onClick={handleFlipClick}
         />
       );
     }
@@ -148,15 +151,15 @@ const Cell: React.FC<Props> = (props) => {
     return {backgroundColor: attributionColor};
   };
 
-  const handleClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
+  const handleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>((e) => {
     e.preventDefault?.();
     props.onClick(props.r, props.c);
-  };
+  }, [props]);
 
-  const handleRightClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
+  const handleRightClick = useCallback<React.MouseEventHandler<HTMLDivElement>>((e) => {
     e.preventDefault?.();
     props.onContextMenu(props.r, props.c);
-  };
+  }, [props]);
 
   const {
     black,

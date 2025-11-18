@@ -4,7 +4,7 @@ import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import {incrementGid, incrementPid} from '../model/counters.js';
 
 // eslint-disable-next-line require-await
-async function countersRouter(fastify: FastifyInstance) {
+async function countersRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Reply: IncrementGidResponse}>(
     '/gid',
     async (request: FastifyRequest, _reply: FastifyReply) => {

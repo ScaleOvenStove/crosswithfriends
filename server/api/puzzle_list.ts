@@ -18,7 +18,7 @@ interface PuzzleListQuery {
 }
 
 // eslint-disable-next-line require-await
-async function puzzleListRouter(fastify: FastifyInstance) {
+async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzleResponse}>(
     '/',
     async (request: FastifyRequest<{Querystring: PuzzleListQuery}>, _reply: FastifyReply) => {

@@ -1,5 +1,17 @@
 import _ from 'lodash';
 
+// Safe while loop to prevent infinite loops
+const safe_while = (condition, step, maxIterations = 1000) => {
+  let iterations = 0;
+  while (condition() && iterations < maxIterations) {
+    step();
+    iterations++;
+  }
+  if (iterations >= maxIterations) {
+    console.warn('safe_while: Maximum iterations reached');
+  }
+};
+
 export const getOppositeDirection = (direction) =>
   ({
     across: 'down',

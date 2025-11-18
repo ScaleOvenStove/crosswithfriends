@@ -100,7 +100,10 @@ class ErrorBoundary extends Component<Props, State> {
               Try Again
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                window.location.reload();
+              }}
+              type="button"
               style={{
                 padding: '12px 24px',
                 backgroundColor: '#f5f5f5',

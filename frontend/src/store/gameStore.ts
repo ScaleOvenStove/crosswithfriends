@@ -16,16 +16,15 @@ import {isValidFirebasePath, extractAndValidateGid} from './firebaseUtils';
 // ============ Serialize / Deserialize Helpers ========== //
 
 // Recursively walks obj and converts `null` to `undefined`
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const castNullsToUndefined = (obj: any): any => {
+const castNullsToUndefined = <T>(obj: T): T => {
   if (_.isNil(obj)) {
-    return undefined;
+    return undefined as T;
   }
   if (typeof obj === 'object') {
     return Object.assign(
-      obj.constructor(),
-      _.fromPairs(_.keys(obj).map((key) => [key, castNullsToUndefined(obj[key])]))
-    );
+      (obj as object).constructor(),
+      _.fromPairs(_.keys(obj).map((key) => [key, castNullsToUndefined((obj as Record<string, unknown>)[key])]))
+    ) as T;
   }
   return obj;
 };
@@ -41,7 +40,7 @@ interface GameInstance {
   battleData?: unknown;
   ready: boolean; // Whether the game has been initialized and is ready
   events: GameEvent[]; // All events for HistoryWrapper compatibility
-  gameState: any | null; // Computed game state from events (reactive in Zustand)
+  gameState: RawGame | null; // Computed game state from events (reactive in Zustand)
   optimisticEvents: GameEvent[]; // Optimistic events that haven't been confirmed
   subscriptions: Map<string, Set<(data: unknown) => void>>; // Map-based subscription system
   unsubscribeBattleData?: () => void;
@@ -83,14 +82,18 @@ interface GameStore {
 
 export const useGameStore = create<GameStore>((setState, getState) => {
   // Helper function to compute game state from events
-  const computeGameState = (game: GameInstance): any | null => {
+  const computeGameState = (game: GameInstance): RawGame | null => {
     if (!game.createEvent) return null;
 
     // Start with the create event
     let state = gameReducer(null, game.createEvent);
 
     // Sort events by timestamp to ensure correct order
-    const sortedEvents = [...game.events].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    const sortedEvents = [...game.events].sort((a, b) => {
+      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : (a.timestamp || 0);
+      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : (b.timestamp || 0);
+      return aTime - bTime;
+    });
 
     // Apply all events in order (excluding create event which we already applied)
     for (const event of sortedEvents) {
@@ -262,7 +265,11 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     }
 
     // Sort events by timestamp
-    allEvents.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    allEvents.sort((a, b) => {
+      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : (a.timestamp || 0);
+      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : (b.timestamp || 0);
+      return aTime - bTime;
+    });
 
     const currentState = getState();
     const currentGame = currentState.games[path];
@@ -707,6 +714,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     addPing: (path: string, r: number, c: number, id: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'addPing',
         params: {
@@ -719,6 +727,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     updateDisplayName: (path: string, id: string, displayName: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'updateDisplayName',
         params: {
@@ -730,6 +739,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     updateColor: (path: string, id: string, color: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'updateColor',
         params: {
@@ -741,13 +751,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     updateClock: (path: string, action: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'updateClock',
         params: {
           action,
           timestamp: SERVER_TIME,
         },
-      });
+      } as GameEvent);
     },
 
     check: (path: string, scope: {r: number; c: number}[]) => {
@@ -756,12 +767,13 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         return;
       }
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'check',
         params: {
           scope,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     reveal: (path: string, scope: {r: number; c: number}[]) => {
@@ -770,12 +782,13 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         return;
       }
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'reveal',
         params: {
           scope,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     reset: (path: string, scope: {r: number; c: number}[], force: boolean) => {
@@ -784,26 +797,29 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         return;
       }
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'reset',
         params: {
           scope,
           force,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     chat: (path: string, username: string, id: string, text: string) => {
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'chat',
         params: {
+          username,
+          id,
           text,
-          senderId: id,
-          sender: username,
         },
       });
       addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'sendChatMessage', // send to fencing too
         params: {
@@ -811,7 +827,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           id,
           sender: username,
         },
-      });
+      } as unknown as GameEvent);
     },
 
     initialize: async (path: string, rawGame: RawGame, {battleData}: {battleData?: BattleData} = {}) => {
@@ -853,6 +869,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       await set(ref(db, `${path}/pid`), pid);
       await set(gameInstance.eventsRef, {});
       await addEvent(path, {
+        id: '', // Will be set by addEvent
         timestamp: SERVER_TIME,
         type: 'create',
         params: {
@@ -860,7 +877,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           version,
           game,
         },
-      });
+      } as unknown as GameEvent);
 
       if (battleData) {
         await set(ref(db, `${path}/battleData`), battleData);
@@ -909,7 +926,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       return game?.createEvent || null;
     },
 
-    getGameState: (path: string): any | null => {
+    getGameState: (path: string): RawGame | null => {
       const state = getState();
       const game = state.games[path];
       if (!game) return null;

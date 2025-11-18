@@ -3,11 +3,7 @@ declare module 'react-linkify' {
 
   interface LinkifyProps {
     children?: ReactNode;
-    componentDecorator?: (
-      decoratedHref: string,
-      decoratedText: string,
-      key: number
-    ) => ReactNode;
+    componentDecorator?: (decoratedHref: string, decoratedText: string, key: number) => ReactNode;
     hrefDecorator?: (href: string) => string;
     matchDecorator?: (text: string) => Array<{
       index: number;
@@ -21,4 +17,3 @@ declare module 'react-linkify' {
   const Linkify: React.FC<LinkifyProps>;
   export default Linkify;
 }
-
