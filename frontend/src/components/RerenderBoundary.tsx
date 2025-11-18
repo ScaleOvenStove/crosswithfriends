@@ -8,10 +8,12 @@ const RerenderBoundary: React.FC<{name: string; hash: string}> = (props) => {
 
   React.useEffect(() => {
     if (prevHash !== props.hash) {
+      // eslint-disable-next-line no-console
+      console.debug('rerendering', props.name);
       prevChildren.current = props.children;
       setChildren(props.children);
     }
-  }, [prevHash, props.hash, props.children]);
+  }, [prevHash, props.hash, props.children, props.name]);
 
   return children;
 };
