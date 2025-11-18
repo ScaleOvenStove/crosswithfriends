@@ -2,7 +2,15 @@
 
 import {Box, Stack} from '@mui/material';
 import _ from 'lodash';
-import React, {useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef} from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+} from 'react';
 
 import Emoji from '../common/Emoji';
 
@@ -27,6 +35,15 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
     const emojiRefs = useRef<Record<string, React.RefObject<HTMLSpanElement>>>({});
     const listContainer = useRef<HTMLDivElement>(null);
 
+    // Initialize refs for all matches to avoid accessing refs during render
+    useEffect(() => {
+      matches.forEach((emoji) => {
+        if (!emojiRefs.current[emoji]) {
+          emojiRefs.current[emoji] = React.createRef<HTMLSpanElement>();
+        }
+      });
+    }, [matches]);
+
     // Replicate getDerivedStateFromProps logic
     useEffect(() => {
       if (!selectedEmoji || matches.indexOf(selectedEmoji) === -1) {
@@ -35,9 +52,9 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
     }, [matches, selectedEmoji]);
 
     const getDomPosition = useCallback((emoji: string) => {
-      const ref = emojiRefs.current[emoji];
-      if (!ref || !ref.current) return null;
-      const el = ref.current;
+      const emojiRef = emojiRefs.current[emoji];
+      if (!emojiRef || !emojiRef.current) return null;
+      const el = emojiRef.current;
       const rect = el.getBoundingClientRect();
       return {
         left: rect.left,
@@ -50,9 +67,9 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
     const scrollEmojiIntoView = useCallback((emoji: string) => {
       // HACK: hardcoding container's padding here
       const padding = 5;
-      const ref = emojiRefs.current[emoji];
-      if (!ref?.current || !listContainer.current) return;
-      const span = ref.current;
+      const emojiRef = emojiRefs.current[emoji];
+      if (!emojiRef?.current || !listContainer.current) return;
+      const span = emojiRef.current;
       const top = span.offsetTop;
       const bottom = top + span.offsetHeight;
       const container = listContainer.current;
@@ -184,14 +201,18 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
       [selectedEmoji, matches, onEscape, onConfirm, selectEmoji, scrollEmojiIntoView, getDomPosition]
     );
 
-    useImperativeHandle(ref, () => ({
-      handleKeyDown: (e: KeyboardEvent) => {
-        handleKeyDown(e as any);
-      },
-    }));
+    useImperativeHandle(ref, () => {
+      return {
+        handleKeyDown: (e: KeyboardEvent) => {
+          handleKeyDown(e as unknown as React.KeyboardEvent);
+        },
+      };
+    });
 
     useEffect(() => {
-      if (disableKeyListener) return;
+      if (disableKeyListener) {
+        return undefined;
+      }
       window.addEventListener('keydown', handleKeyDown);
       return () => {
         window.removeEventListener('keydown', handleKeyDown);
@@ -211,7 +232,7 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
       return (
         <Box sx={headerStyle}>
           <span>
-            <span style={patternStyle}>"{`:${pattern}`}"</span>
+            <span style={patternStyle}>&quot;{`:${pattern}`}&quot;</span>
           </span>
           <span>
             <span style={hintStyle}>
@@ -246,26 +267,41 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
           marginLeft: 5,
         };
 
-        if (!emojiRefs.current[emoji]) {
-          emojiRefs.current[emoji] = React.createRef<HTMLSpanElement>();
-        }
+        // Use ref callback to avoid accessing refs during render
+        const setEmojiRef = (el: HTMLSpanElement | null) => {
+          if (el && !emojiRefs.current[emoji]) {
+            emojiRefs.current[emoji] = {current: el} as React.RefObject<HTMLSpanElement>;
+          }
+        };
+
+        const handleKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectEmoji(emoji);
+          }
+        };
+
         return (
           <span
             style={style}
-            ref={emojiRefs.current[emoji]}
+            ref={setEmojiRef}
             key={emoji}
             data-emoji={emoji}
             onMouseMove={handleMouseEnterSpan}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            aria-label={`Select emoji :${emoji}:`}
           >
             <Emoji emoji={emoji} />
             <span style={textStyle}>{`:${emoji}:`}</span>
           </span>
         );
       },
-      [selectedEmoji, handleMouseEnterSpan]
+      [selectedEmoji, handleMouseEnterSpan, selectEmoji]
     );
 
-    const renderMatches = () => {
+    const renderMatches = useMemo(() => {
       const containerStyle = {
         display: 'flex', // we don't use flex-view so that we can access the dom el
         flexWrap: 'wrap',
@@ -279,7 +315,7 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
           {matches.map((emoji) => renderEmoji(emoji))}
         </div>
       );
-    };
+    }, [matches, renderEmoji]);
 
     return (
       <Stack
@@ -288,7 +324,7 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
         onMouseDown={handleMouseDown}
       >
         {renderHeader()}
-        {renderMatches()}
+        {renderMatches}
       </Stack>
     );
   }

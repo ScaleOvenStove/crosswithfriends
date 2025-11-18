@@ -4,7 +4,7 @@ import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import {recordSolve} from '../model/puzzle.js';
 
 // eslint-disable-next-line require-await
-async function recordSolveRouter(fastify: FastifyInstance) {
+async function recordSolveRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Params: {pid: string}; Body: RecordSolveRequest; Reply: RecordSolveResponse}>(
     '/:pid',
     async (

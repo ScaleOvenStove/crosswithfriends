@@ -122,7 +122,10 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
         type: 'revealAllClues',
         params: {},
       });
-      setHasRevealedAll(true);
+      // Use setTimeout to avoid calling setState synchronously in effect
+      setTimeout(() => {
+        setHasRevealedAll(true);
+      }, 0);
     }
   }, [isGameComplete, hasRevealedAll, gameState.loaded, gameState.started, sendEvent]);
   useUpdateEffect(() => {
@@ -144,7 +147,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
           return; // game not loaded yet
         }
         const nTeamId =
-          _.minBy(TEAM_IDS, (t) => _.filter(_.values(gameState.users), (user) => user.teamId === t).length) ??
+          _.minBy(TEAM_IDS, (t) => _.filter(_.values(gameState.users), (u) => u.teamId === t).length) ??
           (TEAM_IDS[0] as number);
         sendEvent({
           type: 'updateTeamId',
@@ -167,41 +170,55 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
   const toolbarActions = useToolbarActions(sendEvent, gameState, id);
   const playerActions = usePlayerActions(sendEvent, id);
 
-  const changeName = (newName: string): void => {
-    if (newName.trim().length === 0) {
-      newName = nameGenerator();
-    }
-    sendEvent({
-      type: 'updateDisplayName',
-      params: {
-        id,
-        displayName: newName,
-      },
-    });
-  };
-  const changeTeamName = (newName: string): void => {
-    if (!teamId) return;
-    if (newName.trim().length === 0) {
-      newName = nameGenerator();
-    }
-    sendEvent({
-      type: 'updateTeamName',
-      params: {
-        teamId,
-        teamName: newName,
-      },
-    });
-  };
-  const joinTeam = (teamId: number) => {
-    sendEvent({
-      type: 'updateTeamId',
-      params: {
-        id,
-        teamId,
-      },
-    });
-  };
-  const spectate = () => {
+  const changeName = useCallback(
+    (newName: string): void => {
+      let finalName = newName;
+      if (finalName.trim().length === 0) {
+        finalName = nameGenerator();
+      }
+      sendEvent({
+        type: 'updateDisplayName',
+        params: {
+          id,
+          displayName: finalName,
+        },
+      });
+    },
+    [sendEvent, id]
+  );
+
+  const changeTeamName = useCallback(
+    (newName: string): void => {
+      if (!teamId) return;
+      let finalName = newName;
+      if (finalName.trim().length === 0) {
+        finalName = nameGenerator();
+      }
+      sendEvent({
+        type: 'updateTeamName',
+        params: {
+          teamId,
+          teamName: finalName,
+        },
+      });
+    },
+    [sendEvent, teamId]
+  );
+
+  const joinTeam = useCallback(
+    (newTeamId: number) => {
+      sendEvent({
+        type: 'updateTeamId',
+        params: {
+          id,
+          teamId: newTeamId,
+        },
+      });
+    },
+    [sendEvent, id]
+  );
+
+  const spectate = useCallback(() => {
     sendEvent({
       type: 'updateTeamId',
       params: {
@@ -209,25 +226,37 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
         teamId: teamId ? 0 : 1,
       },
     });
-  };
-  const handleChat = (username: string, id: string, message: string) => {
-    sendEvent({
-      type: 'sendChatMessage',
-      params: {
-        id,
-        message,
-      },
-    });
-    // Note: 'chat' event type is deprecated, using 'sendChatMessage' instead
-    // This legacy event is kept for backward compatibility
-    sendEvent({
-      type: 'sendChatMessage',
-      params: {
-        id,
-        message,
-      },
-    });
-  };
+  }, [sendEvent, id, teamId]);
+
+  const handleChat = useCallback(
+    (username: string, userId: string, message: string) => {
+      sendEvent({
+        type: 'sendChatMessage',
+        params: {
+          id,
+          message,
+        },
+      });
+      // Note: 'chat' event type is deprecated, using 'sendChatMessage' instead
+      // This legacy event is kept for backward compatibility
+      sendEvent({
+        type: 'sendChatMessage',
+        params: {
+          id,
+          message,
+        },
+      });
+    },
+    [sendEvent, id]
+  );
+
+  const handleUpdateDisplayName = useCallback(
+    (_id: string, name: string) => {
+      changeName(name);
+    },
+    [changeName]
+  );
+
   const fencingScoreboard = (
     <FencingScoreboard
       gameState={gameState}
@@ -251,16 +280,18 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
                 <>
                   {' '}
                   <FencingToolbar toolbarActions={toolbarActions} />
-                  <Player
-                    // eslint-disable-next-line react/jsx-props-no-spreading
-                    {...transformGameToPlayerProps(
-                      gameState.game!,
-                      _.values(gameState.users),
-                      playerActions,
-                      id,
-                      teamId
-                    )}
-                  />
+                  {gameState.game && (
+                    <Player
+                      // eslint-disable-next-line react/jsx-props-no-spreading
+                      {...transformGameToPlayerProps(
+                        gameState.game,
+                        _.values(gameState.users),
+                        playerActions,
+                        id,
+                        teamId
+                      )}
+                    />
+                  )}
                 </>
               )}
             </FencingCountdown>
@@ -295,7 +326,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
               onChat={handleChat}
               mobile={false}
               updateSeenChatMessage={null}
-              onUpdateDisplayName={(_id: string, name: string) => changeName(name)}
+              onUpdateDisplayName={handleUpdateDisplayName}
             />
           )}
         </Stack>

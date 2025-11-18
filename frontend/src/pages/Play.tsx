@@ -112,7 +112,10 @@ const Play: React.FC = () => {
 
     const shouldAutocreate = !creating && (!games || (games && games.length === 0) || is_new);
     if (shouldAutocreate) {
-      create();
+      // Use setTimeout to avoid calling setState synchronously in effect
+      setTimeout(() => {
+        create();
+      }, 0);
       return;
     }
     const shouldAutojoin = games && games.length > 0 && !creating;

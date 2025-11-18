@@ -11,7 +11,7 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import React, {useState} from 'react';
+import React, {useState, useCallback} from 'react';
 import {MdInfo, MdShare, MdContentCopy} from 'react-icons/md';
 
 interface PuzzleInfoProps {
@@ -26,19 +26,31 @@ const PuzzleInfo: React.FC<PuzzleInfoProps> = ({title, author, type, pid, gid}) 
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     const url = pid ? `${window.location.origin}/beta/play/${pid}` : window.location.href;
     navigator.clipboard.writeText(url);
     setSnackbarOpen(true);
-  };
+  }, [pid]);
 
-  const handleCopyGameLink = () => {
+  const handleCopyGameLink = useCallback(() => {
     if (gid) {
       const url = `${window.location.origin}/beta/game/${gid}`;
       navigator.clipboard.writeText(url);
       setSnackbarOpen(true);
     }
-  };
+  }, [gid]);
+
+  const handleOpenInfoDialog = useCallback(() => {
+    setInfoDialogOpen(true);
+  }, []);
+
+  const handleCloseInfoDialog = useCallback(() => {
+    setInfoDialogOpen(false);
+  }, []);
+
+  const handleCloseSnackbar = useCallback(() => {
+    setSnackbarOpen(false);
+  }, []);
 
   return (
     <>
@@ -98,7 +110,7 @@ const PuzzleInfo: React.FC<PuzzleInfoProps> = ({title, author, type, pid, gid}) 
         <Tooltip title="Puzzle information">
           <IconButton
             size="small"
-            onClick={() => setInfoDialogOpen(true)}
+            onClick={handleOpenInfoDialog}
             aria-label="Show puzzle information"
           >
             <MdInfo />
@@ -111,7 +123,7 @@ const PuzzleInfo: React.FC<PuzzleInfoProps> = ({title, author, type, pid, gid}) 
         </Tooltip>
       </Box>
 
-      <Dialog open={infoDialogOpen} onClose={() => setInfoDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={infoDialogOpen} onClose={handleCloseInfoDialog} maxWidth="sm" fullWidth>
         <DialogTitle>Puzzle Information</DialogTitle>
         <DialogContent>
           <Typography variant="h6" sx={{marginBottom: 1}}>
@@ -155,17 +167,17 @@ const PuzzleInfo: React.FC<PuzzleInfoProps> = ({title, author, type, pid, gid}) 
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setInfoDialogOpen(false)}>Close</Button>
+          <Button onClick={handleCloseInfoDialog}>Close</Button>
         </DialogActions>
       </Dialog>
 
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
+        onClose={handleCloseSnackbar}
         anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
       >
-        <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{width: '100%'}}>
+        <Alert onClose={handleCloseSnackbar} severity="success" sx={{width: '100%'}}>
           Link copied to clipboard!
         </Alert>
       </Snackbar>

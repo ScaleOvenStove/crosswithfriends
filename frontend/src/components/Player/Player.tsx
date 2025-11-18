@@ -5,6 +5,7 @@ import {lightenHsl} from '@crosswithfriends/shared/lib/colors';
 import * as gameUtils from '@crosswithfriends/shared/lib/gameUtils';
 import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
 import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
+import type {CellIndex, Cursor, GridData, UserJson} from '@crosswithfriends/shared/types';
 import React, {
   useState,
   useRef,
@@ -16,7 +17,9 @@ import React, {
 } from 'react';
 
 import {getTime} from '../../store/firebase';
+import type {Pickup} from '../../types/battle';
 import Grid from '../Grid';
+import type {CellStyles, Ping} from '../Grid/types';
 import ListView from '../ListView';
 
 import Clues from './Clues';
@@ -34,7 +37,7 @@ const PING_TIMEOUT = 10000;
 interface PlayerProps {
   currentCursor?: {r: number; c: number};
   size?: number;
-  grid: any[][];
+  grid: GridData;
   clues: {across: string[]; down: string[]};
   updateGrid: (r: number, c: number, value: string) => void;
   updateCursor?: (selected: {r: number; c: number}) => void;
@@ -51,21 +54,21 @@ interface PlayerProps {
   onVimCommand?: () => void;
   onVimCommandPressEnter?: (command: string) => void;
   onVimCommandPressEscape?: () => void;
-  circles?: any[];
-  shades?: any[];
-  cursors?: any[];
-  pings?: any[];
+  circles?: CellIndex[];
+  shades?: CellIndex[];
+  cursors?: Cursor[];
+  pings?: Ping[];
   frozen?: boolean;
   myColor?: string;
-  users?: Record<string, {color?: string; displayName?: string}>;
+  users?: UserJson[];
   id?: string;
-  pickups?: any[];
+  pickups?: Record<string, Pickup>;
   clueBarStyle?: React.CSSProperties;
-  gridStyle?: {cellStyle?: any};
+  gridStyle?: {cellStyle?: CellStyles};
   colorAttributionMode?: boolean;
   beta?: boolean;
   solution?: string[][];
-  opponentGrid?: any[][];
+  opponentGrid?: GridData;
   onCheck?: (scope: string) => void;
   onReveal?: (scope: string) => void;
   optimisticCounter?: number;
@@ -201,7 +204,9 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
         return keys.map(([r, c]) => ({r, c})).filter(({r, c}) => gridObj.isWhite(r, c));
       },
       setSelected: (sel: {r: number; c: number}) => {
-        setSelected(sel);
+        if (setSelectedRef.current) {
+          setSelectedRef.current(sel);
+        }
       },
     }),
     [gridObj, selectedAdjusted, direction]
@@ -281,6 +286,8 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
     [isValidDirection, selectedAdjusted]
   );
 
+  const setSelectedRef = useRef<(sel: {r: number; c: number}) => void>(() => {});
+
   const setSelected = useCallback(
     (sel: {r: number; c: number}) => {
       if (cursorLockedRef.current) return;
@@ -313,6 +320,15 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
     },
     [gridObj, isValidDirection, direction, selectedAdjusted, props.updateCursor]
   );
+
+  // Update ref with latest setSelected function
+  const setSelectedRefValue = setSelected;
+  useEffect(() => {
+    if (setSelectedRef.current !== setSelectedRefValue) {
+       
+      setSelectedRef.current = setSelectedRefValue;
+    }
+  });
 
   const handlePing = useCallback(
     (r: number, c: number) => {

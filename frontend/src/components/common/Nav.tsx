@@ -39,13 +39,26 @@ function LogIn({style}: LogInProps): JSX.Element | null {
     );
     */
   }
+  const handleLogin = () => {
+    user.logIn();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleLogin();
+    }
+  };
+
   return (
     <div className="nav--right" style={style}>
       <div
         className="nav--login"
-        onClick={() => {
-          user.logIn();
-        }}
+        onClick={handleLogin}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label="Log in"
       >
         Log in
       </div>
@@ -114,7 +127,19 @@ export default function Nav({
         {/* <div className="nav--right stats">
           <a href="/stats">Your stats</a>
         </div> */}
-        <div className="nav--info" onClick={showInfo}>
+        <div
+          className="nav--info"
+          onClick={showInfo}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              showInfo();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Show information"
+        >
           <i className="fa fa-info-circle" />
         </div>
         {canLogin && <LogIn />}

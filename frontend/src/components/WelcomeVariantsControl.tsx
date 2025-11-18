@@ -82,7 +82,19 @@ export const WelcomeVariantsControl: React.FC<{
             Fencing
           </Box>
         </Link>
-        <span className="nav--info" onClick={showFencingInfo}>
+        <span
+          className="nav--info"
+          onClick={showFencingInfo}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              showFencingInfo();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Show fencing information"
+        >
           <i className="fa fa-info-circle" />
         </span>
       </Box>

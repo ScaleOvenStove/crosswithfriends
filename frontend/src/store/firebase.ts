@@ -24,7 +24,9 @@ if (getApps().length === 0) {
 
 const db = getDatabase(app);
 
-const SERVER_TIME = serverTimestamp();
+// SERVER_TIME is a Firebase sentinel value that becomes a timestamp when written to the database
+// TypeScript sees it as 'object' but it will be a number in the database
+const SERVER_TIME = serverTimestamp() as unknown as number;
 
 // Get server time offset - use onValue for better connection handling
 // This will wait for the connection to be established before reading

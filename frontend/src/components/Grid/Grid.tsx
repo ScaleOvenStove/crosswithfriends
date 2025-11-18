@@ -3,7 +3,7 @@ import './css/index.css';
 import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {toCellIndex} from '@crosswithfriends/shared/types';
 import type {CellIndex, Cursor, GridData} from '@crosswithfriends/shared/types';
-import React, {useMemo} from 'react';
+import React, {useMemo, useCallback} from 'react';
 
 import RerenderBoundary from '../RerenderBoundary';
 
@@ -47,25 +47,50 @@ export interface GridProps {
 }
 
 const Grid: React.FC<GridProps> = (props) => {
-  const grid = useMemo(() => new GridWrapper(props.grid), [props.grid]);
+  // Destructure props to avoid dependency issues
+  const {
+    grid: gridData,
+    opponentGrid: opponentGridData,
+    solution,
+    selected,
+    direction,
+    circles,
+    shades,
+    pings,
+    cursors,
+    references,
+    pickups,
+    cellStyle,
+    myColor,
+    frozen,
+    canFlipColor,
+    size,
+    onChangeDirection,
+    onSetSelected,
+    onPing,
+    onFlipColor,
+    editMode,
+  } = props;
+
+  const grid = useMemo(() => new GridWrapper(gridData), [gridData]);
 
   const opponentGrid = useMemo(() => {
-    return props.opponentGrid ? new GridWrapper(props.opponentGrid) : null;
-  }, [props.opponentGrid]);
+    return opponentGridData ? new GridWrapper(opponentGridData) : null;
+  }, [opponentGridData]);
 
   // Use Sets for O(1) lookups instead of O(n) indexOf
   const circlesSet = useMemo(() => {
-    return new Set(props.circles || []);
-  }, [props.circles]);
+    return new Set(circles || []);
+  }, [circles]);
 
   const shadesSet = useMemo(() => {
-    return new Set(props.shades || []);
-  }, [props.shades]);
+    return new Set(shades || []);
+  }, [shades]);
 
   // Index cursors and pings by cell for faster lookup
   const cursorsByCell = useMemo(() => {
     const map = new Map<string, Cursor[]>();
-    (props.cursors || []).forEach((cursor) => {
+    (cursors || []).forEach((cursor) => {
       const key = `${cursor.r},${cursor.c}`;
       if (!map.has(key)) {
         map.set(key, []);
@@ -73,11 +98,11 @@ const Grid: React.FC<GridProps> = (props) => {
       map.get(key)!.push(cursor);
     });
     return map;
-  }, [props.cursors]);
+  }, [cursors]);
 
   const pingsByCell = useMemo(() => {
     const map = new Map<string, Ping[]>();
-    (props.pings || []).forEach((ping) => {
+    (pings || []).forEach((ping) => {
       const key = `${ping.r},${ping.c}`;
       if (!map.has(key)) {
         map.set(key, []);
@@ -85,22 +110,21 @@ const Grid: React.FC<GridProps> = (props) => {
       map.get(key)!.push(ping);
     });
     return map;
-  }, [props.pings]);
+  }, [pings]);
 
   // Index pickups by cell
   const pickupsByCell = useMemo(() => {
     const map = new Map<string, BattlePickup>();
-    (props.pickups || []).forEach((pickup) => {
+    (pickups || []).forEach((pickup) => {
       if (!pickup.pickedUp) {
         const key = `${pickup.i},${pickup.j}`;
         map.set(key, pickup);
       }
     });
     return map;
-  }, [props.pickups]);
+  }, [pickups]);
 
-  const {size, cellStyle, selected, direction} = props;
-  const cols = props.grid[0].length;
+  const cols = gridData[0].length;
 
   // Memoize selectedParent and selectedIsWhite to prevent infinite loops
   const selectedParent = useMemo(() => {
@@ -121,7 +145,7 @@ const Grid: React.FC<GridProps> = (props) => {
   const sizeClass = getSizeClass(size);
 
   const data = useMemo(() => {
-    return props.grid.map((row, r) =>
+    return gridData.map((row, r) =>
       row.map((cell, c) => {
         const cellKey = `${r},${c}`;
         const cellIdx = toCellIndex(r, c, cols);
@@ -130,7 +154,7 @@ const Grid: React.FC<GridProps> = (props) => {
 
         // Check if done by opponent
         const isDoneByOpp = opponentGrid
-          ? opponentGrid.isFilled(r, c) && props.solution[r]?.[c] === props.opponentGrid[r]?.[c]?.value
+          ? opponentGrid.isFilled(r, c) && solution[r]?.[c] === opponentGridData[r]?.[c]?.value
           : false;
 
         // Check if highlighted (same word as selected)
@@ -141,7 +165,7 @@ const Grid: React.FC<GridProps> = (props) => {
           grid.getParent(r, c, direction) === selectedParent;
 
         // Check if referenced
-        const isReferenced = props.references.some(
+        const isReferenced = references.some(
           (clue) => isCellWhite && grid.getParent(r, c, clue.ori) === clue.num
         );
 
@@ -154,12 +178,12 @@ const Grid: React.FC<GridProps> = (props) => {
           referenced: isReferenced,
           circled: circlesSet.has(cellIdx),
           shaded: shadesSet.has(cellIdx) || isDoneByOpp,
-          canFlipColor: !!props.canFlipColor?.(r, c),
+          canFlipColor: !!canFlipColor?.(r, c),
           cursors: cursorsByCell.get(cellKey) || [],
           pings: pingsByCell.get(cellKey) || [],
           highlighted: isHighlighted,
-          myColor: props.myColor,
-          frozen: props.frozen,
+          myColor,
+          frozen,
           pickupType: pickupsByCell.get(cellKey)?.type,
           cellStyle,
           // Explicitly pass through good and bad flags for visual feedback
@@ -169,7 +193,7 @@ const Grid: React.FC<GridProps> = (props) => {
       })
     );
   }, [
-    props.grid,
+    gridData,
     cols,
     size,
     selected.r,
@@ -183,36 +207,36 @@ const Grid: React.FC<GridProps> = (props) => {
     pingsByCell,
     pickupsByCell,
     opponentGrid,
-    props.solution,
-    props.opponentGrid,
-    props.references,
-    props.myColor,
-    props.frozen,
-    props.canFlipColor,
+    solution,
+    opponentGridData,
+    references,
+    myColor,
+    frozen,
+    canFlipColor,
     cellStyle,
     grid, // Needed because we use grid.getParent() inside the useMemo
   ]);
 
-  const handleClick = (r: number, c: number) => {
-    if (!grid.isWhite(r, c) && !props.editMode) return;
+  const handleClick = useCallback((r: number, c: number) => {
+    if (!grid.isWhite(r, c) && !editMode) return;
     if (r === selected.r && c === selected.c) {
-      props.onChangeDirection();
+      onChangeDirection();
     } else {
-      props.onSetSelected({r, c});
+      onSetSelected({r, c});
     }
-  };
+  }, [grid, editMode, selected.r, selected.c, onChangeDirection, onSetSelected]);
 
-  const handleRightClick = (r: number, c: number) => {
-    if (props.onPing) {
-      props.onPing(r, c);
+  const handleRightClick = useCallback((r: number, c: number) => {
+    if (onPing) {
+      onPing(r, c);
     }
-  };
+  }, [onPing]);
 
   return (
     <table
       style={{
         width: cols * size,
-        height: props.grid.length * size,
+        height: gridData.length * size,
       }}
       className={`grid ${sizeClass}`}
     >
@@ -221,7 +245,7 @@ const Grid: React.FC<GridProps> = (props) => {
           <RerenderBoundary
             name={`grid row ${i}`}
             key={i}
-            hash={hashGridRow(row, {...props.cellStyle, size})}
+            hash={hashGridRow(row, {...cellStyle, size})}
           >
             <tr>
               {row.map((cellProps) => (
@@ -239,7 +263,7 @@ const Grid: React.FC<GridProps> = (props) => {
                     {...cellProps}
                     onClick={handleClick}
                     onContextMenu={handleRightClick}
-                    onFlipColor={props.onFlipColor}
+                    onFlipColor={onFlipColor}
                   />
                 </td>
               ))}

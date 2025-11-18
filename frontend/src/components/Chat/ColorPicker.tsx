@@ -7,28 +7,35 @@ interface ColorPickerProps {
   onUpdateColor: (color: string) => void;
 }
 const ColorPicker: React.FC<ColorPickerProps> = (props) => {
+  const {color, onUpdateColor} = props;
   const [isActive, toggleIsActive] = useToggle(false);
 
   const handleClick = React.useCallback(() => {
     toggleIsActive();
   }, [toggleIsActive]);
 
-  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      toggleIsActive();
-    }
-  }, [toggleIsActive]);
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleIsActive();
+      }
+    },
+    [toggleIsActive]
+  );
 
-  const handleChangeComplete = React.useCallback((color: {hsl: {h: number; s: number; l: number}}) => {
-    const colorHSL = `hsl(${Math.floor(color.hsl.h)},${Math.floor(color.hsl.s * 100)}%,${Math.floor(
-      color.hsl.l * 100
-    )}%)`;
-    if (colorHSL !== props.color) {
-      props.onUpdateColor(colorHSL);
-    }
-    toggleIsActive(false);
-  }, [props.color, props.onUpdateColor, toggleIsActive]);
+  const handleChangeComplete = React.useCallback(
+    (colorObj: {hsl: {h: number; s: number; l: number}}) => {
+      const colorHSL = `hsl(${Math.floor(colorObj.hsl.h)},${Math.floor(colorObj.hsl.s * 100)}%,${Math.floor(
+        colorObj.hsl.l * 100
+      )}%)`;
+      if (colorHSL !== color) {
+        onUpdateColor(colorHSL);
+      }
+      toggleIsActive(false);
+    },
+    [color, onUpdateColor, toggleIsActive]
+  );
 
   return (
     <>
@@ -42,7 +49,7 @@ const ColorPicker: React.FC<ColorPickerProps> = (props) => {
           border: 'none',
           padding: 0,
           cursor: 'pointer',
-          color: props.color,
+          color: color,
           font: 'inherit',
           display: 'inline',
         }}
@@ -53,10 +60,7 @@ const ColorPicker: React.FC<ColorPickerProps> = (props) => {
       </button>
       {isActive ? (
         <>
-          <CirclePicker
-            color={props.color}
-            onChangeComplete={handleChangeComplete}
-          />
+          <CirclePicker color={color} onChangeComplete={handleChangeComplete} />
           <br />
         </>
       ) : null}

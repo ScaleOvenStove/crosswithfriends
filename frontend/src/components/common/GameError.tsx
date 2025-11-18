@@ -1,6 +1,10 @@
 import React from 'react';
 
 export const GameError: React.FC = () => {
+  const handleReload = () => {
+    window.location.reload();
+  };
+
   return (
     <div
       style={{
@@ -12,7 +16,8 @@ export const GameError: React.FC = () => {
       <h2>Game Error</h2>
       <p style={{margin: '20px 0'}}>Something went wrong while loading the game.</p>
       <button
-        onClick={() => window.location.reload()}
+        onClick={handleReload}
+        type="button"
         style={{
           padding: '10px 20px',
           marginTop: '10px',

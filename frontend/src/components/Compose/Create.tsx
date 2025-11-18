@@ -30,10 +30,16 @@ const Create: React.FC<CreateProps> = ({onCreate}) => {
     (newDims: {r: number; c: number}) => {
       const newPattern: number[][] = [];
       for (let i = 0; i < newDims.r; i += 1) {
-        newPattern[i] = [];
+        const newRow: number[] = [];
+        const existingRow = pattern[i];
         for (let j = 0; j < newDims.c; j += 1) {
-          newPattern[i][j] = (pattern[i] || [])[j] || 0;
+          let existingCell: number | undefined;
+          if (existingRow && j < existingRow.length) {
+            existingCell = existingRow[j];
+          }
+          newRow[j] = existingCell !== undefined ? existingCell : 0;
         }
+        newPattern[i] = newRow;
       }
       setPattern(newPattern);
     },
@@ -50,7 +56,8 @@ const Create: React.FC<CreateProps> = ({onCreate}) => {
 
   const paint = useCallback(
     (r: number, c: number, val: number) => {
-      if (pattern[r][c] === val) return;
+      const row = pattern[r];
+      if (!row || row[c] === val) return;
       paintedRef.current[`${r}_${c}`] = true;
       flipPattern(r, c);
     },
@@ -106,13 +113,19 @@ const Create: React.FC<CreateProps> = ({onCreate}) => {
     updateDimsDelta(0, +1);
   }, [updateDimsDelta]);
 
-  const handleHeightChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    updateDims(Number(e.target.value) || dims.r, dims.c);
-  }, [dims.r, dims.c, updateDims]);
+  const handleHeightChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateDims(Number(e.target.value) || dims.r, dims.c);
+    },
+    [dims.r, dims.c, updateDims]
+  );
 
-  const handleWidthChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    updateDims(dims.r, Number(e.target.value) || dims.c);
-  }, [dims.r, dims.c, updateDims]);
+  const handleWidthChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateDims(dims.r, Number(e.target.value) || dims.c);
+    },
+    [dims.r, dims.c, updateDims]
+  );
 
   const size = 180 / Math.max(dims.r, dims.c);
 
@@ -140,24 +153,32 @@ const Create: React.FC<CreateProps> = ({onCreate}) => {
               <tr key={`row-${r}`}>
                 {row.map((cell, c) => {
                   const cellKey = `cell-${r}-${c}`;
-                  const handleMouseMove = (e: React.MouseEvent) => {
+                  const handleCellMouseMove = (e: React.MouseEvent) => {
                     if (e.buttons === 1) {
+                      const patternRow = pattern[r];
+                      const cellValue = patternRow && patternRow[c] !== undefined ? patternRow[c] : 0;
                       if (paintColorRef.current === undefined) {
-                        paintColorRef.current = 1 - pattern[r][c];
+                        paintColorRef.current = 1 - cellValue;
                       }
                       paint(r, c, paintColorRef.current);
                     }
                   };
-                  const handleMouseDown = () => {
+                  const handleCellMouseDown = () => {
                     resetPaint();
                   };
-                  const handleClick = () => {
+                  const handleCellClick = () => {
                     if (!paintedRef.current[cellKey]) {
                       flipPattern(r, c);
                     }
                     resetPaint();
                   };
-                  const handleDrag = (e: React.DragEvent) => {
+                  const handleCellKeyDown = (e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCellClick();
+                    }
+                  };
+                  const handleCellDrag = (e: React.DragEvent) => {
                     e.preventDefault();
                   };
                   return (
@@ -170,14 +191,19 @@ const Create: React.FC<CreateProps> = ({onCreate}) => {
                       }}
                     >
                       <div
-                        onMouseMove={handleMouseMove}
-                        onMouseDown={handleMouseDown}
-                        onClick={handleClick}
-                        onDrag={handleDrag}
+                        onMouseMove={handleCellMouseMove}
+                        onMouseDown={handleCellMouseDown}
+                        onClick={handleCellClick}
+                        onKeyDown={handleCellKeyDown}
+                        onDrag={handleCellDrag}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Cell at row ${r + 1}, column ${c + 1}`}
                         className={`${cell === 0 ? 'white ' : 'black '}create--pattern--grid--cell`}
                       />
-                  </td>
-                ))}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

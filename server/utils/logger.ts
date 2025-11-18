@@ -20,22 +20,24 @@ const shouldLog = (level: LogLevel): boolean => {
 };
 
 const createLogger = (): Logger => ({
-  debug: (message: string, ...args: unknown[]) => {
+  debug: (message: string, ...args: unknown[]): void => {
     if (shouldLog('debug')) {
+      // eslint-disable-next-line no-console
       console.debug(`[DEBUG] ${message}`, ...args);
     }
   },
-  info: (message: string, ...args: unknown[]) => {
+  info: (message: string, ...args: unknown[]): void => {
     if (shouldLog('info')) {
+      // eslint-disable-next-line no-console
       console.info(`[INFO] ${message}`, ...args);
     }
   },
-  warn: (message: string, ...args: unknown[]) => {
+  warn: (message: string, ...args: unknown[]): void => {
     if (shouldLog('warn')) {
       console.warn(`[WARN] ${message}`, ...args);
     }
   },
-  error: (message: string, ...args: unknown[]) => {
+  error: (message: string, ...args: unknown[]): void => {
     if (shouldLog('error')) {
       console.error(`[ERROR] ${message}`, ...args);
     }

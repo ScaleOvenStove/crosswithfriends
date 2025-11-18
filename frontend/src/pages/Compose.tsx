@@ -71,6 +71,7 @@ const Compose: React.FC = () => {
           onClick={() => {
             setLimit(limit + 10);
           }}
+          type="button"
         >
           +
         </button>
@@ -79,6 +80,7 @@ const Compose: React.FC = () => {
           onClick={() => {
             setLimit(limit + 50);
           }}
+          type="button"
         >
           ++
         </button>

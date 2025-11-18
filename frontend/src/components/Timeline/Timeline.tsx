@@ -57,6 +57,7 @@ const Timeline: React.FC<TimelineProps> = ({history, position, width, onSetPosit
   const timelineRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
   const [down, setDown] = useState(false);
+  const [mouseTargetStyle, setMouseTargetStyle] = useState<{left: number; top: number} | null>(null);
 
   const begin = useMemo(() => {
     return history[0]?.gameTimestamp || 0;
@@ -71,28 +72,43 @@ const Timeline: React.FC<TimelineProps> = ({history, position, width, onSetPosit
     return length > 0 ? width / length : 0;
   }, [end, begin, width]);
 
-  const updateScroll = useMemo(
-    () =>
-      _.throttle(() => {
-        if (!scrollContainer || !cursorRef.current || !timelineRef.current) {
-          return;
-        }
-        const center = cursorRef.current.offsetLeft;
+  const updateScrollRef = useRef<_.DebouncedFunc<() => void>>();
 
-        // scroll minimally so that the center is visible with 5px padding
-        const padding = 5;
-        const lo = Math.min(
-          timelineRef.current.clientWidth - scrollContainer.clientWidth,
-          center - scrollContainer.clientWidth + padding
-        );
-        const hi = Math.max(0, center - padding);
+  useEffect(() => {
+    updateScrollRef.current = _.throttle(() => {
+      if (!scrollContainer || !cursorRef.current || !timelineRef.current) {
+        return;
+      }
+      const center = cursorRef.current.offsetLeft;
 
-        let scrollLeft = scrollContainer.scrollLeft;
-        scrollLeft = Math.max(lo, Math.min(hi, scrollLeft));
-        scrollContainer.scrollLeft = scrollLeft;
-      }, 50),
-    [scrollContainer]
-  );
+      // scroll minimally so that the center is visible with 5px padding
+      const padding = 5;
+      const lo = Math.min(
+        timelineRef.current.clientWidth - scrollContainer.clientWidth,
+        center - scrollContainer.clientWidth + padding
+      );
+      const hi = Math.max(0, center - padding);
+
+      const currentScrollLeft = scrollContainer.scrollLeft;
+      const newScrollLeft = Math.max(lo, Math.min(hi, currentScrollLeft));
+      if (scrollContainer.scrollLeft !== newScrollLeft) {
+        // Use requestAnimationFrame to avoid direct mutation warning
+        requestAnimationFrame(() => {
+          if (scrollContainer) {
+            scrollContainer.scrollLeft = newScrollLeft;
+          }
+        });
+      }
+    }, 50);
+
+    return () => {
+      updateScrollRef.current?.cancel();
+    };
+  }, [scrollContainer]);
+
+  const updateScroll = useCallback(() => {
+    updateScrollRef.current?.();
+  }, []);
 
   const handleMouseUp = useCallback(() => {
     setDown(false);
@@ -133,6 +149,13 @@ const Timeline: React.FC<TimelineProps> = ({history, position, width, onSetPosit
     (e: React.MouseEvent) => {
       if (e.button) return;
       setDown(true);
+      if (timelineRef.current) {
+        const rect = timelineRef.current.getBoundingClientRect();
+        setMouseTargetStyle({
+          left: -rect.left,
+          top: -rect.top,
+        });
+      }
       handleMouse(e);
     },
     [handleMouse]
@@ -179,15 +202,14 @@ const Timeline: React.FC<TimelineProps> = ({history, position, width, onSetPosit
           left: (position - begin) * units - 5,
         }}
       />
-      {down && timelineRef.current && (
+      {down && mouseTargetStyle && (
         <div
           className="mouse--target"
           style={{
             position: 'absolute',
-            left: -timelineRef.current.getBoundingClientRect().left,
-            top: -timelineRef.current.getBoundingClientRect().top,
+            ...mouseTargetStyle,
           }}
-        ></div>
+        />
       )}
     </div>
   );

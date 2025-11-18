@@ -11,7 +11,12 @@ describe('emitAsync', () => {
   });
 
   it('should emit event and resolve when acknowledged', async () => {
-    const promise = emitAsync(mockSocket as unknown as Parameters<typeof emitAsync>[0], 'test-event', 'data1', 'data2');
+    const promise = emitAsync(
+      mockSocket as unknown as Parameters<typeof emitAsync>[0],
+      'test-event',
+      'data1',
+      'data2'
+    );
 
     // The mock socket should have called emit
     expect(mockSocket.emit).toHaveBeenCalledWith('test-event', 'data1', 'data2', expect.any(Function));
@@ -21,7 +26,9 @@ describe('emitAsync', () => {
   });
 
   it('should pass multiple arguments to emit', async () => {
-    await emitAsync(mockSocket as unknown as Parameters<typeof emitAsync>[0], 'join-game', 'game-id', {option: 'value'});
+    await emitAsync(mockSocket as unknown as Parameters<typeof emitAsync>[0], 'join-game', 'game-id', {
+      option: 'value',
+    });
 
     expect(mockSocket.emit).toHaveBeenCalledWith(
       'join-game',
@@ -91,7 +98,10 @@ describe('onceAsync', () => {
 
   it('should handle different event types', async () => {
     const connectPromise = onceAsync(mockSocket as unknown as Parameters<typeof onceAsync>[0], 'connect');
-    const disconnectPromise = onceAsync(mockSocket as unknown as Parameters<typeof onceAsync>[0], 'disconnect');
+    const disconnectPromise = onceAsync(
+      mockSocket as unknown as Parameters<typeof onceAsync>[0],
+      'disconnect'
+    );
 
     // Trigger the events using the helper function
     triggerSocketEvent(mockSocket, 'connect', 'connect-data');

@@ -61,6 +61,26 @@ interface GameProps {
 
 // component for gameplay -- incl. grid/clues & toolbar
 const Game: React.FC<GameProps> = (props) => {
+  // Destructure props to avoid dependency issues
+  const {
+    id,
+    myColor,
+    gameModel,
+    onChange,
+    battleModel,
+    team,
+    onToggleChat,
+    onUnfocus,
+    ownPowerups,
+    opponentPowerups,
+    gid,
+    pickups,
+    unreads,
+    scrollToBottomTrigger,
+    mobile,
+    beta,
+  } = props;
+
   const [listMode, setListMode] = useState<boolean>(false);
   const [pencilMode, setPencilMode] = useState<boolean>(false);
   const [autocheckMode, setAutocheckMode] = useState<boolean>(false);
@@ -77,7 +97,7 @@ const Game: React.FC<GameProps> = (props) => {
     selectClue: (direction: string, number: number) => void;
     focus: () => void;
   } | null>(null);
-  const prevMyColorRef = useRef<string | undefined>(props.myColor);
+  const prevMyColorRef = useRef<string | undefined>(myColor);
 
   useEffect(() => {
     let vimModeValue = false;
@@ -86,26 +106,29 @@ const Game: React.FC<GameProps> = (props) => {
     } catch {
       console.error('Failed to parse local storage vim mode!');
     }
-    setVimMode(vimModeValue);
+    // Use setTimeout to avoid calling setState synchronously in effect
+    setTimeout(() => {
+      setVimMode(vimModeValue);
+    }, 0);
   }, []);
 
   const handleUpdateColor = useCallback(
-    (id: string, color: string) => {
-      if (!props.gameModel) return;
-      props.gameModel.updateColor(id, color);
+    (userId: string, color: string) => {
+      if (!gameModel) return;
+      gameModel.updateColor(userId, color);
     },
-    [props.gameModel]
+    [gameModel]
   );
 
   useEffect(() => {
-    if (prevMyColorRef.current !== props.myColor && props.gameModel) {
-      handleUpdateColor(props.id, props.myColor);
-      prevMyColorRef.current = props.myColor;
+    if (prevMyColorRef.current !== myColor && gameModel) {
+      handleUpdateColor(id, myColor);
+      prevMyColorRef.current = myColor;
     }
-  }, [props.myColor, props.id, props.gameModel, handleUpdateColor]);
+  }, [myColor, id, gameModel, handleUpdateColor]);
 
   // Use Zustand store as primary source
-  const gamePath = props.gid ? `/game/${props.gid}` : '';
+  const gamePath = gid ? `/game/${gid}` : '';
   const rawGame = useGameStore((state) => state.games[gamePath]?.gameState ?? null);
 
   // Opponent game state would come from a separate hook if needed
@@ -114,8 +137,8 @@ const Game: React.FC<GameProps> = (props) => {
 
   // TODO: this should be cached, sigh...
   const games = useMemo(() => {
-    return powerups.apply(rawGame, rawOpponentGame, props.ownPowerups, props.opponentPowerups);
-  }, [rawGame, rawOpponentGame, props.ownPowerups, props.opponentPowerups]);
+    return powerups.apply(rawGame, rawOpponentGame, ownPowerups, opponentPowerups);
+  }, [rawGame, rawOpponentGame, ownPowerups, opponentPowerups]);
 
   const game = useMemo(() => {
     return games.ownGame;
@@ -150,80 +173,67 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleUpdateGrid = useCallback(
     (r: number, c: number, value: string) => {
-      if (!props.gameModel) {
+      if (!gameModel) {
         console.warn('handleUpdateGrid called but gameModel is not available');
         return;
       }
-      const {id, myColor} = props;
-      props.gameModel.updateCell(r, c, id, myColor, pencilMode, value, autocheckMode);
-      props.onChange({isEdit: true});
-      if (props.battleModel) {
-        props.battleModel.checkPickups(r, c, rawGame, props.team);
+      gameModel.updateCell(r, c, id, myColor, pencilMode, value, autocheckMode);
+      onChange({isEdit: true});
+      if (battleModel) {
+        battleModel.checkPickups(r, c, rawGame, team);
       }
     },
-    [
-      props.id,
-      props.myColor,
-      props.gameModel,
-      props.onChange,
-      props.battleModel,
-      props.team,
-      pencilMode,
-      autocheckMode,
-      rawGame,
-    ]
+    [id, myColor, gameModel, onChange, battleModel, team, pencilMode, autocheckMode, rawGame]
   );
 
   const handleUpdateCursor = useCallback(
     ({r, c}: {r: number; c: number}) => {
-      if (!props.gameModel) return;
-      const {id} = props;
-      if (game.solved && !_.find(game.cursors, (cursor: any) => cursor.id === id)) {
+      if (!gameModel) return;
+      if (game.solved && !_.find(game.cursors, (cursor) => cursor.id === id)) {
         return;
       }
-      props.gameModel.updateCursor(r, c, id);
+      gameModel.updateCursor(r, c, id);
     },
-    [props.id, props.gameModel, game]
+    [id, gameModel, game]
   );
 
   const handleAddPing = useCallback(
     ({r, c}: {r: number; c: number}) => {
-      if (!props.gameModel) return;
-      const {id} = props;
-      props.gameModel.addPing(r, c, id);
+      if (!gameModel) return;
+      gameModel.addPing(r, c, id);
     },
-    [props.id, props.gameModel]
+    [id, gameModel]
   );
 
   const handleStartClock = useCallback(() => {
-    if (!props.gameModel) return;
-    props.gameModel.updateClock('start');
-  }, [props.gameModel]);
+    if (!gameModel) return;
+    gameModel.updateClock('start');
+  }, [gameModel]);
 
   const handlePauseClock = useCallback(() => {
-    if (!props.gameModel) return;
-    props.gameModel.updateClock('pause');
-  }, [props.gameModel]);
+    if (!gameModel) return;
+    gameModel.updateClock('pause');
+  }, [gameModel]);
 
   const handleResetClock = useCallback(() => {
-    if (!props.gameModel) return;
-    props.gameModel.updateClock('reset');
-  }, [props.gameModel]);
+    if (!gameModel) return;
+    gameModel.updateClock('reset');
+  }, [gameModel]);
 
   const handleCheck = useCallback(
     (scopeString: string) => {
       console.error('[Game] handleCheck called with scopeString:', scopeString);
-      console.error('[Game] props.gameModel exists:', !!props.gameModel);
-      console.error('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.error('[Game] gameModel exists:', !!gameModel);
+      console.error('[Game] gameModel?.ready:', gameModel?.ready);
       console.error('[Game] game exists:', !!game);
-      if (!props.gameModel || !game || !props.gameModel.ready) {
+      if (!gameModel || !game || !gameModel.ready) {
         console.warn(
           '[Game] handleCheck early return - gameModel:',
-          !!props.gameModel,
+          !!gameModel,
           'game:',
           !!game,
           'ready:',
-          props.gameModel?.ready
+          gameModel?.ready
         );
         return;
       }
@@ -234,25 +244,25 @@ const Game: React.FC<GameProps> = (props) => {
         return;
       }
       console.error('[Game] Calling gameModel.check with scopeValue:', scopeValue);
-      props.gameModel.check(scopeValue);
+      gameModel.check(scopeValue);
     },
-    [props.gameModel, scope, game]
+    [gameModel, scope, game]
   );
 
   const handleReveal = useCallback(
     (scopeString: string) => {
       console.error('[Game] handleReveal called with scopeString:', scopeString);
-      console.error('[Game] props.gameModel exists:', !!props.gameModel);
-      console.error('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.error('[Game] gameModel exists:', !!gameModel);
+      console.error('[Game] gameModel?.ready:', gameModel?.ready);
       console.error('[Game] game exists:', !!game);
-      if (!props.gameModel || !game || !props.gameModel.ready) {
+      if (!gameModel || !game || !gameModel.ready) {
         console.warn(
           '[Game] handleReveal early return - gameModel:',
-          !!props.gameModel,
+          !!gameModel,
           'game:',
           !!game,
           'ready:',
-          props.gameModel?.ready
+          gameModel?.ready
         );
         return;
       }
@@ -263,26 +273,26 @@ const Game: React.FC<GameProps> = (props) => {
         return;
       }
       console.error('[Game] Calling gameModel.reveal with scopeValue:', scopeValue);
-      props.gameModel.reveal(scopeValue);
-      props.onChange();
+      gameModel.reveal(scopeValue);
+      onChange();
     },
-    [props.gameModel, props.onChange, scope, game]
+    [gameModel, onChange, scope, game]
   );
 
   const handleReset = useCallback(
     (scopeString: string, force: boolean = false) => {
       console.error('[Game] handleReset called with scopeString:', scopeString, 'force:', force);
-      console.error('[Game] props.gameModel exists:', !!props.gameModel);
-      console.error('[Game] props.gameModel?.ready:', props.gameModel?.ready);
+      console.error('[Game] gameModel exists:', !!gameModel);
+      console.error('[Game] gameModel?.ready:', gameModel?.ready);
       console.error('[Game] game exists:', !!game);
-      if (!props.gameModel || !game || !props.gameModel.ready) {
+      if (!gameModel || !game || !gameModel.ready) {
         console.warn(
           '[Game] handleReset early return - gameModel:',
-          !!props.gameModel,
+          !!gameModel,
           'game:',
           !!game,
           'ready:',
-          props.gameModel?.ready
+          gameModel?.ready
         );
         return;
       }
@@ -293,9 +303,9 @@ const Game: React.FC<GameProps> = (props) => {
         return;
       }
       console.error('[Game] Calling gameModel.reset with scopeValue:', scopeValue, 'force:', force);
-      props.gameModel.reset(scopeValue, force);
+      gameModel.reset(scopeValue, force);
     },
-    [props.gameModel, scope, game]
+    [gameModel, scope, game]
   );
 
   const handleKeybind = useCallback((mode: string) => {
@@ -336,8 +346,8 @@ const Game: React.FC<GameProps> = (props) => {
   }, []);
 
   const handleToggleChat = useCallback(() => {
-    props.onToggleChat();
-  }, [props.onToggleChat]);
+    onToggleChat();
+  }, [onToggleChat]);
 
   const handleToggleExpandMenu = useCallback(() => {
     setExpandMenu((prev) => !prev);
@@ -373,8 +383,8 @@ const Game: React.FC<GameProps> = (props) => {
   );
 
   const handlePressEnter = useCallback(() => {
-    props.onUnfocus();
-  }, [props.onUnfocus]);
+    onUnfocus();
+  }, [onUnfocus]);
 
   const _handleSelectClue = useCallback((direction: string, number: number) => {
     if (playerRef.current) {
@@ -449,10 +459,10 @@ const Game: React.FC<GameProps> = (props) => {
 
   // Scroll to bottom when trigger changes
   useEffect(() => {
-    if (props.scrollToBottomTrigger && containerRef.current) {
+    if (scrollToBottomTrigger && containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [props.scrollToBottomTrigger]);
+  }, [scrollToBottomTrigger]);
 
   // Use actual container width, fallback to window width if not measured yet
   const screenWidth = useMemo(() => {
@@ -482,7 +492,6 @@ const Game: React.FC<GameProps> = (props) => {
   }, [containerWidth]);
 
   const renderPlayer = useCallback(() => {
-    const {id, myColor, mobile, beta} = props;
     if (!game) {
       return <div>Loading...</div>;
     }
@@ -536,7 +545,7 @@ const Game: React.FC<GameProps> = (props) => {
 
     // Use the smaller dimension to ensure grid fits in both directions
     const maxCellSize = 35;
-    const minSize = props.mobile ? 1 : 20;
+    const minSize = mobile ? 1 : 20;
     const calculatedSize = Math.min(sizeByWidth, sizeByHeight);
 
     // For mini puzzles (5x5 or smaller), allow larger cells to fill the space better
@@ -579,7 +588,7 @@ const Game: React.FC<GameProps> = (props) => {
         onVimCommandPressEscape={handleRefocus}
         colorAttributionMode={colorAttributionMode}
         mobile={mobile}
-        pickups={props.pickups}
+        pickups={pickups}
         optimisticCounter={optimisticCounter}
         onCheck={handleCheck}
         onReveal={handleReveal}
@@ -587,18 +596,21 @@ const Game: React.FC<GameProps> = (props) => {
       />
     );
   }, [
-    props,
+    id,
+    myColor,
+    mobile,
+    beta,
     game,
     opponentGame,
     clues,
     screenWidth,
     containerHeight,
     listMode,
-    pencilMode,
     vimMode,
     vimInsert,
     vimCommand,
     colorAttributionMode,
+    pickups,
     handleUpdateGrid,
     handleUpdateCursor,
     handleAddPing,
@@ -616,7 +628,6 @@ const Game: React.FC<GameProps> = (props) => {
   const renderToolbar = useCallback(() => {
     if (!game) return null;
     const {clock, solved} = game;
-    const {mobile, gid, unreads} = props;
     const {lastUpdated: startTime, totalTime: pausedTime, paused: isPaused} = clock;
     return (
       <Toolbar
@@ -658,9 +669,9 @@ const Game: React.FC<GameProps> = (props) => {
     );
   }, [
     game,
-    props.mobile,
-    props.gid,
-    props.unreads,
+    mobile,
+    gid,
+    unreads,
     listMode,
     expandMenu,
     pencilMode,
@@ -698,7 +709,7 @@ const Game: React.FC<GameProps> = (props) => {
             author={game.info.author || 'Unknown'}
             type={game.info.type}
             pid={game.pid}
-            gid={props.gid}
+            gid={gid}
           />
         </Box>
       )}

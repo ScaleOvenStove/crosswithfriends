@@ -13,7 +13,7 @@ interface LinkPreviewQuery {
 }
 
 // eslint-disable-next-line require-await
-async function linkPreviewRouter(fastify: FastifyInstance) {
+async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Querystring: LinkPreviewQuery}>(
     '/',
     async (request: FastifyRequest<{Querystring: LinkPreviewQuery}>, reply: FastifyReply) => {

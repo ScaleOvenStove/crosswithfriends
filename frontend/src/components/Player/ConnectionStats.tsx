@@ -13,8 +13,8 @@ const ConnectionStats: React.FC<Record<string, never>> = () => {
 
   useEffect(() => {
     const it = setInterval(() => {
-      setConnectionStatus((window as any).connectionStatus);
-      const socket = (window as any).socket;
+      setConnectionStatus(window.connectionStatus);
+      const socket = window.socket;
       setSocketConnected(socket?.connected ?? false);
       setCurrentTime(Date.now());
     }, 100);

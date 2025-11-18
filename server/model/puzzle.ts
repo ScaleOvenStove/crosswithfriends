@@ -22,7 +22,11 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   );
   const ms = Date.now() - startTime;
   logger.debug(`getPuzzle (${pid}) took ${ms}ms`);
-  return _.first(rows)!.content;
+  const firstRow = _.first(rows);
+  if (!firstRow) {
+    throw new Error(`Puzzle ${pid} not found`);
+  }
+  return firstRow.content;
 }
 
 const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string[] => {
@@ -104,7 +108,7 @@ export async function listPuzzles(
   return puzzles;
 }
 
-const string = () => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
+const string = (): Joi.StringSchema => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
 
 const puzzleValidator = Joi.object({
   grid: Joi.array().items(Joi.array().items(string())),
@@ -124,7 +128,7 @@ const puzzleValidator = Joi.object({
   private: Joi.boolean().optional(),
 });
 
-function validatePuzzle(puzzle: any) {
+function validatePuzzle(puzzle: unknown): void {
   logger.debug('Puzzle keys:', _.keys(puzzle));
   const {error} = puzzleValidator.validate(puzzle);
   if (error) {
@@ -132,9 +136,10 @@ function validatePuzzle(puzzle: any) {
   }
 }
 
-export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: string) {
-  if (!pid) {
-    pid = uuid.v4().substr(0, 8);
+export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: string): Promise<string> {
+  let puzzleId = pid;
+  if (!puzzleId) {
+    puzzleId = uuid.v4().substr(0, 8);
   }
   validatePuzzle(puzzle);
   const uploaded_at = Date.now();
@@ -142,17 +147,15 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
     `
       INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric)
       VALUES ($1, to_timestamp($2), $3, $4, $5)`,
-    [pid, uploaded_at / 1000, isPublic, puzzle, pid]
+    [puzzleId, uploaded_at / 1000, isPublic, puzzle, puzzleId]
   );
-  return pid;
+  return puzzleId;
 }
 
-async function isGidAlreadySolved(gid: string) {
+async function isGidAlreadySolved(gid: string): Promise<boolean> {
   // Note: This gate makes use of the assumption "one pid per gid";
   // The unique index on (pid, gid) is more strict than this
-  const {
-    rows: [{count}],
-  } = await pool.query(
+  const {rows} = await pool.query(
     `
     SELECT COUNT(*)
     FROM puzzle_solves
@@ -160,10 +163,14 @@ async function isGidAlreadySolved(gid: string) {
   `,
     [gid]
   );
-  return count > 0;
+  const firstRow = rows[0];
+  if (!firstRow) {
+    return false;
+  }
+  return firstRow.count > 0;
 }
 
-export async function recordSolve(pid: string, gid: string, timeToSolve: number) {
+export async function recordSolve(pid: string, gid: string, timeToSolve: number): Promise<void> {
   const solved_time = Date.now();
 
   // Clients may log a solve multiple times; skip logging after the first one goes through
@@ -199,7 +206,7 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
   }
 }
 
-export async function getPuzzleInfo(pid: string) {
+export async function getPuzzleInfo(pid: string): Promise<PuzzleJson['info']> {
   const puzzle = await getPuzzle(pid);
   const {info = {}} = puzzle;
   return info;

@@ -12,7 +12,7 @@ export interface MockSocket {
   off: (event: string, callback?: (...args: unknown[]) => void) => void;
   disconnect: () => void;
   connect: () => void;
-  // eslint-disable-next-line no-underscore-dangle
+
   _callbacks: Record<string, Array<(...args: unknown[]) => void>>;
 }
 
@@ -71,7 +71,7 @@ export function createMockSocket(): MockSocket {
         callbacks.connect.forEach((cb) => cb());
       }
     }),
-    // eslint-disable-next-line no-underscore-dangle
+
     _callbacks: callbacks,
   };
 

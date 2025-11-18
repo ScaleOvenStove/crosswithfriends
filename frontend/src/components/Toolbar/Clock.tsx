@@ -128,9 +128,13 @@ const Clock: React.FC<Props> = ({
   }, [pausedTime, startTime, stopTime, replayMode, propsIsPaused]);
 
   useEffect(() => {
-    updateClock();
+    // Use setTimeout to avoid calling setState synchronously in effect
+    const timeoutId = setTimeout(() => {
+      updateClock();
+    }, 0);
     const interval = setInterval(updateClock, 1000);
     return () => {
+      clearTimeout(timeoutId);
       clearInterval(interval);
     };
   }, [updateClock]);

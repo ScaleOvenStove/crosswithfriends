@@ -4,12 +4,12 @@ const linkExpanderUserAgentSubstrings = {
   FB_Messenger: 'facebookexternalhit',
 };
 
-export function isFBMessengerCrawler(userAgent: string | undefined) {
+export function isFBMessengerCrawler(userAgent: string | undefined): boolean {
   if (!userAgent) return false;
   return userAgent.includes(linkExpanderUserAgentSubstrings.FB_Messenger);
 }
 
-export function isLinkExpanderBot(userAgent: string | undefined) {
+export function isLinkExpanderBot(userAgent: string | undefined): boolean {
   if (!userAgent) return false;
   return Object.values(linkExpanderUserAgentSubstrings).some((ua) => userAgent.includes(ua));
 }

@@ -25,7 +25,7 @@ function logAllEvents(io: SocketIOServer, log: typeof console.log): void {
 
 // ================== Main Entrypoint ================
 
-async function runServer() {
+async function runServer(): Promise<void> {
   try {
     // ======== Fastify Server Config ==========
     // In Fastify v5, fastify() returns PromiseLike<FastifyInstance>
@@ -129,8 +129,8 @@ async function runServer() {
     await app.listen({port: Number(port), host: '0.0.0.0'});
     app.log.info(`Listening on port ${port}`);
 
-    process.once('SIGUSR2', () => {
-      void (async () => {
+    process.once('SIGUSR2', (): void => {
+      void (async (): Promise<void> => {
         await app.close();
         app.log.info('exiting...');
         process.kill(process.pid, 'SIGUSR2');

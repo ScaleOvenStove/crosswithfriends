@@ -11,7 +11,7 @@ interface OEmbedResponse {
 }
 
 // eslint-disable-next-line require-await
-async function oEmbedRouter(fastify: FastifyInstance) {
+async function oEmbedRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Querystring: OEmbedQuery; Reply: OEmbedResponse}>(
     '/',
     (request: FastifyRequest<{Querystring: OEmbedQuery}>, _reply: FastifyReply) => {
