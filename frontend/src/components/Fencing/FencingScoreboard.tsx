@@ -42,14 +42,16 @@ export const FencingScoreboard: React.FC<{
       })()
     : null;
 
-  const teamData = _.keys(props.gameState.teams).map((teamId) => {
-    const team = props.gameState.teams[teamId];
-    if (!team) return null;
-    return {
-      team,
-      users: _.values(props.gameState.users).filter((user) => String(user.teamId) === teamId),
-    };
-  }).filter((item): item is NonNullable<typeof item> => item !== null);
+  const teamData = _.keys(props.gameState.teams)
+    .map((teamId) => {
+      const team = props.gameState.teams[teamId];
+      if (!team) return null;
+      return {
+        team,
+        users: _.values(props.gameState.users).filter((user) => String(user.teamId) === teamId),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
   const currentUser = _.values(props.gameState.users).find((user) => user.id === props.currentUserId);
   const rows: {
     nameEl: React.ReactNode;

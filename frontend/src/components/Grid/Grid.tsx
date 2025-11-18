@@ -217,20 +217,26 @@ const Grid: React.FC<GridProps> = (props) => {
     grid, // Needed because we use grid.getParent() inside the useMemo
   ]);
 
-  const handleClick = useCallback((r: number, c: number) => {
-    if (!grid.isWhite(r, c) && !editMode) return;
-    if (r === selected.r && c === selected.c) {
-      onChangeDirection();
-    } else {
-      onSetSelected({r, c});
-    }
-  }, [grid, editMode, selected.r, selected.c, onChangeDirection, onSetSelected]);
+  const handleClick = useCallback(
+    (r: number, c: number) => {
+      if (!grid.isWhite(r, c) && !editMode) return;
+      if (r === selected.r && c === selected.c) {
+        onChangeDirection();
+      } else {
+        onSetSelected({r, c});
+      }
+    },
+    [grid, editMode, selected.r, selected.c, onChangeDirection, onSetSelected]
+  );
 
-  const handleRightClick = useCallback((r: number, c: number) => {
-    if (onPing) {
-      onPing(r, c);
-    }
-  }, [onPing]);
+  const handleRightClick = useCallback(
+    (r: number, c: number) => {
+      if (onPing) {
+        onPing(r, c);
+      }
+    },
+    [onPing]
+  );
 
   return (
     <table
@@ -242,11 +248,7 @@ const Grid: React.FC<GridProps> = (props) => {
     >
       <tbody>
         {data.map((row, i) => (
-          <RerenderBoundary
-            name={`grid row ${i}`}
-            key={i}
-            hash={hashGridRow(row, {...cellStyle, size})}
-          >
+          <RerenderBoundary name={`grid row ${i}`} key={i} hash={hashGridRow(row, {...cellStyle, size})}>
             <tr>
               {row.map((cellProps) => (
                 <td

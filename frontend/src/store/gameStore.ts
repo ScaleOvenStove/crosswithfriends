@@ -23,7 +23,9 @@ const castNullsToUndefined = <T>(obj: T): T => {
   if (typeof obj === 'object') {
     return Object.assign(
       (obj as object).constructor(),
-      _.fromPairs(_.keys(obj).map((key) => [key, castNullsToUndefined((obj as Record<string, unknown>)[key])]))
+      _.fromPairs(
+        _.keys(obj).map((key) => [key, castNullsToUndefined((obj as Record<string, unknown>)[key])])
+      )
     ) as T;
   }
   return obj;
@@ -90,8 +92,8 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     // Sort events by timestamp to ensure correct order
     const sortedEvents = [...game.events].sort((a, b) => {
-      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : (a.timestamp || 0);
-      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : (b.timestamp || 0);
+      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : a.timestamp || 0;
+      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : b.timestamp || 0;
       return aTime - bTime;
     });
 
@@ -266,8 +268,8 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     // Sort events by timestamp
     allEvents.sort((a, b) => {
-      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : (a.timestamp || 0);
-      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : (b.timestamp || 0);
+      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : a.timestamp || 0;
+      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : b.timestamp || 0;
       return aTime - bTime;
     });
 

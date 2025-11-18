@@ -28,12 +28,15 @@ const Clues: React.FC<CluesProps> = ({
     setShowClueLengths((prev) => !prev);
   }, []);
 
-  const handleToggleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      toggleShowClueLengths();
-    }
-  }, [toggleShowClueLengths]);
+  const handleToggleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleShowClueLengths();
+      }
+    },
+    [toggleShowClueLengths]
+  );
 
   return (
     <div className="clues">

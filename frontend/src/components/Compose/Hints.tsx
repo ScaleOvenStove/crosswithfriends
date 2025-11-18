@@ -144,11 +144,7 @@ const Hints: React.FC<HintsProps> = ({grid, direction, num}) => {
       </div>
       {!hidden ? (
         <div className="hints--matches">
-          {matchesList ? (
-            <div className="hints--matches--entries">{matchesList}</div>
-          ) : (
-            'No matches'
-          )}
+          {matchesList ? <div className="hints--matches--entries">{matchesList}</div> : 'No matches'}
         </div>
       ) : null}
     </div>

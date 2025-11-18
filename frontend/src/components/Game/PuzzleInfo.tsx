@@ -108,11 +108,7 @@ const PuzzleInfo: React.FC<PuzzleInfoProps> = ({title, author, type, pid, gid}) 
           </Typography>
         </Box>
         <Tooltip title="Puzzle information">
-          <IconButton
-            size="small"
-            onClick={handleOpenInfoDialog}
-            aria-label="Show puzzle information"
-          >
+          <IconButton size="small" onClick={handleOpenInfoDialog} aria-label="Show puzzle information">
             <MdInfo />
           </IconButton>
         </Tooltip>

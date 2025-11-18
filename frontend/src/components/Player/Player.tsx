@@ -325,7 +325,6 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
   const setSelectedRefValue = setSelected;
   useEffect(() => {
     if (setSelectedRef.current !== setSelectedRefValue) {
-       
       setSelectedRef.current = setSelectedRefValue;
     }
   });

@@ -728,10 +728,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       <div className="chat">
         {renderChatHeader()}
         {renderChatSubheader()}
-        <div
-          ref={handleMessagesRef}
-          className="chat--messages"
-        >
+        <div ref={handleMessagesRef} className="chat--messages">
           {showShareMessage && (
             <div
               className="chat--message chat--system-message"

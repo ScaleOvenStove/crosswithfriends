@@ -78,21 +78,19 @@ const Cell: React.FC<Props> = (props) => {
     );
   };
 
-  const handleFlipClick = useCallback((e: React.MouseEvent) => {
-    const {onFlipColor, r, c} = props;
-    e.stopPropagation();
-    onFlipColor?.(r, c);
-  }, [props]);
+  const handleFlipClick = useCallback(
+    (e: React.MouseEvent) => {
+      const {onFlipColor, r, c} = props;
+      e.stopPropagation();
+      onFlipColor?.(r, c);
+    },
+    [props]
+  );
 
   const renderFlipButton = () => {
     const {canFlipColor} = props;
     if (canFlipColor) {
-      return (
-        <i
-          className="cell--flip fa fa-small fa-sticky-note"
-          onClick={handleFlipClick}
-        />
-      );
+      return <i className="cell--flip fa fa-small fa-sticky-note" onClick={handleFlipClick} />;
     }
     return null;
   };
@@ -151,15 +149,21 @@ const Cell: React.FC<Props> = (props) => {
     return {backgroundColor: attributionColor};
   };
 
-  const handleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>((e) => {
-    e.preventDefault?.();
-    props.onClick(props.r, props.c);
-  }, [props]);
+  const handleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
+    (e) => {
+      e.preventDefault?.();
+      props.onClick(props.r, props.c);
+    },
+    [props]
+  );
 
-  const handleRightClick = useCallback<React.MouseEventHandler<HTMLDivElement>>((e) => {
-    e.preventDefault?.();
-    props.onContextMenu(props.r, props.c);
-  }, [props]);
+  const handleRightClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
+    (e) => {
+      e.preventDefault?.();
+      props.onContextMenu(props.r, props.c);
+    },
+    [props]
+  );
 
   const {
     black,

@@ -339,7 +339,6 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
   // Update ref with latest focusKeyboard function
   const focusKeyboardValue = focusKeyboard;
   useEffect(() => {
-     
     focusKeyboardRef.current = focusKeyboardValue;
   });
 
