@@ -70,10 +70,11 @@ export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[
 
   const puzzleSolves = Array.from(puzzleIds)
     .map(([pid, puzzle]) => {
-      const title = puzzle.content.info.title;
-      const grid = puzzle.content.grid;
-      const width = grid.length;
-      const length = grid.length > 0 && grid[0] ? grid[0].length : 0;
+      // Read from ipuz format: title is at root level, size from dimensions or solution
+      const title = puzzle.content.title || '';
+      const solution = puzzle.content.solution || [];
+      const width = puzzle.content.dimensions?.height || solution.length || 0;
+      const length = puzzle.content.dimensions?.width || (solution[0]?.length || 0);
       // Parse date string (YYYY-MM-DD) to Date object
       // If it's already a Date, use it directly
       const solvedTime =
