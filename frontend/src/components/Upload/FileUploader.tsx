@@ -12,6 +12,11 @@ import withReactContent from 'sweetalert2-react-content';
 const swal = withReactContent(Swal);
 
 class UnknownFileTypeError extends Error {
+  errorType: string;
+  errorTitle: string;
+  errorText: string;
+  errorIcon: string;
+
   constructor(fileType: string) {
     const title = `Unknown file type: .${fileType}`;
     super(title);
@@ -23,6 +28,11 @@ class UnknownFileTypeError extends Error {
 }
 
 class UnsupportedFileTypeError extends Error {
+  errorType: string;
+  errorTitle: string;
+  errorText: string;
+  errorIcon: string;
+
   constructor(fileType: string) {
     const title = `Unsupported file type: .${fileType}`;
     super(title);
@@ -67,12 +77,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
     try {
       const ipuz = JSON.parse(new TextDecoder().decode(readerResult));
       return ipuz;
-    } catch (e) {
+    } catch (_e) {
       throw new Error('Invalid JSON in .ipuz file');
     }
   }, []);
 
-  const attemptPuzzleConversionRef = useRef<(readerResult: any, fileType: string) => any>();
+  const attemptPuzzleConversionRef = useRef<((readerResult: any, fileType: string) => any) | undefined>(
+    undefined
+  );
 
   const attemptPuzzleConversion = useCallback(
     (readerResult: any, fileType: string): any => {
@@ -91,7 +103,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
         }
       }
     },
-    [convertPUZ, validateIPUZ, fileTypeGuesser]
+    [convertPUZ, validateIPUZ]
   );
 
   useEffect(() => {
@@ -101,6 +113,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
+      if (!file) {
+        return;
+      }
       const fileType = file.name.split('.').pop() || '';
       const reader = new FileReader();
       reader.addEventListener('loadend', () => {
@@ -111,14 +126,33 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
           } else {
             fail();
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           let defaultTitle = 'Something went wrong';
-          let defaultText = `The error message was: ${e.message}`;
-          let defaultIcon = 'warning';
+          let defaultText = 'An unknown error occurred';
+          let defaultIcon: 'warning' | 'error' | 'info' | 'success' | 'question' = 'warning';
 
-          if (e?.errorTitle) defaultTitle = e.errorTitle;
-          if (e?.errorText) defaultText = e.errorText;
-          if (e?.errorIcon) defaultIcon = e.errorIcon;
+          if (e instanceof Error) {
+            defaultText = `The error message was: ${e.message}`;
+          }
+
+          if (e && typeof e === 'object' && 'errorTitle' in e) {
+            defaultTitle = String(e.errorTitle);
+          }
+          if (e && typeof e === 'object' && 'errorText' in e) {
+            defaultText = String(e.errorText);
+          }
+          if (e && typeof e === 'object' && 'errorIcon' in e) {
+            const icon = String(e.errorIcon);
+            if (
+              icon === 'warning' ||
+              icon === 'error' ||
+              icon === 'info' ||
+              icon === 'success' ||
+              icon === 'question'
+            ) {
+              defaultIcon = icon;
+            }
+          }
 
           swal.fire({
             title: defaultTitle,
@@ -127,8 +161,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
             confirmButtonText: 'OK',
           });
         }
-        if (acceptedFiles[0].preview) {
-          window.URL.revokeObjectURL(acceptedFiles[0].preview);
+        const firstFile = acceptedFiles[0];
+        if (firstFile && 'preview' in firstFile && typeof firstFile.preview === 'string') {
+          window.URL.revokeObjectURL(firstFile.preview);
         }
       });
       reader.readAsArrayBuffer(file);

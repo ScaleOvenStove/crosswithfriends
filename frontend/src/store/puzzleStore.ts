@@ -37,20 +37,22 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
       const state = getState();
       if (!state.puzzles[path]) {
         const puzzleRef = ref(db, path);
+        const newPuzzle: PuzzleInstance = {
+          ref: puzzleRef,
+          path,
+          pid,
+          data: null,
+          ready: false,
+        };
         setState({
           puzzles: {
             ...state.puzzles,
-            [path]: {
-              ref: puzzleRef,
-              path,
-              pid,
-              data: null,
-              ready: false,
-            },
+            [path]: newPuzzle,
           },
         });
+        return newPuzzle;
       }
-      return getState().puzzles[path];
+      return state.puzzles[path];
     },
 
     attach: (path: string) => {
