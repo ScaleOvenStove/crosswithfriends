@@ -1,7 +1,6 @@
 import './css/fileUploader.css';
 
-import iPUZtoJSON from '@crosswithfriends/shared/lib/converter/iPUZtoJSON';
-import PUZtoJSON from '@crosswithfriends/shared/lib/converter/PUZtoJSON';
+import PUZtoIPUZ from '@crosswithfriends/shared/lib/converter/PUZtoIPUZ';
 import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
 import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
 import React, {useCallback, useRef, useEffect} from 'react';
@@ -41,60 +40,36 @@ interface FileUploaderProps {
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
-  const validPuzzle = useCallback((puzzle: any) => {
+  const validIpuz = useCallback((puzzle: any) => {
+    // Validate ipuz format
     const shape = {
-      info: {
-        title: '',
-        type: '',
-        author: '',
-      },
-      grid: [['']],
-      // circles: {} is optional
+      version: '',
+      kind: [],
+      title: '',
+      author: '',
+      solution: [[]],
+      puzzle: [[]],
       clues: {
-        across: {},
-        down: {},
+        Across: [],
+        Down: [],
       },
     };
     return hasShape(puzzle, shape);
   }, []);
 
   const convertPUZ = useCallback((buffer: ArrayBuffer) => {
-    const raw = PUZtoJSON(buffer);
-
-    const {grid: rawGrid, info, circles, shades, across, down} = raw;
-
-    const {title, author, description} = info;
-
-    const grid = rawGrid.map((row) => row.map(({solution}) => solution || '.'));
-    const type = grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
-
-    const result = {
-      grid,
-      circles,
-      shades,
-      info: {
-        type,
-        title,
-        author,
-        description,
-      },
-      clues: {across, down},
-    };
-    return result;
+    // Convert .puz directly to ipuz format
+    return PUZtoIPUZ(buffer);
   }, []);
 
-  const convertIPUZ = useCallback((readerResult: any) => {
-    const {grid, info, circles, shades, across, down} = iPUZtoJSON(readerResult);
-
-    const result = {
-      grid,
-      circles,
-      shades,
-      info,
-      clues: {across, down},
-    };
-
-    return result;
+  const validateIPUZ = useCallback((readerResult: any) => {
+    // For .ipuz files, just parse and validate - no conversion needed
+    try {
+      const ipuz = JSON.parse(new TextDecoder().decode(readerResult));
+      return ipuz;
+    } catch (e) {
+      throw new Error('Invalid JSON in .ipuz file');
+    }
   }, []);
 
   const attemptPuzzleConversionRef = useRef<(readerResult: any, fileType: string) => any>();
@@ -104,7 +79,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
       if (fileType === 'puz') {
         return convertPUZ(readerResult);
       } else if (fileType === 'ipuz') {
-        return convertIPUZ(readerResult);
+        return validateIPUZ(readerResult);
       } else if (fileType === 'jpz') {
         throw new UnsupportedFileTypeError(fileType);
       } else {
@@ -116,7 +91,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
         }
       }
     },
-    [convertPUZ, convertIPUZ, fileTypeGuesser]
+    [convertPUZ, validateIPUZ, fileTypeGuesser]
   );
 
   useEffect(() => {
@@ -131,7 +106,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
       reader.addEventListener('loadend', () => {
         try {
           const puzzle = attemptPuzzleConversion(reader.result, fileType);
-          if (validPuzzle(puzzle)) {
+          if (validIpuz(puzzle)) {
             success(puzzle);
           } else {
             fail();
@@ -158,7 +133,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
       });
       reader.readAsArrayBuffer(file);
     },
-    [attemptPuzzleConversion, validPuzzle, success, fail]
+    [attemptPuzzleConversion, validIpuz, success, fail]
   );
 
   return (

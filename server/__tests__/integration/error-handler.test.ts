@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeAll, afterAll, vi} from 'vitest';
-import {buildTestApp, closeApp, waitForApp} from '../helpers';
+import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
 import {FastifyError} from 'fastify';
 

@@ -44,3 +44,4 @@ describe('formatMilliseconds', () => {
     expect(formatMilliseconds(999)).toBe('00:00');
   });
 });
+

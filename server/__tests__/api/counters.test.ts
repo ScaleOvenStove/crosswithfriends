@@ -1,10 +1,10 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
-import {buildTestApp, closeApp, waitForApp} from '../helpers';
+import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as countersModel from '../../model/counters';
+import * as countersModel from '../../model/counters.js';
 
 // Mock the model
-vi.mock('../../model/counters');
+vi.mock('../../model/counters.js');
 
 describe('Counters API', () => {
   let app: FastifyInstance;

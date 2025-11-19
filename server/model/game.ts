@@ -11,7 +11,7 @@ import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/upda
 import type {CellIndex, GameJson} from '@shared/types';
 import _ from 'lodash';
 
-import {makeGrid} from '../gameUtils';
+import {makeGrid} from '../gameUtils.js';
 import {logger} from '../utils/logger.js';
 
 import {pool} from './pool.js';
@@ -175,40 +175,69 @@ export async function addGameEvent(gid: string, event: GameEvent): Promise<void>
 export async function addInitialGameEvent(gid: string, pid: string): Promise<string> {
   const puzzle = await getPuzzle(pid);
   logger.debug('got puzzle', puzzle);
-  const {
-    info = {
-      title: '',
-      author: '',
-      copyright: '',
-      description: '',
-    },
-    grid: solution = [['']],
-    circles = [],
-  } = puzzle;
+  
+  // Read from ipuz format
+  const title = puzzle.title || '';
+  const author = puzzle.author || '';
+  const copyright = puzzle.copyright || '';
+  const description = puzzle.notes || '';
+  const solution = (puzzle.solution || []).map((row: (string | null)[]) =>
+    row.map((cell: string | null) => (cell === null ? '.' : cell))
+  );
+  
+  // Extract circles from puzzle grid (ipuz format stores circles in puzzle[i][j].style.shapebg)
+  const circles: number[] = [];
+  const puzzleGrid = puzzle.puzzle || [];
+  const ncol = solution[0]?.length || 0;
+  puzzleGrid.forEach((row: (import('@shared/types').IpuzCell | null)[], rowIndex: number) => {
+    row.forEach((cell: import('@shared/types').IpuzCell | null, cellIndex: number) => {
+      if (cell && typeof cell === 'object' && cell.style?.shapebg === 'circle') {
+        const idx = rowIndex * ncol + cellIndex;
+        circles.push(idx);
+      }
+    });
+  });
+
+  // Extract shades from puzzle grid
+  const shades: number[] = [];
+  puzzleGrid.forEach((row: (import('@shared/types').IpuzCell | null)[], rowIndex: number) => {
+    row.forEach((cell: import('@shared/types').IpuzCell | null, cellIndex: number) => {
+      if (cell && typeof cell === 'object' && cell.style?.fillbg) {
+        const idx = rowIndex * ncol + cellIndex;
+        shades.push(idx);
+      }
+    });
+  });
+
+  // Convert ipuz clues format to internal format
+  // ipuz has clues.Across and clues.Down as arrays of [number, clue] or {number, clue}
+  const convertClues = (clueArray: Array<[string, string] | {number: string; clue: string}>): string[] => {
+    const result: string[] = [];
+    clueArray.forEach((item) => {
+      if (Array.isArray(item) && item.length >= 2) {
+        const num = parseInt(item[0], 10);
+        if (!isNaN(num)) {
+          result[num] = item[1];
+        }
+      } else if (item && typeof item === 'object' && 'number' in item && 'clue' in item) {
+        const num = parseInt(item.number, 10);
+        if (!isNaN(num)) {
+          result[num] = item.clue;
+        }
+      }
+    });
+    return result;
+  };
+
+  const acrossClues = convertClues(puzzle.clues?.Across || []);
+  const downClues = convertClues(puzzle.clues?.Down || []);
 
   const gridObject = makeGrid(solution);
-  const clues = gridObject.alignClues(puzzle.clues);
+  const clues = gridObject.alignClues({across: acrossClues, down: downClues});
   const grid = gridObject.toArray();
 
-  // Convert circles from string[] (PuzzleJson format) to CellIndex[] (GameJson format)
-  // PuzzleJson stores circles as strings (likely coordinate strings or index strings),
-  // but GameJson expects CellIndex[] (branded number type)
-  // For now, we'll convert string indices to numbers, or use empty array if conversion fails
-  const circlesAsCellIndices: number[] = (circles || [])
-    .map((circle) => {
-      if (typeof circle === 'string') {
-        // Try to parse as number (if it's an index string)
-        const parsed = parseInt(circle, 10);
-        if (!isNaN(parsed)) {
-          return parsed;
-        }
-        // If parsing fails, it might be a coordinate string like "r,c" - skip for now
-        // In a real implementation, you'd parse coordinates and convert to CellIndex
-        return 0;
-      }
-      return typeof circle === 'number' ? circle : 0;
-    })
-    .filter((idx) => idx >= 0); // Filter out invalid indices
+  // Determine puzzle type from grid size
+  const type = solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
 
   const initialEvent: InitialGameEvent = {
     user: '',
@@ -219,16 +248,17 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
       version: 1.0,
       game: {
         info: {
-          title: info.title || '',
-          author: info.author || '',
-          copyright: info.copyright || '',
-          description: info.description || '',
-          type: info.type,
+          title,
+          author,
+          copyright,
+          description,
+          type,
         },
         grid,
         solution,
         clues,
-        circles: circlesAsCellIndices.length > 0 ? (circlesAsCellIndices as CellIndex[]) : undefined, // CellIndex is a branded type, safe to cast here
+        circles: circles.length > 0 ? (circles as CellIndex[]) : undefined,
+        shades: shades.length > 0 ? (shades as CellIndex[]) : undefined,
       },
     },
   };

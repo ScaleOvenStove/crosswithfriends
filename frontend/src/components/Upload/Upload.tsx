@@ -74,16 +74,25 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
     const isPublic = publicCheckboxChecked;
     const puzzleData = {
       ...puzzle,
-      private: !isPublic,
     };
+    // Remove private field if it exists - isPublic is handled separately
+    delete puzzleData.private;
     // store in both firebase & pg
     actions.createPuzzle(puzzleData, (pid: number) => {
       setPuzzle(null);
       setRecentUnlistedPid(isPublic ? undefined : pid);
 
-      createNewPuzzle(puzzleData, pid, {
-        isPublic,
-      })
+      createNewPuzzle(
+        {
+          puzzle: puzzleData,
+          pid: pid?.toString(),
+          isPublic,
+        },
+        pid?.toString(),
+        {
+          isPublic,
+        }
+      )
         .then(renderUploadSuccessModal)
         .catch(renderUploadFailModal);
     });
@@ -101,7 +110,7 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
 
   const renderSuccessModal = useCallback(
     (puzzleData: any) => {
-      const puzzleTitle = puzzleData.info?.title || 'Untitled';
+      const puzzleTitle = puzzleData.title || puzzleData.info?.title || 'Untitled';
       swal
         .fire({
           title: 'Confirm Upload',
@@ -118,7 +127,11 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
               </p>
               <div id="unlistedRow">
                 <label>
-                  <input type="checkbox" onChange={handleChangePublicCheckbox} /> Upload Publicly
+                  <input 
+                    type="checkbox" 
+                    checked={publicCheckboxChecked}
+                    onChange={handleChangePublicCheckbox} 
+                  /> Upload Publicly
                 </label>
               </div>
             </div>
@@ -130,14 +143,14 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
           }
         });
     },
-    [handleChangePublicCheckbox, handleUpload]
+    [handleChangePublicCheckbox, handleUpload, publicCheckboxChecked]
   );
 
   const success = useCallback(
     (puzzleData: any) => {
       setPuzzle({...puzzleData});
       setRecentUnlistedPid(null);
-      setPublicCheckboxChecked(false);
+      // Don't reset checkbox state here - let user's previous choice persist
       renderSuccessModal(puzzleData);
     },
     [renderSuccessModal]

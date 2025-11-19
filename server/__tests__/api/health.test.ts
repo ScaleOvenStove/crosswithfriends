@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeAll, afterAll} from 'vitest';
-import {buildTestApp, closeApp, waitForApp} from '../helpers';
+import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
 
 describe('Health API', () => {

@@ -73,18 +73,30 @@ export interface Cursor {
 }
 
 /**
- * PuzzleJson: the json format of puzzles stored in the db (both firebase & postgres)
- * Fields are a bit messy & don't correspond perfectly with puzjs formats... see logic in FileUploader.js
+ * PuzzleJson: ipuz format JSON stored in the db (both firebase & postgres)
+ * This is the standard ipuz format for crossword puzzles
  */
 
+export interface IpuzCell {
+  style?: {
+    shapebg?: string; // e.g., 'circle'
+    fillbg?: string; // e.g., '#000000' for shades
+  };
+}
+
 export interface PuzzleJson {
-  grid: string[][];
-  solution: string[][];
-  info: InfoJson;
-  circles: string[];
-  shades: string[];
-  clues: CluesJson;
-  private?: boolean;
+  version: string; // e.g., "http://ipuz.org/v1"
+  kind: string[]; // e.g., ["http://ipuz.org/crossword#1"]
+  title: string;
+  author: string;
+  copyright?: string;
+  notes?: string; // description
+  solution: (string | null)[][]; // null for black squares
+  puzzle: (IpuzCell | null)[][]; // cell objects with style info, null for regular cells
+  clues: {
+    Across: Array<[string, string] | {number: string; clue: string}>;
+    Down: Array<[string, string] | {number: string; clue: string}>;
+  };
 }
 
 export interface PuzzleStatsJson {
