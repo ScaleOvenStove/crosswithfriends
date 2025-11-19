@@ -161,28 +161,31 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
       const solution = (ipuz.solution || []).map((row: (string | null)[]) =>
         row.map((cell: string | null) => (cell === null ? '.' : cell))
       );
-      
+
       if (!solution || solution.length === 0) {
         return null;
       }
 
       // Extract circles and shades from puzzle grid
+      // ipuz format: puzzle grid can contain numbers, "#", objects with {cell, style}, or null
       const circles: Array<{r: number; c: number}> = [];
       const shades: Array<{r: number; c: number}> = [];
-      const puzzleGrid = ipuz.puzzle || [];
-      const ncol = solution[0]?.length || 0;
-      puzzleGrid.forEach((row: any[], rowIndex: number) => {
-        row.forEach((cell: any, cellIndex: number) => {
-          if (cell && typeof cell === 'object') {
-            if (cell.style?.shapebg === 'circle') {
-              circles.push({r: rowIndex, c: cellIndex});
+      const puzzleGrid = (ipuz.puzzle || []) as (number | string | {cell: number; style?: any} | null)[][];
+      puzzleGrid.forEach(
+        (row: (number | string | {cell: number; style?: any} | null)[], rowIndex: number) => {
+          row.forEach((cell: number | string | {cell: number; style?: any} | null, cellIndex: number) => {
+            if (cell && typeof cell === 'object' && 'cell' in cell) {
+              // Cell object with style
+              if (cell.style?.shapebg === 'circle') {
+                circles.push({r: rowIndex, c: cellIndex});
+              }
+              if (cell.style?.fillbg) {
+                shades.push({r: rowIndex, c: cellIndex});
+              }
             }
-            if (cell.style?.fillbg) {
-              shades.push({r: rowIndex, c: cellIndex});
-            }
-          }
-        });
-      });
+          });
+        }
+      );
 
       // Convert ipuz clues format
       const convertClues = (clueArray: any[]): string[] => {
@@ -203,8 +206,8 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
         return result;
       };
 
-      const acrossClues = convertClues(ipuz.clues?.Across || []);
-      const downClues = convertClues(ipuz.clues?.Down || []);
+      const acrossClues = convertClues(ipuz.clues?.across || []);
+      const downClues = convertClues(ipuz.clues?.down || []);
 
       const gridObject = makeGrid(solution);
       const clues = gridObject.alignClues({across: acrossClues, down: downClues});
@@ -213,10 +216,10 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
       // Build info object from ipuz format
       const type = solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
       const info = {
-        title: ipuz.title || '',
-        author: ipuz.author || '',
-        copyright: ipuz.copyright || '',
-        description: ipuz.notes || '',
+        title: (ipuz.title as string | undefined) || '',
+        author: (ipuz.author as string | undefined) || '',
+        copyright: (ipuz.copyright as string | undefined) || '',
+        description: (ipuz.notes as string | undefined) || '',
         type,
       };
 

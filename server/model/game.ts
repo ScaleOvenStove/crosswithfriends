@@ -175,7 +175,7 @@ export async function addGameEvent(gid: string, event: GameEvent): Promise<void>
 export async function addInitialGameEvent(gid: string, pid: string): Promise<string> {
   const puzzle = await getPuzzle(pid);
   logger.debug('got puzzle', puzzle);
-  
+
   // Read from ipuz format
   const title = puzzle.title || '';
   const author = puzzle.author || '';
@@ -184,27 +184,26 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
   const solution = (puzzle.solution || []).map((row: (string | null)[]) =>
     row.map((cell: string | null) => (cell === null ? '.' : cell))
   );
-  
-  // Extract circles from puzzle grid (ipuz format stores circles in puzzle[i][j].style.shapebg)
+
+  // Extract circles and shades from puzzle grid
+  // ipuz format: puzzle grid can contain numbers, "#", objects with {cell, style}, or null
   const circles: number[] = [];
+  const shades: number[] = [];
   const puzzleGrid = puzzle.puzzle || [];
   const ncol = solution[0]?.length || 0;
-  puzzleGrid.forEach((row: (import('@shared/types').IpuzCell | null)[], rowIndex: number) => {
-    row.forEach((cell: import('@shared/types').IpuzCell | null, cellIndex: number) => {
-      if (cell && typeof cell === 'object' && cell.style?.shapebg === 'circle') {
-        const idx = rowIndex * ncol + cellIndex;
-        circles.push(idx);
-      }
-    });
-  });
-
-  // Extract shades from puzzle grid
-  const shades: number[] = [];
-  puzzleGrid.forEach((row: (import('@shared/types').IpuzCell | null)[], rowIndex: number) => {
-    row.forEach((cell: import('@shared/types').IpuzCell | null, cellIndex: number) => {
-      if (cell && typeof cell === 'object' && cell.style?.fillbg) {
-        const idx = rowIndex * ncol + cellIndex;
-        shades.push(idx);
+  type IpuzCell = import('@shared/types').IpuzCell;
+  puzzleGrid.forEach((row: (number | string | IpuzCell | null)[], rowIndex: number) => {
+    row.forEach((cell: number | string | IpuzCell | null, cellIndex: number) => {
+      if (cell && typeof cell === 'object' && 'cell' in cell) {
+        // Cell object with style
+        if (cell.style?.shapebg === 'circle') {
+          const idx = rowIndex * ncol + cellIndex;
+          circles.push(idx);
+        }
+        if (cell.style?.fillbg) {
+          const idx = rowIndex * ncol + cellIndex;
+          shades.push(idx);
+        }
       }
     });
   });

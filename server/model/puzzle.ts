@@ -74,21 +74,20 @@ export async function listPuzzles(
   const parameterizedTileAuthorFilter = parametersForTitleAuthorFilter
     .map(
       (_s, idx) =>
-        `AND ((content ->> 'title') || ' ' || (content->>'author')) ILIKE $${
-          idx + parameterOffset
-        }`
+        `AND ((content ->> 'title') || ' ' || (content->>'author')) ILIKE $${idx + parameterOffset}`
     )
     .join('\n');
   // Size filter: check solution array length (jsonb_array_length on first dimension)
   // Mini: <= 10 rows, Standard: > 10 rows
-  const sizeFilterCondition = sizeFilterArray.length > 0 
-    ? `AND (
+  const sizeFilterCondition =
+    sizeFilterArray.length > 0
+      ? `AND (
       CASE 
         WHEN jsonb_array_length(content->'solution') <= 10 THEN 'Mini Puzzle'
         ELSE 'Daily Puzzle'
       END = ANY($1)
     )`
-    : '';
+      : '';
   const queryParams =
     sizeFilterArray.length > 0
       ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
@@ -127,39 +126,62 @@ export async function listPuzzles(
 
 const string = (): Joi.StringSchema => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
 
-// Validator for ipuz format
+// Validator for ipuz format per https://www.puzzazz.com/ipuz/v1
 const puzzleValidator = Joi.object({
   version: string().required(),
   kind: Joi.array().items(string()).required(),
+  dimensions: Joi.object({
+    width: Joi.number().integer().required(),
+    height: Joi.number().integer().required(),
+  }).required(),
   title: string().required(),
   author: string().required(),
   copyright: string().optional(),
   notes: string().optional(),
-  solution: Joi.array().items(Joi.array().items(Joi.alternatives().try(string(), Joi.valid(null)))).required(),
-  puzzle: Joi.array().items(Joi.array().items(Joi.alternatives().try(
-    Joi.object({
-      style: Joi.object({
-        shapebg: string().optional(),
-        fillbg: string().optional(),
-      }).optional(),
-    }),
-    Joi.valid(null)
-  ))).required(),
+  solution: Joi.array()
+    .items(Joi.array().items(Joi.alternatives().try(string(), Joi.valid(null, '#'))))
+    .required(),
+  puzzle: Joi.array()
+    .items(
+      Joi.array().items(
+        Joi.alternatives().try(
+          Joi.number(),
+          Joi.string().valid('#'),
+          Joi.object({
+            cell: Joi.number().required(),
+            style: Joi.object({
+              shapebg: string().optional(),
+              fillbg: string().optional(),
+            }).optional(),
+          }),
+          Joi.valid(null)
+        )
+      )
+    )
+    .required(),
   clues: Joi.object({
-    Across: Joi.array().items(Joi.alternatives().try(
-      Joi.array().items(string()),
-      Joi.object({
-        number: string(),
-        clue: string(),
-      })
-    )).required(),
-    Down: Joi.array().items(Joi.alternatives().try(
-      Joi.array().items(string()),
-      Joi.object({
-        number: string(),
-        clue: string(),
-      })
-    )).required(),
+    Across: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.array().items(string()),
+          Joi.object({
+            number: string(),
+            clue: string(),
+          })
+        )
+      )
+      .required(),
+    Down: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.array().items(string()),
+          Joi.object({
+            number: string(),
+            clue: string(),
+          })
+        )
+      )
+      .required(),
   }).required(),
 });
 
@@ -241,7 +263,9 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
   }
 }
 
-export async function getPuzzleInfo(pid: string): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
+export async function getPuzzleInfo(
+  pid: string
+): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
   const puzzle = await getPuzzle(pid);
   // Extract from ipuz format
   return {

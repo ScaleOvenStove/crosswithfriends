@@ -96,7 +96,7 @@ export default function PUZtoIPUZ(buffer) {
   const bytes = new Uint8Array(buffer);
   const ncol = bytes[44];
   const nrow = bytes[45];
-  
+
   if (!(bytes[50] === 0 && bytes[51] === 0)) {
     throw new Error('Scrambled PUZ file');
   }
@@ -115,38 +115,14 @@ export default function PUZtoIPUZ(buffer) {
   const rebus = getRebus(bytes);
   const finalSolution = rebus ? addRebusToSolution(solution, rebus, ncol, nrow) : solution;
 
-  // Build puzzle grid (playable grid with cell objects)
-  const puzzle = [];
-  const circles = getCircles(bytes);
-  const shades = getShades(bytes);
-  const circleSet = new Set(circles);
-  const shadeSet = new Set(shades);
-
-  for (let i = 0; i < nrow; i++) {
-    puzzle[i] = [];
-    for (let j = 0; j < ncol; j++) {
-      const idx = i * ncol + j;
-      const cell = {};
-      if (circleSet.has(idx)) {
-        cell.style = {shapebg: 'circle'};
-      }
-      if (shadeSet.has(idx)) {
-        if (!cell.style) {
-          cell.style = {};
-        }
-        cell.style.fillbg = '#000000';
-      }
-      puzzle[i][j] = Object.keys(cell).length > 0 ? cell : null;
-    }
-  }
-
-  // Find clue numbers
+  // Find clue numbers first
   function isBlack(i, j) {
     return i < 0 || j < 0 || i >= nrow || j >= ncol || finalSolution[i][j] === null;
   }
 
   const isAcross = [];
   const isDown = [];
+  const clueNumbers = []; // Map from cell index to clue number
   let n = 0;
   for (let i = 0; i < nrow; i++) {
     for (let j = 0; j < ncol; j++) {
@@ -158,6 +134,54 @@ export default function PUZtoIPUZ(buffer) {
           n += 1;
           isAcross[n] = isAcrossStart;
           isDown[n] = isDownStart;
+          const idx = i * ncol + j;
+          clueNumbers[idx] = n;
+        }
+      }
+    }
+  }
+
+  // Build puzzle grid (playable grid with clue numbers and cell objects)
+  // Per ipuz spec: puzzle grid contains clue numbers, "#" for black squares, null for empty
+  // Cells with styles use objects like {cell: number, style: {...}}
+  const puzzle = [];
+  const circles = getCircles(bytes);
+  const shades = getShades(bytes);
+  const circleSet = new Set(circles);
+  const shadeSet = new Set(shades);
+
+  for (let i = 0; i < nrow; i++) {
+    puzzle[i] = [];
+    for (let j = 0; j < ncol; j++) {
+      const idx = i * ncol + j;
+      const isBlackSquare = finalSolution[i][j] === null;
+
+      if (isBlackSquare) {
+        puzzle[i][j] = '#';
+      } else {
+        const clueNum = clueNumbers[idx];
+        const hasCircle = circleSet.has(idx);
+        const hasShade = shadeSet.has(idx);
+
+        if (hasCircle || hasShade) {
+          // Cell with style - use object format
+          const cellObj = {cell: clueNum || 0};
+          if (hasCircle || hasShade) {
+            cellObj.style = {};
+            if (hasCircle) {
+              cellObj.style.shapebg = 'circle';
+            }
+            if (hasShade) {
+              cellObj.style.fillbg = '#000000';
+            }
+          }
+          puzzle[i][j] = cellObj;
+        } else if (clueNum) {
+          // Just a clue number, no style
+          puzzle[i][j] = clueNum;
+        } else {
+          // Regular cell, no clue number
+          puzzle[i][j] = null;
         }
       }
     }
@@ -194,10 +218,14 @@ export default function PUZtoIPUZ(buffer) {
 
   const notes = readString();
 
-  // Build ipuz format
+  // Build ipuz format per specification at https://www.puzzazz.com/ipuz/v1
   const ipuz = {
     version: 'http://ipuz.org/v1',
     kind: ['http://ipuz.org/crossword#1'],
+    dimensions: {
+      width: ncol,
+      height: nrow,
+    },
     title: title || '',
     author: author || '',
     copyright: copyright || '',
@@ -212,4 +240,3 @@ export default function PUZtoIPUZ(buffer) {
 
   return ipuz;
 }
-

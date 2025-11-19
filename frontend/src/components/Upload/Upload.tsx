@@ -127,11 +127,12 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
               </p>
               <div id="unlistedRow">
                 <label>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={publicCheckboxChecked}
-                    onChange={handleChangePublicCheckbox} 
-                  /> Upload Publicly
+                    onChange={handleChangePublicCheckbox}
+                  />{' '}
+                  Upload Publicly
                 </label>
               </div>
             </div>

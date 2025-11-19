@@ -78,6 +78,7 @@ export interface Cursor {
  */
 
 export interface IpuzCell {
+  cell: number; // clue number
   style?: {
     shapebg?: string; // e.g., 'circle'
     fillbg?: string; // e.g., '#000000' for shades
@@ -87,12 +88,16 @@ export interface IpuzCell {
 export interface PuzzleJson {
   version: string; // e.g., "http://ipuz.org/v1"
   kind: string[]; // e.g., ["http://ipuz.org/crossword#1"]
+  dimensions: {
+    width: number;
+    height: number;
+  };
   title: string;
   author: string;
   copyright?: string;
   notes?: string; // description
-  solution: (string | null)[][]; // null for black squares
-  puzzle: (IpuzCell | null)[][]; // cell objects with style info, null for regular cells
+  solution: (string | null)[][]; // null for black squares, "#" also valid
+  puzzle: (number | string | IpuzCell | null)[][]; // clue numbers, "#" for black, objects with cell+style, or null
   clues: {
     Across: Array<[string, string] | {number: string; clue: string}>;
     Down: Array<[string, string] | {number: string; clue: string}>;
