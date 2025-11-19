@@ -1,13 +1,13 @@
-import type { PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters } from '@crosswithfriends/shared/types';
-import { Box, Skeleton } from '@mui/material';
+import type {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '@crosswithfriends/shared/types';
+import {Box, Skeleton} from '@mui/material';
 import _ from 'lodash';
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, {useEffect, useRef, useState, useMemo, useCallback} from 'react';
 
-import { fetchPuzzleList } from '../../api/puzzle_list';
+import {fetchPuzzleList} from '../../api/puzzle_list';
 
 import './css/puzzleList.css';
 import Entry from './Entry';
-import type { EntryProps } from './Entry';
+import type {EntryProps} from './Entry';
 
 interface PuzzleStatuses {
   [pid: string]: 'solved' | 'started';
@@ -72,7 +72,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
 
   const fullyScrolled = (): boolean => {
     if (!containerRef.current) return false;
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    const {scrollTop, scrollHeight, clientHeight} = containerRef.current;
     const buffer = 600; // 600 pixels of buffer, i guess?
     return scrollTop + clientHeight + buffer > scrollHeight;
   };
@@ -83,7 +83,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       setLoading(true);
       setError(null);
       try {
-        const nextPage = await fetchPuzzleList({ page: currentPage, pageSize, filter: currentFilter });
+        const nextPage = await fetchPuzzleList({page: currentPage, pageSize, filter: currentFilter});
         // Defensive check: ensure puzzles array exists
         const puzzlesArray = nextPage?.puzzles || [];
         setPuzzles([...currentPuzzles, ...puzzlesArray]);
@@ -112,7 +112,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
           await fetchMore(currentPuzzles, currentPage, currentFilter);
         },
         500,
-        { trailing: true }
+        {trailing: true}
       ),
     [fetchMore]
   );
@@ -188,26 +188,26 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       onTouchEnd={handleTouchEnd}
     >
       {error && (
-        <div style={{ width: '100%', padding: '20px', textAlign: 'center', color: '#d32f2f' }}>
+        <div style={{width: '100%', padding: '20px', textAlign: 'center', color: '#d32f2f'}}>
           Error loading puzzles: {error}
         </div>
       )}
       {!error && puzzleData.length === 0 && !loading && (
-        <div style={{ width: '100%', padding: '20px', textAlign: 'center', color: '#666' }}>
+        <div style={{width: '100%', padding: '20px', textAlign: 'center', color: '#666'}}>
           No puzzles found matching your filters.
         </div>
       )}
-      {puzzleData.map(({ entryProps }) => (
+      {puzzleData.map(({entryProps}) => (
         <div className="entry--container" key={entryProps.pid}>
           <Entry {...entryProps} />
         </div>
       ))}
       {loading && (
-        <Box sx={{ width: '100%', p: 2 }}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Box key={i} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <Skeleton variant="text" width="60%" height={24} sx={{ mb: 1 }} />
-              <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1 }} />
+        <Box sx={{width: '100%', p: 2}}>
+          {Array.from({length: 3}).map((_, i) => (
+            <Box key={i} sx={{mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1}}>
+              <Skeleton variant="text" width="60%" height={24} sx={{mb: 1}} />
+              <Skeleton variant="text" width="80%" height={32} sx={{mb: 1}} />
               <Skeleton variant="text" width="40%" height={20} />
             </Box>
           ))}

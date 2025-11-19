@@ -1,12 +1,12 @@
 import './css/index.css';
 
-import React, { useState, useCallback } from 'react';
+import React, {useState, useCallback} from 'react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
 const swal = withReactContent(Swal);
 import actions from '../../actions';
-import { createNewPuzzle } from '../../api/puzzle';
+import {createNewPuzzle} from '../../api/puzzle';
 
 import FileUploader from './FileUploader';
 
@@ -16,39 +16,42 @@ interface UploadProps {
   onCreate?: () => void;
 }
 
-const Upload: React.FC<UploadProps> = ({ v2, fencing, onCreate }) => {
+const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
   const [, setPublicCheckboxChecked] = useState(false);
 
-  const renderUploadSuccessModal = useCallback((pid: number | null, isPublic: boolean) => {
-    Swal.close();
-    if (isPublic || !pid) {
-      if (onCreate) {
-        onCreate();
+  const renderUploadSuccessModal = useCallback(
+    (pid: number | null, isPublic: boolean) => {
+      Swal.close();
+      if (isPublic || !pid) {
+        if (onCreate) {
+          onCreate();
+        }
+        swal.fire({
+          title: 'Upload Success!',
+          icon: 'success',
+          text: 'You may now view your puzzle on the home page.',
+        });
+      } else {
+        const url = `/beta/play/${pid}${fencing ? '?fencing=1' : ''}`;
+        swal.fire({
+          title: 'Upload Success!',
+          icon: 'success',
+          html: (
+            <div className="swal-text swal-text--no-margin swal-text--text-align-center">
+              <p style={{marginTop: 10, marginBottom: 10}}>
+                Successfully created an unlisted puzzle. You may now visit the link{' '}
+                <a href={url} style={{wordBreak: 'break-all'}}>
+                  {url}
+                </a>{' '}
+                to play the new puzzle.
+              </p>
+            </div>
+          ),
+        });
       }
-      swal.fire({
-        title: 'Upload Success!',
-        icon: 'success',
-        text: 'You may now view your puzzle on the home page.',
-      });
-    } else {
-      const url = `/beta/play/${pid}${fencing ? '?fencing=1' : ''}`;
-      swal.fire({
-        title: 'Upload Success!',
-        icon: 'success',
-        html: (
-          <div className="swal-text swal-text--no-margin swal-text--text-align-center">
-            <p style={{ marginTop: 10, marginBottom: 10 }}>
-              Successfully created an unlisted puzzle. You may now visit the link{' '}
-              <a href={url} style={{ wordBreak: 'break-all' }}>
-                {url}
-              </a>{' '}
-              to play the new puzzle.
-            </p>
-          </div>
-        ),
-      });
-    }
-  }, [fencing, onCreate]);
+    },
+    [fencing, onCreate]
+  );
 
   const renderUploadFailModal = useCallback((err: any) => {
     Swal.close();
@@ -64,20 +67,23 @@ const Upload: React.FC<UploadProps> = ({ v2, fencing, onCreate }) => {
     });
   }, []);
 
-  const create = useCallback(async (puzzleDataArg: any, isPublicArg: boolean) => {
-    const puzzleData = {
-      ...puzzleDataArg,
-      private: !isPublicArg,
-    };
-    // store in both firebase & pg
-    actions.createPuzzle(puzzleData, (pid: number) => {
-      createNewPuzzle(puzzleData, String(pid), {
-        isPublic: isPublicArg,
-      })
-        .then(() => renderUploadSuccessModal(pid, isPublicArg))
-        .catch(renderUploadFailModal);
-    });
-  }, [renderUploadSuccessModal, renderUploadFailModal]);
+  const create = useCallback(
+    async (puzzleDataArg: any, isPublicArg: boolean) => {
+      const puzzleData = {
+        ...puzzleDataArg,
+        private: !isPublicArg,
+      };
+      // store in both firebase & pg
+      actions.createPuzzle(puzzleData, (pid: number) => {
+        createNewPuzzle(puzzleData, String(pid), {
+          isPublic: isPublicArg,
+        })
+          .then(() => renderUploadSuccessModal(pid, isPublicArg))
+          .catch(renderUploadFailModal);
+      });
+    },
+    [renderUploadSuccessModal, renderUploadFailModal]
+  );
 
   const handleUpload = useCallback(
     (uploadConfirmed: boolean, puzzleData: any, isPublic: boolean) => {
@@ -113,7 +119,7 @@ const Upload: React.FC<UploadProps> = ({ v2, fencing, onCreate }) => {
           ),
           preConfirm: () => {
             const checkbox = Swal.getPopup()?.querySelector('#public-checkbox') as HTMLInputElement;
-            return { isPublic: checkbox?.checked || false };
+            return {isPublic: checkbox?.checked || false};
           },
         })
         .then((result) => {
