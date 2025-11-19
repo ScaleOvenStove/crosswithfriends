@@ -6,7 +6,6 @@ html {
 
 html,
 body,
-input,
 #root,
 .router-wrapper {
   display: flex;
