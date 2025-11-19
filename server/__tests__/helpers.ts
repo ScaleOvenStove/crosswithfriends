@@ -1,7 +1,7 @@
 import fastify from 'fastify';
 import type {FastifyInstance} from 'fastify';
 import cors from '@fastify/cors';
-import apiRouter from '../api/router';
+import apiRouter from '../api/router.js';
 
 /**
  * Creates a test Fastify instance with API routes registered

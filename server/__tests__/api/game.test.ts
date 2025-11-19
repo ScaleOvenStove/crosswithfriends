@@ -1,13 +1,13 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
-import {buildTestApp, closeApp, waitForApp} from '../helpers';
+import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as gameModel from '../../model/game';
-import * as puzzleSolveModel from '../../model/puzzle_solve';
-import * as puzzleModel from '../../model/puzzle';
+import * as gameModel from '../../model/game.js';
+import * as puzzleSolveModel from '../../model/puzzle_solve.js';
+import * as puzzleModel from '../../model/puzzle.js';
 
 // Mock the models
-vi.mock('../../model/game');
-vi.mock('../../model/puzzle_solve');
+vi.mock('../../model/game.js');
+vi.mock('../../model/puzzle_solve.js');
 vi.mock('../../model/puzzle');
 
 describe('Game API', () => {

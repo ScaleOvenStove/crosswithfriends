@@ -1,18 +1,18 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
-import {buildTestApp, closeApp, waitForApp} from '../helpers';
+import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as gameModel from '../../model/game';
-import * as puzzleModel from '../../model/puzzle';
+import * as gameModel from '../../model/game.js';
+import * as puzzleModel from '../../model/puzzle.js';
 
 // Mock the models
-vi.mock('../../model/game');
-vi.mock('../../model/puzzle');
+vi.mock('../../model/game.js');
+vi.mock('../../model/puzzle.js');
 
 // Mock the utility functions
 const mockIsLinkExpanderBot = vi.fn((ua: string) => ua === 'bot' || ua === 'messenger');
 const mockIsFBMessengerCrawler = vi.fn((ua: string) => ua === 'messenger');
 
-vi.mock('../../utils/link_preview_util', () => ({
+vi.mock('../../utils/link_preview_util.js', () => ({
   isLinkExpanderBot: (ua: string) => mockIsLinkExpanderBot(ua),
   isFBMessengerCrawler: (ua: string) => mockIsFBMessengerCrawler(ua),
 }));

@@ -40,6 +40,12 @@ const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']):
   return ret;
 };
 
+// Helper to determine puzzle type from ipuz solution array length
+function getPuzzleTypeFromIpuz(ipuz: any): string {
+  const solution = ipuz.solution || [];
+  return solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
+}
+
 export async function listPuzzles(
   filter: ListPuzzleRequestFilters,
   limit: number,
@@ -63,15 +69,25 @@ export async function listPuzzles(
   // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL cause, but will for multiple ands
   // note this is not vulnerable to SQL injection because this string is just dynamically constructing params of the form $#
   // which we fully control.
+  // ipuz format has title and author at root level, not in info
+  // For size, we determine from solution array length (Mini if <= 10 rows, Standard if > 10)
   const parameterizedTileAuthorFilter = parametersForTitleAuthorFilter
     .map(
       (_s, idx) =>
-        `AND ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${
-          idx + parameterOffset
-        }`
+        `AND ((content ->> 'title') || ' ' || (content->>'author')) ILIKE $${idx + parameterOffset}`
     )
     .join('\n');
-  const sizeFilterCondition = sizeFilterArray.length > 0 ? `AND (content->'info'->>'type') = ANY($1)` : '';
+  // Size filter: check solution array length (jsonb_array_length on first dimension)
+  // Mini: <= 10 rows, Standard: > 10 rows
+  const sizeFilterCondition =
+    sizeFilterArray.length > 0
+      ? `AND (
+      CASE 
+        WHEN jsonb_array_length(content->'solution') <= 10 THEN 'Mini Puzzle'
+        ELSE 'Daily Puzzle'
+      END = ANY($1)
+    )`
+      : '';
   const queryParams =
     sizeFilterArray.length > 0
       ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
@@ -110,22 +126,63 @@ export async function listPuzzles(
 
 const string = (): Joi.StringSchema => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
 
+// Validator for ipuz format per https://www.puzzazz.com/ipuz/v1
 const puzzleValidator = Joi.object({
-  grid: Joi.array().items(Joi.array().items(string())),
-  info: Joi.object({
-    type: string().optional(),
-    title: string(),
-    author: string(),
-    copyright: string().optional(),
-    description: string().optional(),
-  }),
-  circles: Joi.array().optional(),
-  shades: Joi.array().optional(),
+  version: string().required(),
+  kind: Joi.array().items(string()).required(),
+  dimensions: Joi.object({
+    width: Joi.number().integer().required(),
+    height: Joi.number().integer().required(),
+  }).required(),
+  title: string().required(),
+  author: string().required(),
+  copyright: string().optional(),
+  notes: string().optional(),
+  solution: Joi.array()
+    .items(Joi.array().items(Joi.alternatives().try(string(), Joi.valid(null, '#'))))
+    .required(),
+  puzzle: Joi.array()
+    .items(
+      Joi.array().items(
+        Joi.alternatives().try(
+          Joi.number(),
+          Joi.string().valid('#'),
+          Joi.object({
+            cell: Joi.number().required(),
+            style: Joi.object({
+              shapebg: string().optional(),
+              fillbg: string().optional(),
+            }).optional(),
+          }),
+          Joi.valid(null)
+        )
+      )
+    )
+    .required(),
   clues: Joi.object({
-    across: Joi.array(),
-    down: Joi.array(),
-  }),
-  private: Joi.boolean().optional(),
+    Across: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.array().items(string()),
+          Joi.object({
+            number: string(),
+            clue: string(),
+          })
+        )
+      )
+      .required(),
+    Down: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.array().items(string()),
+          Joi.object({
+            number: string(),
+            clue: string(),
+          })
+        )
+      )
+      .required(),
+  }).required(),
 });
 
 function validatePuzzle(puzzle: unknown): void {
@@ -206,8 +263,16 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
   }
 }
 
-export async function getPuzzleInfo(pid: string): Promise<PuzzleJson['info']> {
+export async function getPuzzleInfo(
+  pid: string
+): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
   const puzzle = await getPuzzle(pid);
-  const {info = {title: '', author: '', copyright: '', description: ''}} = puzzle;
-  return info;
+  // Extract from ipuz format
+  return {
+    title: puzzle.title || '',
+    author: puzzle.author || '',
+    copyright: puzzle.copyright || '',
+    description: puzzle.notes || '',
+    type: getPuzzleTypeFromIpuz(puzzle),
+  };
 }

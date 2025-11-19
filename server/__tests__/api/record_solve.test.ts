@@ -1,10 +1,10 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
-import {buildTestApp, closeApp, waitForApp} from '../helpers';
+import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as puzzleModel from '../../model/puzzle';
+import * as puzzleModel from '../../model/puzzle.js';
 
 // Mock the model
-vi.mock('../../model/puzzle');
+vi.mock('../../model/puzzle.js');
 
 describe('Record Solve API', () => {
   let app: FastifyInstance;

@@ -1,7 +1,6 @@
 import './css/fileUploader.css';
 
-import iPUZtoJSON from '@crosswithfriends/shared/lib/converter/iPUZtoJSON';
-import PUZtoJSON from '@crosswithfriends/shared/lib/converter/PUZtoJSON';
+import PUZtoIPUZ from '@crosswithfriends/shared/lib/converter/PUZtoIPUZ';
 import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
 import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
 import React, {useCallback, useRef, useEffect} from 'react';
@@ -13,6 +12,11 @@ import withReactContent from 'sweetalert2-react-content';
 const swal = withReactContent(Swal);
 
 class UnknownFileTypeError extends Error {
+  errorType: string;
+  errorTitle: string;
+  errorText: string;
+  errorIcon: string;
+
   constructor(fileType: string) {
     const title = `Unknown file type: .${fileType}`;
     super(title);
@@ -24,6 +28,11 @@ class UnknownFileTypeError extends Error {
 }
 
 class UnsupportedFileTypeError extends Error {
+  errorType: string;
+  errorTitle: string;
+  errorText: string;
+  errorIcon: string;
+
   constructor(fileType: string) {
     const title = `Unsupported file type: .${fileType}`;
     super(title);
@@ -41,70 +50,48 @@ interface FileUploaderProps {
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
-  const validPuzzle = useCallback((puzzle: any) => {
+  const validIpuz = useCallback((puzzle: any) => {
+    // Validate ipuz format
     const shape = {
-      info: {
-        title: '',
-        type: '',
-        author: '',
-      },
-      grid: [['']],
-      // circles: {} is optional
+      version: '',
+      kind: [],
+      title: '',
+      author: '',
+      solution: [[]],
+      puzzle: [[]],
       clues: {
-        across: {},
-        down: {},
+        Across: [],
+        Down: [],
       },
     };
     return hasShape(puzzle, shape);
   }, []);
 
   const convertPUZ = useCallback((buffer: ArrayBuffer) => {
-    const raw = PUZtoJSON(buffer);
-
-    const {grid: rawGrid, info, circles, shades, across, down} = raw;
-
-    const {title, author, description} = info;
-
-    const grid = rawGrid.map((row) => row.map(({solution}) => solution || '.'));
-    const type = grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
-
-    const result = {
-      grid,
-      circles,
-      shades,
-      info: {
-        type,
-        title,
-        author,
-        description,
-      },
-      clues: {across, down},
-    };
-    return result;
+    // Convert .puz directly to ipuz format
+    return PUZtoIPUZ(buffer);
   }, []);
 
-  const convertIPUZ = useCallback((readerResult: any) => {
-    const {grid, info, circles, shades, across, down} = iPUZtoJSON(readerResult);
-
-    const result = {
-      grid,
-      circles,
-      shades,
-      info,
-      clues: {across, down},
-    };
-
-    return result;
+  const validateIPUZ = useCallback((readerResult: any) => {
+    // For .ipuz files, just parse and validate - no conversion needed
+    try {
+      const ipuz = JSON.parse(new TextDecoder().decode(readerResult));
+      return ipuz;
+    } catch (_e) {
+      throw new Error('Invalid JSON in .ipuz file');
+    }
   }, []);
 
-  const attemptPuzzleConversionRef = useRef<(readerResult: any, fileType: string) => any>();
+  const attemptPuzzleConversionRef = useRef<((readerResult: any, fileType: string) => any) | undefined>(
+    undefined
+  );
 
   const attemptPuzzleConversion = useCallback(
     (readerResult: any, fileType: string): any => {
       if (fileType === 'puz') {
         return convertPUZ(readerResult);
       } else if (fileType === 'ipuz') {
-        return convertIPUZ(readerResult);
+        return validateIPUZ(readerResult);
       } else if (fileType === 'jpz') {
         throw new UnsupportedFileTypeError(fileType);
       } else {
@@ -116,7 +103,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
         }
       }
     },
-    [convertPUZ, convertIPUZ, fileTypeGuesser]
+    [convertPUZ, validateIPUZ]
   );
 
   useEffect(() => {
@@ -126,24 +113,46 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
+      if (!file) {
+        return;
+      }
       const fileType = file.name.split('.').pop() || '';
       const reader = new FileReader();
       reader.addEventListener('loadend', () => {
         try {
           const puzzle = attemptPuzzleConversion(reader.result, fileType);
-          if (validPuzzle(puzzle)) {
+          if (validIpuz(puzzle)) {
             success(puzzle);
           } else {
             fail();
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           let defaultTitle = 'Something went wrong';
-          let defaultText = `The error message was: ${e.message}`;
-          let defaultIcon = 'warning';
+          let defaultText = 'An unknown error occurred';
+          let defaultIcon: 'warning' | 'error' | 'info' | 'success' | 'question' = 'warning';
 
-          if (e?.errorTitle) defaultTitle = e.errorTitle;
-          if (e?.errorText) defaultText = e.errorText;
-          if (e?.errorIcon) defaultIcon = e.errorIcon;
+          if (e instanceof Error) {
+            defaultText = `The error message was: ${e.message}`;
+          }
+
+          if (e && typeof e === 'object' && 'errorTitle' in e) {
+            defaultTitle = String(e.errorTitle);
+          }
+          if (e && typeof e === 'object' && 'errorText' in e) {
+            defaultText = String(e.errorText);
+          }
+          if (e && typeof e === 'object' && 'errorIcon' in e) {
+            const icon = String(e.errorIcon);
+            if (
+              icon === 'warning' ||
+              icon === 'error' ||
+              icon === 'info' ||
+              icon === 'success' ||
+              icon === 'question'
+            ) {
+              defaultIcon = icon;
+            }
+          }
 
           swal.fire({
             title: defaultTitle,
@@ -152,13 +161,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
             confirmButtonText: 'OK',
           });
         }
-        if (acceptedFiles[0].preview) {
-          window.URL.revokeObjectURL(acceptedFiles[0].preview);
+        const firstFile = acceptedFiles[0];
+        if (firstFile && 'preview' in firstFile && typeof firstFile.preview === 'string') {
+          window.URL.revokeObjectURL(firstFile.preview);
         }
       });
       reader.readAsArrayBuffer(file);
     },
-    [attemptPuzzleConversion, validPuzzle, success, fail]
+    [attemptPuzzleConversion, validIpuz, success, fail]
   );
 
   return (

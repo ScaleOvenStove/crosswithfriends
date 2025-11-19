@@ -37,20 +37,22 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
       const state = getState();
       if (!state.puzzles[path]) {
         const puzzleRef = ref(db, path);
+        const newPuzzle: PuzzleInstance = {
+          ref: puzzleRef,
+          path,
+          pid,
+          data: null,
+          ready: false,
+        };
         setState({
           puzzles: {
             ...state.puzzles,
-            [path]: {
-              ref: puzzleRef,
-              path,
-              pid,
-              data: null,
-              ready: false,
-            },
+            [path]: newPuzzle,
           },
         });
+        return newPuzzle;
       }
-      return getState().puzzles[path];
+      return state.puzzles[path];
     },
 
     attach: (path: string) => {
@@ -156,13 +158,72 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
       const puzzle = state.puzzles[path];
       if (!puzzle || !puzzle.data) return null;
 
-      const {info, circles = [], shades = [], grid: solution, pid} = puzzle.data;
-      if (!solution) {
+      // Read from ipuz format
+      const ipuz = puzzle.data;
+      const solution = (ipuz.solution || []).map((row: (string | null)[]) =>
+        row.map((cell: string | null) => (cell === null ? '.' : cell))
+      );
+
+      if (!solution || solution.length === 0) {
         return null;
       }
+
+      // Extract circles and shades from puzzle grid
+      // ipuz format: puzzle grid can contain numbers, "#", objects with {cell, style}, or null
+      const circles: Array<{r: number; c: number}> = [];
+      const shades: Array<{r: number; c: number}> = [];
+      const puzzleGrid = (ipuz.puzzle || []) as (number | string | {cell: number; style?: any} | null)[][];
+      puzzleGrid.forEach(
+        (row: (number | string | {cell: number; style?: any} | null)[], rowIndex: number) => {
+          row.forEach((cell: number | string | {cell: number; style?: any} | null, cellIndex: number) => {
+            if (cell && typeof cell === 'object' && 'cell' in cell) {
+              // Cell object with style
+              if (cell.style?.shapebg === 'circle') {
+                circles.push({r: rowIndex, c: cellIndex});
+              }
+              if (cell.style?.fillbg) {
+                shades.push({r: rowIndex, c: cellIndex});
+              }
+            }
+          });
+        }
+      );
+
+      // Convert ipuz clues format
+      const convertClues = (clueArray: any[]): string[] => {
+        const result: string[] = [];
+        clueArray.forEach((item) => {
+          if (Array.isArray(item) && item.length >= 2) {
+            const num = parseInt(item[0], 10);
+            if (!isNaN(num)) {
+              result[num] = item[1];
+            }
+          } else if (item && typeof item === 'object' && item.number && item.clue) {
+            const num = parseInt(item.number, 10);
+            if (!isNaN(num)) {
+              result[num] = item.clue;
+            }
+          }
+        });
+        return result;
+      };
+
+      const acrossClues = convertClues(ipuz.clues?.across || []);
+      const downClues = convertClues(ipuz.clues?.down || []);
+
       const gridObject = makeGrid(solution);
-      const clues = gridObject.alignClues(puzzle.data.clues || {across: [], down: []});
+      const clues = gridObject.alignClues({across: acrossClues, down: downClues});
       const grid = gridObject.toArray();
+
+      // Build info object from ipuz format
+      const type = solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
+      const info = {
+        title: (ipuz.title as string | undefined) || '',
+        author: (ipuz.author as string | undefined) || '',
+        copyright: (ipuz.copyright as string | undefined) || '',
+        description: (ipuz.notes as string | undefined) || '',
+        type,
+      };
 
       const rawGame: RawGame = {
         info,
@@ -170,7 +231,7 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
         shades,
         clues,
         solution,
-        pid,
+        pid: puzzle.pid,
         grid,
         chat: {
           users: [],

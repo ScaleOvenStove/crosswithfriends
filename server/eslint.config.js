@@ -114,7 +114,7 @@ export default [
         'ignorePackages',
         {
           ts: 'never',
-          js: 'never',
+          js: 'always', // Required for ES modules in Node.js
           json: 'always',
         },
       ],
