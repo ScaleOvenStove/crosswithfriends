@@ -1,17 +1,17 @@
-import type {ListPuzzleRequestFilters, PuzzleJson} from '@shared/types';
+import type { ListPuzzleRequestFilters, PuzzleJson } from '@shared/types';
 import Joi from 'joi';
 import _ from 'lodash';
 import * as uuid from 'uuid';
 
-import {logger} from '../utils/logger.js';
+import { logger } from '../utils/logger.js';
 
-import {pool} from './pool.js';
+import { pool } from './pool.js';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
 export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   const startTime = Date.now();
-  const {rows} = await pool.query(
+  const { rows } = await pool.query(
     `
       SELECT content
       FROM puzzles
@@ -66,8 +66,7 @@ export async function listPuzzles(
   const parameterizedTileAuthorFilter = parametersForTitleAuthorFilter
     .map(
       (_s, idx) =>
-        `AND ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${
-          idx + parameterOffset
+        `AND ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${idx + parameterOffset
         }`
     )
     .join('\n');
@@ -76,7 +75,7 @@ export async function listPuzzles(
     sizeFilterArray.length > 0
       ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
       : [limit, offset, ...parametersForTitleAuthorFilter];
-  const {rows} = await pool.query(
+  const { rows } = await pool.query(
     `
       SELECT pid, uploaded_at, content, times_solved
       FROM puzzles
@@ -122,15 +121,15 @@ const puzzleValidator = Joi.object({
   circles: Joi.array().optional(),
   shades: Joi.array().optional(),
   clues: Joi.object({
-    across: Joi.array(),
-    down: Joi.array(),
+    across: Joi.alternatives().try(Joi.array(), Joi.object()),
+    down: Joi.alternatives().try(Joi.array(), Joi.object()),
   }),
   private: Joi.boolean().optional(),
 });
 
 function validatePuzzle(puzzle: unknown): void {
   logger.debug('Puzzle keys:', _.keys(puzzle));
-  const {error} = puzzleValidator.validate(puzzle);
+  const { error } = puzzleValidator.validate(puzzle);
   if (error) {
     throw new Error(error.message);
   }
@@ -155,7 +154,7 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
 async function isGidAlreadySolved(gid: string): Promise<boolean> {
   // Note: This gate makes use of the assumption "one pid per gid";
   // The unique index on (pid, gid) is more strict than this
-  const {rows} = await pool.query(
+  const { rows } = await pool.query(
     `
     SELECT COUNT(*)
     FROM puzzle_solves
@@ -208,6 +207,6 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
 
 export async function getPuzzleInfo(pid: string): Promise<PuzzleJson['info']> {
   const puzzle = await getPuzzle(pid);
-  const {info = {title: '', author: '', copyright: '', description: ''}} = puzzle;
+  const { info = { title: '', author: '', copyright: '', description: '' } } = puzzle;
   return info;
 }

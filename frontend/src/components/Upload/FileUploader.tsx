@@ -3,16 +3,21 @@ import './css/fileUploader.css';
 import iPUZtoJSON from '@crosswithfriends/shared/lib/converter/iPUZtoJSON';
 import PUZtoJSON from '@crosswithfriends/shared/lib/converter/PUZtoJSON';
 import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
-import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
-import React, {useCallback, useRef, useEffect} from 'react';
+import { hasShape } from '@crosswithfriends/shared/lib/jsUtils';
+import React, { useCallback, useRef, useEffect } from 'react';
 import Dropzone from 'react-dropzone';
-import {MdFileUpload} from 'react-icons/md';
-import Swal from 'sweetalert2';
+import { MdFileUpload } from 'react-icons/md';
+import Swal, { type SweetAlertIcon } from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
 const swal = withReactContent(Swal);
 
 class UnknownFileTypeError extends Error {
+  errorType: string;
+  errorTitle: string;
+  errorText: string;
+  errorIcon: any;
+
   constructor(fileType: string) {
     const title = `Unknown file type: .${fileType}`;
     super(title);
@@ -24,6 +29,11 @@ class UnknownFileTypeError extends Error {
 }
 
 class UnsupportedFileTypeError extends Error {
+  errorType: string;
+  errorTitle: string;
+  errorText: string;
+  errorIcon: any;
+
   constructor(fileType: string) {
     const title = `Unsupported file type: .${fileType}`;
     super(title);
@@ -40,7 +50,7 @@ interface FileUploaderProps {
   fail: () => void;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
+const FileUploader: React.FC<FileUploaderProps> = ({ v2, success, fail }) => {
   const validPuzzle = useCallback((puzzle: any) => {
     const shape = {
       info: {
@@ -61,11 +71,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
   const convertPUZ = useCallback((buffer: ArrayBuffer) => {
     const raw = PUZtoJSON(buffer);
 
-    const {grid: rawGrid, info, circles, shades, across, down} = raw;
+    const { grid: rawGrid, info, circles, shades, across, down } = raw;
 
-    const {title, author, description} = info;
+    const { title, author, description } = info;
 
-    const grid = rawGrid.map((row) => row.map(({solution}) => solution || '.'));
+    const grid = rawGrid.map((row: { solution?: string }[]) => row.map(({ solution }) => solution || '.'));
     const type = grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
 
     const result = {
@@ -78,26 +88,26 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
         author,
         description,
       },
-      clues: {across, down},
+      clues: { across, down },
     };
     return result;
   }, []);
 
   const convertIPUZ = useCallback((readerResult: any) => {
-    const {grid, info, circles, shades, across, down} = iPUZtoJSON(readerResult);
+    const { grid, info, circles, shades, across, down } = iPUZtoJSON(readerResult);
 
     const result = {
       grid,
       circles,
       shades,
       info,
-      clues: {across, down},
+      clues: { across, down },
     };
 
     return result;
   }, []);
 
-  const attemptPuzzleConversionRef = useRef<(readerResult: any, fileType: string) => any>();
+  const attemptPuzzleConversionRef = useRef<((readerResult: any, fileType: string) => any) | null>(null);
 
   const attemptPuzzleConversion = useCallback(
     (readerResult: any, fileType: string): any => {
@@ -126,6 +136,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
+      if (!file) return;
       const fileType = file.name.split('.').pop() || '';
       const reader = new FileReader();
       reader.addEventListener('loadend', () => {
@@ -139,7 +150,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
         } catch (e: any) {
           let defaultTitle = 'Something went wrong';
           let defaultText = `The error message was: ${e.message}`;
-          let defaultIcon = 'warning';
+          let defaultIcon: SweetAlertIcon = 'warning';
 
           if (e?.errorTitle) defaultTitle = e.errorTitle;
           if (e?.errorText) defaultText = e.errorText;
@@ -152,8 +163,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
             confirmButtonText: 'OK',
           });
         }
-        if (acceptedFiles[0].preview) {
-          window.URL.revokeObjectURL(acceptedFiles[0].preview);
+        if ((file as any).preview) {
+          window.URL.revokeObjectURL((file as any).preview);
         }
       });
       reader.readAsArrayBuffer(file);
@@ -163,7 +174,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
 
   return (
     <Dropzone onDrop={onDrop}>
-      {({getRootProps, getInputProps, isDragActive}) => (
+      {({ getRootProps, getInputProps, isDragActive }) => (
         <div
           {...getRootProps()}
           className="file-uploader"

@@ -1,12 +1,12 @@
 import './css/index.css';
 
-import React, {useState, useCallback} from 'react';
+import React, { useState, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
 const swal = withReactContent(Swal);
 import actions from '../../actions';
-import {createNewPuzzle} from '../../api/puzzle';
+import { createNewPuzzle } from '../../api/puzzle';
 
 import FileUploader from './FileUploader';
 
@@ -16,18 +16,12 @@ interface UploadProps {
   onCreate?: () => void;
 }
 
-const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
-  const [puzzle, setPuzzle] = useState<any>(null);
-  const [recentUnlistedPid, setRecentUnlistedPid] = useState<number | null>(null);
-  const [publicCheckboxChecked, setPublicCheckboxChecked] = useState(false);
+const Upload: React.FC<UploadProps> = ({ v2, fencing, onCreate }) => {
+  const [, setPublicCheckboxChecked] = useState(false);
 
-  const handleChangePublicCheckbox = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPublicCheckboxChecked(e.target.checked);
-  }, []);
-
-  const renderUploadSuccessModal = useCallback(() => {
+  const renderUploadSuccessModal = useCallback((pid: number | null, isPublic: boolean) => {
     Swal.close();
-    if (!recentUnlistedPid) {
+    if (isPublic || !pid) {
       if (onCreate) {
         onCreate();
       }
@@ -37,15 +31,15 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
         text: 'You may now view your puzzle on the home page.',
       });
     } else {
-      const url = `/beta/play/${recentUnlistedPid}${fencing ? '?fencing=1' : ''}`;
+      const url = `/beta/play/${pid}${fencing ? '?fencing=1' : ''}`;
       swal.fire({
         title: 'Upload Success!',
         icon: 'success',
         html: (
           <div className="swal-text swal-text--no-margin swal-text--text-align-center">
-            <p style={{marginTop: 10, marginBottom: 10}}>
+            <p style={{ marginTop: 10, marginBottom: 10 }}>
               Successfully created an unlisted puzzle. You may now visit the link{' '}
-              <a href={url} style={{wordBreak: 'break-all'}}>
+              <a href={url} style={{ wordBreak: 'break-all' }}>
                 {url}
               </a>{' '}
               to play the new puzzle.
@@ -54,7 +48,7 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
         ),
       });
     }
-  }, [recentUnlistedPid, fencing, onCreate]);
+  }, [fencing, onCreate]);
 
   const renderUploadFailModal = useCallback((err: any) => {
     Swal.close();
@@ -70,29 +64,25 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
     });
   }, []);
 
-  const create = useCallback(async () => {
-    const isPublic = publicCheckboxChecked;
+  const create = useCallback(async (puzzleDataArg: any, isPublicArg: boolean) => {
     const puzzleData = {
-      ...puzzle,
-      private: !isPublic,
+      ...puzzleDataArg,
+      private: !isPublicArg,
     };
     // store in both firebase & pg
     actions.createPuzzle(puzzleData, (pid: number) => {
-      setPuzzle(null);
-      setRecentUnlistedPid(isPublic ? undefined : pid);
-
-      createNewPuzzle(puzzleData, pid, {
-        isPublic,
+      createNewPuzzle(puzzleData, String(pid), {
+        isPublic: isPublicArg,
       })
-        .then(renderUploadSuccessModal)
+        .then(() => renderUploadSuccessModal(pid, isPublicArg))
         .catch(renderUploadFailModal);
     });
-  }, [puzzle, publicCheckboxChecked, renderUploadSuccessModal, renderUploadFailModal]);
+  }, [renderUploadSuccessModal, renderUploadFailModal]);
 
   const handleUpload = useCallback(
-    (uploadConfirmed: boolean) => {
+    (uploadConfirmed: boolean, puzzleData: any, isPublic: boolean) => {
       if (uploadConfirmed) {
-        return create();
+        return create(puzzleData, isPublic);
       }
       return null;
     },
@@ -116,27 +106,29 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
                 {puzzleTitle}
                 &quot;. Continue?
               </p>
-              <div id="unlistedRow">
-                <label>
-                  <input type="checkbox" onChange={handleChangePublicCheckbox} /> Upload Publicly
-                </label>
-              </div>
+              <label>
+                <input type="checkbox" id="public-checkbox" /> Upload Publicly
+              </label>
             </div>
           ),
+          preConfirm: () => {
+            const checkbox = Swal.getPopup()?.querySelector('#public-checkbox') as HTMLInputElement;
+            return { isPublic: checkbox?.checked || false };
+          },
         })
         .then((result) => {
           if (result.isConfirmed) {
-            handleUpload(true);
+            const isPublic = result.value?.isPublic || false;
+            setPublicCheckboxChecked(isPublic);
+            handleUpload(true, puzzleData, isPublic);
           }
         });
     },
-    [handleChangePublicCheckbox, handleUpload]
+    [handleUpload]
   );
 
   const success = useCallback(
     (puzzleData: any) => {
-      setPuzzle({...puzzleData});
-      setRecentUnlistedPid(null);
       setPublicCheckboxChecked(false);
       renderSuccessModal(puzzleData);
     },
