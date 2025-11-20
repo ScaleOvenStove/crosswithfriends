@@ -41,8 +41,8 @@ const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']):
 };
 
 // Helper to determine puzzle type from ipuz solution array length
-function getPuzzleTypeFromIpuz(ipuz: any): string {
-  const solution = ipuz.solution || [];
+function getPuzzleTypeFromIpuz(ipuz: {solution?: unknown}): string {
+  const solution = Array.isArray(ipuz.solution) ? ipuz.solution : [];
   return solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
 }
 
@@ -58,7 +58,11 @@ export async function listPuzzles(
   }[]
 > {
   const startTime = Date.now();
-  const parametersForTitleAuthorFilter = filter.nameOrTitleFilter.split(/\s/).map((s) => `%${s}%`);
+  // Filter out empty strings from search terms
+  const parametersForTitleAuthorFilter = filter.nameOrTitleFilter
+    .split(/\s/)
+    .filter((s) => s.length > 0)
+    .map((s) => `%${s}%`);
   const sizeFilterArray = mapSizeFilterForDB(filter.sizeFilter);
   // Parameter offset depends on whether size filter is present:
   // - With size filter: $1=sizeFilter, $2=limit, $3=offset, $4+=titleAuthorFilter
@@ -69,20 +73,31 @@ export async function listPuzzles(
   // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL cause, but will for multiple ands
   // note this is not vulnerable to SQL injection because this string is just dynamically constructing params of the form $#
   // which we fully control.
-  // ipuz format has title and author at root level, not in info
+  //
+  // IMPORTANT: Production and staging share the same database, so we must support both formats:
+  // - Old format: content->'info'->>'title' and content->'info'->>'author' (legacy puzzles)
+  // - New format (ipuz): content->>'title' and content->>'author' (new puzzles)
+  //
   // For size, we determine from solution array length (Mini if <= 10 rows, Standard if > 10)
+  // or from info.type if it exists (old format)
   const parameterizedTileAuthorFilter = parametersForTitleAuthorFilter
     .map(
       (_s, idx) =>
-        `AND ((content ->> 'title') || ' ' || (content->>'author')) ILIKE $${idx + parameterOffset}`
+        `AND (
+          ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${idx + parameterOffset}
+          OR ((content ->> 'title') || ' ' || (content->>'author')) ILIKE $${idx + parameterOffset}
+        )`
     )
     .join('\n');
   // Size filter: check solution array length (jsonb_array_length on first dimension)
   // Mini: <= 10 rows, Standard: > 10 rows
+  // Handle both old format (content->'info'->>'type') and ipuz format (content->'solution')
   const sizeFilterCondition =
     sizeFilterArray.length > 0
       ? `AND (
-      CASE 
+      CASE
+        WHEN content->'info'->>'type' IS NOT NULL THEN
+          (content->'info'->>'type')
         WHEN jsonb_array_length(content->'solution') <= 10 THEN 'Mini Puzzle'
         ELSE 'Daily Puzzle'
       END = ANY($1)
@@ -267,7 +282,28 @@ export async function getPuzzleInfo(
   pid: string
 ): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
   const puzzle = await getPuzzle(pid);
-  // Extract from ipuz format
+
+  // IMPORTANT: Production and staging share the same database, so we must support both formats
+  // Handle old format (with info object) and ipuz format (title/author at root)
+  if ('info' in puzzle && puzzle.info && typeof puzzle.info === 'object') {
+    // Old format: extract from info object
+    const info = puzzle.info as {
+      title?: string;
+      author?: string;
+      copyright?: string;
+      description?: string;
+      type?: string;
+    };
+    return {
+      title: info.title || '',
+      author: info.author || '',
+      copyright: info.copyright || '',
+      description: info.description || '',
+      type: info.type,
+    };
+  }
+
+  // New format (ipuz): extract from root level
   return {
     title: puzzle.title || '',
     author: puzzle.author || '',

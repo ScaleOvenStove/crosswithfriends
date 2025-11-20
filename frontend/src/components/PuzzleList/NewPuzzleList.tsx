@@ -151,19 +151,57 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
   }[] = useMemo(
     () =>
       puzzles
-        .map((puzzle) => ({
-          entryProps: {
-            info: {
-              type: puzzle.content.info.type || 'Puzzle',
+        .map((puzzle) => {
+          // Handle both ipuz format (title/author at root) and transformed format (info object)
+          const content = puzzle.content;
+          const isIpuzFormat = content.title !== undefined && !('info' in content);
+
+          let info: {type: string; title?: string; author?: string; copyright?: string; description?: string};
+          let title: string;
+          let author: string;
+
+          if (isIpuzFormat) {
+            // ipuz format: title/author at root level
+            const solution = content.solution || [];
+            const type = solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
+            info = {type};
+            title = content.title || '';
+            author = content.author || '';
+          } else {
+            // Transformed format: info object exists (old format or API-transformed)
+            const contentWithInfo = content as PuzzleJson & {
+              info?: {
+                type?: string;
+                title?: string;
+                author?: string;
+                copyright?: string;
+                description?: string;
+              };
+            };
+            const existingInfo = contentWithInfo.info;
+            info = {
+              type: existingInfo?.type || 'Puzzle',
+              title: existingInfo?.title,
+              author: existingInfo?.author,
+              copyright: existingInfo?.copyright,
+              description: existingInfo?.description,
+            };
+            title = existingInfo?.title || '';
+            author = existingInfo?.author || '';
+          }
+
+          return {
+            entryProps: {
+              info,
+              title,
+              author,
+              pid: puzzle.pid,
+              stats: puzzle.stats,
+              status: props.puzzleStatuses[puzzle.pid],
+              fencing: props.fencing,
             },
-            title: puzzle.content.info.title,
-            author: puzzle.content.info.author,
-            pid: puzzle.pid,
-            stats: puzzle.stats,
-            status: props.puzzleStatuses[puzzle.pid],
-            fencing: props.fencing,
-          },
-        }))
+          };
+        })
         .filter((data) => {
           const mappedStatus = {
             undefined: 'New' as const,
