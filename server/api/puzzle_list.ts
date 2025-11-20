@@ -45,7 +45,7 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
         const content = puzzle.content;
 
         // If content already has info object (old format), use it as-is
-        if (content.info && typeof content.info === 'object') {
+        if ('info' in content && typeof content.info === 'object') {
           return {
             pid: puzzle.pid,
             content,

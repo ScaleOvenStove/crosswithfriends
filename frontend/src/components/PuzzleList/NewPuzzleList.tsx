@@ -154,9 +154,12 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         .map((puzzle) => {
           // Handle both ipuz format (title/author at root) and transformed format (info object)
           const content = puzzle.content;
-          const isIpuzFormat = content.title !== undefined && content.info === undefined;
+          const isIpuzFormat = content.title !== undefined && !('info' in content);
 
-          let info, title, author;
+          let info: {type: string; title?: string; author?: string; copyright?: string; description?: string};
+          let title: string;
+          let author: string;
+
           if (isIpuzFormat) {
             // ipuz format: title/author at root level
             const solution = content.solution || [];
@@ -166,9 +169,25 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
             author = content.author || '';
           } else {
             // Transformed format: info object exists (old format or API-transformed)
-            info = content.info || {type: 'Puzzle'};
-            title = info.title || '';
-            author = info.author || '';
+            const contentWithInfo = content as PuzzleJson & {
+              info?: {
+                type?: string;
+                title?: string;
+                author?: string;
+                copyright?: string;
+                description?: string;
+              };
+            };
+            const existingInfo = contentWithInfo.info;
+            info = {
+              type: existingInfo?.type || 'Puzzle',
+              title: existingInfo?.title,
+              author: existingInfo?.author,
+              copyright: existingInfo?.copyright,
+              description: existingInfo?.description,
+            };
+            title = existingInfo?.title || '';
+            author = existingInfo?.author || '';
           }
 
           return {
