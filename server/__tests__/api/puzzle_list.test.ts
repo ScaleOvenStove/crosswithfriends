@@ -48,9 +48,19 @@ describe('Puzzle List API', () => {
       const body = JSON.parse(response.body);
       expect(body).toHaveProperty('puzzles');
       expect(body.puzzles).toHaveLength(2);
+      // API transforms ipuz format to include info object for frontend compatibility
       expect(body.puzzles[0]).toEqual({
         pid: 'pid1',
-        content: {title: 'Puzzle 1'},
+        content: {
+          title: 'Puzzle 1',
+          info: {
+            type: 'Mini Puzzle',
+            title: 'Puzzle 1',
+            author: '',
+            copyright: '',
+            description: '',
+          },
+        },
         stats: {numSolves: 10},
       });
     });
