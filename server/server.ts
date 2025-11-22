@@ -80,16 +80,18 @@ async function runServer(): Promise<void> {
       // 3. If name is 'Error' and explicitly set, use 'Error'
       // 4. If name is missing/inherited and status is 400, use 'Internal Server Error'
       // 5. Otherwise use 'Error' as fallback
-      const errorName =
-        statusCode === 500
-          ? 'Error'
-          : nameValue && nameValue !== 'Error'
-            ? nameValue
-            : nameValue === 'Error' && hasOwnName
-              ? 'Error'
-              : !nameValue || (nameValue === 'Error' && !hasOwnName && statusCode === 400)
-                ? 'Internal Server Error'
-                : 'Error';
+      let errorName: string;
+      if (statusCode === 500) {
+        errorName = 'Error';
+      } else if (nameValue && nameValue !== 'Error') {
+        errorName = nameValue;
+      } else if (nameValue === 'Error' && hasOwnName) {
+        errorName = 'Error';
+      } else if (!nameValue || (nameValue === 'Error' && !hasOwnName && statusCode === 400)) {
+        errorName = 'Internal Server Error';
+      } else {
+        errorName = 'Error';
+      }
       reply.code(statusCode).send({
         statusCode,
         error: errorName,
@@ -104,7 +106,7 @@ async function runServer(): Promise<void> {
 
     // Register rate limiting plugin
     await app.register(rateLimit, {
-      max: 100, // Maximum 100 requests
+      max: 500, // Maximum 500 requests
       timeWindow: '15 minutes', // Per 15-minute window
       cache: 10000, // Cache up to 10000 different IPs
       allowList: (req) => {
