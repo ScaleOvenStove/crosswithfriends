@@ -1,4 +1,3 @@
-import _ from 'lodash';
 
 const reducers = {
   create: (composition, params) => {
@@ -76,7 +75,7 @@ const reducers = {
 
   clearPencil: (composition) => {
     let {grid} = composition;
-    grid = _.map(grid, (row) =>
+    grid = grid.map((row) =>
       row.map((cell) => ({
         ...cell,
         pencil: cell.value === '.' ? null : false,
@@ -141,7 +140,7 @@ const reducers = {
       value,
     } = params;
     clues = [
-      ..._.filter(clues, (clue) => clue.r !== r || clue.c !== c || clue.dir !== dir),
+      ...clues.filter((clue) => clue.r !== r || clue.c !== c || clue.dir !== dir),
       {
         r,
         c,

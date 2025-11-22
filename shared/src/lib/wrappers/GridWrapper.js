@@ -1,5 +1,4 @@
 /* eslint no-continue: "off", no-underscore-dangle: "off" */
-import _ from 'lodash';
 // eslint-disable-next-line import/no-cycle
 import * as gameUtils from '../gameUtils';
 
@@ -16,7 +15,7 @@ export default class GridWrapper {
     if (!grid) {
       throw new Error('Attempting to wrap an undefined grid object.');
     }
-    if (!_.isArray(grid)) {
+    if (!Array.isArray(grid)) {
       throw new Error(`Invalid type for grid object: ${typeof grid}`);
     }
   }
@@ -50,8 +49,8 @@ export default class GridWrapper {
 
   keys() {
     const keys = [];
-    for (const r of _.range(0, this.grid.length)) {
-      for (const c of _.range(0, this.grid[r].length)) {
+    for (let r = 0; r < this.grid.length; r++) {
+      for (let c = 0; c < this.grid[r].length; c++) {
         keys.push([r, c]);
       }
     }
@@ -60,8 +59,8 @@ export default class GridWrapper {
 
   values() {
     const values = [];
-    for (const r of _.range(0, this.grid.length)) {
-      for (const c of _.range(0, this.grid[r].length)) {
+    for (let r = 0; r < this.grid.length; r++) {
+      for (let c = 0; c < this.grid[r].length; c++) {
         values.push(this.grid[r][c]);
       }
     }
@@ -70,8 +69,8 @@ export default class GridWrapper {
 
   items() {
     const items = [];
-    for (const r of _.range(0, this.grid.length)) {
-      for (const c of _.range(0, this.grid[r].length)) {
+    for (let r = 0; r < this.grid.length; r++) {
+      for (let c = 0; c < this.grid[r].length; c++) {
         items.push([r, c, this.grid[r][c]]);
       }
     }
@@ -217,13 +216,13 @@ export default class GridWrapper {
   getWritableLocations() {
     const writableLocations = [];
 
-    _.forEach(_.range(this.grid.length), (i) => {
-      _.forEach(_.range(this.grid[0].length), (j) => {
+    for (let i = 0; i < this.grid.length; i++) {
+      for (let j = 0; j < this.grid[0].length; j++) {
         if (this.isWriteable(i, j)) {
           writableLocations.push({i, j});
         }
-      });
-    });
+      }
+    }
 
     return writableLocations;
   }
@@ -235,16 +234,16 @@ export default class GridWrapper {
       ({i, j}) =>
         this.getParent(r, c, direction) === this.getParent(i, j, direction);
 
-    const across = _.filter(writableLocations, isSameWord('across'));
-    const down = _.filter(writableLocations, isSameWord('down'));
+    const across = writableLocations.filter(isSameWord('across'));
+    const down = writableLocations.filter(isSameWord('down'));
     return {across, down};
   }
 
   getPossiblePickupLocations(solution) {
     const writableLocations = this.getWritableLocations();
-    const isCorrect = (cells) => _.every(cells, ({i, j}) => this.grid[i][j].value === solution[i][j]);
+    const isCorrect = (cells) => cells.every(({i, j}) => this.grid[i][j].value === solution[i][j]);
 
-    return _.filter(writableLocations, ({i, j}) => {
+    return writableLocations.filter(({i, j}) => {
       const {across, down} = this.getCrossingWords(i, j);
       return !isCorrect(across) && !isCorrect(down);
     });

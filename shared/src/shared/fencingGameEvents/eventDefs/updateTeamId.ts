@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import type {EventDef} from '../types/EventDef';
 
 export interface UpdateTeamIdEvent {
@@ -8,7 +7,7 @@ export interface UpdateTeamIdEvent {
 
 const updateTeamId: EventDef<UpdateTeamIdEvent> = {
   reducer(state, {id, teamId}) {
-    if (!_.includes([0, 1, 2], teamId)) return state;
+    if (![0, 1, 2].includes(teamId)) return state;
     if (!state.users[id]) {
       return state; // illegal update if no user exists with id
     }

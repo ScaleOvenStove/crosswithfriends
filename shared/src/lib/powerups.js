@@ -1,12 +1,14 @@
 import moment from 'moment';
-import _ from 'lodash';
+import identity from 'lodash-es/identity';
+import reverse from 'lodash-es/reverse';
+import some from 'lodash-es/some';
 
 /** Status effect helpers * */
 
 const transformClues = (game, transformation) => {
   const {clues} = game;
-  const across = _.map(clues.across, transformation);
-  const down = _.map(clues.down, transformation);
+  const across = clues.across.map(transformation);
+  const down = clues.down.map(transformation);
   return {
     ...game,
     clues: {across, down},
@@ -14,19 +16,19 @@ const transformClues = (game, transformation) => {
 };
 
 const reverseClues = (game) => {
-  const reverseString = (s) => s && _.reverse(s.split('')).join('');
+  const reverseString = (s) => s && reverse(s.split('')).join('');
   return transformClues(game, reverseString);
 };
 
 const removeVowels = (game) => {
-  const remove = (s) => s && _.filter(s.split(''), (char) => !_.includes('aeiouAEIOU', char)).join('');
+  const remove = (s) => s && s.split('').filter((char) => !'aeiouAEIOU'.includes(char)).join('');
   return transformClues(game, remove);
 };
 
 const hideSquares = (game) => {
   const {grid, cursors} = game;
   const closeToCursor = (r2, c2) =>
-    _.some(cursors, ({r, c}) => Math.max(Math.abs(r2 - r), Math.abs(c2 - c)) <= 3);
+    some(cursors, ({r, c}) => Math.max(Math.abs(r2 - r), Math.abs(c2 - c)) <= 3);
 
   return {
     ...game,
@@ -67,9 +69,9 @@ export const apply = (ownGame, opponentGame, ownPowerups, opponentPowerups) => {
   }
 
   const applyOneDirection = (ownGame, opponentGame, currentPowerups) => {
-    const inUsePowerups = _.filter(currentPowerups, inUse);
+    const inUsePowerups = currentPowerups.filter(inUse);
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    return _.reduce(inUsePowerups, (g, p) => powerups[p.type].action(g), {ownGame, opponentGame});
+    return inUsePowerups.reduce((g, p) => powerups[p.type].action(g), {ownGame, opponentGame});
   };
 
   // TODO: better names for these variables / better way to do this.
@@ -120,7 +122,7 @@ const powerups = {
     name: 'Reveal Square',
     icon: 'surprised_pikachu',
     duration: 0,
-    action: _.identity,
+    action: identity,
     oneTimeAction: revealSquare,
   },
 };
