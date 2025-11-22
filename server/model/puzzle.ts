@@ -1,6 +1,5 @@
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@shared/types';
 import Joi from 'joi';
-import _ from 'lodash';
 import * as uuid from 'uuid';
 
 import {logger} from '../utils/logger.js';
@@ -22,7 +21,7 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   );
   const ms = Date.now() - startTime;
   logger.debug(`getPuzzle (${pid}) took ${ms}ms`);
-  const firstRow = _.first(rows);
+  const firstRow = rows[0];
   if (!firstRow) {
     throw new Error(`Puzzle ${pid} not found`);
   }
@@ -84,8 +83,8 @@ export async function listPuzzles(
     .map(
       (_s, idx) =>
         `AND (
-          ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${idx + parameterOffset}
-          OR ((content ->> 'title') || ' ' || (content->>'author')) ILIKE $${idx + parameterOffset}
+          (COALESCE(content ->> 'title', content -> 'info' ->> 'title', '') || ' ' ||
+           COALESCE(content ->> 'author', content -> 'info' ->> 'author', '')) ILIKE $${idx + parameterOffset}
         )`
     )
     .join('\n');
@@ -141,9 +140,9 @@ export async function listPuzzles(
 
 const string = (): Joi.StringSchema => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
 
-// Validator for ipuz format per https://www.puzzazz.com/ipuz/v1
+// Validator for ipuz format per https://www.puzzazz.com/ipuz/v1 and v2
 const puzzleValidator = Joi.object({
-  version: string().required(),
+  version: string().required(), // Supports both v1 and v2
   kind: Joi.array().items(string()).required(),
   dimensions: Joi.object({
     width: Joi.number().integer().required(),
@@ -161,9 +160,9 @@ const puzzleValidator = Joi.object({
       Joi.array().items(
         Joi.alternatives().try(
           Joi.number(),
-          Joi.string().valid('#'),
+          Joi.string(), // Allow string clue numbers like "1", "2", "10", "0" for empty
           Joi.object({
-            cell: Joi.number().required(),
+            cell: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
             style: Joi.object({
               shapebg: string().optional(),
               fillbg: string().optional(),
@@ -178,10 +177,11 @@ const puzzleValidator = Joi.object({
     Across: Joi.array()
       .items(
         Joi.alternatives().try(
-          Joi.array().items(string()),
+          Joi.array().items(string()), // v1 format: ["1", "clue text"]
           Joi.object({
             number: string(),
             clue: string(),
+            cells: Joi.array().optional(), // v2 format with cells property
           })
         )
       )
@@ -189,10 +189,11 @@ const puzzleValidator = Joi.object({
     Down: Joi.array()
       .items(
         Joi.alternatives().try(
-          Joi.array().items(string()),
+          Joi.array().items(string()), // v1 format: ["1", "clue text"]
           Joi.object({
             number: string(),
             clue: string(),
+            cells: Joi.array().optional(), // v2 format with cells property
           })
         )
       )
@@ -201,7 +202,7 @@ const puzzleValidator = Joi.object({
 });
 
 function validatePuzzle(puzzle: unknown): void {
-  logger.debug('Puzzle keys:', _.keys(puzzle));
+  logger.debug({keys: puzzle && typeof puzzle === 'object' ? Object.keys(puzzle) : []}, 'Puzzle keys');
   const {error} = puzzleValidator.validate(puzzle);
   if (error) {
     throw new Error(error.message);
@@ -211,7 +212,7 @@ function validatePuzzle(puzzle: unknown): void {
 export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: string): Promise<string> {
   let puzzleId = pid;
   if (!puzzleId) {
-    puzzleId = uuid.v4().substr(0, 8);
+    puzzleId = uuid.v4().substring(0, 8);
   }
   validatePuzzle(puzzle);
   const uploaded_at = Date.now();
@@ -271,8 +272,9 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
       [pid]
     );
     await client.query('COMMIT');
-  } catch {
+  } catch (error) {
     await client.query('ROLLBACK');
+    logger.error({err: error, pid, gid, solved_time, timeToSolve}, 'Failed to record puzzle solve');
   } finally {
     client.release();
   }

@@ -1,4 +1,6 @@
-import _ from 'lodash';
+import last from 'lodash-es/last';
+import range from 'lodash-es/range';
+import sortedLastIndexBy from 'lodash-es/sortedLastIndexBy';
 import {reduce as gameReducer} from '../reducers/game';
 
 const MEMO_RATE = 10;
@@ -39,13 +41,13 @@ export default class HistoryWrapper {
       },
     ];
 
-    _.range(this.history.length).forEach((index) => {
+    range(this.history.length).forEach((index) => {
       this.memoize(index);
     });
   }
 
   memoize(index) {
-    if (index <= _.last(this.memo).index) {
+    if (index <= last(this.memo).index) {
       console.error('tried to memoize out of order');
       return;
     }
@@ -58,7 +60,7 @@ export default class HistoryWrapper {
 
   // returns result of [0, index]
   getSnapshotAtIndex(index, {optimistic = false} = {}) {
-    const _i = _.sortedLastIndexBy(this.memo, {index}, (memoItem) => memoItem.index);
+    const _i = sortedLastIndexBy(this.memo, {index}, (memoItem) => memoItem.index);
     const memoItem = this.memo[_i - 1];
 
     // Handle case where memo is empty or index is out of bounds
@@ -110,7 +112,7 @@ export default class HistoryWrapper {
   // this is used for replay
   getSnapshotAt(gameTimestamp) {
     // compute the number of events that have happened
-    const index = _.sortedLastIndexBy(this.history, {gameTimestamp}, (event) => event.gameTimestamp);
+    const index = sortedLastIndexBy(this.history, {gameTimestamp}, (event) => event.gameTimestamp);
     return this.getSnapshotAtIndex(index - 1);
   }
 
@@ -124,16 +126,16 @@ export default class HistoryWrapper {
     window.timeStampOffset = event.timestamp - Date.now();
     this.optimisticEvents = this.optimisticEvents.filter((ev) => ev.id !== event.id);
     // we must support retroactive updates to the event log
-    const insertPoint = _.sortedLastIndexBy(this.history, event, (event) => event.timestamp);
+    const insertPoint = sortedLastIndexBy(this.history, event, (event) => event.timestamp);
     this.history.splice(insertPoint, 0, event);
     if (!this.createEvent) {
       return;
     }
-    while (_.last(this.memo).index >= insertPoint) {
+    while (last(this.memo).index >= insertPoint) {
       this.memo.pop();
     }
-    _.range(0, this.history.length, MEMO_RATE).forEach((index) => {
-      if (index > _.last(this.memo).index) {
+    range(0, this.history.length, MEMO_RATE).forEach((index) => {
+      if (index > last(this.memo).index) {
         this.memoize(index);
       }
     });
@@ -146,7 +148,7 @@ export default class HistoryWrapper {
   addOptimisticEvent(event) {
     event = {
       ...event,
-      timestamp: (_.last(this.history)?.timestamp ?? 0) + this.optimisticEvents.length + 1000,
+      timestamp: (last(this.history)?.timestamp ?? 0) + this.optimisticEvents.length + 1000,
     };
     setTimeout(() => {
       if (this.optimisticEvents.includes(event)) {

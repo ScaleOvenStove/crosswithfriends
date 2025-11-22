@@ -3,7 +3,7 @@
     "target": "es2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["es2022"],
+    "lib": ["es2022", "DOM"],
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
@@ -28,5 +28,12 @@
     }
   },
   "include": [".", "../shared/src/lib", "../shared/src/shared", "./utils"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "../shared/src/lib/adapters/xwordParserAdapter.ts",
+    "../shared/src/lib/adapters/gameJsonToPuzzle.ts"
+  ]
 }

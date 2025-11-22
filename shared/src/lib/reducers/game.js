@@ -1,6 +1,6 @@
 import {MAX_CLOCK_INCREMENT} from '../timing';
 import {MAIN_BLUE_3} from '../colors';
-import _ from 'lodash';
+import {makeGrid} from '../gameUtils';
 
 function getScopeGrid(grid, scope) {
   const scopeGrid = grid.map((row) => row.map(() => false));
@@ -10,9 +10,22 @@ function getScopeGrid(grid, scope) {
   return scopeGrid;
 }
 
+// Memoization cache for isSolved function
+// Caches the last grid reference and its result to avoid redundant calculations
+let isSolvedCache = {
+  grid: null,
+  result: null,
+};
+
 function isSolved(game) {
   const {grid, solution} = game;
-  // TODO this can be memoized
+
+  // Check cache - if the grid reference is the same, return cached result
+  if (isSolvedCache.grid === grid) {
+    return isSolvedCache.result;
+  }
+
+  // Compute result
   function isRowSolved(gridRow, solutionRow) {
     for (let i = 0; i < gridRow.length; i += 1) {
       if (!(solutionRow[i] === '.' || solutionRow[i] === gridRow[i].value)) {
@@ -21,11 +34,19 @@ function isSolved(game) {
     }
     return true;
   }
+
   for (let i = 0; i < grid.length; i += 1) {
     if (!isRowSolved(grid[i], solution[i])) {
+      // Cache negative result and return
+      isSolvedCache.grid = grid;
+      isSolvedCache.result = false;
       return false;
     }
   }
+
+  // Cache positive result and return
+  isSolvedCache.grid = grid;
+  isSolvedCache.result = true;
   return true;
 }
 
@@ -34,7 +55,7 @@ const reducers = {
     const {pid} = params;
     const {
       info = {},
-      grid = [[{}]],
+      grid: rawGrid = [[{}]],
       solution = [['']],
       circles = [],
       chat = {messages: []},
@@ -55,6 +76,40 @@ const reducers = {
     } = params.game;
     clock.trueTotalTime = 0;
 
+    // Validate grid: if it's empty or invalid, try to reconstruct from solution
+    // Default destructuring only works for undefined, not for empty arrays
+    let grid = rawGrid;
+    let finalClues = clues;
+    if (!Array.isArray(grid) || grid.length === 0 || !Array.isArray(grid[0]) || grid[0].length === 0) {
+      // Try to reconstruct grid from solution if available
+      if (
+        solution &&
+        Array.isArray(solution) &&
+        solution.length > 0 &&
+        Array.isArray(solution[0]) &&
+        solution[0].length > 0
+      ) {
+        try {
+          console.warn(
+            '[gameReducer] Invalid or empty grid in create event, attempting to reconstruct from solution'
+          );
+          const gridObject = makeGrid(solution, false);
+          grid = gridObject.toArray();
+          // Align clues if available
+          if (clues && (clues.across || clues.down)) {
+            finalClues = gridObject.alignClues(clues);
+          }
+        } catch (error) {
+          console.error('[gameReducer] Failed to reconstruct grid from solution:', error);
+          console.warn('[gameReducer] Using default grid as fallback');
+          grid = [[{}]];
+        }
+      } else {
+        console.warn('[gameReducer] Invalid or empty grid in create event, using default grid');
+        grid = [[{}]];
+      }
+    }
+
     return {
       pid,
       info,
@@ -62,7 +117,7 @@ const reducers = {
       solution,
       circles,
       chat,
-      clues,
+      clues: finalClues,
       clock,
       solved,
       cursors,
@@ -311,7 +366,7 @@ const reducers = {
     console.log(params);
     return {
       ...game,
-      fencingUsers: _.uniq([...(game.fencingUsers || []), params.id]),
+      fencingUsers: [...new Set([...(game.fencingUsers || []), params.id])],
     };
   },
   // sendChatMessage is for fencing games only - no-op for regular games

@@ -1,24 +1,26 @@
 import {Server as HTTPServer} from 'http';
 
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import fastify from 'fastify';
 import type {FastifyError, FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
-import _ from 'lodash';
 import {Server as SocketIOServer} from 'socket.io';
 
 import apiRouter from './api/router.js';
 import SocketManager from './SocketManager.js';
+import {logger} from './utils/logger.js';
 
 const port = process.env.PORT || 3000;
 
 // ================== Logging ================
 
-function logAllEvents(io: SocketIOServer, log: typeof console.log): void {
+function logAllEvents(io: SocketIOServer): void {
   io.on('*', (event: string, ...args: unknown[]) => {
     try {
-      log(`[${event}]`, _.truncate(JSON.stringify(args), {length: 100}));
+      const argsStr = JSON.stringify(args);
+      logger.debug({event, args: argsStr.length > 100 ? argsStr.substring(0, 100) : argsStr}, `[${event}]`);
     } catch {
-      log(`[${event}]`, args);
+      logger.debug({event, args}, `[${event}]`);
     }
   });
 }
@@ -30,15 +32,23 @@ async function runServer(): Promise<void> {
     // ======== Fastify Server Config ==========
     // In Fastify v5, fastify() returns PromiseLike<FastifyInstance>
     // The methods are available immediately, but TypeScript types need help
+    const isProduction = process.env.NODE_ENV === 'production';
     const app = fastify({
-      logger:
-        process.env.NODE_ENV === 'production'
-          ? {
-              level: 'info',
-            }
-          : {
-              level: 'debug',
+      logger: isProduction
+        ? {
+            level: 'info',
+          }
+        : {
+            level: 'debug',
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translateTime: 'HH:MM:ss.l',
+                ignore: 'pid,hostname',
+              },
             },
+          },
     }) as unknown as FastifyInstance;
 
     // Set custom error handler
@@ -61,37 +71,26 @@ async function runServer(): Promise<void> {
       const statusCode = error.statusCode ?? 500;
 
       // Determine error name based on test expectations
-      let errorName: string;
       const nameValue = error.name;
       const hasOwnName = Object.prototype.hasOwnProperty.call(error, 'name');
 
-      // Logic based on test expectations:
-      // - 500 errors → 'Error'
-      // - Non-500 errors with custom name → use custom name
-      // - Non-500 errors with name 'Error':
-      //   - If name is own property → 'Error' (explicitly set)
-      //   - If name is inherited (not own) and statusCode is 400 → 'Internal Server Error' (treat as deleted per test)
-      //   - If name is inherited and statusCode is not 400 → 'Error'
-      // - Non-500 errors with no name (undefined/null) → 'Internal Server Error'
+      // Simplified error name logic:
+      // 1. 500 errors always use 'Error'
+      // 2. Custom names (not 'Error') are used as-is
+      // 3. If name is 'Error' and explicitly set, use 'Error'
+      // 4. If name is missing/inherited and status is 400, use 'Internal Server Error'
+      // 5. Otherwise use 'Error' as fallback
+      let errorName: string;
       if (statusCode === 500) {
         errorName = 'Error';
       } else if (nameValue && nameValue !== 'Error') {
         errorName = nameValue;
-      } else if (nameValue === 'Error') {
-        // Name is 'Error': check if it's own property or inherited
-        if (hasOwnName) {
-          // Explicitly set → 'Error'
-          errorName = 'Error';
-        } else if (statusCode === 400) {
-          // 400 errors with inherited name → treat as missing/deleted per test → 'Internal Server Error'
-          errorName = 'Internal Server Error';
-        } else {
-          // Other non-500 errors with inherited name → 'Error'
-          errorName = 'Error';
-        }
-      } else {
-        // Name is undefined/null → 'Internal Server Error'
+      } else if (nameValue === 'Error' && hasOwnName) {
+        errorName = 'Error';
+      } else if (!nameValue || (nameValue === 'Error' && !hasOwnName && statusCode === 400)) {
         errorName = 'Internal Server Error';
+      } else {
+        errorName = 'Error';
       }
       reply.code(statusCode).send({
         statusCode,
@@ -103,6 +102,35 @@ async function runServer(): Promise<void> {
     // Register CORS plugin
     await app.register(cors, {
       origin: true,
+    });
+
+    // Register rate limiting plugin
+    await app.register(rateLimit, {
+      max: 500, // Maximum 500 requests
+      timeWindow: '15 minutes', // Per 15-minute window
+      cache: 10000, // Cache up to 10000 different IPs
+      allowList: (req) => {
+        // Allow health check endpoint to bypass rate limiting
+        return req.url === '/api/health';
+      },
+      keyGenerator: (req) => {
+        // Use IP address as the rate limit key
+        return req.ip;
+      },
+      errorResponseBuilder: (_req, context) => {
+        return {
+          statusCode: 429,
+          error: 'Too Many Requests',
+          message: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+          retryAfter: Math.ceil(context.ttl / 1000),
+        };
+      },
+      onExceeding: (req) => {
+        logger.warn({ip: req.ip, url: req.url}, 'Rate limit warning - approaching limit');
+      },
+      onExceeded: (req) => {
+        logger.warn({ip: req.ip, url: req.url}, 'Rate limit exceeded');
+      },
     });
 
     // Register API routes
@@ -123,7 +151,7 @@ async function runServer(): Promise<void> {
 
       const socketManager = new SocketManager(io);
       socketManager.listen();
-      logAllEvents(io, app.log.info.bind(app.log));
+      logAllEvents(io);
     });
 
     await app.listen({port: Number(port), host: '0.0.0.0'});
@@ -138,7 +166,7 @@ async function runServer(): Promise<void> {
       })();
     });
   } catch (err) {
-    console.error('Failed to start server:', err);
+    logger.error({err}, 'Failed to start server');
     process.exit(1);
   }
 }

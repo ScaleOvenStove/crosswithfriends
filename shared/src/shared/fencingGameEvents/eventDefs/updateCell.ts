@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import type {CellCoords} from '../../types';
 import type {EventDef} from '../types/EventDef';
 
@@ -36,15 +35,17 @@ const updateCell: EventDef<UpdateCellEvent> = {
       return state; // if cell is already correct, no need to update
     }
 
-    const newGrid = _.assign([], grid, {
-      [r]: _.assign([], grid[r], {
-        [c]: {
-          ...grid[r]?.[c],
-          value,
-          bad: false,
-        },
-      }),
-    });
+    const newGrid = [...grid];
+    const gridRow = grid[r];
+    if (!gridRow) {
+      return state; // illegal update if row is undefined
+    }
+    newGrid[r] = [...gridRow];
+    newGrid[r][c] = {
+      ...gridRow[c],
+      value,
+      bad: false,
+    };
     return {
       ...state,
       game: {

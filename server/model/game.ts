@@ -1,3 +1,4 @@
+import {convertIpuzClues} from '@lib/puzzleUtils';
 import type {CheckEvent} from '@shared/fencingGameEvents/eventDefs/check';
 import type {RevealEvent} from '@shared/fencingGameEvents/eventDefs/reveal';
 import type {RevealAllCluesEvent} from '@shared/fencingGameEvents/eventDefs/revealAllClues';
@@ -9,7 +10,6 @@ import type {UpdateDisplayNameEvent} from '@shared/fencingGameEvents/eventDefs/u
 import type {UpdateTeamIdEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamId';
 import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamName';
 import type {CellIndex, GameJson} from '@shared/types';
-import _ from 'lodash';
 
 import {makeGrid} from '../gameUtils.js';
 import {logger} from '../utils/logger.js';
@@ -20,7 +20,7 @@ import {getPuzzle} from './puzzle.js';
 export async function getGameEvents(gid: string): Promise<GameEvent[]> {
   const startTime = Date.now();
   const res = await pool.query('SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC', [gid]);
-  const events = _.map(res.rows, 'event_payload');
+  const events = res.rows.map((row) => row.event_payload);
   const ms = Date.now() - startTime;
   logger.debug(`getGameEvents(${gid}) took ${ms}ms`);
   return events;
@@ -163,18 +163,45 @@ export interface InitialGameEvent extends GameEvent {
   params: CreateEventParams;
 }
 
+/**
+ * Safely converts a timestamp to an ISO string.
+ * If the timestamp is invalid, falls back to the current time and logs a warning.
+ */
+function timestampToISOString(timestamp: number | undefined | null): string {
+  // Check if timestamp is a valid number
+  if (timestamp == null || typeof timestamp !== 'number' || isNaN(timestamp)) {
+    logger.warn(
+      {timestamp, fallbackTo: Date.now()},
+      'Invalid timestamp provided, using current time as fallback'
+    );
+    return new Date().toISOString();
+  }
+
+  // Create Date object and check if it's valid
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) {
+    logger.warn(
+      {timestamp, fallbackTo: Date.now()},
+      'Invalid Date created from timestamp, using current time as fallback'
+    );
+    return new Date().toISOString();
+  }
+
+  return date.toISOString();
+}
+
 export async function addGameEvent(gid: string, event: GameEvent): Promise<void> {
   await pool.query(
     `
       INSERT INTO game_events (gid, uid, ts, event_type, event_payload)
       VALUES ($1, $2, $3, $4, $5)`,
-    [gid, event.user, new Date(event.timestamp).toISOString(), event.type, event]
+    [gid, event.user, timestampToISOString(event.timestamp), event.type, event]
   );
 }
 
 export async function addInitialGameEvent(gid: string, pid: string): Promise<string> {
   const puzzle = await getPuzzle(pid);
-  logger.debug('got puzzle', puzzle);
+  logger.debug({pid}, 'got puzzle');
 
   // Read from ipuz format
   const title = puzzle.title || '';
@@ -184,6 +211,14 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
   const solution = (puzzle.solution || []).map((row: (string | null)[]) =>
     row.map((cell: string | null) => (cell === null ? '.' : cell))
   );
+
+  // Validate solution is not empty
+  if (!solution || solution.length === 0) {
+    throw new Error(`Puzzle ${pid} has an empty solution array`);
+  }
+  if (!solution[0] || solution[0].length === 0) {
+    throw new Error(`Puzzle ${pid} has a solution with empty rows`);
+  }
 
   // Extract circles and shades from puzzle grid
   // ipuz format: puzzle grid can contain numbers, "#", objects with {cell, style}, or null
@@ -209,31 +244,21 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
   });
 
   // Convert ipuz clues format to internal format
-  // ipuz has clues.Across and clues.Down as arrays of [number, clue] or {number, clue}
-  const convertClues = (clueArray: Array<[string, string] | {number: string; clue: string}>): string[] => {
-    const result: string[] = [];
-    clueArray.forEach((item) => {
-      if (Array.isArray(item) && item.length >= 2) {
-        const num = parseInt(item[0], 10);
-        if (!isNaN(num)) {
-          result[num] = item[1];
-        }
-      } else if (item && typeof item === 'object' && 'number' in item && 'clue' in item) {
-        const num = parseInt(item.number, 10);
-        if (!isNaN(num)) {
-          result[num] = item.clue;
-        }
-      }
-    });
-    return result;
-  };
-
-  const acrossClues = convertClues(puzzle.clues?.Across || []);
-  const downClues = convertClues(puzzle.clues?.Down || []);
+  // Supports both v1 format: [["1", "clue text"], ...] and v2 format: [{number: "1", clue: "clue text", cells: [...]}, ...]
+  const acrossClues = convertIpuzClues(puzzle.clues?.Across || []);
+  const downClues = convertIpuzClues(puzzle.clues?.Down || []);
 
   const gridObject = makeGrid(solution);
   const clues = gridObject.alignClues({across: acrossClues, down: downClues});
   const grid = gridObject.toArray();
+
+  // Validate grid is not empty after creation
+  if (!grid || grid.length === 0) {
+    throw new Error(`Puzzle ${pid} produced an empty grid after processing`);
+  }
+  if (!grid[0] || grid[0].length === 0) {
+    throw new Error(`Puzzle ${pid} produced a grid with empty rows after processing`);
+  }
 
   // Determine puzzle type from grid size
   const type = solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
