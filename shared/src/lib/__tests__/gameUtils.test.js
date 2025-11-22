@@ -120,10 +120,7 @@ describe('makeGrid', () => {
 
 describe('makeGridFromComposition', () => {
   it('should create grid from composition format', () => {
-    const compositionGrid = [
-      [{value: 'A', pencil: false}],
-      [{value: '.', pencil: false}],
-    ];
+    const compositionGrid = [[{value: 'A', pencil: false}], [{value: '.', pencil: false}]];
     const grid = makeGridFromComposition(compositionGrid);
     expect(grid).toBeInstanceOf(GridWrapper);
     expect(grid.grid[0][0].value).toBe('A');
@@ -133,17 +130,13 @@ describe('makeGridFromComposition', () => {
   });
 
   it('should preserve pencil marks', () => {
-    const compositionGrid = [
-      [{value: 'A', pencil: true}],
-    ];
+    const compositionGrid = [[{value: 'A', pencil: true}]];
     const grid = makeGridFromComposition(compositionGrid);
     expect(grid.grid[0][0].pencil).toBe(true);
   });
 
   it('should convert black squares correctly', () => {
-    const compositionGrid = [
-      [{value: '.', pencil: false}],
-    ];
+    const compositionGrid = [[{value: '.', pencil: false}]];
     const grid = makeGridFromComposition(compositionGrid);
     expect(grid.grid[0][0].black).toBe(true);
     expect(grid.grid[0][0].value).toBe('');
@@ -152,7 +145,10 @@ describe('makeGridFromComposition', () => {
   it('should assign numbers to starting cells', () => {
     // Need at least 2 cells in a row to have a number assigned
     const compositionGrid = [
-      [{value: 'A', pencil: false}, {value: 'B', pencil: false}],
+      [
+        {value: 'A', pencil: false},
+        {value: 'B', pencil: false},
+      ],
     ];
     const grid = makeGridFromComposition(compositionGrid);
     // First cell should be numbered as it's the start of a clue
@@ -179,9 +175,7 @@ describe('makeClues', () => {
   it('should skip clues for cells without numbers', () => {
     const textGrid = [['.']];
     const grid = makeGrid(textGrid, false);
-    const cluesBySquare = [
-      {r: 0, c: 0, dir: 'across', value: 'Clue'},
-    ];
+    const cluesBySquare = [{r: 0, c: 0, dir: 'across', value: 'Clue'}];
     const clues = makeClues(cluesBySquare, grid.grid);
     // Black square shouldn't have a clue
     expect(clues.across.filter((c) => c).length).toBe(0);
@@ -193,9 +187,7 @@ describe('makeClues', () => {
       ['C', 'D'],
     ];
     const grid = makeGrid(textGrid, false);
-    const cluesBySquare = [
-      {r: 0, c: 0, dir: 'across', value: 'Clue 1'},
-    ];
+    const cluesBySquare = [{r: 0, c: 0, dir: 'across', value: 'Clue 1'}];
     const clues = makeClues(cluesBySquare, grid.grid);
     expect(clues).toBeInstanceOf(Object);
     expect(Array.isArray(clues.across)).toBe(true);
@@ -299,11 +291,7 @@ describe('makeEmptyClues', () => {
   });
 
   it('should align clues correctly', () => {
-    const gridArray = [
-      [
-        {black: false, value: 'A', number: 1, parents: {across: 1, down: 1}},
-      ],
-    ];
+    const gridArray = [[{black: false, value: 'A', number: 1, parents: {across: 1, down: 1}}]];
     const clues = makeEmptyClues(gridArray);
     expect(clues.across.length).toBeGreaterThan(0);
     expect(clues.down.length).toBeGreaterThan(0);
@@ -438,4 +426,3 @@ describe('getReferencedClues', () => {
     expect(result).toEqual([]);
   });
 });
-

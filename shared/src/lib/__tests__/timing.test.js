@@ -21,4 +21,3 @@ describe('MAX_CLOCK_INCREMENT', () => {
     expect(value1).toBe(value2);
   });
 });
-

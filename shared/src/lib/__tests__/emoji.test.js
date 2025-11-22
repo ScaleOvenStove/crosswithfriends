@@ -147,4 +147,3 @@ describe('emoji search integration', () => {
     expect(Array.isArray(matches)).toBe(true);
   });
 });
-

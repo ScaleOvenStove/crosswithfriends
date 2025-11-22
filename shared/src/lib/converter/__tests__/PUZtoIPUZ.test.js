@@ -263,4 +263,3 @@ describe('PUZtoIPUZ', () => {
     expect(result.puzzle[0]).toHaveLength(3);
   });
 });
-

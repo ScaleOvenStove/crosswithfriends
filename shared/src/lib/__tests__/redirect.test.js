@@ -7,7 +7,7 @@ describe('redirect', () => {
   beforeEach(async () => {
     // Reset modules to clear the redirected flag
     vi.resetModules();
-    
+
     // Save original location
     originalLocation = window.location;
     delete window.location;
@@ -74,10 +74,9 @@ describe('redirect', () => {
     // Reset module for fresh state
     vi.resetModules();
     const {default: redirectFn} = await import('../redirect');
-    
+
     const url = 'https://example.com';
     redirectFn(url);
     expect(mockLocation.replace).toHaveBeenCalledWith(url);
   });
 });
-

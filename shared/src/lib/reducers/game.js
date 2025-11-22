@@ -80,12 +80,7 @@ const reducers = {
     // Default destructuring only works for undefined, not for empty arrays
     let grid = rawGrid;
     let finalClues = clues;
-    if (
-      !Array.isArray(grid) ||
-      grid.length === 0 ||
-      !Array.isArray(grid[0]) ||
-      grid[0].length === 0
-    ) {
+    if (!Array.isArray(grid) || grid.length === 0 || !Array.isArray(grid[0]) || grid[0].length === 0) {
       // Try to reconstruct grid from solution if available
       if (
         solution &&

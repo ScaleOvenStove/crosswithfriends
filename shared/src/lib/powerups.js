@@ -21,7 +21,12 @@ const reverseClues = (game) => {
 };
 
 const removeVowels = (game) => {
-  const remove = (s) => s && s.split('').filter((char) => !'aeiouAEIOU'.includes(char)).join('');
+  const remove = (s) =>
+    s &&
+    s
+      .split('')
+      .filter((char) => !'aeiouAEIOU'.includes(char))
+      .join('');
   return transformClues(game, remove);
 };
 

@@ -4,8 +4,7 @@ export const PINKISH = 0xf0dbff;
 
 export const THEME_COLORS = [MAIN_BLUE_3, GREENISH];
 
-export const toHex = (number: number): string =>
-  `#${(2 ** 24 + number).toString(16).substring(1)}`;
+export const toHex = (number: number): string => `#${(2 ** 24 + number).toString(16).substring(1)}`;
 
 interface RGB {
   r: number;

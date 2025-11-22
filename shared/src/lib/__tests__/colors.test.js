@@ -58,7 +58,8 @@ describe('darken', () => {
     const color = 0x808080; // gray
     const darkened = darken(color);
     // Each component should be 0x80 * 0.95 = 0x78 (120)
-    const expected = Math.floor(0x80 * 0.95) * 256 * 256 + Math.floor(0x80 * 0.95) * 256 + Math.floor(0x80 * 0.95);
+    const expected =
+      Math.floor(0x80 * 0.95) * 256 * 256 + Math.floor(0x80 * 0.95) * 256 + Math.floor(0x80 * 0.95);
     expect(darkened).toBe(expected);
   });
 
@@ -129,4 +130,3 @@ describe('constants', () => {
     expect(THEME_COLORS.length).toBe(2);
   });
 });
-

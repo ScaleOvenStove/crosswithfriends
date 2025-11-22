@@ -14,8 +14,14 @@ describe('iPUZtoJSON', () => {
       title: 'Test Puzzle',
       author: 'Test Author',
       notes: 'Test Notes',
-      solution: [['A', 'B'], ['C', 'D']],
-      puzzle: [[null, null], [null, null]],
+      solution: [
+        ['A', 'B'],
+        ['C', 'D'],
+      ],
+      puzzle: [
+        [null, null],
+        [null, null],
+      ],
       clues: {
         Across: [[1, 'Clue 1']],
         Down: [[1, 'Clue 2']],
@@ -35,8 +41,14 @@ describe('iPUZtoJSON', () => {
   it('should convert solution grid correctly', () => {
     const ipuzData = {
       version: 'http://ipuz.org/v1',
-      solution: [['A', 'B'], ['C', '.']],
-      puzzle: [[null, null], [null, null]],
+      solution: [
+        ['A', 'B'],
+        ['C', '.'],
+      ],
+      puzzle: [
+        [null, null],
+        [null, null],
+      ],
       clues: {Across: [], Down: []},
     };
     const buffer = createIPUZBuffer(ipuzData);
@@ -51,8 +63,14 @@ describe('iPUZtoJSON', () => {
   it('should convert null cells to dots', () => {
     const ipuzData = {
       version: 'http://ipuz.org/v1',
-      solution: [[null, 'A'], ['B', null]],
-      puzzle: [[null, null], [null, null]],
+      solution: [
+        [null, 'A'],
+        ['B', null],
+      ],
+      puzzle: [
+        [null, null],
+        [null, null],
+      ],
       clues: {Across: [], Down: []},
     };
     const buffer = createIPUZBuffer(ipuzData);
@@ -67,8 +85,14 @@ describe('iPUZtoJSON', () => {
   it('should convert # cells to dots', () => {
     const ipuzData = {
       version: 'http://ipuz.org/v1',
-      solution: [['#', 'A'], ['B', '#']],
-      puzzle: [[null, null], [null, null]],
+      solution: [
+        ['#', 'A'],
+        ['B', '#'],
+      ],
+      puzzle: [
+        [null, null],
+        [null, null],
+      ],
       clues: {Across: [], Down: []},
     };
     const buffer = createIPUZBuffer(ipuzData);
@@ -101,14 +125,24 @@ describe('iPUZtoJSON', () => {
   it('should set type based on grid size', () => {
     const smallPuzzle = {
       version: 'http://ipuz.org/v1',
-      solution: [['A', 'B'], ['C', 'D']],
-      puzzle: [[null, null], [null, null]],
+      solution: [
+        ['A', 'B'],
+        ['C', 'D'],
+      ],
+      puzzle: [
+        [null, null],
+        [null, null],
+      ],
       clues: {Across: [], Down: []},
     };
     const largePuzzle = {
       version: 'http://ipuz.org/v1',
-      solution: Array(15).fill(null).map(() => Array(15).fill('A')),
-      puzzle: Array(15).fill(null).map(() => Array(15).fill(null)),
+      solution: Array(15)
+        .fill(null)
+        .map(() => Array(15).fill('A')),
+      puzzle: Array(15)
+        .fill(null)
+        .map(() => Array(15).fill(null)),
       clues: {Across: [], Down: []},
     };
 
@@ -143,7 +177,10 @@ describe('iPUZtoJSON', () => {
       solution: [['A', 'B']],
       puzzle: [[null, null]],
       clues: {
-        Across: [[1, 'Clue 1'], [2, 'Clue 2']],
+        Across: [
+          [1, 'Clue 1'],
+          [2, 'Clue 2'],
+        ],
         Down: [],
       },
     };
@@ -174,9 +211,7 @@ describe('iPUZtoJSON', () => {
     const ipuzData = {
       version: 'http://ipuz.org/v1',
       solution: [['A', 'B']],
-      puzzle: [
-        [{style: {shapebg: 'circle'}}, null],
-      ],
+      puzzle: [[{style: {shapebg: 'circle'}}, null]],
       clues: {Across: [], Down: []},
     };
     const buffer = createIPUZBuffer(ipuzData);
@@ -202,13 +237,7 @@ describe('iPUZtoJSON', () => {
     const ipuzData = {
       version: 'http://ipuz.org/v1',
       solution: [['A', 'B', 'C']],
-      puzzle: [
-        [
-          {style: {shapebg: 'circle'}},
-          null,
-          {style: {shapebg: 'circle'}},
-        ],
-      ],
+      puzzle: [[{style: {shapebg: 'circle'}}, null, {style: {shapebg: 'circle'}}]],
       clues: {Across: [], Down: []},
     };
     const buffer = createIPUZBuffer(ipuzData);
@@ -246,4 +275,3 @@ describe('iPUZtoJSON', () => {
     expect(result.down).toEqual([]);
   });
 });
-

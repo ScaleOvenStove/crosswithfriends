@@ -1,4 +1,3 @@
-
 const reducers = {
   create: (composition, params) => {
     const {

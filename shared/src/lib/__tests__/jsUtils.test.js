@@ -457,4 +457,3 @@ describe('lazy', () => {
     expect(callback).toHaveBeenCalled();
   });
 });
-

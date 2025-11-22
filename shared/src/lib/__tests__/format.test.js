@@ -16,8 +16,14 @@ describe('format converter', () => {
     it('should decode PUZ format', () => {
       const mockPuzData = {
         grid: [
-          [{type: 'white', solution: 'A'}, {type: 'white', solution: 'B'}],
-          [{type: 'white', solution: 'C'}, {type: 'white', solution: 'D'}],
+          [
+            {type: 'white', solution: 'A'},
+            {type: 'white', solution: 'B'},
+          ],
+          [
+            {type: 'white', solution: 'C'},
+            {type: 'white', solution: 'D'},
+          ],
         ],
         clues: {across: ['', 'Clue 1'], down: ['', 'Clue 2']},
         circles: [],
@@ -36,7 +42,12 @@ describe('format converter', () => {
 
     it('should handle circles in PUZ format', () => {
       const mockPuzData = {
-        grid: [[{type: 'white', solution: 'A'}, {type: 'white', solution: 'B'}]],
+        grid: [
+          [
+            {type: 'white', solution: 'A'},
+            {type: 'white', solution: 'B'},
+          ],
+        ],
         clues: {across: ['', 'Clue'], down: []},
         circles: [0],
       };
@@ -57,8 +68,14 @@ describe('format converter', () => {
           author: 'Test Author',
         },
         grid: [
-          [{value: 'A', pencil: false}, {value: 'B', pencil: false}],
-          [{value: '.', pencil: false}, {value: 'C', pencil: false}],
+          [
+            {value: 'A', pencil: false},
+            {value: 'B', pencil: false},
+          ],
+          [
+            {value: '.', pencil: false},
+            {value: 'C', pencil: false},
+          ],
         ],
         clues: [
           {r: 0, c: 0, dir: 'across', value: 'Clue 1'},
@@ -116,7 +133,10 @@ describe('format converter', () => {
       const composition = {
         info: {},
         grid: [
-          [{value: 'A', pencil: false}, {value: 'B', pencil: false}],
+          [
+            {value: 'A', pencil: false},
+            {value: 'B', pencil: false},
+          ],
         ],
         clues: [],
         circles: [],
@@ -130,7 +150,12 @@ describe('format converter', () => {
   describe('toPuz', () => {
     it('should encode to PUZ format', () => {
       const mockPuzData = {
-        grid: [[{type: 'white', solution: 'A'}, {type: 'white', solution: 'B'}]],
+        grid: [
+          [
+            {type: 'white', solution: 'A'},
+            {type: 'white', solution: 'B'},
+          ],
+        ],
         clues: {across: ['', 'Clue'], down: []},
         circles: [],
       };
@@ -298,4 +323,3 @@ describe('format converter', () => {
     });
   });
 });
-
