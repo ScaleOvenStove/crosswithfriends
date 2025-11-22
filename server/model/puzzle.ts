@@ -202,7 +202,7 @@ const puzzleValidator = Joi.object({
 });
 
 function validatePuzzle(puzzle: unknown): void {
-  logger.debug({keys: Object.keys(puzzle)}, 'Puzzle keys');
+  logger.debug({keys: puzzle && typeof puzzle === 'object' ? Object.keys(puzzle) : []}, 'Puzzle keys');
   const {error} = puzzleValidator.validate(puzzle);
   if (error) {
     throw new Error(error.message);
