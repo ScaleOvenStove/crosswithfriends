@@ -1,6 +1,5 @@
 import type {InfoJson} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import _ from 'lodash';
 
 import {getGameInfo} from '../model/game.js';
 import {getPuzzleInfo} from '../model/puzzle.js';
@@ -44,7 +43,7 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
         throw createHttpError('Invalid URL path', 400);
       }
 
-      if (_.isEmpty(info)) {
+      if (!info || Object.keys(info).length === 0) {
         throw createHttpError('Game or puzzle not found', 404);
       }
 
