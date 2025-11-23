@@ -1,9 +1,24 @@
-import last from 'lodash-es/last';
-import range from 'lodash-es/range';
-import sortedLastIndexBy from 'lodash-es/sortedLastIndexBy';
 import {reduce as gameReducer} from '../reducers/game';
 
 const MEMO_RATE = 10;
+
+// Helper: Binary search to find insertion point in sorted array
+const sortedLastIndexBy = (array, value, iteratee) => {
+  let low = 0;
+  let high = array.length;
+  const computed = typeof iteratee === 'function' ? iteratee(value) : value[iteratee];
+
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    const midValue = typeof iteratee === 'function' ? iteratee(array[mid]) : array[mid][iteratee];
+    if (midValue <= computed) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  return low;
+};
 
 export default class HistoryWrapper {
   constructor(history = [], reducer = gameReducer) {
@@ -41,13 +56,14 @@ export default class HistoryWrapper {
       },
     ];
 
-    range(this.history.length).forEach((index) => {
+    Array.from({length: this.history.length}, (_, index) => index).forEach((index) => {
       this.memoize(index);
     });
   }
 
   memoize(index) {
-    if (index <= last(this.memo).index) {
+    const lastMemo = this.memo[this.memo.length - 1];
+    if (lastMemo && index <= lastMemo.index) {
       console.error('tried to memoize out of order');
       return;
     }
@@ -131,14 +147,15 @@ export default class HistoryWrapper {
     if (!this.createEvent) {
       return;
     }
-    while (last(this.memo).index >= insertPoint) {
+    while (this.memo.length > 0 && this.memo[this.memo.length - 1].index >= insertPoint) {
       this.memo.pop();
     }
-    range(0, this.history.length, MEMO_RATE).forEach((index) => {
-      if (index > last(this.memo).index) {
+    for (let index = 0; index < this.history.length; index += MEMO_RATE) {
+      const lastMemo = this.memo[this.memo.length - 1];
+      if (lastMemo && index > lastMemo.index) {
         this.memoize(index);
       }
-    });
+    }
     const snapshot = this.getSnapshotAtIndex(insertPoint);
     if (snapshot.clock) {
       event.gameTimestamp = snapshot.clock.trueTotalTime;
@@ -146,9 +163,10 @@ export default class HistoryWrapper {
   }
 
   addOptimisticEvent(event) {
+    const lastHistory = this.history[this.history.length - 1];
     event = {
       ...event,
-      timestamp: (last(this.history)?.timestamp ?? 0) + this.optimisticEvents.length + 1000,
+      timestamp: (lastHistory?.timestamp ?? 0) + this.optimisticEvents.length + 1000,
     };
     setTimeout(() => {
       if (this.optimisticEvents.includes(event)) {

@@ -1,13 +1,34 @@
 import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import groupBy from 'lodash-es/groupBy';
-import mean from 'lodash-es/mean';
-import minBy from 'lodash-es/minBy';
 
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
 
 import {createHttpError} from './errors.js';
+
+const groupBy = <T>(arr: T[], fn: (item: T) => string | number): Record<string, T[]> => {
+  return arr.reduce(
+    (acc, item) => {
+      const key = String(fn(item));
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(item);
+      return acc;
+    },
+    {} as Record<string, T[]>
+  );
+};
+
+const mean = (arr: number[]): number => {
+  if (arr.length === 0) return 0;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+};
+
+const minBy = <T>(arr: T[], fn: (item: T) => number): T | undefined => {
+  if (arr.length === 0) return undefined;
+  return arr.reduce((min, item) => (fn(item) < fn(min) ? item : min));
+};
 
 type PuzzleSummaryStat = {
   size: string;

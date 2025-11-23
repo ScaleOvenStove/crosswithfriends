@@ -1,4 +1,3 @@
-import fromPairs from 'lodash-es/fromPairs';
 import type {EventDef} from '../types/EventDef';
 import {TEAM_IDS} from '../constants';
 
@@ -21,7 +20,7 @@ const revealAllClues: EventDef<RevealAllCluesEvent> = {
       ...state,
       game: {
         ...state.game,
-        teamClueVisibility: fromPairs(TEAM_IDS.map((teamId) => [teamId, allCluesVisible])),
+        teamClueVisibility: Object.fromEntries(TEAM_IDS.map((teamId) => [teamId, allCluesVisible])),
       },
     };
   },

@@ -1,5 +1,3 @@
-import fromPairs from 'lodash-es/fromPairs';
-import toPairs from 'lodash-es/toPairs';
 import type {CellCoords, GridData} from '../../types';
 import type {EventDef} from '../types/EventDef';
 
@@ -106,8 +104,8 @@ const check: EventDef<CheckEvent> = {
               })(),
             },
           },
-          teamGrids: fromPairs(
-            toPairs(state.game!.teamGrids).map(([tId, tGrid]) => [tId, updateCellCorrect(tGrid)])
+          teamGrids: Object.fromEntries(
+            Object.entries(state.game!.teamGrids ?? {}).map(([tId, tGrid]) => [tId, updateCellCorrect(tGrid)])
           ),
           grid: updateCellCorrect(state.game.grid),
         },

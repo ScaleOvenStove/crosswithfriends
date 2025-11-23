@@ -77,11 +77,13 @@ describe('hasShape', () => {
   });
 
   it('should handle null and undefined', () => {
-    // hasShape checks typeof first - null is typeof 'object' so it will try Object.keys(null) which throws
-    // undefined is typeof 'undefined' so it will return false at the type check
-    expect(() => hasShape(null, null)).toThrow();
-    // undefined should return false (type mismatch) rather than throw
-    expect(hasShape(undefined, undefined)).toBe(true); // Both are undefined, so types match
+    // hasShape has null safety checks, so null values return true when both are null
+    expect(hasShape(null, null)).toBe(true);
+    // undefined types match, so returns true
+    expect(hasShape(undefined, undefined)).toBe(true);
+    // Mismatched null/undefined should return false
+    expect(hasShape(null, undefined)).toBe(false);
+    expect(hasShape(undefined, null)).toBe(false);
   });
 });
 

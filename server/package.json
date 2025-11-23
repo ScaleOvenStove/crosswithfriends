@@ -25,7 +25,6 @@
     "@fastify/rate-limit": "^10.3.0",
     "fastify": "^5.6.2",
     "joi": "^18.0.2",
-    "lodash-es": "^4.17.21",
     "pg": "^8.16.3",
     "pino": "^10.1.0",
     "socket.io": "^4.8.1",
@@ -35,7 +34,6 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@tsconfig/node20": "^20.1.8",
-    "@types/lodash-es": "^4.17.12",
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
     "@typescript-eslint/eslint-plugin": "^8.47.0",

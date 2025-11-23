@@ -1,7 +1,4 @@
 import moment from 'moment';
-import identity from 'lodash-es/identity';
-import reverse from 'lodash-es/reverse';
-import some from 'lodash-es/some';
 
 /** Status effect helpers * */
 
@@ -16,7 +13,7 @@ const transformClues = (game, transformation) => {
 };
 
 const reverseClues = (game) => {
-  const reverseString = (s) => s && reverse(s.split('')).join('');
+  const reverseString = (s) => s && s.split('').reverse().join('');
   return transformClues(game, reverseString);
 };
 
@@ -33,7 +30,7 @@ const removeVowels = (game) => {
 const hideSquares = (game) => {
   const {grid, cursors} = game;
   const closeToCursor = (r2, c2) =>
-    some(cursors, ({r, c}) => Math.max(Math.abs(r2 - r), Math.abs(c2 - c)) <= 3);
+    cursors.some(({r, c}) => Math.max(Math.abs(r2 - r), Math.abs(c2 - c)) <= 3);
 
   return {
     ...game,
@@ -127,7 +124,7 @@ const powerups = {
     name: 'Reveal Square',
     icon: 'surprised_pikachu',
     duration: 0,
-    action: identity,
+    action: (x) => x,
     oneTimeAction: revealSquare,
   },
 };

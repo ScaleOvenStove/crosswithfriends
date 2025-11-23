@@ -1,7 +1,3 @@
-import flatMap from 'lodash-es/flatMap';
-import fromPairs from 'lodash-es/fromPairs';
-import range from 'lodash-es/range';
-import sortBy from 'lodash-es/sortBy';
 import type {CellCoords, GameJson} from '../../types';
 import type {EventDef} from '../types/EventDef';
 import {TEAM_IDS} from '../constants';
@@ -20,8 +16,8 @@ const create: EventDef<CreateEvent> = {
         ...state.game,
         pid: params.pid,
         ...params.game,
-        teamGrids: fromPairs(TEAM_IDS.map((teamId) => [teamId, params.game.grid])),
-        teamClueVisibility: fromPairs(
+        teamGrids: Object.fromEntries(TEAM_IDS.map((teamId) => [teamId, params.game.grid])),
+        teamClueVisibility: Object.fromEntries(
           TEAM_IDS.map((teamId) => [teamId, getInitialClueVisibility(params.game, teamId)])
         ),
       },
@@ -44,13 +40,15 @@ const getSortedWhiteCells = (game: GameJson, origin: CellCoords) => {
 
   const TIEBREAKER = 1.0001; // this makes the order consistent under 180 rotational symmetry (i.e. don't leave it up to stable sorting to break ties between cells that are equidistant from origin)
 
-  const allWhiteCells = flatMap(range(n).map((r) => range(m).map((c) => ({r, c})))).filter(
-    ({r, c}) => !game.grid[r]?.[c]?.black
-  );
+  const allWhiteCells = Array.from({length: n}, (_, r) => Array.from({length: m}, (_, c) => ({r, c})))
+    .flatMap((x) => x)
+    .filter(({r, c}) => !game.grid[r]?.[c]?.black);
 
-  const sortedWhiteCells = sortBy(
-    allWhiteCells,
-    ({r, c}) => Math.abs(r - origin.r) * TIEBREAKER + Math.abs(c - origin.c)
+  const sortedWhiteCells = [...allWhiteCells].sort(
+    (a, b) =>
+      Math.abs(a.r - origin.r) * TIEBREAKER +
+      Math.abs(a.c - origin.c) -
+      (Math.abs(b.r - origin.r) * TIEBREAKER + Math.abs(b.c - origin.c))
   );
   return sortedWhiteCells;
 };
