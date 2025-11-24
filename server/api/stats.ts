@@ -1,11 +1,34 @@
 import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-import _ from 'lodash';
 
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
 
 import {createHttpError} from './errors.js';
+
+const groupBy = <T>(arr: T[], fn: (item: T) => string | number): Record<string, T[]> => {
+  return arr.reduce(
+    (acc, item) => {
+      const key = String(fn(item));
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(item);
+      return acc;
+    },
+    {} as Record<string, T[]>
+  );
+};
+
+const mean = (arr: number[]): number => {
+  if (arr.length === 0) return 0;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+};
+
+const minBy = <T>(arr: T[], fn: (item: T) => number): T | undefined => {
+  if (arr.length === 0) return undefined;
+  return arr.reduce((min, item) => (fn(item) < fn(min) ? item : min));
+};
 
 type PuzzleSummaryStat = {
   size: string;
@@ -18,26 +41,25 @@ type PuzzleSummaryStat = {
 };
 
 export function computePuzzleStats(puzzle_solves: SolvedPuzzleType[]): PuzzleSummaryStat[] {
-  const groupedSizes = _.groupBy(puzzle_solves, (ps) => ps.size);
+  const groupedSizes = groupBy(puzzle_solves, (ps) => ps.size);
   const stats: PuzzleSummaryStat[] = [];
   Object.entries(groupedSizes).forEach(([size, sizePuzzles]) => {
     if (sizePuzzles.length === 0) {
       return;
     }
-    const bestPuzzle = _.minBy(sizePuzzles, (p) => p.time_taken_to_solve);
+    const bestPuzzle = minBy(sizePuzzles, (p) => p.time_taken_to_solve);
     if (!bestPuzzle) {
       return;
     }
     stats.push({
       size,
       n_puzzles_solved: sizePuzzles.length,
-      avg_solve_time: _.mean(_.map(sizePuzzles, (p) => p.time_taken_to_solve)),
+      avg_solve_time: mean(sizePuzzles.map((p) => p.time_taken_to_solve)),
       best_solve_time_game: bestPuzzle.gid,
       best_solve_time: bestPuzzle.time_taken_to_solve,
       avg_revealed_square_count:
-        Math.round(_.mean(_.map(sizePuzzles, (p) => p.revealed_squares_count)) * 100) / 100,
-      avg_checked_square_count:
-        Math.round(_.mean(_.map(sizePuzzles, (p) => p.checked_squares_count)) * 100) / 100,
+        Math.round(mean(sizePuzzles.map((p) => p.revealed_squares_count)) * 100) / 100,
+      avg_checked_square_count: Math.round(mean(sizePuzzles.map((p) => p.checked_squares_count)) * 100) / 100,
     });
   });
 
@@ -52,7 +74,7 @@ async function statsRouter(fastify: FastifyInstance): Promise<void> {
       const {gids} = request.body;
       const startTime = Date.now();
 
-      if (!Array.isArray(gids) || !_.every(gids, (it) => typeof it === 'string')) {
+      if (!Array.isArray(gids) || !gids.every((it) => typeof it === 'string')) {
         throw createHttpError('gids are invalid', 400);
       }
 

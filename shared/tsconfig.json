@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2022",
-    "lib": ["es2022"],
+    "lib": ["es2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react",
@@ -24,5 +24,9 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "src/lib/adapters/xwordParserAdapter.ts",
+    "src/lib/adapters/gameJsonToPuzzle.ts"
+  ]
 }

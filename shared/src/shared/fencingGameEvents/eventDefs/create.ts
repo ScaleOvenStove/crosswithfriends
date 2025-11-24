@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import type {CellCoords, GameJson} from '../../types';
 import type {EventDef} from '../types/EventDef';
 import {TEAM_IDS} from '../constants';
@@ -17,8 +16,8 @@ const create: EventDef<CreateEvent> = {
         ...state.game,
         pid: params.pid,
         ...params.game,
-        teamGrids: _.fromPairs(TEAM_IDS.map((teamId) => [teamId, params.game.grid])),
-        teamClueVisibility: _.fromPairs(
+        teamGrids: Object.fromEntries(TEAM_IDS.map((teamId) => [teamId, params.game.grid])),
+        teamClueVisibility: Object.fromEntries(
           TEAM_IDS.map((teamId) => [teamId, getInitialClueVisibility(params.game, teamId)])
         ),
       },
@@ -41,13 +40,15 @@ const getSortedWhiteCells = (game: GameJson, origin: CellCoords) => {
 
   const TIEBREAKER = 1.0001; // this makes the order consistent under 180 rotational symmetry (i.e. don't leave it up to stable sorting to break ties between cells that are equidistant from origin)
 
-  const allWhiteCells = _.flatMap(_.range(n).map((r) => _.range(m).map((c) => ({r, c})))).filter(
-    ({r, c}) => !game.grid[r]?.[c]?.black
-  );
+  const allWhiteCells = Array.from({length: n}, (_, r) => Array.from({length: m}, (_, c) => ({r, c})))
+    .flatMap((x) => x)
+    .filter(({r, c}) => !game.grid[r]?.[c]?.black);
 
-  const sortedWhiteCells = _.sortBy(
-    allWhiteCells,
-    ({r, c}) => Math.abs(r - origin.r) * TIEBREAKER + Math.abs(c - origin.c)
+  const sortedWhiteCells = [...allWhiteCells].sort(
+    (a, b) =>
+      Math.abs(a.r - origin.r) * TIEBREAKER +
+      Math.abs(a.c - origin.c) -
+      (Math.abs(b.r - origin.r) * TIEBREAKER + Math.abs(b.c - origin.c))
   );
   return sortedWhiteCells;
 };
@@ -70,8 +71,8 @@ const getInitialClueVisibility = (
   const sortedWhiteCells = getSortedWhiteCells(game, origin);
   const MIN_CLUES = 10;
   // take the minimum prefix of sortedWhiteCells so that the number of clues spanned by the cells is at least MIN_CLUES
-  const across = _.map(game.clues.across, () => false);
-  const down = _.map(game.clues.down, () => false);
+  const across = game.clues.across.map(() => false);
+  const down = game.clues.down.map(() => false);
   let cnt = 0;
   for (const cell of sortedWhiteCells) {
     const cellData = grid[cell.r]?.[cell.c];

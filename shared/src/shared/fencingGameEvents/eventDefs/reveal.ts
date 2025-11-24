@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import type {CellCoords, GridData} from '../../types';
 import type {EventDef} from '../types/EventDef';
 
@@ -32,18 +31,20 @@ const reveal: EventDef<RevealEvent> = {
     }
 
     const updateCellCorrect = (grid: GridData): GridData => {
-      const newGrid = _.assign([], grid, {
-        [r]: _.assign([], grid[r], {
-          [c]: {
-            ...grid[r]?.[c],
-            value: state.game!.solution[r]?.[c] ?? '',
-            bad: false,
-            good: true,
-            revealed: true,
-            solvedBy: {id, teamId},
-          },
-        }),
-      });
+      const newGrid = [...grid];
+      const gridRow = grid[r];
+      if (!gridRow) {
+        return grid; // Return unchanged if row is undefined
+      }
+      newGrid[r] = [...gridRow];
+      newGrid[r][c] = {
+        ...gridRow[c],
+        value: state.game!.solution[r]?.[c] ?? '',
+        bad: false,
+        good: true,
+        revealed: true,
+        solvedBy: {id, teamId},
+      };
       return newGrid;
     };
 
@@ -54,16 +55,22 @@ const reveal: EventDef<RevealEvent> = {
         teamClueVisibility: {
           ...state.game.teamClueVisibility,
           [teamId]: {
-            across: _.assign(state.game.teamClueVisibility?.[teamId]?.across ?? [], {
-              [teamGrid[r]?.[c]?.parents?.across ?? 0]: true,
-            }),
-            down: _.assign(state.game.teamClueVisibility?.[teamId]?.down ?? [], {
-              [teamGrid[r]?.[c]?.parents?.down ?? 0]: true,
-            }),
+            across: (() => {
+              const existing = state.game.teamClueVisibility?.[teamId]?.across ?? [];
+              const newArray = [...existing];
+              newArray[teamGrid[r]?.[c]?.parents?.across ?? 0] = true;
+              return newArray;
+            })(),
+            down: (() => {
+              const existing = state.game.teamClueVisibility?.[teamId]?.down ?? [];
+              const newArray = [...existing];
+              newArray[teamGrid[r]?.[c]?.parents?.down ?? 0] = true;
+              return newArray;
+            })(),
           },
         },
-        teamGrids: _.fromPairs(
-          _.toPairs(state.game!.teamGrids).map(([tId, tGrid]) => [tId, updateCellCorrect(tGrid)])
+        teamGrids: Object.fromEntries(
+          Object.entries(state.game!.teamGrids ?? {}).map(([tId, tGrid]) => [tId, updateCellCorrect(tGrid)])
         ),
         grid: updateCellCorrect(state.game.grid),
       },

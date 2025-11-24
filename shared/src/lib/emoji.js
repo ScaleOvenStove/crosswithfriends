@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import defaultPack from './emojiPacks/default';
 import pricklyPear from './emojiPacks/pricklyPear.json';
 import custom from './emojiPacks/custom';
@@ -13,7 +12,7 @@ const allEmojiData = {
   ...yoyo,
   ...custom,
 };
-const allEmojis = _.keys(allEmojiData);
+const allEmojis = Object.keys(allEmojiData);
 const getScore = (emoji, pattern) => {
   if (emoji === pattern) return 60;
   if (emoji.startsWith(pattern)) return 50;
@@ -28,16 +27,17 @@ const getScore = (emoji, pattern) => {
 };
 
 export const findMatches = (pattern) =>
-  _.orderBy(
-    allEmojis
-      .map((emoji, i) => ({
-        emoji,
-        score: getScore(emoji, pattern),
-        index: i,
-      }))
-      .filter(({score}) => score > 0),
-    ['score', 'index'],
-    ['desc', 'desc']
-  ).map(({emoji}) => emoji);
+  allEmojis
+    .map((emoji, i) => ({
+      emoji,
+      score: getScore(emoji, pattern),
+      index: i,
+    }))
+    .filter(({score}) => score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.index - a.index;
+    })
+    .map(({emoji}) => emoji);
 
 export const get = (emoji) => allEmojiData[emoji];

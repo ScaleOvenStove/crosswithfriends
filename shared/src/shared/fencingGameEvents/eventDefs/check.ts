@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import type {CellCoords, GridData} from '../../types';
 import type {EventDef} from '../types/EventDef';
 
@@ -53,30 +52,26 @@ const check: EventDef<CheckEvent> = {
     }
 
     const updateCellCorrect = (grid: GridData): GridData => {
-      const newGrid = _.assign([], grid, {
-        [r]: _.assign([], grid[r] || [], {
-          [c]: {
-            ...grid[r]?.[c],
-            value: state.game!.solution[r]?.[c],
-            bad: false,
-            good: true,
-            solvedBy: {id, teamId},
-          },
-        }),
-      });
+      const newGrid = [...grid];
+      newGrid[r] = [...(grid[r] || [])];
+      newGrid[r][c] = {
+        ...grid[r]?.[c],
+        value: state.game!.solution[r]?.[c],
+        bad: false,
+        good: true,
+        solvedBy: {id, teamId},
+      };
       return newGrid;
     };
 
     const updateCellIncorrect = (grid: GridData): GridData => {
-      const newGrid = _.assign([], grid, {
-        [r]: _.assign([], grid[r] || [], {
-          [c]: {
-            ...grid[r]?.[c],
-            bad: true,
-            good: false,
-          },
-        }),
-      });
+      const newGrid = [...grid];
+      newGrid[r] = [...(grid[r] || [])];
+      newGrid[r][c] = {
+        ...grid[r]?.[c],
+        bad: true,
+        good: false,
+      };
       return newGrid;
     };
 
@@ -109,8 +104,8 @@ const check: EventDef<CheckEvent> = {
               })(),
             },
           },
-          teamGrids: _.fromPairs(
-            _.toPairs(state.game!.teamGrids).map(([tId, tGrid]) => [tId, updateCellCorrect(tGrid)])
+          teamGrids: Object.fromEntries(
+            Object.entries(state.game!.teamGrids ?? {}).map(([tId, tGrid]) => [tId, updateCellCorrect(tGrid)])
           ),
           grid: updateCellCorrect(state.game.grid),
         },

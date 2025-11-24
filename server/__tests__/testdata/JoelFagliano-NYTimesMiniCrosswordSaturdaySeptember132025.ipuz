@@ -1,0 +1,529 @@
+{
+  "version": "http://ipuz.org/v2",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "NY Times Mini Crossword, Saturday, September 13, 2025",
+  "copyright": "© 2025, The New York Times",
+  "author": "Joel Fagliano",
+  "dimensions": {
+    "width": 7,
+    "height": 7
+  },
+  "puzzle": [
+    [
+      "#",
+      "#",
+      "#",
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    [
+      "#",
+      "#",
+      "5",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "#",
+      "6",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "7",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "8",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "#"
+    ],
+    [
+      "9",
+      "0",
+      "0",
+      "0",
+      "0",
+      "#",
+      "#"
+    ],
+    [
+      "10",
+      "0",
+      "0",
+      "0",
+      "#",
+      "#",
+      "#"
+    ]
+  ],
+  "solution": [
+    [
+      null,
+      null,
+      null,
+      "B",
+      "L",
+      "A",
+      "B"
+    ],
+    [
+      null,
+      null,
+      "G",
+      "R",
+      "A",
+      "D",
+      "E"
+    ],
+    [
+      null,
+      "S",
+      "H",
+      "O",
+      "N",
+      "D",
+      "A"
+    ],
+    [
+      "S",
+      "P",
+      "O",
+      "N",
+      "C",
+      "O",
+      "N"
+    ],
+    [
+      "L",
+      "I",
+      "S",
+      "T",
+      "E",
+      "N",
+      null
+    ],
+    [
+      "A",
+      "C",
+      "T",
+      "E",
+      "D",
+      null,
+      null
+    ],
+    [
+      "M",
+      "E",
+      "S",
+      "S",
+      null,
+      null,
+      null
+    ]
+  ],
+  "clues": {
+    "Across": [
+      {
+        "number": "1",
+        "cells": [
+          [
+            4,
+            1
+          ],
+          [
+            5,
+            1
+          ],
+          [
+            6,
+            1
+          ],
+          [
+            7,
+            1
+          ]
+        ],
+        "clue": "Give away a secret"
+      },
+      {
+        "number": "5",
+        "cells": [
+          [
+            3,
+            2
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            5,
+            2
+          ],
+          [
+            6,
+            2
+          ],
+          [
+            7,
+            2
+          ]
+        ],
+        "clue": "A, B, C or D, but not E"
+      },
+      {
+        "number": "6",
+        "cells": [
+          [
+            2,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            5,
+            3
+          ],
+          [
+            6,
+            3
+          ],
+          [
+            7,
+            3
+          ]
+        ],
+        "clue": "Rhimes who created \"Grey's Anatomy\" and \"Scandal\""
+      },
+      {
+        "number": "7",
+        "cells": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            5,
+            4
+          ],
+          [
+            6,
+            4
+          ],
+          [
+            7,
+            4
+          ]
+        ],
+        "clue": "Many posts by Instagram influencers, informally"
+      },
+      {
+        "number": "8",
+        "cells": [
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "clue": "\"Look, here's the thing ...\""
+      },
+      {
+        "number": "9",
+        "cells": [
+          [
+            1,
+            6
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            5,
+            6
+          ]
+        ],
+        "clue": "Performed in a play"
+      },
+      {
+        "number": "10",
+        "cells": [
+          [
+            1,
+            7
+          ],
+          [
+            2,
+            7
+          ],
+          [
+            3,
+            7
+          ],
+          [
+            4,
+            7
+          ]
+        ],
+        "clue": "Clutter"
+      }
+    ],
+    "Down": [
+      {
+        "number": "1",
+        "cells": [
+          [
+            4,
+            1
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            4,
+            7
+          ]
+        ],
+        "clue": "Literary sisters behind \"Jane Eyre\" and \"Wuthering Heights\""
+      },
+      {
+        "number": "2",
+        "cells": [
+          [
+            5,
+            1
+          ],
+          [
+            5,
+            2
+          ],
+          [
+            5,
+            3
+          ],
+          [
+            5,
+            4
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            6
+          ]
+        ],
+        "clue": "Poked with a knight's weapon"
+      },
+      {
+        "number": "3",
+        "cells": [
+          [
+            6,
+            1
+          ],
+          [
+            6,
+            2
+          ],
+          [
+            6,
+            3
+          ],
+          [
+            6,
+            4
+          ],
+          [
+            6,
+            5
+          ]
+        ],
+        "clue": "Extra feature"
+      },
+      {
+        "number": "4",
+        "cells": [
+          [
+            7,
+            1
+          ],
+          [
+            7,
+            2
+          ],
+          [
+            7,
+            3
+          ],
+          [
+            7,
+            4
+          ]
+        ],
+        "clue": "Edamame or chickpea"
+      },
+      {
+        "number": "5",
+        "cells": [
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            3,
+            7
+          ]
+        ],
+        "clue": "Abruptly stops texting"
+      },
+      {
+        "number": "6",
+        "cells": [
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            2,
+            7
+          ]
+        ],
+        "clue": "Valuable substance in the \"Dune\" universe"
+      },
+      {
+        "number": "7",
+        "cells": [
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "clue": "Word after grand, body or poetry"
+      }
+    ]
+  }
+}

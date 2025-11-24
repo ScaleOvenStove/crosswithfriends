@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 import {logger} from '../utils/logger.js';
 
 import {pool} from './pool.js';
@@ -13,7 +11,7 @@ export async function incrementGid(): Promise<string> {
   );
   const ms = Date.now() - startTime;
   logger.debug(`incrementGid took ${ms}ms`);
-  const firstRow = _.first(rows);
+  const firstRow = rows[0];
   if (!firstRow) {
     throw new Error('Failed to increment GID');
   }
@@ -29,7 +27,7 @@ export async function incrementPid(): Promise<string> {
   );
   const ms = Date.now() - startTime;
   logger.debug(`incrementPid took ${ms}ms`);
-  const firstRow = _.first(rows);
+  const firstRow = rows[0];
   if (!firstRow) {
     throw new Error('Failed to increment PID');
   }
