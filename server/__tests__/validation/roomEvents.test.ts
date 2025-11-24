@@ -265,5 +265,3 @@ describe('Room Events Validation', () => {
     });
   });
 });
-
-

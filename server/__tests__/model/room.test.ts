@@ -192,5 +192,3 @@ describe('Room Model', () => {
     });
   });
 });
-
-

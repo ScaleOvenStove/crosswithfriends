@@ -47,5 +47,3 @@ describe('HTTP Error Utilities', () => {
     });
   });
 });
-
-

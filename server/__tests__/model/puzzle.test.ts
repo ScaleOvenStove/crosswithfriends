@@ -387,5 +387,3 @@ describe('Puzzle Model', () => {
     });
   });
 });
-
-

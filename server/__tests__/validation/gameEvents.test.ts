@@ -582,5 +582,3 @@ describe('Game Events Validation', () => {
     });
   });
 });
-
-

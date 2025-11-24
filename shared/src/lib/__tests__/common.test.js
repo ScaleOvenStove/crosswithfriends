@@ -74,5 +74,3 @@ describe('parseRawUrls', () => {
     });
   });
 });
-
-
