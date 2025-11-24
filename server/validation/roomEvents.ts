@@ -1,4 +1,4 @@
-import {RoomEventType} from '@shared/roomEvents';
+import {RoomEventType} from '@crosswithfriends/shared/roomEvents';
 import {z} from 'zod';
 
 // Room event parameter schemas

@@ -1,4 +1,4 @@
-import type {CreateGameRequest, GetGameResponse, InfoJson} from '@shared/types';
+import type {CreateGameRequest, GetGameResponse, InfoJson} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
 import {addInitialGameEvent} from '../model/game.js';

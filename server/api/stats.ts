@@ -1,4 +1,4 @@
-import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@shared/types';
+import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';

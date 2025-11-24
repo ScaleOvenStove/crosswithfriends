@@ -1,4 +1,4 @@
-import type {RoomEvent} from '@shared/roomEvents';
+import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 
 import {logger} from '../utils/logger.js';
 

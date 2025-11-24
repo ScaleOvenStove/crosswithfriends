@@ -1,15 +1,15 @@
-import {convertIpuzClues} from '@lib/puzzleUtils';
-import type {CheckEvent} from '@shared/fencingGameEvents/eventDefs/check';
-import type {RevealEvent} from '@shared/fencingGameEvents/eventDefs/reveal';
-import type {RevealAllCluesEvent} from '@shared/fencingGameEvents/eventDefs/revealAllClues';
-import type {SendChatMessageEvent} from '@shared/fencingGameEvents/eventDefs/sendChatMessage';
-import type {StartEvent} from '@shared/fencingGameEvents/eventDefs/startGame';
-import type {UpdateCellEvent} from '@shared/fencingGameEvents/eventDefs/updateCell';
-import type {UpdateCursorEvent} from '@shared/fencingGameEvents/eventDefs/updateCursor';
-import type {UpdateDisplayNameEvent} from '@shared/fencingGameEvents/eventDefs/updateDisplayName';
-import type {UpdateTeamIdEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamId';
-import type {UpdateTeamNameEvent} from '@shared/fencingGameEvents/eventDefs/updateTeamName';
-import type {CellIndex, GameJson} from '@shared/types';
+import {convertIpuzClues} from '@crosswithfriends/shared/lib/puzzleUtils';
+import type {CheckEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/check';
+import type {RevealEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/reveal';
+import type {RevealAllCluesEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/revealAllClues';
+import type {SendChatMessageEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/sendChatMessage';
+import type {StartEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/startGame';
+import type {UpdateCellEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateCell';
+import type {UpdateCursorEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateCursor';
+import type {UpdateDisplayNameEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateDisplayName';
+import type {UpdateTeamIdEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateTeamId';
+import type {UpdateTeamNameEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateTeamName';
+import type {CellIndex, GameJson} from '@crosswithfriends/shared/types';
 
 import {makeGrid} from '../gameUtils.js';
 import {logger} from '../utils/logger.js';
@@ -226,7 +226,7 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
   const shades: number[] = [];
   const puzzleGrid = puzzle.puzzle || [];
   const ncol = solution[0]?.length || 0;
-  type IpuzCell = import('@shared/types').IpuzCell;
+  type IpuzCell = import('@crosswithfriends/shared/types').IpuzCell;
   puzzleGrid.forEach((row: (number | string | IpuzCell | null)[], rowIndex: number) => {
     row.forEach((cell: number | string | IpuzCell | null, cellIndex: number) => {
       if (cell && typeof cell === 'object' && 'cell' in cell) {
@@ -248,7 +248,7 @@ export async function addInitialGameEvent(gid: string, pid: string): Promise<str
   const acrossClues = convertIpuzClues(puzzle.clues?.Across || []);
   const downClues = convertIpuzClues(puzzle.clues?.Down || []);
 
-  const gridObject = makeGrid(solution);
+  const gridObject = makeGrid(solution, false);
   const clues = gridObject.alignClues({across: acrossClues, down: downClues});
   const grid = gridObject.toArray();
 

@@ -1,4 +1,4 @@
-import type {ListPuzzleRequestFilters, PuzzleJson} from '@shared/types';
+import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
 import Joi from 'joi';
 import * as uuid from 'uuid';
 

@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {RoomEventType} from '@shared/roomEvents';
+import {RoomEventType} from '@crosswithfriends/shared/roomEvents';
 import {validateRoomEvent, isValidRoomEvent} from '../../validation/roomEvents.js';
 
 describe('Room Events Validation', () => {
@@ -265,3 +265,5 @@ describe('Room Events Validation', () => {
     });
   });
 });
+
+

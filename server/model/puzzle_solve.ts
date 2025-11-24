@@ -1,4 +1,4 @@
-import type {PuzzleJson} from '@shared/types';
+import type {PuzzleJson} from '@crosswithfriends/shared/types';
 
 import {logger} from '../utils/logger.js';
 

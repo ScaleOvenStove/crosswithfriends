@@ -186,3 +186,5 @@ describe('PUZtoJSON', () => {
     expect(result.grid[1][1].type).toBe('white');
   });
 });
+
+

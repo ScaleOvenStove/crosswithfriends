@@ -1,4 +1,4 @@
-import type {RecordSolveRequest, RecordSolveResponse} from '@shared/types';
+import type {RecordSolveRequest, RecordSolveResponse} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
 import {recordSolve} from '../model/puzzle.js';
