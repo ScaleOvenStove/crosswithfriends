@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sample Input Forms – Registration & Advanced Movie Search</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f5fb;
+      margin: 0;
+      padding: 2rem;
+      color: #222;
+    }
+
+    h1, h2 {
+      margin-top: 0;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem 2rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0.75rem;
+    }
+
+    .field label {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .field small {
+      color: #666;
+      font-size: 0.8rem;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="file"],
+    select,
+    textarea {
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 0.95rem;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .inline-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
+      margin-top: 0.2rem;
+    }
+
+    .inline-options label {
+      font-weight: 400;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    button,
+    .link-button {
+      border-radius: 999px;
+      border: none;
+      font-size: 0.95rem;
+      padding: 0.55rem 1.4rem;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .link-button {
+      background: none;
+      color: #2563eb;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+    }
+
+    .toggle input[type="checkbox"] {
+      width: 40px;
+      height: 20px;
+      appearance: none;
+      background: #e5e7eb;
+      border-radius: 999px;
+      position: relative;
+      outline: none;
+      transition: background 0.2s;
+    }
+
+    .toggle input[type="checkbox"]::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+
+    .toggle input[type="checkbox"]:checked {
+      background: #22c55e;
+    }
+
+    .toggle input[type="checkbox"]:checked::before {
+      transform: translateX(20px);
+    }
+
+    .section-note {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 0.75rem;
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .range-row input[type="range"] {
+      flex: 1;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 1.5rem 0;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ========================================
+       FORM 1: USER REGISTRATION
+       ======================================== -->
+  <section id="registration" class="card">
+    <h1>Create Your Account</h1>
+    <p class="section-note">
+      Join Mason Movies to book tickets, save favorites, and manage your profile.
+      <!-- context aligned with the Mason Movies system :contentReference[oaicite:0]{index=0} -->
+    </p>
+
+    <form>
+      <div class="form-grid">
+
+        <!-- Full Name (text input) -->
+        <div class="field">
+          <label for="fullName">Full Name</label>
+          <input
+            type="text"
+            id="fullName"
+            name="fullName"
+            value="Tyler Witlin"
+            placeholder="Enter your full name" />
+          <small>Used for your ticket and account profile.</small>
+        </div>
+
+        <!-- Email (email input) -->
+        <div class="field">
+          <label for="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value="tyler@example.com"
+            placeholder="you@example.com" />
+          <small>We’ll send confirmations and password reset links here.</small>
+        </div>
+
+        <!-- Password (password field) -->
+        <div class="field">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value="ExamplePass123"
+            placeholder="Create a password" />
+          <small>Must be at least 8 characters, with 1 number and 1 uppercase letter.</small>
+        </div>
+
+        <!-- User Type (dropdown) -->
+        <div class="field">
+          <label for="userType">User Type</label>
+          <select id="userType" name="userType">
+            <option value="standard" selected>Standard User</option>
+            <option value="student">Student</option>
+            <option value="staff">Staff / Employee</option>
+            <option value="admin">Administrator</option>
+          </select>
+          <small>Dropdown used to avoid typos and keep roles consistent.</small>
+        </div>
+
+        <!-- Gender (radio buttons) -->
+        <div class="field">
+          <label>Gender (Optional)</label>
+          <div class="inline-options">
+            <label><input type="radio" name="gender" value="male" checked /> Male</label>
+            <label><input type="radio" name="gender" value="female" /> Female</label>
+            <label><input type="radio" name="gender" value="nonbinary" /> Non-binary</label>
+            <label><input type="radio" name="gender" value="na" /> Prefer not to say</label>
+          </div>
+        </div>
+
+        <!-- Country (dropdown) -->
+        <div class="field">
+          <label for="country">Country</label>
+          <select id="country" name="country">
+            <option value="us" selected>United States</option>
+            <option value="ca">Canada</option>
+            <option value="uk">United Kingdom</option>
+            <option value="au">Australia</option>
+            <option value="other">Other</option>
+          </select>
+          <small>Default country set to USA to reduce input for local users.</small>
+        </div>
+
+        <!-- Profile Photo (file upload) -->
+        <div class="field">
+          <label for="avatar">Upload Profile Photo (Optional)</label>
+          <input type="file" id="avatar" name="avatar" />
+          <small>Helps staff verify your identity when picking up tickets.</small>
+        </div>
+
+        <!-- Short Bio (textarea, optional sixth element) -->
+        <div class="field">
+          <label for="bio">Short Bio (Optional)</label>
+          <textarea id="bio" name="bio" placeholder="Tell us a bit about your movie preferences...">Sci-fi and action fan, goes to the theater weekly.</textarea>
+        </div>
+
+      </div>
+
+      <hr />
+
+      <!-- Terms + navigation -->
+      <div class="field">
+        <label>
+          <input type="checkbox" name="terms" checked />
+          I agree to the <a href="#" target="_blank">Terms &amp; Conditions</a>.
+        </label>
+        <small>Checkbox ensures explicit consent to policies.</small>
+      </div>
+
+      <div class="button-row">
+        <!-- Navigation control for multi-step form -->
+        <button type="submit" class="primary">Next &rarr;</button>
+        <button type="button" class="secondary">Save &amp; Finish Later</button>
+        <button type="button" class="link-button" onclick="document.getElementById('search').scrollIntoView({behavior:'smooth'})">
+          Skip to Advanced Search
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ========================================
+       FORM 2: ADVANCED MOVIE SEARCH
+       ======================================== -->
+  <section id="search" class="card">
+    <h2>Advanced Movie Search</h2>
+    <p class="section-note">
+      Use filters to quickly find movies by title, genre, release year, rating, and more.
+    </p>
+
+    <form>
+      <div class="form-grid">
+
+        <!-- Movie Title (text input) -->
+        <div class="field">
+          <label for="title">Movie Title</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            value="Star"
+            placeholder="Search by name..." />
+          <small>Supports partial titles to help when spelling is uncertain.</small>
+        </div>
+
+        <!-- Genre (multi-select as simple multiple select mockup) -->
+        <div class="field">
+          <label for="genre">Genre(s)</label>
+          <select id="genre" name="genre" multiple size="4">
+            <option selected>Action</option>
+            <option>Comedy</option>
+            <option>Sci-Fi</option>
+            <option>Drama</option>
+            <option>Thriller</option>
+            <option>Horror</option>
+          </select>
+          <small>Multiple selection lets users search across several genres.</small>
+        </div>
+
+        <!-- Release year range (sliders) -->
+        <div class="field">
+          <label>Release Year Range</label>
+          <div class="range-row">
+            <span>
+              From
+              <input type="number" id="yearFrom" name="yearFrom" value="2010" min="1980" max="2025" style="width:5rem;" />
+            </span>
+            <input type="range" id="yearSliderFrom" min="1980" max="2025" value="2010" />
+          </div>
+          <div class="range-row">
+            <span>
+              To
+              <input type="number" id="yearTo" name="yearTo" value="2025" min="1980" max="2025" style="width:5rem;" />
+            </span>
+            <input type="range" id="yearSliderTo" min="1980" max="2025" value="2025" />
+          </div>
+          <small>Sliders provide a quick way to adjust numeric ranges without typing.</small>
+        </div>
+
+        <!-- Rating (checkbox group) -->
+        <div class="field">
+          <label>Rating</label>
+          <div class="inline-options">
+            <label><input type="checkbox" name="rating" value="G" checked /> G</label>
+            <label><input type="checkbox" name="rating" value="PG" checked /> PG</label>
+            <label><input type="checkbox" name="rating" value="PG-13" /> PG-13</label>
+            <label><input type="checkbox" name="rating" value="R" /> R</label>
+          </div>
+          <small>Checkboxes allow combining multiple rating categories.</small>
+        </div>
+
+        <!-- Language (dropdown) -->
+        <div class="field">
+          <label for="language">Language</label>
+          <select id="language" name="language">
+            <option selected>English (EN)</option>
+            <option>Spanish (ES)</option>
+            <option>French (FR)</option>
+            <option>Japanese (JA)</option>
+            <option>Korean (KO)</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <!-- Streaming availability (toggle) -->
+        <div class="field">
+          <label>Streaming Availability</label>
+          <label class="toggle">
+            <input type="checkbox" id="streamingOnly" name="streamingOnly" checked />
+            <span>Show only movies currently available to stream</span>
+          </label>
+          <small>Toggle used for a simple on/off filter.</small>
+        </div>
+
+        <!-- CSV upload (file upload) -->
+        <div class="field">
+          <label for="csv">Upload CSV of Favorites (Optional)</label>
+          <input type="file" id="csv" name="csv" />
+          <small>Used for advanced features like matching against your favorite list.</small>
+        </div>
+
+        <!-- Notes / Debug (textarea) -->
+        <div class="field">
+          <label for="notes">Search Notes (Internal Only)</label>
+          <textarea id="notes" name="notes" placeholder="E.g., looking for Marvel movies for a group of teens.">Looking for sci-fi/action movies suitable for a college meetup.</textarea>
+        </div>
+
+      </div>
+
+      <hr />
+
+      <!-- Navigation / actions -->
+      <div class="button-row">
+        <!-- Primary action -->
+        <button type="submit" class="primary">Search Movies</button>
+
+        <!-- Secondary actions -->
+        <button type="reset" class="secondary">Reset Filters</button>
+        <button type="button" class="link-button" onclick="document.getElementById('registration').scrollIntoView({behavior:'smooth'})">
+          &larr; Back to Registration
+        </button>
+      </div>
+    </form>
+  </section>
+
+</div>
+
+<!-- Simple JS to keep number + slider roughly in sync (mock behavior only) -->
+<script>
+  const yearFromInput = document.getElementById("yearFrom");
+  const yearToInput = document.getElementById("yearTo");
+  const yearSliderFrom = document.getElementById("yearSliderFrom");
+  const yearSliderTo = document.getElementById("yearSliderTo");
+
+  function syncFrom(value) {
+    yearFromInput.value = value;
+    yearSliderFrom.value = value;
+  }
+  function syncTo(value) {
+    yearToInput.value = value;
+    yearSliderTo.value = value;
+  }
+
+  yearFromInput.addEventListener("input", e => syncFrom(e.target.value));
+  yearSliderFrom.addEventListener("input", e => syncFrom(e.target.value));
+
+  yearToInput.addEventListener("input", e => syncTo(e.target.value));
+  yearSliderTo.addEventListener("input", e => syncTo(e.target.value));
+</script>
+</body>
+</html>

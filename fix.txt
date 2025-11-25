@@ -1,0 +1,735 @@
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Chat/Chat.tsx
+  498:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  726:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Chat/EmojiPicker.tsx
+  276:15  warning  'handleKeyDown' is already declared in the upper scope on line 116 column 11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-shadow
+  290:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react/jsx-no-bind
+  314:24  warning  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Chat/EmojiPicker.tsx:314:24
+  312 |       return (
+  313 |         <div style={containerStyle} ref={listContainer}>
+> 314 |           {matches.map((emoji) => renderEmoji(emoji))}
+      |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  315 |         </div>
+  316 |       );
+  317 |     }, [matches, renderEmoji]);  react-hooks/refs
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Compose/Create.tsx
+  153:24  warning  Do not use Array index in keys            react/no-array-index-key
+  194:25  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  195:25  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  196:25  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  197:25  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  198:25  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Compose/Hints.tsx
+    7:9   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  108:19  warning  Do not use Array index in keys            react/no-array-index-key
+  125:9   warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Compose/lib/hintUtils.js
+   9:9   warning  Unexpected use of '&'   no-bitwise
+   9:10  warning  Unexpected use of '>>'  no-bitwise
+  20:23  warning  Unexpected use of '<<'  no-bitwise
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Fencing/Fencing.tsx
+  173:9   warning  The 'changeName' function makes the dependencies of useCallback Hook (at line 241) change on every render. To fix this, wrap the definition of 'changeName' in its own useCallback() Hook  react-hooks/exhaustive-deps
+  248:7   warning  JSX props should not use arrow functions                                                                                                                                                   react/jsx-no-bind
+  249:7   warning  JSX props should not use arrow functions                                                                                                                                                   react/jsx-no-bind
+  250:7   warning  JSX props should not use arrow functions                                                                                                                                                   react/jsx-no-bind
+  251:7   warning  JSX props should not use arrow functions                                                                                                                                                   react/jsx-no-bind
+  310:15  warning  JSX props should not use arrow functions                                                                                                                                                   react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Fencing/FencingCountdown.tsx
+  82:14  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Fencing/FencingScoreboard.tsx
+  18:26  error    'useCallback' is not defined              no-undef
+  22:26  error    'useCallback' is not defined              no-undef
+  88:21  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Fencing/FencingToolbar.tsx
+  13:15  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Fencing/transformGameToPlayerProps.ts
+  32:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  42:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  44:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  45:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  59:47  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  59:82  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  82:46  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  89:35  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  89:69  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Fencing/useGameEvents.ts
+  47:37  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Fencing/useToolbarActions.ts
+  24:17  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Game/Confetti.tsx
+  18:52  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Game/Game.tsx
+  167:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  184:57  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  189:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  198:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  272:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  343:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  380:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  382:9   warning  Unexpected dangling '_' in '_handleSelectClue'                                                                                                                                                                                                                                                                    no-underscore-dangle
+  447:5   warning  Arrow function expected no return value                                                                                                                                                                                                                                                                           consistent-return
+  589:9   warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  592:6   warning  React Hook useCallback has an unnecessary dependency: 'pencilMode'. Either exclude it or remove the dependency array                                                                                                                                                                                              react-hooks/exhaustive-deps
+  655:9   warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  662:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Game/PuzzleInfo.tsx
+  101:13  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  108:36  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  114:37  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  150:42  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  158:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  165:9   warning  JSX props should not use arrow functions  react/jsx-no-bind
+  168:16  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Grid/Cell.tsx
+   44:18  warning  Do not use Array index in keys                                                                                                                                                                     react/no-array-index-key
+   66:18  warning  Do not use Array index in keys                                                                                                                                                                     react/no-array-index-key
+   85:9   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+   85:9   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+   87:11  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  126:14  warning  Forbidden non-null assertion                                                                                                                                                                       @typescript-eslint/no-non-null-assertion
+  127:15  warning  Forbidden non-null assertion                                                                                                                                                                       @typescript-eslint/no-non-null-assertion
+  128:21  warning  Forbidden non-null assertion                                                                                                                                                                       @typescript-eslint/no-non-null-assertion
+  181:7   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  181:7   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  188:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  189:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  202:5   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  202:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  215:7   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  216:7   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  259:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                  no-console
+  267:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                  no-console
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Grid/Grid.tsx
+   73:7   warning  Forbidden non-null assertion                                                                                                                                                                                                                                                                          @typescript-eslint/no-non-null-assertion
+   85:7   warning  Forbidden non-null assertion                                                                                                                                                                                                                                                                          @typescript-eslint/no-non-null-assertion
+  171:6   warning  React Hook useMemo has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useMemo call and refer to those specific props inside useMemo  react-hooks/exhaustive-deps
+  223:18  warning  Do not use Array index in keys                                                                                                                                                                                                                                                                        react/no-array-index-key
+  239:21  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                           react/jsx-props-no-spreading
+  240:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                              react/jsx-no-bind
+  241:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                              react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Grid/hashGridRow.ts
+  1:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Grid/types.ts
+  56:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/ListView/ListView.tsx
+   53:70  warning  Forbidden non-null assertion                                                                                                                                                                                                                                                                                      @typescript-eslint/no-non-null-assertion
+   84:5   warning  React Hook useCallback has a missing dependency: 'clueContainsSquare'. Either include it or remove the dependency array                                                                                                                                                                                           react-hooks/exhaustive-deps
+  108:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  117:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  209:49  warning  Do not use Array index in keys                                                                                                                                                                                                                                                                                    react/no-array-index-key
+  214:19  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                                                                                                                                    jsx-a11y/click-events-have-key-events
+  214:19  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                 jsx-a11y/no-static-element-interactions
+  216:26  warning  Do not use Array index in keys                                                                                                                                                                                                                                                                                    react/no-array-index-key
+  217:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  218:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  230:34  warning  Do not use Array index in keys                                                                                                                                                                                                                                                                                    react/no-array-index-key
+  249:37  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  250:37  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/ClueText.ts
+  15:28  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  26:18  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/Clues.tsx
+  33:7   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  33:7   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  35:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  41:21  warning  Do not use Array index in keys                                                                                                                                                                     react/no-array-index-key
+  48:21  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  48:21  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  49:28  warning  Do not use Array index in keys                                                                                                                                                                     react/no-array-index-key
+  55:23  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  61:23  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  65:23  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/ConnectionStats.tsx
+  16:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/ConnectionStatusIndicator.tsx
+  24:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/Editor.tsx
+   43:9   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   46:12  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   72:34  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   73:26  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  130:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  148:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  154:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  160:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  167:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  205:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  222:9   warning  Unexpected dangling '_' in '_isSelected'                                                                                                                                                                                                                                                                          no-underscore-dangle
+  252:20  warning  Do not use Array index in keys                                                                                                                                                                                                                                                                                    react/no-array-index-key
+  255:17  warning  Do not nest ternary expressions                                                                                                                                                                                                                                                                                   no-nested-ternary
+  257:15  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  260:15  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  294:9   warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  297:9   warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  400:29  warning  Do not use Array index in keys                                                                                                                                                                                                                                                                                    react/no-array-index-key
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/GridControls.tsx
+   10:9   warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   13:10  warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   62:13  warning  Unexpected dangling '_' in '_handleKeyDown'                                                                                                                                                        no-underscore-dangle
+   66:47  warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   66:70  warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   70:41  warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   70:63  warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   94:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+   96:7   warning  `tabIndex` should only be declared on interactive elements                                                                                                                                         jsx-a11y/no-noninteractive-tabindex
+   96:7   warning  Avoid positive integer values for tabIndex                                                                                                                                                         jsx-a11y/tabindex-no-positive
+   98:35  warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   99:7   warning  Prop spreading is forbidden                                                                                                                                                                        react/jsx-props-no-spreading
+  102:55  warning  Prop spreading is forbidden                                                                                                                                                                        react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/ListViewControls.tsx
+   19:41  warning  Expected to return a value at the end of arrow function                                                                                                                                                                                                                                                           consistent-return
+   27:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+   29:45  warning  Expected to return a value at the end of arrow function                                                                                                                                                                                                                                                           consistent-return
+   37:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+   44:18  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   60:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+   70:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  100:24  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/MobileGridControls.tsx
+   24:6   warning  React Hook useEffect has a missing dependency: 'effect'. Either include it or remove the dependency array. If 'effect' changes too often, find the parent component that defines it and wrap that definition in useCallback                                                                                       react-hooks/exhaustive-deps
+   43:42  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   57:39  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  164:7   warning  'anchors' is already declared in the upper scope on line 43 column 10                                                                                                                                                                                                                                             @typescript-eslint/no-shadow
+  164:16  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  171:45  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  171:58  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  212:7   warning  Arrow function expected no return value                                                                                                                                                                                                                                                                           consistent-return
+  262:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  309:5   warning  React Hook useCallback has a missing dependency: 'keepFocus'. Either include it or remove the dependency array                                                                                                                                                                                                    react-hooks/exhaustive-deps
+  342:5   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  424:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  434:60  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  435:58  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  436:56  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  475:67  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  484:67  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  485:63  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  493:68  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  505:9   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                                                                                                                                    jsx-a11y/click-events-have-key-events
+  505:9   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                 jsx-a11y/no-static-element-interactions
+  555:30  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  556:45  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  557:30  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  563:25  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  564:42  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  564:47  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  564:87  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  565:25  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/MobileKeyboard.tsx
+  29:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/MobileListViewControls.tsx
+   26:43  warning  Expected to return a value at the end of arrow function                                                                                                                                                                                                                                                           consistent-return
+   34:8   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+   36:47  warning  Expected to return a value at the end of arrow function                                                                                                                                                                                                                                                           consistent-return
+   44:8   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+   51:20  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   67:7   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+   77:8   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  107:42  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/Player.tsx
+   37:9   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   54:13  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   55:12  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   56:13  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   57:11  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   62:13  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   64:28  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   68:18  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  115:34  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  116:26  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  238:5   warning  Arrow function expected no return value                                                                                                                                                                                                                                                                           consistent-return
+  254:6   warning  React Hook useEffect has missing dependencies: 'selected.c' and 'selected.r'. Either include them or remove the dependency array                                                                                                                                                                                  react-hooks/exhaustive-deps
+  318:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  325:7   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  336:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  430:26  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  612:41  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  642:35  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  683:39  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  728:35  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  756:20  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/VimCommandBar.tsx
+  52:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  53:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  55:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Player/useGridControls.ts
+    7:5   warning  Assignment to function parameter 'cap'                                                                                                                                                                                                                                                                            no-param-reassign
+   12:9   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   15:10  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  129:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  136:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  232:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  248:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  252:39  warning  Expected to return a value at the end of arrow function                                                                                                                                                                                                                                                           consistent-return
+  308:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  319:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  324:27  warning  Assignment to function parameter 'isRebus'                                                                                                                                                                                                                                                                        no-param-reassign
+  332:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  342:9   warning  Arrow function expected no return value                                                                                                                                                                                                                                                                           consistent-return
+  360:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  379:7   warning  Assignment to function parameter 'key'                                                                                                                                                                                                                                                                            no-param-reassign
+  492:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  573:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/PuzzleList/Entry.tsx
+  18:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  53:51  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  53:73  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/PuzzleList/NewPuzzleList.tsx
+  142:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  204:18  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+  209:41  warning  '_' is already declared in the upper scope on line 3 column 8                                                                                                                                                                                                                                                     @typescript-eslint/no-shadow
+  210:23  warning  Do not use Array index in keys                                                                                                                                                                                                                                                                                    react/no-array-index-key
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/PuzzleList/PuzzleList.tsx
+   8:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  12:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Timeline/Timeline.tsx
+   32:63  warning  Unexpected any. Specify a different type                                                                                                                                                           @typescript-eslint/no-explicit-any
+   36:14  warning  Do not use Array index in keys                                                                                                                                                                     react/no-array-index-key
+  182:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  192:7   warning  onMouseOut must be accompanied by onBlur for accessibility                                                                                                                                         jsx-a11y/mouse-events-have-key-events
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Toolbar/ActionMenu.tsx
+  68:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  77:11  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  77:11  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  78:18  warning  Do not use Array index in keys                                                                                                                                                                     react/no-array-index-key
+  81:13  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  84:13  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  89:13  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  94:13  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Toolbar/Clock.tsx
+   73:5  warning  Arrow function expected no return value                                                                                                                                                            consistent-return
+  157:5  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  157:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Toolbar/Popup.tsx
+  85:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  85:76  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  90:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  93:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Toolbar/index.tsx
+   83:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+   96:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  132:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  142:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  152:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  162:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  167:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  168:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  170:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  176:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  180:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  186:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  187:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  189:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  195:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  203:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  204:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  206:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  212:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  240:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  246:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  259:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                                                                                                                                                                 no-console
+  300:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  301:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  302:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  359:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  360:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  361:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  426:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  427:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  428:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  429:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  482:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  490:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  498:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  506:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  514:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  522:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  584:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  597:13  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  637:9   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                                                                                                                                    jsx-a11y/click-events-have-key-events
+  637:9   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                 jsx-a11y/no-static-element-interactions
+  647:7   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                                                                                                                                    jsx-a11y/click-events-have-key-events
+  647:7   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                 jsx-a11y/no-static-element-interactions
+  655:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  673:7   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                                                                                                                                    jsx-a11y/click-events-have-key-events
+  673:7   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                 jsx-a11y/no-static-element-interactions
+  682:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  692:9   warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  712:9   warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  720:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  733:9   warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  736:36  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  743:13  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                                                                                                                                    jsx-a11y/click-events-have-key-events
+  743:13  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                 jsx-a11y/no-static-element-interactions
+  747:15  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  754:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  773:9   warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  776:39  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  783:6   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array                                                                                                                                                                                                        react-hooks/exhaustive-deps
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Upload/FileUploader.tsx
+   39:21  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   44:44  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   86:50  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  100:60  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  100:86  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  103:20  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  103:44  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  119:5   warning  React Hook useCallback has an unnecessary dependency: 'fileTypeGuesser'. Either exclude it or remove the dependency array. Outer scope values like 'fileTypeGuesser' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+  139:21  warning  Unexpected any. Specify a different type                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  168:11  warning  Prop spreading is forbidden                                                                                                                                                                                                                           react/jsx-props-no-spreading
+  177:18  warning  Prop spreading is forbidden                                                                                                                                                                                                                           react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/Upload/Upload.tsx
+   20:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   59:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  103:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  137:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/WelcomeVariantsControl.tsx
+  87:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  88:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/AccountError.tsx
+  19:9  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/ErrorBoundary.tsx
+  103:15  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/GameError.tsx
+  19:9  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/GameSkeletonLoader.tsx
+  82:32  warning  Do not use Array index in keys  react/no-array-index-key
+  88:32  warning  Do not use Array index in keys  react/no-array-index-key
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/Nav.tsx
+   57:9   warning  JSX props should not use arrow functions  react/jsx-no-bind
+   58:9   warning  JSX props should not use arrow functions  react/jsx-no-bind
+  133:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/Powerups.tsx
+  50:9  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/RoomError.tsx
+  19:9  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/components/common/Timestamp.tsx
+  57:22  warning  Expected to return a value at the end of arrow function                                                              consistent-return
+  65:6   warning  React Hook React.useEffect has a missing dependency: 'formatTime'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/useBattleSetup.ts
+  68:16  warning  Expected to return a value at the end of arrow function  consistent-return
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/useComposition.ts
+  77:55  warning  'options' is already declared in the upper scope on line 39 column 32  @typescript-eslint/no-shadow
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/useGame.ts
+  26:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/useGamePowerups.ts
+  104:9  warning  Unexpected dangling '_' in '_handleUsePowerup'  no-underscore-dangle
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/useGameSetup.ts
+  67:16  warning  Expected to return a value at the end of arrow function  consistent-return
+  79:16  warning  Expected to return a value at the end of arrow function  consistent-return
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/usePuzzle.ts
+  63:5  warning  Arrow function expected no return value  consistent-return
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/useRoom.ts
+  92:5  warning  Arrow function expected no return value  consistent-return
+
+/home/twitlin/src/crosswithfriends/frontend/src/hooks/useStoreSubscriptions.ts
+  26:64  warning  Forbidden non-null assertion                                                                                                                             @typescript-eslint/no-non-null-assertion
+  31:6   warning  React Hook useEffect has a missing dependency: 'subscriptions'. Either include it or remove the dependency array                                         react-hooks/exhaustive-deps
+  31:20  warning  React Hook useEffect has a spread element in its dependency array. This means we can't statically verify whether you've passed the correct dependencies  react-hooks/exhaustive-deps
+
+/home/twitlin/src/crosswithfriends/frontend/src/localAuth.ts
+  25:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Account.tsx
+  41:15  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  42:15  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Battle.tsx
+  156:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  159:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  174:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  177:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  194:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  211:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  214:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Compose.tsx
+  71:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  80:11  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Composition.tsx
+   35:28  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+   36:26  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  158:9   warning  Unexpected dangling '_' in '_handleChat'         no-underscore-dangle
+  194:9   warning  Unexpected dangling '_' in '_handleUnfocusChat'  no-underscore-dangle
+  359:13  warning  JSX props should not use arrow functions         react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Game.tsx
+   51:12  warning  Do not nest ternary expressions                                                                                                                                        no-nested-ternary
+   52:9   warning  Forbidden non-null assertion                                                                                                                                           @typescript-eslint/no-non-null-assertion
+   54:11  warning  Forbidden non-null assertion                                                                                                                                           @typescript-eslint/no-non-null-assertion
+   79:15  warning  'opponentGame' is already declared in the upper scope on line 59 column 44                                                                                             @typescript-eslint/no-shadow
+  137:9   warning  Unexpected dangling '_' in '_query'                                                                                                                                    no-underscore-dangle
+  138:11  warning  'params' is already declared in the upper scope on line 25 column 9                                                                                                    @typescript-eslint/no-shadow
+  168:13  warning  'game' is already declared in the upper scope on line 59 column 38                                                                                                     @typescript-eslint/no-shadow
+  173:29  warning  Forbidden non-null assertion                                                                                                                                           @typescript-eslint/no-non-null-assertion
+  199:27  warning  Forbidden non-null assertion                                                                                                                                           @typescript-eslint/no-non-null-assertion
+  248:64  warning  Forbidden non-null assertion                                                                                                                                           @typescript-eslint/no-non-null-assertion
+  255:6   warning  React Hook useEffect has a missing dependency: 'gameHook'. Either include it or remove the dependency array                                                            react-hooks/exhaustive-deps
+  301:9   warning  Unexpected dangling '_' in '_gameReady'                                                                                                                                no-underscore-dangle
+  302:9   warning  Unexpected dangling '_' in '_gameState'                                                                                                                                no-underscore-dangle
+  303:9   warning  Unexpected dangling '_' in '_gameInstance'                                                                                                                             no-underscore-dangle
+  485:6   warning  React Hook useCallback has missing dependencies: 'battleHook', 'gameHook', 'scrollToBottomTrigger', and 'user.id'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  539:6   warning  React Hook useCallback has missing dependencies: 'gameHook.ready' and 'user.id'. Either include them or remove the dependency array                                    react-hooks/exhaustive-deps
+  564:6   warning  React Hook useMemo has a missing dependency: 'gameHook.ready'. Either include it or remove the dependency array                                                        react-hooks/exhaustive-deps
+  666:6   warning  React Hook useCallback has a missing dependency: 'handleToggleChat'. Either include it or remove the dependency array                                                  react-hooks/exhaustive-deps
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Play.tsx
+   25:65  warning  Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+   36:11  warning  'params' is already declared in the upper scope on line 23 column 9  @typescript-eslint/no-shadow
+  128:20  warning  Do not nest ternary expressions                                      no-nested-ternary
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Replay.tsx
+  378:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  381:9   warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  424:6   warning  React Hook useMemo has a missing dependency: 'myColor'. Either include it or remove the dependency array                                                                                           react-hooks/exhaustive-deps
+  426:9   warning  Unexpected dangling '_' in '_renderChat'                                                                                                                                                           no-underscore-dangle
+  443:7   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  454:9   warning  `tabIndex` should only be declared on interactive elements                                                                                                                                         jsx-a11y/no-noninteractive-tabindex
+  474:13  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  510:15  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+  513:15  warning  JSX props should not use arrow functions                                                                                                                                                           react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Replays.tsx
+  180:57  warning  'snapshot' is already declared in the upper scope on line 176 column 43  @typescript-eslint/no-shadow
+  203:12  warning  Do not nest ternary expressions                                          no-nested-ternary
+  320:11  warning  JSX props should not use arrow functions                                 react/jsx-no-bind
+  329:11  warning  JSX props should not use arrow functions                                 react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Room.tsx
+  117:19  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Stats.tsx
+  18:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/Welcome.tsx
+   42:65  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  150:5   warning  React Hook useCallback has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback  react-hooks/exhaustive-deps
+  160:6   warning  React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect        react-hooks/exhaustive-deps
+  225:21  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  327:19  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  332:19  warning  JSX props should not use arrow functions                                                                                                                                                                                                                                                                          react/jsx-no-bind
+  334:23  warning  Prop spreading is forbidden                                                                                                                                                                                                                                                                                       react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/pages/WrappedWelcome.tsx
+  97:16  warning  Prop spreading is forbidden  react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/routes/index.tsx
+  23:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/sockets/SocketContext.tsx
+  32:30  warning  Expected to return a value at the end of async arrow function  consistent-return
+
+/home/twitlin/src/crosswithfriends/frontend/src/sockets/SocketManager.ts
+   69:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   85:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   88:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   91:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   95:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  109:21  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  116:19  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  140:17  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  147:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+/home/twitlin/src/crosswithfriends/frontend/src/sockets/emitAsync.ts
+  16:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  18:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/store/EventEmitter.ts
+   3:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   5:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   9:5   warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  13:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  32:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  47:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/store/battleStore.ts
+   35:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   39:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   40:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:27  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  197:27  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  253:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  341:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  346:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  368:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  424:20  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/home/twitlin/src/crosswithfriends/frontend/src/store/compositionStore.ts
+  169:27  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/twitlin/src/crosswithfriends/frontend/src/store/demoUser.ts
+   4:20  warning  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  17:3   warning  Expected 'this' to be used by class method 'detach'  class-methods-use-this
+
+/home/twitlin/src/crosswithfriends/frontend/src/store/gameStore.ts
+   44:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   86:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  439:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  599:27  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  651:27  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  912:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/store/user.ts
+  37:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  79:30  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  87:31  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/components/Chat/ChatBar.test.tsx
+  11:16  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  11:41  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  26:16  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  26:46  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  42:28  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  42:53  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  43:17  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  63:23  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  63:48  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/components/Grid/Cell.test.tsx
+  25:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:13  warning  Prop spreading is forbidden               react/jsx-props-no-spreading
+  49:13  warning  Prop spreading is forbidden               react/jsx-props-no-spreading
+  49:32  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  65:13  warning  Prop spreading is forbidden               react/jsx-props-no-spreading
+  65:32  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  76:13  warning  Prop spreading is forbidden               react/jsx-props-no-spreading
+  86:13  warning  Prop spreading is forbidden               react/jsx-props-no-spreading
+  96:13  warning  Prop spreading is forbidden               react/jsx-props-no-spreading
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/components/Toolbar/Clock.test.tsx
+  37:23  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  53:31  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/components/common/EditableSpan.test.tsx
+   11:40  warning  JSX props should not use arrow functions  react/jsx-no-bind
+   21:30  warning  JSX props should not use arrow functions  react/jsx-no-bind
+   31:34  warning  JSX props should not use arrow functions  react/jsx-no-bind
+   46:37  warning  JSX props should not use arrow functions  react/jsx-no-bind
+   68:37  warning  JSX props should not use arrow functions  react/jsx-no-bind
+   87:46  warning  JSX props should not use arrow functions  react/jsx-no-bind
+   88:17  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  114:34  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  114:54  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/components/common/ErrorBoundary.test.tsx
+   8:7   warning  Unexpected dangling '_' in '_ThrowError'  no-underscore-dangle
+  73:22  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/components/common/Powerups.test.tsx
+  19:41  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  34:41  warning  JSX props should not use arrow functions  react/jsx-no-bind
+  53:31  warning  JSX props should not use arrow functions  react/jsx-no-bind
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/mocks/firebase.ts
+  13:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/mocks/socket.ts
+   8:34  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+   9:43  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  10:45  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  13:46  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  17:51  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  22:36  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  24:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  26:45  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  32:47  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  60:80  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  61:7   warning  Unexpected dangling '_' in '_callbacks'                                            no-underscore-dangle
+  62:5   warning  Unexpected dangling '_' in '_callbacks'                                            no-underscore-dangle
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/mocks/user.ts
+  9:7  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/twitlin/src/crosswithfriends/frontend/src/tests/setup.ts
+  44:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 534 problems (2 errors, 532 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

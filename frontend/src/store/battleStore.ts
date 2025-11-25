@@ -3,8 +3,19 @@ import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {ref, onValue, get, set, push, remove, runTransaction} from 'firebase/database';
 import {create} from 'zustand';
 
-const findKey = <T>(obj: Record<string, T>, fn: (value: T) => boolean): string | undefined => {
-  return Object.keys(obj).find((key) => fn(obj[key]));
+const findKey = <T>(
+  obj: Record<string, T>,
+  predicate: ((value: T) => boolean) | Partial<T>
+): string | undefined => {
+  const predicateFn =
+    typeof predicate === 'function'
+      ? predicate
+      : (value: T) => {
+          return Object.keys(predicate).every(
+            (key) => (value as any)[key] === (predicate as any)[key]
+          );
+        };
+  return Object.keys(obj).find((key) => predicateFn(obj[key]));
 };
 
 const isEqual = (a: any, b: any): boolean => {
@@ -19,11 +30,24 @@ const isEqual = (a: any, b: any): boolean => {
   return true;
 };
 
-const intersectionWith = <T>(...arrays: T[][]): T[] => {
+const intersectionWith = <T>(
+  ...args: [...T[][], (a: T, b: T) => boolean]
+): T[] => {
+  if (args.length === 0) return [];
+  if (args.length === 1) return [];
+
+  const comparator = args[args.length - 1] as (a: T, b: T) => boolean;
+  const arrays = args.slice(0, -1) as T[][];
+
   if (arrays.length === 0) return [];
-  if (arrays.length === 1) return arrays[0];
+  if (arrays.length === 1) return arrays[0] || [];
+
   const [first, ...rest] = arrays;
-  return first.filter((item) => rest.every((arr) => arr.some((other) => isEqual(item, other))));
+  if (!first) return [];
+
+  return first.filter((item) =>
+    rest.every((arr) => arr && arr.some((other) => comparator(item, other)))
+  );
 };
 
 const sample = <T>(arr: T[]): T | undefined => {
