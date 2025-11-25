@@ -1,6 +1,8 @@
 import {screen} from '@testing-library/react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
+
 import Emoji from '../../../components/common/Emoji';
+import {renderWithProviders} from '../../utils';
 
 // Mock emoji library
 vi.mock('@crosswithfriends/shared/lib/emoji', () => ({
@@ -14,8 +16,6 @@ vi.mock('@crosswithfriends/shared/lib/emoji', () => ({
     return null;
   }),
 }));
-
-import {renderWithProviders} from '../../utils';
 
 describe('Emoji', () => {
   beforeEach(() => {

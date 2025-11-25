@@ -18,7 +18,7 @@ describe('counters API', () => {
   describe('incrementGid', () => {
     it('should call apiClient.post with correct parameters', async () => {
       const mockResponse = {gid: 'test-gid'};
-      (apiClient.post as any).mockResolvedValue(mockResponse);
+      vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
       const result = await incrementGid();
 
@@ -30,7 +30,7 @@ describe('counters API', () => {
   describe('incrementPid', () => {
     it('should call apiClient.post with correct parameters', async () => {
       const mockResponse = {pid: '123'};
-      (apiClient.post as any).mockResolvedValue(mockResponse);
+      vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
       const result = await incrementPid();
 

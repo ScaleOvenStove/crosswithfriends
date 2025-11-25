@@ -3,7 +3,7 @@ import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import {apiClient, type RequestConfig, type ApiError} from '../../api/client';
 
 // Mock fetch
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn() as typeof fetch;
 
 // Mock config
 vi.mock('../../config', () => ({
@@ -15,7 +15,7 @@ vi.mock('../../config', () => ({
 describe('ApiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (global.fetch as any).mockClear();
+    vi.mocked(globalThis.fetch).mockClear();
   });
 
   afterEach(() => {
@@ -30,14 +30,14 @@ describe('ApiClient', () => {
       }));
 
       apiClient.addRequestInterceptor(interceptor);
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(globalThis.fetch).mockResolvedValue({
         ok: true,
         status: 200,
         headers: {
           get: vi.fn(() => 'application/json'),
         },
         json: async () => ({}),
-      });
+      } as Response);
 
       await apiClient.get('/test');
 
@@ -53,14 +53,14 @@ describe('ApiClient', () => {
       // Verify interceptor was removed by checking it's not called on next request
       const interceptor2 = vi.fn((config: RequestConfig) => config);
       apiClient.addRequestInterceptor(interceptor2);
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(globalThis.fetch).mockResolvedValue({
         ok: true,
         status: 200,
         headers: {
           get: vi.fn(() => 'application/json'),
         },
         json: async () => ({}),
-      });
+      } as Response);
 
       await apiClient.get('/test');
 
@@ -82,7 +82,7 @@ describe('ApiClient', () => {
       } as Response;
 
       apiClient.addResponseInterceptor(interceptor);
-      (global.fetch as any).mockResolvedValue(mockResponse);
+      vi.mocked(globalThis.fetch).mockResolvedValue(mockResponse);
 
       await apiClient.get('/test');
 
@@ -96,11 +96,11 @@ describe('ApiClient', () => {
       const mockError = new Error('Test error') as ApiError;
 
       apiClient.addErrorInterceptor(interceptor);
-      (global.fetch as any).mockRejectedValue(mockError);
+      vi.mocked(globalThis.fetch).mockRejectedValue(mockError);
 
       try {
         await apiClient.get('/test', {retries: 0, timeout: 1000});
-      } catch (error) {
+      } catch (_error) {
         // Expected - error should be caught
       }
 
@@ -111,18 +111,18 @@ describe('ApiClient', () => {
   describe('GET requests', () => {
     it('should make GET request', async () => {
       const mockData = {id: 1, name: 'Test'};
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(globalThis.fetch).mockResolvedValue({
         ok: true,
         status: 200,
         headers: {
           get: vi.fn(() => 'application/json'),
         },
         json: async () => mockData,
-      });
+      } as Response);
 
       const result = await apiClient.get('/test');
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         'http://localhost:3000/test',
         expect.objectContaining({
           method: 'GET',
@@ -132,19 +132,19 @@ describe('ApiClient', () => {
     });
 
     it('should include query parameters in URL', async () => {
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(globalThis.fetch).mockResolvedValue({
         ok: true,
         status: 200,
         headers: {
           get: vi.fn(() => 'application/json'),
         },
         json: async () => ({}),
-      });
+      } as Response);
 
       await apiClient.get('/test', {params: {page: 1, limit: 10}});
 
-      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('page=1'), expect.any(Object));
-      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('limit=10'), expect.any(Object));
+      expect(globalThis.fetch).toHaveBeenCalledWith(expect.stringContaining('page=1'), expect.any(Object));
+      expect(globalThis.fetch).toHaveBeenCalledWith(expect.stringContaining('limit=10'), expect.any(Object));
     });
   });
 
@@ -152,18 +152,18 @@ describe('ApiClient', () => {
     it('should make POST request with body', async () => {
       const mockData = {id: 1};
       const requestData = {name: 'Test'};
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(globalThis.fetch).mockResolvedValue({
         ok: true,
         status: 200,
         headers: {
           get: vi.fn(() => 'application/json'),
         },
         json: async () => mockData,
-      });
+      } as Response);
 
       const result = await apiClient.post('/test', requestData);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         'http://localhost:3000/test',
         expect.objectContaining({
           method: 'POST',
@@ -177,8 +177,8 @@ describe('ApiClient', () => {
   describe('retry logic', () => {
     it('should retry on network errors', async () => {
       let attempt = 0;
-      (global.fetch as any).mockImplementation(() => {
-        attempt++;
+      vi.mocked(globalThis.fetch).mockImplementation(() => {
+        attempt += 1;
         if (attempt < 2) {
           return Promise.reject(new Error('Network error'));
         }
@@ -189,18 +189,18 @@ describe('ApiClient', () => {
             get: vi.fn(() => 'application/json'),
           },
           json: async () => ({}),
-        });
+        } as Response);
       });
 
       await apiClient.get('/test', {retries: 3});
 
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     });
 
     it('should retry on 5xx errors', async () => {
       let attempt = 0;
-      (global.fetch as any).mockImplementation(() => {
-        attempt++;
+      vi.mocked(globalThis.fetch).mockImplementation(() => {
+        attempt += 1;
         if (attempt < 2) {
           return Promise.resolve({
             ok: false,
@@ -210,7 +210,7 @@ describe('ApiClient', () => {
               get: vi.fn(),
             },
             text: async () => '{}',
-          });
+          } as Response);
         }
         return Promise.resolve({
           ok: true,
@@ -219,21 +219,21 @@ describe('ApiClient', () => {
             get: vi.fn(() => 'application/json'),
           },
           json: async () => ({}),
-        });
+        } as Response);
       });
 
       try {
         await apiClient.get('/test', {retries: 3, timeout: 1000});
-      } catch (error) {
+      } catch (_error) {
         // May throw on 5xx, but should retry first
       }
 
       // Should retry at least once (attempt < 2 means it fails first time)
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     });
 
     it('should not retry on 4xx errors', async () => {
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(globalThis.fetch).mockResolvedValue({
         ok: false,
         status: 400,
         statusText: 'Bad Request',
@@ -241,7 +241,7 @@ describe('ApiClient', () => {
           get: vi.fn(),
         },
         text: async () => JSON.stringify({error: 'Bad Request'}),
-      });
+      } as Response);
 
       try {
         await apiClient.get('/test', {retries: 3});
@@ -249,7 +249,7 @@ describe('ApiClient', () => {
         expect((error as ApiError).status).toBe(400);
       }
 
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -257,7 +257,7 @@ describe('ApiClient', () => {
     it('should timeout after specified duration', async () => {
       vi.useFakeTimers();
 
-      (global.fetch as any).mockImplementation(
+      vi.mocked(globalThis.fetch).mockImplementation(
         () =>
           new Promise((resolve) => {
             // Use fake timers setTimeout
@@ -267,7 +267,7 @@ describe('ApiClient', () => {
                 status: 200,
                 headers: {get: vi.fn(() => 'application/json')},
                 json: async () => ({}),
-              });
+              } as Response);
             }, 10000);
           })
       );
@@ -292,18 +292,18 @@ describe('ApiClient', () => {
       const abortController = new AbortController();
       let abortListener: (() => void) | null = null;
 
-      (global.fetch as any).mockImplementation(
-        (_url: string, options: RequestInit) =>
+      vi.mocked(globalThis.fetch).mockImplementation(
+        (_url: string | URL | Request, options?: RequestInit) =>
           new Promise((resolve, reject) => {
             // Simulate fetch respecting AbortSignal
-            if (options.signal) {
+            if (options?.signal) {
               abortListener = () => {
                 reject(new DOMException('The operation was aborted.', 'AbortError'));
               };
               options.signal.addEventListener('abort', abortListener);
             }
             // Never resolves naturally
-            setTimeout(() => resolve({ok: true, status: 200}), 10000);
+            setTimeout(() => resolve({ok: true, status: 200} as Response), 10000);
           })
       );
 
@@ -321,7 +321,7 @@ describe('ApiClient', () => {
 
   describe('error handling', () => {
     it('should throw ApiError with status code', async () => {
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(globalThis.fetch).mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
@@ -329,7 +329,7 @@ describe('ApiClient', () => {
           get: vi.fn(),
         },
         text: async () => JSON.stringify({error: 'Not Found'}),
-      });
+      } as Response);
 
       try {
         await apiClient.get('/test');

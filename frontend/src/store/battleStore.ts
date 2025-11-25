@@ -3,6 +3,15 @@ import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {ref, onValue, get, set, push, remove, runTransaction} from 'firebase/database';
 import {create} from 'zustand';
 
+import actions from '../actions';
+import type {Powerup} from '../types/battle';
+import type {RawGame} from '../types/rawGame';
+import {logger} from '../utils/logger';
+import {createSubscriptionHelpers} from '../utils/subscriptionHelpers';
+
+import {db, type DatabaseReference} from './firebase';
+import {usePuzzleStore} from './puzzleStore';
+
 const findKey = <T>(obj: Record<string, T>, fn: (value: T) => boolean): string | undefined => {
   return Object.keys(obj).find((key) => fn(obj[key]));
 };
@@ -35,15 +44,6 @@ const sampleSize = <T>(arr: T[], n: number): T[] => {
   const shuffled = arr.slice().sort(() => Math.random() - 0.5);
   return shuffled.slice(0, n);
 };
-
-import actions from '../actions';
-import type {Powerup} from '../types/battle';
-import type {RawGame} from '../types/rawGame';
-import {logger} from '../utils/logger';
-import {createSubscriptionHelpers} from '../utils/subscriptionHelpers';
-
-import {db, type DatabaseReference} from './firebase';
-import {usePuzzleStore} from './puzzleStore';
 
 const STARTING_POWERUPS = 1;
 const NUM_PICKUPS = 10;

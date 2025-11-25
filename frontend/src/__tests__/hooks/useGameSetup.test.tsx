@@ -2,7 +2,6 @@ import {renderHook, waitFor} from '@testing-library/react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 
 import {useGameSetup} from '../../hooks/useGameSetup';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {createMockGameStore} from '../mocks/stores';
 
 const mockUseGame = vi.fn();

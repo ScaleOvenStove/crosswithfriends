@@ -609,7 +609,7 @@ describe('gameStore', () => {
         },
       });
 
-      const state1 = useGameStore.getState().games['/game/test-cache']?.gameState;
+      const _state1 = useGameStore.getState().games['/game/test-cache']?.gameState;
 
       // Add a new event
       useGameStore.setState({
@@ -624,7 +624,7 @@ describe('gameStore', () => {
 
       // Trigger recompute by accessing selector
       const game = useGameStore.getState().games['/game/test-cache'];
-      const state2 = game?.gameState;
+      const _state2 = game?.gameState;
 
       // Should be different after events changed (would be if computeGameState was called)
       // Note: In real implementation, the gameState would be recomputed
@@ -656,7 +656,7 @@ describe('gameStore', () => {
         },
       });
 
-      const state1 = useGameStore.getState().games['/game/test-cache']?.gameState;
+      const _state1 = useGameStore.getState().games['/game/test-cache']?.gameState;
 
       // Add optimistic event
       useGameStore.setState({

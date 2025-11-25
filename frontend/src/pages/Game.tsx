@@ -40,8 +40,8 @@ import {useBattleSetup} from '../hooks/useBattleSetup';
 import {useGameSetup} from '../hooks/useGameSetup';
 import {useUser} from '../hooks/useUser';
 import {isValidGid, createSafePath} from '../store/firebaseUtils';
-import {logger} from '../utils/logger';
 import type {Powerup, Winner, BattlePlayer, Pickup, BattleData, ChatMessage} from '../types/battle';
+import {logger} from '../utils/logger';
 
 const Game: React.FC = () => {
   const params = useParams<{gid?: string; rid?: string}>();
