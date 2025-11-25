@@ -1,4 +1,3 @@
-import {convertIpuzClues} from '@crosswithfriends/shared/lib/puzzleUtils';
 import type {CheckEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/check';
 import type {RevealEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/reveal';
 import type {RevealAllCluesEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/revealAllClues';
@@ -9,6 +8,7 @@ import type {UpdateCursorEvent} from '@crosswithfriends/shared/fencingGameEvents
 import type {UpdateDisplayNameEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateDisplayName';
 import type {UpdateTeamIdEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateTeamId';
 import type {UpdateTeamNameEvent} from '@crosswithfriends/shared/fencingGameEvents/eventDefs/updateTeamName';
+import {convertIpuzClues} from '@crosswithfriends/shared/lib/puzzleUtils';
 import type {CellIndex, GameJson} from '@crosswithfriends/shared/types';
 
 import {makeGrid} from '../gameUtils.js';
