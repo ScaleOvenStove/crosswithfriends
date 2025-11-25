@@ -40,7 +40,7 @@ const mockUseUser = {
   onAuth: vi.fn(() => () => {}),
 };
 
-vi.mock('../useUser', () => ({
+vi.mock('../../hooks/useUser', () => ({
   useUser: () => mockUseUser,
 }));
 
@@ -106,7 +106,10 @@ describe('useRoom', () => {
   it('should add new events when room_event is received', async () => {
     let roomEventCallback: ((event: unknown) => void) | null = null;
 
-    mockEmitAsync.mockImplementation(async () => {
+    mockEmitAsync.mockImplementation(async (socket, event) => {
+      if (event === 'sync_all_room_events') {
+        return [];
+      }
       return undefined;
     });
 
@@ -155,7 +158,10 @@ describe('useRoom', () => {
   });
 
   it('should send user ping', async () => {
-    mockEmitAsync.mockImplementation(async () => {
+    mockEmitAsync.mockImplementation(async (socket, event) => {
+      if (event === 'sync_all_room_events') {
+        return [];
+      }
       return undefined;
     });
 
@@ -170,20 +176,24 @@ describe('useRoom', () => {
 
     await result.current.sendUserPing();
 
-    expect(mockEmitAsync).toHaveBeenCalledWith(
+    expect(mockEmitAsync).toHaveBeenLastCalledWith(
       mockSocket,
       'room_event',
       expect.objectContaining({
-        type: 'userPing',
-        params: expect.objectContaining({
-          userId: 'test-user-id',
+        rid: 'test-room',
+        event: expect.objectContaining({
+          type: 'USER_PING',
+          uid: 'test-user-id',
         }),
       })
     );
   });
 
   it('should set game', async () => {
-    mockEmitAsync.mockImplementation(async () => {
+    mockEmitAsync.mockImplementation(async (socket, event) => {
+      if (event === 'sync_all_room_events') {
+        return [];
+      }
       return undefined;
     });
 
@@ -198,13 +208,17 @@ describe('useRoom', () => {
 
     await result.current.setGame('game-123');
 
-    expect(mockEmitAsync).toHaveBeenCalledWith(
+    expect(mockEmitAsync).toHaveBeenLastCalledWith(
       mockSocket,
       'room_event',
       expect.objectContaining({
-        type: 'setGame',
-        params: expect.objectContaining({
-          gid: 'game-123',
+        rid: 'test-room',
+        event: expect.objectContaining({
+          type: 'SET_GAME',
+          uid: 'test-user-id',
+          params: expect.objectContaining({
+            gid: 'game-123',
+          }),
         }),
       })
     );

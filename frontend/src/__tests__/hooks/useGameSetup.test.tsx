@@ -79,91 +79,37 @@ describe('useGameSetup', () => {
     const onBattleData = vi.fn();
     const battleData = {team: 0};
 
-    let battleDataCallback: ((data: unknown) => void) | null = null;
-    mockUseGame.mockReturnValueOnce({
-      game: null,
-      gameState: null,
-      attach: mockGameHook.attach,
-      detach: mockGameHook.detach,
-      updateCell: vi.fn(),
-      updateCursor: vi.fn(),
-      addPing: vi.fn(),
-      updateDisplayName: vi.fn(),
-      updateColor: vi.fn(),
-      updateClock: vi.fn(),
-      check: vi.fn(),
-      reveal: vi.fn(),
-      reset: vi.fn(),
-      chat: vi.fn(),
-      subscribe: vi.fn((_path, event, callback) => {
-        if (event === 'battleData') {
-          battleDataCallback = callback;
-          // Call immediately to simulate subscription
-          setTimeout(() => {
-            if (battleDataCallback) {
-              battleDataCallback(battleData);
-            }
-          }, 10);
-        }
-        return () => {};
-      }),
-      once: vi.fn(() => () => {}),
-      ready: false,
-    });
-
     renderHook(() => useGameSetup({gid: 'test-123', opponent: undefined, onBattleData}));
 
-    await waitFor(
-      () => {
-        expect(onBattleData).toHaveBeenCalledWith(battleData);
-      },
-      {timeout: 1000}
-    );
+    // Get the onBattleData callback from the first call to mockUseGame (main game, not opponent)
+    const firstCall = mockUseGame.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const capturedOnBattleData = firstCall[0].onBattleData;
+    expect(capturedOnBattleData).toBeDefined();
+
+    // Trigger the callback
+    capturedOnBattleData(battleData);
+
+    // Verify the callback was called
+    expect(onBattleData).toHaveBeenCalledWith(battleData);
   });
 
   it('should call onArchived when game is archived', async () => {
     const onArchived = vi.fn();
 
-    let archivedCallback: ((data: unknown) => void) | null = null;
-    mockUseGame.mockReturnValueOnce({
-      game: null,
-      gameState: null,
-      attach: mockGameHook.attach,
-      detach: mockGameHook.detach,
-      updateCell: vi.fn(),
-      updateCursor: vi.fn(),
-      addPing: vi.fn(),
-      updateDisplayName: vi.fn(),
-      updateColor: vi.fn(),
-      updateClock: vi.fn(),
-      check: vi.fn(),
-      reveal: vi.fn(),
-      reset: vi.fn(),
-      chat: vi.fn(),
-      subscribe: vi.fn((_path, event, callback) => {
-        if (event === 'archived') {
-          archivedCallback = callback;
-          // Call immediately to simulate subscription
-          setTimeout(() => {
-            if (archivedCallback) {
-              archivedCallback(undefined);
-            }
-          }, 10);
-        }
-        return () => {};
-      }),
-      once: vi.fn(() => () => {}),
-      ready: false,
-    });
-
     renderHook(() => useGameSetup({gid: 'test-123', opponent: undefined, onArchived}));
 
-    await waitFor(
-      () => {
-        expect(onArchived).toHaveBeenCalled();
-      },
-      {timeout: 1000}
-    );
+    // Get the onArchived callback from the first call to mockUseGame (main game, not opponent)
+    const firstCall = mockUseGame.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const capturedOnArchived = firstCall[0].onArchived;
+    expect(capturedOnArchived).toBeDefined();
+
+    // Trigger the callback
+    capturedOnArchived();
+
+    // Verify the callback was called
+    expect(onArchived).toHaveBeenCalled();
   });
 
   it('should detach games on unmount', async () => {

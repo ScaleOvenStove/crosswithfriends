@@ -9,7 +9,7 @@ const mockUseStoreSubscriptions = vi.fn();
 
 // Mock the composition store
 vi.mock('../../store/compositionStore', () => ({
-  useCompositionStore: () => mockUseCompositionStore(),
+  useCompositionStore: (selector?: (state: unknown) => unknown) => mockUseCompositionStore(selector),
 }));
 
 // Mock useStoreSubscriptions

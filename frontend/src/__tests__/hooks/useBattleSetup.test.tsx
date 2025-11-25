@@ -22,7 +22,28 @@ const mockBattleHook = {
 };
 
 vi.mock('../../hooks/useBattle', () => ({
-  useBattle: () => mockBattleHook,
+  useBattle: (options: {
+    path: string;
+    onGames?: (games: string[]) => void;
+    onPowerups?: (powerups: unknown) => void;
+    onStartedAt?: (startedAt: number) => void;
+    onPlayers?: (players: unknown) => void;
+    onWinner?: (winner: unknown) => void;
+    onPickups?: (pickups: unknown) => void;
+    onUsePowerup?: (powerup: unknown) => void;
+  }) => {
+    // Store callbacks for test access
+    (mockBattleHook as any).callbacks = {
+      onGames: options.onGames,
+      onPowerups: options.onPowerups,
+      onStartedAt: options.onStartedAt,
+      onPlayers: options.onPlayers,
+      onWinner: options.onWinner,
+      onPickups: options.onPickups,
+      onUsePowerup: options.onUsePowerup,
+    };
+    return mockBattleHook;
+  },
 }));
 
 describe('useBattleSetup', () => {
@@ -52,24 +73,17 @@ describe('useBattleSetup', () => {
     const onGames = vi.fn();
     const games = ['game-1', 'game-2'];
 
-    let gamesCallback: ((data: unknown) => void) | null = null;
-    const subscribeMock = vi.fn((_path, event, callback) => {
-      if (event === 'games') {
-        gamesCallback = callback;
-        // Call immediately to simulate subscription
-        setTimeout(() => {
-          if (gamesCallback) {
-            gamesCallback(games);
-          }
-        }, 10);
-      }
-      return () => {};
-    });
-    mockBattleHook.subscribe = subscribeMock;
-
     renderHook(() => useBattleSetup({bid: 123, team: 0, onGames}));
 
-    // Wait for subscription to be set up and callback to be called
+    // Simulate games event by calling the stored callback
+    await waitFor(() => {
+      expect((mockBattleHook as any).callbacks?.onGames).toBeDefined();
+    });
+
+    // Trigger the callback
+    (mockBattleHook as any).callbacks.onGames(games);
+
+    // Wait for the callback to be called
     await waitFor(
       () => {
         expect(onGames).toHaveBeenCalledWith(games);
@@ -82,24 +96,17 @@ describe('useBattleSetup', () => {
     const onPowerups = vi.fn();
     const powerups = {0: [{type: 'reveal'}], 1: []};
 
-    let powerupsCallback: ((data: unknown) => void) | null = null;
-    const subscribeMock = vi.fn((_path, event, callback) => {
-      if (event === 'powerups') {
-        powerupsCallback = callback;
-        // Call immediately to simulate subscription
-        setTimeout(() => {
-          if (powerupsCallback) {
-            powerupsCallback(powerups);
-          }
-        }, 10);
-      }
-      return () => {};
-    });
-    mockBattleHook.subscribe = subscribeMock;
-
     renderHook(() => useBattleSetup({bid: 123, team: 0, onPowerups}));
 
-    // Wait for subscription to be set up and callback to be called
+    // Simulate powerups event by calling the stored callback
+    await waitFor(() => {
+      expect((mockBattleHook as any).callbacks?.onPowerups).toBeDefined();
+    });
+
+    // Trigger the callback
+    (mockBattleHook as any).callbacks.onPowerups(powerups);
+
+    // Wait for the callback to be called
     await waitFor(
       () => {
         expect(onPowerups).toHaveBeenCalledWith(powerups);
