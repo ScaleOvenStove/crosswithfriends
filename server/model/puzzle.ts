@@ -153,7 +153,8 @@ const puzzleValidator = Joi.object({
   copyright: string().optional(),
   notes: string().optional(),
   solution: Joi.array()
-    .items(Joi.array().items(Joi.alternatives().try(string(), Joi.valid(null, '#'))))
+    .items(Joi.array().items(Joi.alternatives().try(string(), Joi.valid(null, '#'))).min(1))
+    .min(1)
     .required(),
   puzzle: Joi.array()
     .items(
@@ -206,6 +207,17 @@ function validatePuzzle(puzzle: unknown): void {
   const {error} = puzzleValidator.validate(puzzle);
   if (error) {
     throw new Error(error.message);
+  }
+
+  // Ensure solution array is not empty
+  if (puzzle && typeof puzzle === 'object' && 'solution' in puzzle) {
+    const solution = (puzzle as {solution?: unknown}).solution;
+    if (!Array.isArray(solution) || solution.length === 0) {
+      throw new Error('Puzzle solution array must not be empty');
+    }
+    if (!Array.isArray(solution[0]) || solution[0].length === 0) {
+      throw new Error('Puzzle solution must have at least one non-empty row');
+    }
   }
 }
 
