@@ -4,7 +4,6 @@ import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
 import redirect from '@crosswithfriends/shared/lib/redirect';
 import {Box, Stack} from '@mui/material';
 import classnames from 'classnames';
-import _ from 'lodash';
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
@@ -42,7 +41,7 @@ const Battle: React.FC = () => {
       setStartedAt(startedAtTime);
     },
     onPlayers: (playersRecord: unknown) => {
-      setPlayers(_.values(playersRecord as Record<string, Player>));
+      setPlayers(Object.values(playersRecord as Record<string, Player>));
     },
   });
 
@@ -65,7 +64,7 @@ const Battle: React.FC = () => {
   );
 
   const handleUnload = useCallback((): void => {
-    if (name && _.isNumber(team) && !redirecting) {
+    if (name && typeof team === 'number' && !redirecting) {
       battle.removePlayer(name, team);
     }
   }, [name, team, redirecting, battle]);
@@ -109,7 +108,7 @@ const Battle: React.FC = () => {
           Team
           {Number(idx) + 1}
         </Box>
-        {_.map(teamPlayers, renderPlayer)}
+        {teamPlayers.map(renderPlayer)}
       </Box>
     ),
     [renderPlayer]
@@ -117,12 +116,12 @@ const Battle: React.FC = () => {
 
   const renderTeams = useCallback((): JSX.Element => {
     if (!players) return <Box className="battle--teams" sx={{display: 'flex'}} />;
-    const numTeams = Math.max(_.max(_.map(players, 'team')) || 0, 2);
-    const teams = _.map(_.range(numTeams), (teamNum) => _.filter(players, {team: teamNum}));
+    const numTeams = Math.max(Math.max(...players.map((p) => p.team), 0) || 0, 2);
+    const teams = Array.from({length: numTeams}, (_, teamNum) => players.filter((p) => p.team === teamNum));
 
     return (
       <Box className="battle--teams" sx={{display: 'flex'}}>
-        {_.map(teams, renderTeam)}
+        {teams.map(renderTeam)}
       </Box>
     );
   }, [players, renderTeam]);
@@ -147,7 +146,7 @@ const Battle: React.FC = () => {
       </Helmet>
       <Box className="battle--main" sx={{flex: 1, display: 'flex'}}>
         <Stack direction="column" sx={{flexShrink: 0}}>
-          {!_.isNumber(team) && (
+          {typeof team !== 'number' && (
             <Box className="battle--selector" sx={{display: 'flex'}}>
               <Box className="battle--buttons" sx={{display: 'flex'}}>
                 <Box
@@ -199,7 +198,7 @@ const Battle: React.FC = () => {
               {renderTeams()}
             </Box>
           )}
-          {_.isNumber(team) && !startedAt && (
+          {typeof team === 'number' && !startedAt && (
             <Box className="battle--selector" sx={{display: 'flex'}}>
               <Box className="battle--teams" sx={{display: 'flex'}}>
                 (This starts the game for all players)

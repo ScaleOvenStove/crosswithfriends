@@ -74,3 +74,26 @@ export const createMockUserStore = () => ({
   markSolved: vi.fn(),
   recordUsername: vi.fn(),
 });
+
+export const createMockCompositionStore = () => ({
+  compositions: {},
+  getComposition: vi.fn((_path: string) => ({
+    attached: false,
+    createEvent: null,
+  })),
+  attach: vi.fn(),
+  detach: vi.fn(),
+  updateCellText: vi.fn(),
+  updateCellColor: vi.fn(),
+  updateClue: vi.fn(),
+  updateCursor: vi.fn(),
+  updateTitle: vi.fn(),
+  updateAuthor: vi.fn(),
+  chat: vi.fn(),
+  import: vi.fn(),
+  setGrid: vi.fn(),
+  clearPencil: vi.fn(),
+  updateDimensions: vi.fn(),
+  initialize: vi.fn().mockResolvedValue(undefined),
+  subscribe: vi.fn(() => () => {}), // Returns unsubscribe function
+});

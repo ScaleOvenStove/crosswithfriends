@@ -18,6 +18,8 @@ import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo} from 'react-icons/
 import {RiPaintFill, RiPaintLine} from 'react-icons/ri';
 import {Link} from 'react-router-dom';
 
+import {logger} from '../../utils/logger';
+
 import Clock from './Clock';
 import Popup from './Popup';
 
@@ -164,32 +166,30 @@ const Toolbar: React.FC<Props> = (props) => {
 
   const check = useCallback(
     (scopeString: string): void => {
-      console.log('[Toolbar] check called with scope:', scopeString);
-      console.log('[Toolbar] props.onCheck exists:', !!props.onCheck);
+      logger.debug('Toolbar check called', {scope: scopeString, hasOnCheck: !!props.onCheck});
       if (props.onCheck) {
-        console.log('[Toolbar] Calling props.onCheck with:', scopeString);
+        logger.debug('Calling props.onCheck', {scope: scopeString});
         props.onCheck(scopeString);
       } else {
-        console.warn('[Toolbar] props.onCheck is not defined');
+        logger.warn('Toolbar props.onCheck is not defined', {scope: scopeString});
       }
     },
     [props.onCheck]
   );
 
   const reveal = useCallback((scopeString: string): void => {
-    console.log('[Toolbar] reveal called with scope:', scopeString);
+    logger.debug('Toolbar reveal called', {scope: scopeString});
     setRevealScope(scopeString);
     setRevealDialogOpen(true);
   }, []);
 
   const handleRevealConfirm = useCallback(() => {
-    console.log('[Toolbar] handleRevealConfirm called with scope:', revealScope);
-    console.log('[Toolbar] props.onReveal exists:', !!props.onReveal);
+    logger.debug('Toolbar handleRevealConfirm called', {scope: revealScope, hasOnReveal: !!props.onReveal});
     if (props.onReveal) {
-      console.log('[Toolbar] Calling props.onReveal with:', revealScope);
+      logger.debug('Calling props.onReveal', {scope: revealScope});
       props.onReveal(revealScope);
     } else {
-      console.warn('[Toolbar] props.onReveal is not defined');
+      logger.warn('Toolbar props.onReveal is not defined', {scope: revealScope});
     }
     setRevealDialogOpen(false);
   }, [props.onReveal, revealScope]);
@@ -200,13 +200,12 @@ const Toolbar: React.FC<Props> = (props) => {
 
   const reset = useCallback(
     (scopeString: string, force: boolean = false): void => {
-      console.log('[Toolbar] reset called with scope:', scopeString, 'force:', force);
-      console.log('[Toolbar] props.onReset exists:', !!props.onReset);
+      logger.debug('Toolbar reset called', {scope: scopeString, force, hasOnReset: !!props.onReset});
       if (props.onReset) {
-        console.log('[Toolbar] Calling props.onReset with:', scopeString, force);
+        logger.debug('Calling props.onReset', {scope: scopeString, force});
         props.onReset(scopeString, force);
       } else {
-        console.warn('[Toolbar] props.onReset is not defined');
+        logger.warn('Toolbar props.onReset is not defined', {scope: scopeString});
       }
     },
     [props.onReset]
@@ -256,7 +255,7 @@ const Toolbar: React.FC<Props> = (props) => {
 
   const handleCheckAction = useCallback(
     (scope: string) => {
-      console.log('[Toolbar] handleCheckAction called with scope:', scope);
+      logger.debug('Toolbar handleCheckAction called', {scope});
       check(scope);
     },
     [check]

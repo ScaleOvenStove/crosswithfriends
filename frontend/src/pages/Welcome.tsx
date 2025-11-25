@@ -3,10 +3,26 @@ import './css/welcome.css';
 import {isMobile, colorAverage} from '@crosswithfriends/shared/lib/jsUtils';
 import {Box, Stack, Autocomplete, TextField, Checkbox, FormControlLabel} from '@mui/material';
 import classnames from 'classnames';
-import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {MdSearch} from 'react-icons/md';
+
+type DebouncedFunc<T extends (...args: any[]) => any> = {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+};
+
+const debounce = <T extends (...args: any[]) => any>(fn: T, delay: number = 0): DebouncedFunc<T> => {
+  let timeout: NodeJS.Timeout;
+  const debounced = (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+  debounced.cancel = () => clearTimeout(timeout);
+  return debounced;
+};
+
+const clamp = (val: number, min: number, max: number): number => Math.min(Math.max(val, min), max);
 
 import Nav from '../components/common/Nav';
 import PuzzleList from '../components/PuzzleList';
@@ -84,7 +100,7 @@ const Welcome: React.FC<Props> = (props) => {
 
   const colorMotion = useMemo(() => {
     if (!mobile) return 0;
-    const result = _.clamp(motionValue * 3, 0, 1);
+    const result = clamp(motionValue * 3, 0, 1);
     return result;
   }, [mobile, motionValue]);
 
@@ -103,7 +119,7 @@ const Welcome: React.FC<Props> = (props) => {
 
   const navTextStyle = useMemo((): React.CSSProperties | undefined => {
     if (!mobile) return undefined;
-    const opacity = _.clamp(1 - 3 * motionValue, 0, 1);
+    const opacity = clamp(1 - 3 * motionValue, 0, 1);
     const translateY = navHeight * motionValue;
     return {
       opacity,
@@ -123,7 +139,7 @@ const Welcome: React.FC<Props> = (props) => {
   const handleScroll = useCallback(
     (top: number): void => {
       if (!mobile) return;
-      const newMotion = _.clamp(top / 100, 0, 1);
+      const newMotion = clamp(top / 100, 0, 1);
       setMotion(newMotion);
     },
     [mobile]
@@ -150,10 +166,10 @@ const Welcome: React.FC<Props> = (props) => {
     [props.sizeFilter, props.statusFilter, props.setSizeFilter, props.setStatusFilter]
   );
 
-  const updateSearchRef = useRef<_.DebouncedFunc<(search: string) => void>>();
+  const updateSearchRef = useRef<DebouncedFunc<(search: string) => void>>();
   useEffect(() => {
     if (!updateSearchRef.current) {
-      updateSearchRef.current = _.debounce((search: string) => {
+      updateSearchRef.current = debounce((search: string) => {
         props.setSearch(search);
       }, 250);
     }
@@ -175,7 +191,7 @@ const Welcome: React.FC<Props> = (props) => {
   const searchStyle = useMemo((): React.CSSProperties => {
     if (!mobile) return {flexGrow: 1};
     const color = colorAverage(BLUE, WHITE, colorMotion);
-    const width = searchFocused ? 1 : _.clamp(1 - motionValue, 0.1, 1);
+    const width = searchFocused ? 1 : clamp(1 - motionValue, 0.1, 1);
     const zIndex = searchFocused ? 3 : 0;
     return {
       color,
@@ -216,7 +232,7 @@ const Welcome: React.FC<Props> = (props) => {
         <Box sx={{mb: 1}}>
           <Box sx={{fontWeight: 600, mb: 0.5, color: 'text.primary'}}>{header}</Box>
           <Stack direction="column" spacing={0.5}>
-            {_.keys(items).map((name) => (
+            {Object.keys(items).map((name) => (
               <FormControlLabel
                 key={name}
                 control={

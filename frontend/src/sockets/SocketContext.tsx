@@ -6,6 +6,8 @@
 import React, {createContext, useContext, useEffect, useState, type ReactNode} from 'react';
 import {type Socket} from 'socket.io-client';
 
+import {logger} from '../utils/logger';
+
 import socketManager from './SocketManager';
 
 interface SocketContextValue {
@@ -53,7 +55,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
           connectedSocket.off('disconnect', updateConnectionStatus);
         };
       } catch (error) {
-        console.error('Failed to connect socket:', error);
+        logger.errorWithException('Failed to connect socket', error);
         if (mounted) {
           setSocket(null);
           setIsConnected(false);

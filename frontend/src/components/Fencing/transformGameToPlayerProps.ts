@@ -10,7 +10,10 @@ import type {
   UserJson,
   CellIndex,
 } from '@crosswithfriends/shared/types';
-import _ from 'lodash';
+
+const compact = <T>(arr: (T | null | undefined | false | 0 | '')[]): T[] => {
+  return arr.filter(Boolean) as T[];
+};
 
 import type {CellCoords, Ping} from '../Grid/types';
 
@@ -56,7 +59,7 @@ function applyClueVisibilityToGrid(vis: {across: boolean[]; down: boolean[]}, gr
   return grid.map((row) =>
     row.map((cell) => ({
       ...cell,
-      isHidden: !!cell.parents && !vis.across[cell.parents!.across] && !vis.down[cell.parents!.down],
+      isHidden: !!cell.parents && !vis.across[cell.parents.across] && !vis.down[cell.parents.down],
     }))
   );
 }
@@ -80,7 +83,7 @@ export const transformGameToPlayerProps = (
   teamId: number | undefined
 ): PlayerProps => {
   const clues = teamId ? applyClueVisibility(game.teamClueVisibility![teamId], game.clues) : game.clues;
-  const cursors = _.compact(users.map((user) => user.cursor));
+  const cursors = compact(users.map((user) => user.cursor));
   return {
     ...playerActions,
     beta: true,

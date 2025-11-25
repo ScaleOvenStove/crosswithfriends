@@ -3,15 +3,22 @@ import {getStartingCursorPosition} from '@crosswithfriends/shared/fencingGameEve
 import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/GameEvent';
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import {Box, Stack} from '@mui/material';
-import _ from 'lodash';
 import React, {useState, useEffect, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {useUpdateEffect} from 'react-use';
 import type {Socket as SocketIOClient} from 'socket.io-client';
 
+const filter = <T,>(arr: T[], fn: (item: T) => boolean): T[] => arr.filter(fn);
+
+const minBy = <T,>(arr: T[], fn: (item: T) => number): T | undefined => {
+  if (arr.length === 0) return undefined;
+  return arr.reduce((min, item) => (fn(item) < fn(min) ? item : min));
+};
+
 import {useUser} from '../../hooks/useUser';
 import {emitAsync} from '../../sockets/emitAsync';
 import {useSocket} from '../../sockets/useSocket';
+import {logger} from '../../utils/logger';
 import Chat from '../Chat';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Nav from '../common/Nav';
@@ -90,7 +97,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
       if (socket) {
         emitAsync(socket, 'game_event', {gid, event});
       } else {
-        console.warn('Cannot send event; not connected to server');
+        logger.warn('Cannot send event; not connected to server', {gid, eventType: event.type});
       }
     },
     [eventsHook, socket, gid]
@@ -147,7 +154,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
           return; // game not loaded yet
         }
         const nTeamId =
-          _.minBy(TEAM_IDS, (t) => _.filter(_.values(gameState.users), (u) => u.teamId === t).length) ??
+          minBy(TEAM_IDS, (t) => filter(Object.values(gameState.users), (u) => u.teamId === t).length) ??
           (TEAM_IDS[0] as number);
         sendEvent({
           type: 'updateTeamId',
@@ -285,7 +292,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
                       // eslint-disable-next-line react/jsx-props-no-spreading
                       {...transformGameToPlayerProps(
                         gameState.game,
-                        _.values(gameState.users),
+                        Object.values(gameState.users),
                         playerActions,
                         id,
                         teamId

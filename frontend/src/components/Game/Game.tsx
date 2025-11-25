@@ -1,12 +1,13 @@
 import {toHex, darken, GREENISH} from '@crosswithfriends/shared/lib/colors';
 import {toArr} from '@crosswithfriends/shared/lib/jsUtils';
 import * as powerups from '@crosswithfriends/shared/lib/powerups';
+import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {Box, Stack} from '@mui/material';
-import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 
 import {useGameStore} from '../../store/gameStore';
 import type {Powerup, Pickup} from '../../types/battle';
+import {logger} from '../../utils/logger';
 import Player from '../Player';
 import Toolbar from '../Toolbar';
 
@@ -103,8 +104,8 @@ const Game: React.FC<GameProps> = (props) => {
     let vimModeValue = false;
     try {
       vimModeValue = JSON.parse(localStorage.getItem(vimModeKey) || 'false') || false;
-    } catch {
-      console.error('Failed to parse local storage vim mode!');
+    } catch (error) {
+      logger.errorWithException('Failed to parse local storage vim mode', error);
     }
     // Use setTimeout to avoid calling setState synchronously in effect
     setTimeout(() => {
@@ -130,6 +131,49 @@ const Game: React.FC<GameProps> = (props) => {
   // Use Zustand store as primary source
   const gamePath = gid ? `/game/${gid}` : '';
   const rawGame = useGameStore((state) => state.games[gamePath]?.gameState ?? null);
+  const createEvent = useGameStore((state) => state.games[gamePath]?.createEvent ?? null);
+  const gameReady = useGameStore((state) => state.games[gamePath]?.ready ?? false);
+
+  // Debug: Check if create event has grid data
+  useEffect(() => {
+    if (createEvent && createEvent.type === 'create' && createEvent.params?.game) {
+      const createGame = createEvent.params.game as {grid?: unknown};
+      if (!createGame.grid || (Array.isArray(createGame.grid) && createGame.grid.length === 0)) {
+        logger.error('Game create event missing or empty grid', {createGame});
+      } else {
+        logger.debug('Game create event has grid', {
+          hasGrid: !!createGame.grid,
+          gridLength: Array.isArray(createGame.grid) ? createGame.grid.length : 'not array',
+          grid0Length:
+            Array.isArray(createGame.grid) && createGame.grid[0] ? createGame.grid[0].length : 'N/A',
+        });
+      }
+    }
+  }, [createEvent]);
+
+  // Debug: Check if rawGame has grid data
+  useEffect(() => {
+    if (rawGame) {
+      const hasGrid = !!rawGame.grid;
+      const gridLength = Array.isArray(rawGame.grid) ? rawGame.grid.length : 'not array';
+      const grid0Length = Array.isArray(rawGame.grid) && rawGame.grid[0] ? rawGame.grid[0].length : 'N/A';
+      logger.debug('Game rawGame state', {
+        hasGrid,
+        gridLength,
+        grid0Length,
+        ready: gameReady,
+        hasCreateEvent: !!createEvent,
+      });
+      if (!hasGrid || (Array.isArray(rawGame.grid) && rawGame.grid.length === 0)) {
+        logger.error('Game rawGame missing or empty grid', {
+          rawGame,
+          createEvent: createEvent ? {type: createEvent.type, hasParams: !!createEvent.params} : null,
+        });
+      }
+    } else {
+      logger.debug('Game rawGame is null', {ready: gameReady, hasCreateEvent: !!createEvent});
+    }
+  }, [rawGame, gameReady, createEvent]);
 
   // Opponent game state would come from a separate hook if needed
   // For now, opponent game effects are handled via powerups
@@ -137,44 +181,112 @@ const Game: React.FC<GameProps> = (props) => {
 
   // TODO: this should be cached, sigh...
   const games = useMemo(() => {
-    return powerups.apply(rawGame, rawOpponentGame, ownPowerups, opponentPowerups);
+    const result = powerups.apply(rawGame, rawOpponentGame, ownPowerups, opponentPowerups);
+    logger.debug('Game powerups.apply result', {
+      hasOwnGame: !!result.ownGame,
+      hasOpponentGame: !!result.opponentGame,
+      ownGameGrid: result.ownGame?.grid
+        ? {
+            exists: true,
+            length: Array.isArray(result.ownGame.grid) ? result.ownGame.grid.length : 'not array',
+            grid0Length:
+              Array.isArray(result.ownGame.grid) && result.ownGame.grid[0]
+                ? result.ownGame.grid[0].length
+                : 'N/A',
+          }
+        : {exists: false},
+    });
+    return result;
   }, [rawGame, rawOpponentGame, ownPowerups, opponentPowerups]);
 
   const game = useMemo(() => {
-    return games.ownGame;
+    const result = games.ownGame;
+    if (result) {
+      logger.debug('Game final game state', {
+        hasGrid: !!result.grid,
+        gridLength: Array.isArray(result.grid) ? result.grid.length : 'not array',
+        grid0Length: Array.isArray(result.grid) && result.grid[0] ? result.grid[0].length : 'N/A',
+      });
+    }
+    return result;
   }, [games]);
 
   const opponentGame = useMemo(() => {
     return games.opponentGame;
   }, [games]);
 
-  const scope = useCallback((s: string) => {
-    console.error('[Game] scope function called with:', s);
-    console.error('[Game] playerRef.current exists:', !!playerRef.current);
-    if (!playerRef.current) {
-      console.warn('[Game] scope early return - playerRef.current is null');
-      return [];
-    }
-    let result: Array<{r: number; c: number}> = [];
-    if (s === 'square') {
-      result = playerRef.current.getSelectedSquares();
-      console.error('[Game] getSelectedSquares returned:', result);
-    } else if (s === 'word') {
-      result = playerRef.current.getSelectedAndHighlightedSquares();
-      console.error('[Game] getSelectedAndHighlightedSquares returned:', result);
-    } else if (s === 'puzzle') {
-      result = playerRef.current.getAllSquares();
-      console.error('[Game] getAllSquares returned:', result);
-    } else {
-      console.warn('[Game] scope unknown scope string:', s);
-    }
-    return result;
-  }, []);
+  const scope = useCallback(
+    (s: string) => {
+      logger.debug('Game scope function called', {
+        scope: s,
+        hasPlayerRef: !!playerRef.current,
+        hasGame: !!game,
+        hasGrid: !!game?.grid,
+        gridLength: game?.grid?.length,
+      });
+
+      // For "puzzle" scope, we can get all squares from the grid even if playerRef is null
+      if (s === 'puzzle' && game?.grid) {
+        try {
+          const gridObj = new GridWrapper(game.grid);
+          const allSquares: Array<{r: number; c: number}> = [];
+          const keys = gridObj.keys();
+          keys.forEach(([r, c]) => {
+            if (gridObj.isWhite(r, c)) {
+              allSquares.push({r, c});
+            }
+          });
+          logger.debug('Game getAllSquares from grid returned', {squareCount: allSquares.length});
+          return allSquares;
+        } catch (error) {
+          logger.errorWithException('Error getting squares from grid', error);
+          // Fallback: try direct grid access
+          const allSquares: Array<{r: number; c: number}> = [];
+          if (Array.isArray(game.grid)) {
+            for (let r = 0; r < game.grid.length; r++) {
+              if (Array.isArray(game.grid[r])) {
+                for (let c = 0; c < game.grid[r].length; c++) {
+                  const cell = game.grid[r][c];
+                  if (cell && typeof cell === 'object' && !cell.black) {
+                    allSquares.push({r, c});
+                  }
+                }
+              }
+            }
+          }
+          logger.debug('Game fallback getAllSquares returned', {squareCount: allSquares.length});
+          return allSquares;
+        }
+      }
+
+      // For other scopes, we need playerRef
+      if (!playerRef.current) {
+        logger.warn('Game scope early return - playerRef.current is null', {scope: s});
+        return [];
+      }
+
+      let result: Array<{r: number; c: number}> = [];
+      if (s === 'square') {
+        result = playerRef.current.getSelectedSquares();
+        logger.debug('Game getSelectedSquares returned', {resultCount: result.length});
+      } else if (s === 'word') {
+        result = playerRef.current.getSelectedAndHighlightedSquares();
+        logger.debug('Game getSelectedAndHighlightedSquares returned', {resultCount: result.length});
+      } else if (s === 'puzzle') {
+        result = playerRef.current.getAllSquares();
+        logger.debug('Game getAllSquares returned', {resultCount: result.length});
+      } else {
+        logger.warn('Game scope unknown scope string', {scope: s});
+      }
+      return result;
+    },
+    [game]
+  );
 
   const handleUpdateGrid = useCallback(
     (r: number, c: number, value: string) => {
       if (!gameModel) {
-        console.warn('handleUpdateGrid called but gameModel is not available');
+        logger.warn('handleUpdateGrid called but gameModel is not available', {r, c, value});
         return;
       }
       gameModel.updateCell(r, c, id, myColor, pencilMode, value, autocheckMode);
@@ -189,7 +301,7 @@ const Game: React.FC<GameProps> = (props) => {
   const handleUpdateCursor = useCallback(
     ({r, c}: {r: number; c: number}) => {
       if (!gameModel) return;
-      if (game.solved && !_.find(game.cursors, (cursor) => cursor.id === id)) {
+      if (game.solved && !game.cursors.find((cursor) => cursor.id === id)) {
         return;
       }
       gameModel.updateCursor(r, c, id);
@@ -222,28 +334,27 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleCheck = useCallback(
     (scopeString: string) => {
-      console.error('[Game] handleCheck called with scopeString:', scopeString);
-      console.error('[Game] gameModel exists:', !!gameModel);
-      console.error('[Game] gameModel?.ready:', gameModel?.ready);
-      console.error('[Game] game exists:', !!game);
+      logger.debug('Game handleCheck called', {
+        scopeString,
+        hasGameModel: !!gameModel,
+        gameModelReady: gameModel?.ready,
+        hasGame: !!game,
+      });
       if (!gameModel || !game || !gameModel.ready) {
-        console.warn(
-          '[Game] handleCheck early return - gameModel:',
-          !!gameModel,
-          'game:',
-          !!game,
-          'ready:',
-          gameModel?.ready
-        );
+        logger.warn('Game handleCheck early return', {
+          hasGameModel: !!gameModel,
+          hasGame: !!game,
+          ready: gameModel?.ready,
+        });
         return;
       }
       const scopeValue = scope(scopeString);
-      console.error('[Game] scope function returned:', scopeValue);
+      logger.debug('Game scope function returned', {scopeValueLength: scopeValue.length});
       if (scopeValue.length === 0) {
-        console.warn('[Game] handleCheck early return - scopeValue is empty');
+        logger.warn('Game handleCheck early return - scopeValue is empty');
         return;
       }
-      console.error('[Game] Calling gameModel.check with scopeValue:', scopeValue);
+      logger.debug('Calling gameModel.check', {scopeValueLength: scopeValue.length});
       gameModel.check(scopeValue);
     },
     [gameModel, scope, game]
@@ -251,28 +362,27 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleReveal = useCallback(
     (scopeString: string) => {
-      console.error('[Game] handleReveal called with scopeString:', scopeString);
-      console.error('[Game] gameModel exists:', !!gameModel);
-      console.error('[Game] gameModel?.ready:', gameModel?.ready);
-      console.error('[Game] game exists:', !!game);
+      logger.debug('Game handleReveal called', {
+        scopeString,
+        hasGameModel: !!gameModel,
+        gameModelReady: gameModel?.ready,
+        hasGame: !!game,
+      });
       if (!gameModel || !game || !gameModel.ready) {
-        console.warn(
-          '[Game] handleReveal early return - gameModel:',
-          !!gameModel,
-          'game:',
-          !!game,
-          'ready:',
-          gameModel?.ready
-        );
+        logger.warn('Game handleReveal early return', {
+          hasGameModel: !!gameModel,
+          hasGame: !!game,
+          ready: gameModel?.ready,
+        });
         return;
       }
       const scopeValue = scope(scopeString);
-      console.error('[Game] scope function returned:', scopeValue);
+      logger.debug('Game scope function returned', {scopeValueLength: scopeValue.length});
       if (scopeValue.length === 0) {
-        console.warn('[Game] handleReveal early return - scopeValue is empty');
+        logger.warn('Game handleReveal early return - scopeValue is empty');
         return;
       }
-      console.error('[Game] Calling gameModel.reveal with scopeValue:', scopeValue);
+      logger.debug('Calling gameModel.reveal', {scopeValueLength: scopeValue.length});
       gameModel.reveal(scopeValue);
       onChange();
     },
@@ -281,28 +391,28 @@ const Game: React.FC<GameProps> = (props) => {
 
   const handleReset = useCallback(
     (scopeString: string, force: boolean = false) => {
-      console.error('[Game] handleReset called with scopeString:', scopeString, 'force:', force);
-      console.error('[Game] gameModel exists:', !!gameModel);
-      console.error('[Game] gameModel?.ready:', gameModel?.ready);
-      console.error('[Game] game exists:', !!game);
+      logger.debug('Game handleReset called', {
+        scopeString,
+        force,
+        hasGameModel: !!gameModel,
+        gameModelReady: gameModel?.ready,
+        hasGame: !!game,
+      });
       if (!gameModel || !game || !gameModel.ready) {
-        console.warn(
-          '[Game] handleReset early return - gameModel:',
-          !!gameModel,
-          'game:',
-          !!game,
-          'ready:',
-          gameModel?.ready
-        );
+        logger.warn('Game handleReset early return', {
+          hasGameModel: !!gameModel,
+          hasGame: !!game,
+          ready: gameModel?.ready,
+        });
         return;
       }
       const scopeValue = scope(scopeString);
-      console.error('[Game] scope function returned:', scopeValue);
+      logger.debug('Game scope function returned', {scopeValueLength: scopeValue.length});
       if (scopeValue.length === 0) {
-        console.warn('[Game] handleReset early return - scopeValue is empty');
+        logger.warn('Game handleReset early return - scopeValue is empty');
         return;
       }
-      console.error('[Game] Calling gameModel.reset with scopeValue:', scopeValue, 'force:', force);
+      logger.debug('Calling gameModel.reset', {scopeValueLength: scopeValue.length, force});
       gameModel.reset(scopeValue, force);
     },
     [gameModel, scope, game]
@@ -404,7 +514,7 @@ const Game: React.FC<GameProps> = (props) => {
       (window.location.host === 'foracross.com' || window.location.host.includes('.foracross.com'))
     ) {
       const dirToHide = window.location.host.includes('down') ? 'across' : 'down';
-      result[dirToHide] = _.assign([], result[dirToHide]).map((val) => val && '-');
+      result[dirToHide] = [...result[dirToHide]].map((val) => val && '-');
     }
     return result;
   }, [game]);
@@ -496,8 +606,39 @@ const Game: React.FC<GameProps> = (props) => {
       return <div>Loading...</div>;
     }
 
-    const {grid, circles, shades, cursors, pings, users, solved, solution, themeColor, optimisticCounter} =
-      game;
+    const {
+      grid,
+      circles,
+      shades,
+      cursors,
+      pings,
+      users,
+      solved,
+      solution,
+      themeColor,
+      optimisticCounter,
+      clues,
+    } = game;
+
+    // Basic validation - check if grid exists and is an array
+    if (!grid || !Array.isArray(grid) || grid.length === 0) {
+      logger.warn('Game renderPlayer: grid validation failed', {
+        hasGrid: !!grid,
+        isArray: Array.isArray(grid),
+        length: grid?.length,
+      });
+      return <div>Loading grid...</div>;
+    }
+
+    // Check if grid[0] exists and is an array
+    if (!grid[0] || !Array.isArray(grid[0])) {
+      logger.warn('Game renderPlayer: grid[0] validation failed', {
+        hasGrid0: !!grid[0],
+        isArray: Array.isArray(grid[0]),
+      });
+      return <div>Loading grid...</div>;
+    }
+
     const opponentGrid = opponentGame && opponentGame.grid;
     const themeStyles = {
       clueBarStyle: {

@@ -1,9 +1,31 @@
 import powerups from '@crosswithfriends/shared/lib/powerups';
 import {Tooltip} from '@mui/material';
-import clsx from 'clsx';
-import * as _ from 'lodash';
+import classNames from 'classnames';
 import React, {useCallback} from 'react';
 
+const isEqual = (a: any, b: any): boolean => {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (!keysB.includes(key) || !isEqual(a[key], b[key])) return false;
+  }
+  return true;
+};
+
+const omit = <T extends Record<string, any>, K extends keyof T>(obj: T, ...keys: K[]): Omit<T, K> => {
+  const result = {...obj};
+  for (const key of keys) {
+    delete result[key];
+  }
+  return result;
+};
+
+const some = <T,>(arr: T[], fn: (item: T) => boolean): boolean => arr.some(fn);
+
+import {logger} from '../../utils/logger';
 import Emoji from '../common/Emoji';
 
 import type {EnhancedCellData} from './types';
@@ -42,7 +64,7 @@ const Cell: React.FC<Props> = (props) => {
         {cursors.map(({color, active}, i) => (
           <div
             key={i}
-            className={clsx('cell--cursor', {
+            className={classNames('cell--cursor', {
               active,
               inactive: !active,
             })}
@@ -64,7 +86,7 @@ const Cell: React.FC<Props> = (props) => {
         {pings.map(({color, active}, i) => (
           <div
             key={i}
-            className={clsx('cell--ping', {
+            className={classNames('cell--ping', {
               active,
               inactive: !active,
             })}
@@ -186,7 +208,7 @@ const Cell: React.FC<Props> = (props) => {
   if (black || isHidden) {
     return (
       <div
-        className={clsx('cell', {
+        className={classNames('cell', {
           selected,
           black,
           hidden: isHidden,
@@ -207,7 +229,7 @@ const Cell: React.FC<Props> = (props) => {
 
   const cellContent = (
     <div
-      className={clsx('cell', {
+      className={classNames('cell', {
         selected,
         highlighted,
         referenced,
@@ -224,7 +246,7 @@ const Cell: React.FC<Props> = (props) => {
     >
       <div className="cell--wrapper">
         <div
-          className={clsx('cell--number', {
+          className={classNames('cell--number', {
             nonempty: !!number,
           })}
         >
@@ -262,16 +284,17 @@ const Cell: React.FC<Props> = (props) => {
 // Custom comparison function to replicate shouldComponentUpdate logic
 const areEqual = (prevProps: Props, nextProps: Props) => {
   const pathsToOmit = ['cursors', 'pings', 'cellStyle'] as const;
-  if (!_.isEqual(_.omit(nextProps, ...pathsToOmit), _.omit(prevProps, ...pathsToOmit))) {
-    console.debug(
-      'cell update',
+  if (!isEqual(omit(nextProps, ...pathsToOmit), omit(prevProps, ...pathsToOmit))) {
+    logger.debug('Cell update', {
       // @ts-expect-error - lodash filter with dynamic keys
-      _.filter(_.keys(prevProps), (k) => prevProps[k] !== nextProps[k])
-    );
+      changedKeys: Object.keys(prevProps).filter((k) => prevProps[k] !== nextProps[k]),
+      row: nextProps.r,
+      col: nextProps.c,
+    });
     return false;
   }
-  if (_.some(pathsToOmit, (p) => JSON.stringify(nextProps[p]) !== JSON.stringify(prevProps[p]))) {
-    console.debug('cell update for array');
+  if (some(pathsToOmit, (p) => JSON.stringify(nextProps[p]) !== JSON.stringify(prevProps[p]))) {
+    logger.debug('Cell update for array', {row: nextProps.r, col: nextProps.c});
     return false;
   }
   return true;

@@ -2,7 +2,6 @@ import './css/mobileGridControls.css';
 
 import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {Box} from '@mui/material';
-import _ from 'lodash';
 import React, {
   useState,
   useRef,
@@ -18,7 +17,7 @@ import Clue from './ClueText';
 import {useGridControls} from './useGridControls';
 import type {UseGridControlsProps, GridControlsActions} from './useGridControls';
 
-const RunOnce = ({effect}) => {
+const RunOnce = ({effect}: {effect: () => void}) => {
   useEffect(() => {
     effect();
   }, []);
@@ -49,6 +48,7 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
   const wasUnfocused = useRef<number>(0);
   const lastTouchMove = useRef<number>(0);
   const lastTouchStart = useRef<number>(0);
+  const keepFocusRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     wasUnfocused.current = Date.now() - 1000;
@@ -57,77 +57,80 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
   const touchingClueBarStart = useRef<any>(null);
 
   const gridControls = useGridControls(props, props.actions);
-  const {
-    getSelectedClueNumber,
-    flipDirection,
-    selectNextClue,
-    backspace,
-    typeLetter,
-    validLetter,
-    handleAction,
-  } = gridControls;
+  const {flipDirection, selectNextClue, backspace, typeLetter, validLetter, handleAction} = gridControls;
+
+  const mainClue = useMemo(() => {
+    return {clueNumber: gridControls.getSelectedClueNumber(), direction: props.direction};
+  }, [gridControls, props.direction]);
 
   const grid = useMemo(() => new GridObject(props.grid), [props.grid]);
 
   const fitOnScreen = useCallback(
-    (fitCurrentClue?: boolean) => {
-      if (!fitCurrentClue && transform.lastFitOnScreen > Date.now() - 100) return;
+    (
+      fitCurrentClue?: boolean,
+      setTransform: React.Dispatch<
+        React.SetStateAction<{scale: number; translateX: number; translateY: number; lastFitOnScreen: number}>
+      >
+    ) => {
+      setTransform((prevTransform) => {
+        if (!fitCurrentClue && prevTransform.lastFitOnScreen > Date.now() - 100) return prevTransform;
 
-      if (!zoomContainer.current) return;
-      const rect = zoomContainer.current.getBoundingClientRect();
-      let {scale, translateX, translateY} = transform;
-      const {selected, size} = props;
+        if (!zoomContainer.current) return prevTransform;
+        const rect = zoomContainer.current.getBoundingClientRect();
+        let {scale, translateX, translateY} = prevTransform;
+        const {selected, size} = props;
 
-      // default scale already fits screen width; no need to zoom out further
-      scale = Math.max(1, scale);
+        // default scale already fits screen width; no need to zoom out further
+        scale = Math.max(1, scale);
 
-      // this shouldn't go larger than half a tile (scaled) for now; the min X/Y
-      // calculations don't work when the difference between the usable size and
-      // grid size are positive, but smaller than PADDING
-      const PADDING = (size / 2) * scale; // px
+        // this shouldn't go larger than half a tile (scaled) for now; the min X/Y
+        // calculations don't work when the difference between the usable size and
+        // grid size are positive, but smaller than PADDING
+        const PADDING = (size / 2) * scale; // px
 
-      const usableWidth = visualViewport.width;
-      const gridWidth = grid.cols * size * scale;
-      const minX = Math.min(0, usableWidth - gridWidth - PADDING);
-      const maxX = PADDING;
-      translateX = Math.min(Math.max(translateX, minX), maxX);
+        const usableWidth = visualViewport.width;
+        const gridWidth = grid.cols * size * scale;
+        const minX = Math.min(0, usableWidth - gridWidth - PADDING);
+        const maxX = PADDING;
+        translateX = Math.min(Math.max(translateX, minX), maxX);
 
-      const usableHeight = visualViewport.height - rect.y;
-      const gridHeight = grid.rows * size * scale;
-      const minY = Math.min(0, usableHeight - gridHeight - PADDING);
-      const maxY = PADDING;
-      translateY = Math.min(Math.max(translateY, minY), maxY);
+        const usableHeight = visualViewport.height - rect.y;
+        const gridHeight = grid.rows * size * scale;
+        const minY = Math.min(0, usableHeight - gridHeight - PADDING);
+        const maxY = PADDING;
+        translateY = Math.min(Math.max(translateY, minY), maxY);
 
-      if (fitCurrentClue) {
-        const posX = selected.c * size;
-        const posY = selected.r * size;
-        const paddingX = (rect.width - grid.cols * size) / 2;
-        const paddingY = (rect.height - grid.rows * size) / 2;
-        const tX = (posX + paddingX) * scale;
-        const tY = (posY + paddingY) * scale;
-        translateX = _.clamp(translateX, -tX, rect.width - tX - size * scale);
-        translateY = _.clamp(translateY, -tY, rect.height - tY - size * scale);
-      }
+        if (fitCurrentClue) {
+          const posX = selected.c * size;
+          const posY = selected.r * size;
+          const paddingX = (rect.width - grid.cols * size) / 2;
+          const paddingY = (rect.height - grid.rows * size) / 2;
+          const tX = (posX + paddingX) * scale;
+          const tY = (posY + paddingY) * scale;
+          translateX = Math.min(Math.max(translateX, -tX), rect.width - tX - size * scale);
+          translateY = Math.min(Math.max(translateY, -tY), rect.height - tY - size * scale);
+        }
 
-      setTransform({
-        scale,
-        translateX,
-        translateY,
-        lastFitOnScreen: Date.now(),
+        return {
+          scale,
+          translateX,
+          translateY,
+          lastFitOnScreen: Date.now(),
+        };
       });
     },
-    [transform, props, grid]
+    [props, grid]
   );
 
   useEffect(() => {
     if (anchors.length === 0) {
-      fitOnScreen();
+      fitOnScreen(undefined, setTransform);
     }
-  }, [transform.scale, transform.translateX, transform.translateY, anchors.length, fitOnScreen]);
+  }, [anchors.length, fitOnScreen, setTransform]);
 
   useEffect(() => {
-    fitOnScreen(true);
-  }, [props.selected.r, props.selected.c, fitOnScreen]);
+    fitOnScreen(true, setTransform);
+  }, [props.selected.r, props.selected.c, fitOnScreen, setTransform]);
 
   const centerGridX = useCallback(() => {
     const usableWidth = visualViewport.width;
@@ -140,7 +143,28 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
     setTransform((prev) => ({...prev, scale: prev.scale, translateX, translateY}));
   }, [grid]);
 
-  const keepFocusRef = useRef<() => void>(() => {});
+  const focusKeyboardRef = useRef<() => void>(() => {});
+
+  const focusKeyboard = useCallback(() => {
+    if (inputRef.current) {
+      inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
+      inputRef.current.focus();
+    }
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    focusKeyboard,
+  }));
+
+  const keepFocus = useCallback(() => {
+    if (!wasUnfocused.current || wasUnfocused.current >= Date.now() - 500) {
+      focusKeyboardRef.current();
+    }
+  }, []);
+
+  useEffect(() => {
+    keepFocusRef.current = keepFocus;
+  }, [keepFocus]);
 
   const handleClueBarTouchEnd = useCallback(
     (e: TouchEvent) => {
@@ -192,10 +216,10 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
         };
       };
       const {center: pixelCenter, distance: pixelDistance} = getCenterAndDistance(
-        ..._.map(anchors, ({pixelPosition}) => pixelPosition)
+        ...anchors.map(({pixelPosition}) => pixelPosition)
       );
       const {center: touchCenter, distance: touchDistance} = getCenterAndDistance(
-        ..._.map(anchors, ({touchPosition}) => touchPosition)
+        ...anchors.map(({touchPosition}) => touchPosition)
       );
       let newScale = scale;
       if (anchors.length >= 2) {
@@ -226,7 +250,7 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
       if (!zoomContainer.current) return;
       const rect = zoomContainer.current.getBoundingClientRect();
       const previousAnchors = e.touches.length >= anchors.length ? anchors : [];
-      const newAnchors = _.map(e.touches, ({pageX, pageY}, i) => {
+      const newAnchors = Array.from(e.touches).map(({pageX, pageY}, i) => {
         const x = pageX - rect.x;
         const y = pageY - rect.y;
         return {
@@ -322,39 +346,6 @@ const MobileGridControls = forwardRef<MobileGridControlsRef, MobileGridControlsP
     },
     [props.clues]
   );
-
-  const mainClue = useMemo(() => {
-    return {clueNumber: getSelectedClueNumber(), direction: props.direction};
-  }, [getSelectedClueNumber, props.direction]);
-
-  const focusKeyboardRef = useRef<() => void>(() => {});
-
-  const focusKeyboard = useCallback(() => {
-    if (inputRef.current) {
-      inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
-      inputRef.current.focus();
-    }
-  }, []);
-
-  // Update ref with latest focusKeyboard function
-  const focusKeyboardValue = focusKeyboard;
-  useEffect(() => {
-    focusKeyboardRef.current = focusKeyboardValue;
-  });
-
-  useImperativeHandle(ref, () => ({
-    focusKeyboard,
-  }));
-
-  const keepFocus = useCallback(() => {
-    if (!wasUnfocused.current || wasUnfocused.current >= Date.now() - 500) {
-      focusKeyboardRef.current();
-    }
-  }, []);
-
-  useEffect(() => {
-    keepFocusRef.current = keepFocus;
-  }, [keepFocus]);
 
   const handleInputFocus = useCallback(
     (e: React.FocusEvent<HTMLTextAreaElement>) => {

@@ -1,6 +1,5 @@
 import type {GameState} from '@crosswithfriends/shared/fencingGameEvents/types/GameState';
 import {Box, Stack} from '@mui/material';
-import _ from 'lodash';
 import React, {useCallback} from 'react';
 
 import EditableSpan from '../common/EditableSpan';
@@ -36,29 +35,29 @@ export const FencingScoreboard: React.FC<{
   // should be able to handle ties with any number of teams
   const winningTeams = props.isGameComplete
     ? (() => {
-        const teams = _.values(props.gameState.teams).filter(Boolean);
-        const maxScore = _.maxBy(teams, 'score')?.score;
+        const teams = Object.values(props.gameState.teams).filter(Boolean);
+        const maxScore = teams.reduce((max, team) => Math.max(max, team?.score ?? 0), 0);
         return teams.filter((team) => team?.score === maxScore);
       })()
     : null;
 
-  const teamData = _.keys(props.gameState.teams)
+  const teamData = Object.keys(props.gameState.teams)
     .map((teamId) => {
       const team = props.gameState.teams[teamId];
       if (!team) return null;
       return {
         team,
-        users: _.values(props.gameState.users).filter((user) => String(user.teamId) === teamId),
+        users: Object.values(props.gameState.users).filter((user) => String(user.teamId) === teamId),
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
-  const currentUser = _.values(props.gameState.users).find((user) => user.id === props.currentUserId);
+  const currentUser = Object.values(props.gameState.users).find((user) => user.id === props.currentUserId);
   const rows: {
     nameEl: React.ReactNode;
     score?: number;
     guesses?: number;
     isCurrent?: boolean;
-  }[] = _.flatMap(teamData, ({team, users}) => [
+  }[] = teamData.flatMap(({team, users}) => [
     {
       nameEl: (
         <Stack
@@ -116,31 +115,32 @@ export const FencingScoreboard: React.FC<{
       isCurrent: user.id === props.currentUserId,
     })),
   ]);
-  const spectators = _.values(props.gameState.users).filter((user) => user.teamId === 0);
+  const spectators = Object.values(props.gameState.users).filter((user) => user.teamId === 0);
   const spectatorRows: {
     nameEl: React.ReactNode;
     score?: number;
     guesses?: number;
     isCurrent?: boolean;
-  }[] = _.isEmpty(spectators)
-    ? []
-    : [
-        {
-          nameEl: (
-            <span
-              style={{
-                fontWeight: 'bold',
-              }}
-            >
-              Spectators
-            </span>
-          ),
-        },
-        ...spectators.map((user) => ({
-          nameEl: <span>{user.displayName}</span>,
-          isCurrent: user.id === props.currentUserId,
-        })),
-      ];
+  }[] =
+    spectators.length === 0
+      ? []
+      : [
+          {
+            nameEl: (
+              <span
+                style={{
+                  fontWeight: 'bold',
+                }}
+              >
+                Spectators
+              </span>
+            ),
+          },
+          ...spectators.map((user) => ({
+            nameEl: <span>{user.displayName}</span>,
+            isCurrent: user.id === props.currentUserId,
+          })),
+        ];
   return (
     <Stack direction="column" sx={{'& td, th': {padding: 1}}}>
       <table>
@@ -150,7 +150,7 @@ export const FencingScoreboard: React.FC<{
             <th>Score</th>
             <th>Guesses</th>
           </tr>
-          {_.map([...rows, ...spectatorRows], ({nameEl, score, guesses, isCurrent}, i) => (
+          {[...rows, ...spectatorRows].map(({nameEl, score, guesses, isCurrent}, i) => (
             <tr key={i} className={isCurrent ? 'fencing-scoreboard--current-user' : ''}>
               <td>{nameEl}</td>
               <td>{score}</td>

@@ -68,17 +68,13 @@ export function useRoom(options: UseRoomOptions): UseRoomReturn {
     if (!socket) return;
 
     let mounted = true;
-    // Use setTimeout to avoid calling setState synchronously in effect
-    setTimeout(() => {
-      if (mounted) {
-        setLoading(true);
-      }
-    }, 0);
+    setLoading(true);
+
     const {syncPromise, unsubscribe} = subscribeToRoomEvents(socket, rid, setEvents);
     syncPromise
       .then(() => {
         if (mounted) {
-          setEvents([]);
+          // Events are already set by subscribeToRoomEvents, just update loading
           setLoading(false);
         }
       })

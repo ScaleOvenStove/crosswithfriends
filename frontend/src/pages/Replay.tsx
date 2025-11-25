@@ -2,11 +2,47 @@ import './css/replay.css';
 import {isMobile, toArr} from '@crosswithfriends/shared/lib/jsUtils';
 import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
 import {Box, Stack, Tooltip} from '@mui/material';
-import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {MdPlayArrow, MdPause, MdChevronLeft, MdChevronRight} from 'react-icons/md';
 import {useParams} from 'react-router-dom';
+
+type DebouncedFunc<T extends (...args: any[]) => any> = {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+};
+
+const debounce = <T extends (...args: any[]) => any>(fn: T, delay: number = 0): DebouncedFunc<T> => {
+  let timeout: NodeJS.Timeout;
+  const debounced = (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+  debounced.cancel = () => clearTimeout(timeout);
+  return debounced;
+};
+
+const throttle = <T extends (...args: any[]) => any>(fn: T, limit: number): DebouncedFunc<T> => {
+  let inThrottle: boolean;
+  const throttled = (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      fn(...args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+  throttled.cancel = () => {};
+  return throttled;
+};
+
+const findLastIndex = <T,>(arr: T[], fn: (item: T) => boolean): number => {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (fn(arr[i])) {
+      return i;
+    }
+  }
+  return -1;
+};
 
 import Chat from '../components/Chat';
 import Nav from '../components/common/Nav';
@@ -103,20 +139,20 @@ const Replay: React.FC = () => {
     setPosition(newPosition);
   }, [position]);
 
-  const debouncedRecomputeHistoryRef = useRef<_.DebouncedFunc<() => void>>();
+  const debouncedRecomputeHistoryRef = useRef<DebouncedFunc<() => void>>();
   useEffect(() => {
     if (!debouncedRecomputeHistoryRef.current) {
-      debouncedRecomputeHistoryRef.current = _.debounce(recomputeHistory);
+      debouncedRecomputeHistoryRef.current = debounce(recomputeHistory);
     }
     return () => {
       debouncedRecomputeHistoryRef.current?.cancel();
     };
   }, [recomputeHistory]);
 
-  const setPositionToRenderThrottledRef = useRef<_.DebouncedFunc<(positionToRender: number) => void>>();
+  const setPositionToRenderThrottledRef = useRef<DebouncedFunc<(positionToRender: number) => void>>();
   useEffect(() => {
     if (!setPositionToRenderThrottledRef.current) {
-      setPositionToRenderThrottledRef.current = _.throttle((newPositionToRender: number) => {
+      setPositionToRenderThrottledRef.current = throttle((newPositionToRender: number) => {
         setPositionToRender(newPositionToRender);
         if (controlsRef.current) {
           controlsRef.current.focus();
@@ -219,7 +255,7 @@ const Replay: React.FC = () => {
     }
 
     if (followCursorRef.current !== undefined) {
-      const cursor = _.find(gameCursors, (c) => c.id === followCursorRef.current);
+      const cursor = gameCursors.find((c) => c.id === followCursorRef.current);
       if (cursor && gameRef.current) {
         gameRef.current.setSelected({
           r: cursor.r,
@@ -239,7 +275,7 @@ const Replay: React.FC = () => {
     ({r, c}: {r: number; c: number}): void => {
       if (!game || !game.cursors) return;
       const gameCursors = game.cursors;
-      const foundCursor = _.find(gameCursors, (cursorItem) => cursorItem.r === r && cursorItem.c === c);
+      const foundCursor = gameCursors.find((cursorItem) => cursorItem.r === r && cursorItem.c === c);
       if (foundCursor !== undefined) {
         followCursorRef.current = foundCursor.id;
       } else {
@@ -252,7 +288,7 @@ const Replay: React.FC = () => {
   const scrubLeft = useCallback(
     ({shift = false}: {shift?: boolean} = {}): void => {
       const events = shift ? filteredHistory : history;
-      const index = _.findLastIndex(events, (event) => event.gameTimestamp < position);
+      const index = findLastIndex(events, (event) => event.gameTimestamp < position);
       if (!left) {
         setLeft(true);
       }
@@ -265,7 +301,7 @@ const Replay: React.FC = () => {
   const scrubRight = useCallback(
     ({shift = false}: {shift?: boolean} = {}): void => {
       const events = shift ? filteredHistory : history;
-      const index = _.findIndex(events, (event) => event.gameTimestamp > position);
+      const index = events.findIndex((event) => event.gameTimestamp > position);
       if (!right) {
         setRight(true);
       }
@@ -316,7 +352,7 @@ const Replay: React.FC = () => {
   }, []);
 
   const handleToggleAutoplay = useCallback((): void => {
-    const index = _.findIndex(history, (event) => event.gameTimestamp > position);
+    const index = history.findIndex((event) => event.gameTimestamp > position);
     if (index === -1) {
       // restart
       handleSetPosition(0);
@@ -394,6 +430,12 @@ const Replay: React.FC = () => {
     }
 
     const {grid, circles, shades, cursors, clues, solved, users} = game;
+
+    // Validate grid before accessing it
+    if (!grid || !Array.isArray(grid) || grid.length === 0 || !grid[0] || !Array.isArray(grid[0])) {
+      return <div>Loading grid...</div>;
+    }
+
     const cols = grid[0].length;
     const rows = grid.length;
     const width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
@@ -412,9 +454,9 @@ const Replay: React.FC = () => {
         cursors={cursors}
         frozen={solved}
         myColor={myColor}
-        updateGrid={_.noop}
+        updateGrid={() => {}}
         updateCursor={handleUpdateCursor}
-        onPressEnter={_.noop}
+        onPressEnter={() => {}}
         mobile={isMobile()}
         users={users}
         colorAttributionMode={colorAttributionMode}
@@ -499,7 +541,8 @@ const Replay: React.FC = () => {
         <div className="replay--time">
           {history.length > 0 && (
             <div>
-              {formatTime(position / 1000)} / {formatTime((_.last(history)?.gameTimestamp ?? 0) / 1000)}
+              {formatTime(position / 1000)} /{' '}
+              {formatTime((history[history.length - 1]?.gameTimestamp ?? 0) / 1000)}
             </div>
           )}
         </div>

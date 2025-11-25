@@ -1,7 +1,7 @@
-import _ from 'lodash';
-
 // word lists are ~100k words.
 // in a single execution of "fillGrid", we might call scoreMatches / countMatches 30k times
+
+const range = (length) => Array.from({length}, (_, i) => i);
 
 // bucketing by length of word
 // => 30k words per bucket
@@ -30,7 +30,7 @@ class BucketedWordlist {
     const key = this.getKey(
       word.length,
       indices,
-      _.map(indices, (idx) => word[idx])
+      indices.map((idx) => word[idx])
     );
     if (!this.buckets[key]) {
       this.buckets[key] = [];
@@ -40,11 +40,11 @@ class BucketedWordlist {
 
   makeBuckets(scoredWordlist) {
     this.buckets = {};
-    const words = _.sortBy(_.keys(scoredWordlist), (word) => -scoredWordlist[word]);
-    _.forEach(words, (word) => {
+    const words = Object.keys(scoredWordlist).sort((word) => -scoredWordlist[word]);
+    words.forEach((word) => {
       this.storeWordInBucket(word, []);
     });
-    _.forEach(_.keys(scoredWordlist), (word) => {
+    Object.keys(scoredWordlist).forEach((word) => {
       const {length} = word;
       for (let i = 0; i < length; i += 1) {
         this.storeWordInBucket(word, [i]);
@@ -66,15 +66,15 @@ class BucketedWordlist {
   _getMatches(pattern, limit) {
     const {length} = pattern;
     // get list of indices that are constrained
-    const constraints = _.filter(_.range(length), (idx) => pattern[idx] !== ' ');
+    const constraints = range(length).filter((idx) => pattern[idx] !== ' ');
     const indices = constraints.slice(0, 2);
     const bucket = this.getBucket(length, {
       indices,
-      vals: _.map(indices, (idx) => pattern[idx]),
+      vals: indices.map((idx) => pattern[idx]),
     });
     const result = [];
     for (const word of bucket) {
-      if (_.every(constraints, (idx) => word[idx] === pattern[idx])) {
+      if (constraints.every((idx) => word[idx] === pattern[idx])) {
         result.push(word);
       }
       if (limit !== -1 && result.length >= limit) {

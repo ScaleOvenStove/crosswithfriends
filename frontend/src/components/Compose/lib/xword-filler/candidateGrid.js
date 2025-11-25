@@ -1,10 +1,13 @@
-import _ from 'lodash';
 import {makeGridFromComposition} from '@crosswithfriends/shared/lib/gameUtils';
 import {getTopMatches, countMatches} from './common';
 
+const flatten = (arr) => arr.flat();
+const range = (length) => Array.from({length}, (_, i) => i);
+const sum = (arr) => arr.reduce((a, b) => a + b, 0);
+
 export const convertFromCandidateGrid = (candidate) =>
-  _.range(candidate.height).map((r) =>
-    _.range(candidate.width).map((c) => ({
+  range(candidate.height).map((r) =>
+    range(candidate.width).map((c) => ({
       value: candidate.gridString[r * candidate.width + c],
       pencil: true, // todo fix
     }))
@@ -45,7 +48,7 @@ export const convertToCandidateGrid = (grid) => {
     down: entriesDict.down[obj.down].idx,
   }));
 
-  const gridString = _.flatten(_.map(grid, (row) => _.map(row, ({value}) => value || ' ')));
+  const gridString = flatten(grid.map((row) => row.map(({value}) => value || ' ')));
 
   return new CandidateGrid(gridString, width, height, entries, entryMap);
 };
@@ -85,7 +88,7 @@ export default class CandidateGrid {
   computeHeuristic(scoredWordlist) {
     if (this.heuristic) return this.heuristic;
     const seen = {};
-    const entryScores = _.map(this.entries, (entry) => {
+    const entryScores = this.entries.map((entry) => {
       const pattern = this.getPattern(entry);
       if (pattern.indexOf(' ') === -1) {
         if (seen[pattern]) {
@@ -98,11 +101,11 @@ export default class CandidateGrid {
       }
       const best = getTopMatches(pattern, scoredWordlist, 100);
 
-      const expectedScore = 0.1 * _.sum(best.map((word, i) => scoredWordlist[word] * Math.pow(0.9, i)));
+      const expectedScore = 0.1 * sum(best.map((word, i) => scoredWordlist[word] * Math.pow(0.9, i)));
       const fillability = Math.log10(countMatches(pattern, scoredWordlist));
       return Math.sqrt(expectedScore) + fillability;
     });
-    this.heuristic = _.sum(entryScores);
+    this.heuristic = sum(entryScores);
     return this.heuristic;
   }
 

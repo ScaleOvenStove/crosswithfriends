@@ -1,7 +1,6 @@
 import * as colors from '@crosswithfriends/shared/lib/colors';
 import {reduce as gameReducer} from '@crosswithfriends/shared/lib/reducers/game';
 import {ref, onValue, off, get, set} from 'firebase/database';
-import _ from 'lodash';
 import {type Socket} from 'socket.io-client';
 import * as uuid from 'uuid';
 import {create} from 'zustand';
@@ -9,6 +8,7 @@ import {create} from 'zustand';
 import socketManager from '../sockets/SocketManager';
 import type {GameEvent} from '../types/events';
 import type {RawGame, BattleData} from '../types/rawGame';
+import {logger} from '../utils/logger';
 
 import {db, SERVER_TIME, type DatabaseReference} from './firebase';
 import {isValidFirebasePath, extractAndValidateGid} from './firebaseUtils';
@@ -17,14 +17,14 @@ import {isValidFirebasePath, extractAndValidateGid} from './firebaseUtils';
 
 // Recursively walks obj and converts `null` to `undefined`
 const castNullsToUndefined = <T>(obj: T): T => {
-  if (_.isNil(obj)) {
+  if (obj === null || obj === undefined) {
     return undefined as T;
   }
   if (typeof obj === 'object') {
     return Object.assign(
       (obj as object).constructor(),
-      _.fromPairs(
-        _.keys(obj).map((key) => [key, castNullsToUndefined((obj as Record<string, unknown>)[key])])
+      Object.fromEntries(
+        Object.keys(obj).map((key) => [key, castNullsToUndefined((obj as Record<string, unknown>)[key])])
       )
     ) as T;
   }
@@ -83,12 +83,167 @@ interface GameStore {
 }
 
 export const useGameStore = create<GameStore>((setState, getState) => {
-  // Helper function to compute game state from events
+  // Helper function to validate that a create event has a valid grid
+  const isValidCreateEvent = (event: GameEvent | null): boolean => {
+    if (!event || event.type !== 'create') return false;
+
+    const params = event.params as {game?: {grid?: unknown}} | undefined;
+    if (!params || !params.game) return false;
+
+    const grid = params.game.grid;
+    // Grid must be an array with at least one row
+    if (!Array.isArray(grid) || grid.length === 0) return false;
+
+    // Grid must have at least one column (check first row)
+    if (!Array.isArray(grid[0]) || grid[0].length === 0) return false;
+
+    return true;
+  };
+
+  // Cache for incremental game state updates
+  // Tracks the last computed state and what was used to compute it
+  interface GameStateCache {
+    createEventId: string | null;
+    eventsLength: number;
+    optimisticEventsLength: number;
+    lastState: RawGame | null;
+  }
+  const gameStateCache = new Map<string, GameStateCache>();
+
+  // Helper function to compute game state from events with incremental update optimization
   const computeGameState = (game: GameInstance): RawGame | null => {
     if (!game.createEvent) return null;
 
+    // Validate create event before processing
+    if (game.createEvent.type === 'create' && !isValidCreateEvent(game.createEvent)) {
+      logger.error('computeGameState - Invalid create event, returning null', {path: game.path});
+      return null;
+    }
+
+    // Check cache for optimization opportunities
+    const cache = gameStateCache.get(game.path);
+    const createEventId = game.createEvent.id || null;
+    const currentEventsLength = game.events.length;
+    const currentOptimisticLength = game.optimisticEvents.length;
+
+    // Cache hit: Nothing has changed, return cached state
+    if (
+      cache &&
+      cache.createEventId === createEventId &&
+      cache.eventsLength === currentEventsLength &&
+      cache.optimisticEventsLength === currentOptimisticLength &&
+      cache.lastState
+    ) {
+      logger.debug('computeGameState - Cache hit (no changes)', {
+        path: game.path,
+        eventsLength: currentEventsLength,
+        optimisticEventsLength: currentOptimisticLength,
+      });
+      return cache.lastState;
+    }
+
+    // Incremental update: Only new events added (no optimistic events involved)
+    if (
+      cache &&
+      cache.createEventId === createEventId &&
+      cache.eventsLength < currentEventsLength &&
+      cache.optimisticEventsLength === 0 &&
+      currentOptimisticLength === 0 &&
+      cache.lastState
+    ) {
+      const newEventsCount = currentEventsLength - cache.eventsLength;
+      logger.debug('computeGameState - Incremental update', {
+        path: game.path,
+        newEventsCount,
+        oldEventsLength: cache.eventsLength,
+        newEventsLength: currentEventsLength,
+      });
+
+      // Apply only new events to cached state
+      let state = cache.lastState;
+      const newEvents = game.events.slice(cache.eventsLength);
+
+      // Sort only the new events
+      const sortedNewEvents = [...newEvents].sort((a, b) => {
+        const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : a.timestamp || 0;
+        const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : b.timestamp || 0;
+        return aTime - bTime;
+      });
+
+      // Apply new events
+      for (const event of sortedNewEvents) {
+        if (event.type !== 'create') {
+          state = gameReducer(state, event);
+        }
+      }
+
+      // Update cache
+      gameStateCache.set(game.path, {
+        createEventId,
+        eventsLength: currentEventsLength,
+        optimisticEventsLength: currentOptimisticLength,
+        lastState: state,
+      });
+
+      return state;
+    }
+
+    // Full recompute: Cache miss or complex state change
+    logger.debug('computeGameState - Full recompute', {
+      path: game.path,
+      reason: cache
+        ? {
+            createEventChanged: cache.createEventId !== createEventId,
+            eventsLengthDecreased: cache.eventsLength > currentEventsLength,
+            optimisticEventsChanged: cache.optimisticEventsLength !== currentOptimisticLength,
+          }
+        : 'no cache',
+    });
+
+    // Debug: Log create event structure
+    if (game.createEvent.type === 'create') {
+      logger.debug('computeGameState - create event structure', {
+        path: game.path,
+        hasParams: !!game.createEvent.params,
+        hasParamsGame: !!(game.createEvent.params as {game?: unknown})?.game,
+        paramsGameType: typeof (game.createEvent.params as {game?: unknown})?.game,
+        paramsKeys: game.createEvent.params ? Object.keys(game.createEvent.params as object) : [],
+        paramsGameKeys: (game.createEvent.params as {game?: Record<string, unknown>})?.game
+          ? Object.keys((game.createEvent.params as {game?: Record<string, unknown>}).game!)
+          : [],
+        hasGrid: !!(game.createEvent.params as {game?: {grid?: unknown}})?.game?.grid,
+        gridLength: Array.isArray((game.createEvent.params as {game?: {grid?: unknown}})?.game?.grid)
+          ? ((game.createEvent.params as {game?: {grid?: unknown[]}})?.game?.grid?.length ?? 'N/A')
+          : 'not array',
+      });
+    }
+
     // Start with the create event
     let state = gameReducer(null, game.createEvent);
+
+    // Debug: Log state after reducer
+    if (game.createEvent.type === 'create' && state) {
+      logger.debug('computeGameState - state after reducer', {
+        path: game.path,
+        hasGrid: !!state.grid,
+        gridLength: Array.isArray(state.grid) ? state.grid.length : 'not array',
+        grid0Length: Array.isArray(state.grid) && state.grid[0] ? state.grid[0].length : 'N/A',
+      });
+
+      // Defensive check: if grid is empty or invalid, return null
+      if (
+        !state.grid ||
+        !Array.isArray(state.grid) ||
+        state.grid.length === 0 ||
+        !Array.isArray(state.grid[0]) ||
+        state.grid[0].length === 0
+      ) {
+        logger.error('computeGameState - Invalid grid in state after reducer, returning null', {
+          path: game.path,
+        });
+        return null;
+      }
+    }
 
     // Sort events by timestamp to ensure correct order
     const sortedEvents = [...game.events].sort((a, b) => {
@@ -109,6 +264,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       state = gameReducer(state, event, {isOptimistic: true});
     }
 
+    // Update cache with new state
+    gameStateCache.set(game.path, {
+      createEventId,
+      eventsLength: currentEventsLength,
+      optimisticEventsLength: currentOptimisticLength,
+      lastState: state,
+    });
+
     return state;
   };
 
@@ -124,7 +287,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in subscription callback for ${event}:`, error);
+          logger.errorWithException(`Error in subscription callback for ${event}`, error, {path});
         }
       });
     }
@@ -163,28 +326,22 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     });
   };
 
-  const subscribeToWebsocketEvents = async (path: string): Promise<void> => {
-    const state = getState();
-    const game = state.games[path];
-    if (!game) {
-      throw new Error('Game not initialized');
-    }
-
-    // Ensure socket is connected
-    await connectToWebsocket(path);
-    const socket = socketManager.getSocket();
-    if (!socket || !socket.connected) {
-      throw new Error('Not connected to websocket');
-    }
-
-    // Create a game-specific event handler that filters by path
-    // We need to use a closure to capture the path
-    const gameEventHandler = ((gamePath: string) => (event: unknown) => {
+  /**
+   * Creates a game event handler that processes incoming websocket events
+   */
+  const createGameEventHandler = (
+    path: string,
+    getState: () => GameStore,
+    setState: (state: Partial<GameStore>) => void,
+    emit: (path: string, event: string, data: unknown) => void
+  ) => {
+    return (event: unknown) => {
       const processedEvent = castNullsToUndefined(event) as GameEvent;
       const currentState = getState();
-      const currentGame = currentState.games[gamePath];
+      const currentGame = currentState.games[path];
+
       if (!currentGame) {
-        console.warn('[gameStore] Received event for game that no longer exists:', gamePath);
+        logger.warn('Received event for game that no longer exists', {gamePath: path});
         return;
       }
 
@@ -205,8 +362,39 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
       if (processedEvent.type === 'create') {
         updatedGame.createEvent = processedEvent;
-        updatedGame.ready = true;
-        console.warn('[gameStore] Received create event via websocket, setting ready=true for:', gamePath);
+        const isValid = isValidCreateEvent(processedEvent);
+        if (isValid) {
+          updatedGame.ready = true;
+          logger.info('Received create event via websocket with valid grid, setting ready=true', {
+            gamePath: path,
+          });
+        } else {
+          updatedGame.ready = false;
+          const params = processedEvent.params as {game?: {grid?: unknown}} | undefined;
+          const game = params?.game;
+          const grid = game?.grid;
+          const gridIsArray = Array.isArray(grid);
+          const gridLength = gridIsArray ? grid.length : 0;
+          const firstRowLength =
+            gridIsArray && grid.length > 0 && Array.isArray(grid[0]) ? grid[0].length : 0;
+
+          logger.error('Received create event via websocket but grid is invalid or empty', {
+            gamePath: path,
+            hasParams: !!processedEvent.params,
+            hasParamsGame: !!game,
+            hasGrid: !!grid,
+            gridType: typeof grid,
+            gridIsArray,
+            gridLength,
+            firstRowLength,
+            gridValue: grid,
+            fullEvent: processedEvent,
+          });
+          logger.warn(
+            'Setting ready=false. Game will remain not ready until a valid create event is received',
+            {gamePath: path}
+          );
+        }
       }
 
       updatedGame.gameState = computeGameState(updatedGame);
@@ -214,22 +402,112 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       setState({
         games: {
           ...currentState.games,
-          [gamePath]: updatedGame,
+          [path]: updatedGame,
         },
       });
+
       if (processedEvent.type === 'create') {
-        console.warn(
-          '[gameStore] State updated after create event. Current ready state:',
-          getState().games[gamePath]?.ready
-        );
+        logger.debug('State updated after create event', {
+          gamePath: path,
+          ready: getState().games[path]?.ready,
+        });
       }
 
       if (processedEvent.type === 'create') {
-        emit(gamePath, 'wsCreateEvent', processedEvent);
+        emit(path, 'wsCreateEvent', processedEvent);
       } else {
-        emit(gamePath, 'wsEvent', processedEvent);
+        emit(path, 'wsEvent', processedEvent);
       }
-    })(path);
+    };
+  };
+
+  /**
+   * Syncs all game events from the server
+   */
+  const syncAllGameEvents = async (path: string): Promise<GameEvent[]> => {
+    const gid = path.substring(6);
+    logger.info('Syncing all game events', {gid});
+
+    try {
+      const response = (await socketManager.emitAsync('sync_all_game_events', gid)) as unknown[];
+
+      if (!response || !Array.isArray(response)) {
+        logger.error('Invalid response from sync_all_game_events', {gid, response});
+        throw new Error(`Invalid response from sync_all_game_events: expected array, got ${typeof response}`);
+      }
+
+      const allEvents = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
+      logger.info('Received events from sync_all_game_events', {gid, eventCount: allEvents.length});
+      return allEvents;
+    } catch (error) {
+      logger.errorWithException('Error syncing game events', error, {path});
+      return [];
+    }
+  };
+
+  /**
+   * Sorts events by timestamp
+   */
+  const sortEventsByTimestamp = (events: GameEvent[]): GameEvent[] => {
+    return events.sort((a, b) => {
+      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : a.timestamp || 0;
+      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : b.timestamp || 0;
+      return aTime - bTime;
+    });
+  };
+
+  /**
+   * Validates create event and logs detailed info
+   */
+  const validateCreateEvent = (createEvent: GameEvent | null, path: string): boolean => {
+    const hasValidCreateEvent = isValidCreateEvent(createEvent);
+
+    if (createEvent) {
+      if (hasValidCreateEvent) {
+        logger.info('Found create event with valid grid, marking game as ready', {path});
+      } else {
+        const params = createEvent.params as {game?: {grid?: unknown}} | undefined;
+        const game = params?.game;
+        const grid = game?.grid;
+        const gridIsArray = Array.isArray(grid);
+        const gridLength = gridIsArray ? grid.length : 0;
+        const firstRowLength = gridIsArray && grid.length > 0 && Array.isArray(grid[0]) ? grid[0].length : 0;
+
+        logger.error('Found create event but grid is invalid or empty', {
+          path,
+          hasParams: !!createEvent.params,
+          hasParamsGame: !!game,
+          hasGrid: !!grid,
+          gridType: typeof grid,
+          gridIsArray,
+          gridLength,
+          firstRowLength,
+          gridValue: grid,
+          fullEvent: createEvent,
+        });
+        logger.warn('Game will wait for a valid create event via websocket', {path});
+      }
+    }
+
+    return hasValidCreateEvent;
+  };
+
+  const subscribeToWebsocketEvents = async (path: string): Promise<void> => {
+    const state = getState();
+    const game = state.games[path];
+    if (!game) {
+      throw new Error('Game not initialized');
+    }
+
+    // Ensure socket is connected
+    await connectToWebsocket(path);
+    const socket = socketManager.getSocket();
+    if (!socket || !socket.connected) {
+      throw new Error('Not connected to websocket');
+    }
+
+    // Create a game-specific event handler using helper function
+    const gameEventHandler = createGameEventHandler(path, getState, setState, emit);
 
     // Register handler directly on socket for immediate use
     socket.on('game_event', gameEventHandler);
@@ -245,62 +523,36 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       await socketManager.emitAsync('join_game', reconnectGid);
     });
 
-    // Sync all game events with error handling
-    let allEvents: GameEvent[] = [];
-    try {
-      const gid = path.substring(6);
-      console.warn('[gameStore] Syncing all game events for', gid);
-      const response = (await socketManager.emitAsync('sync_all_game_events', gid)) as unknown[];
-
-      if (!response || !Array.isArray(response)) {
-        console.error('[gameStore] Invalid response from sync_all_game_events:', response);
-        throw new Error(`Invalid response from sync_all_game_events: expected array, got ${typeof response}`);
-      }
-
-      allEvents = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
-      console.warn('[gameStore] Received', allEvents.length, 'events from sync_all_game_events');
-    } catch (error) {
-      console.error('[gameStore] Error syncing game events:', error);
-      // Don't throw - allow the game to continue and wait for events via websocket
-      // The game will become ready when it receives a create event via websocket
-      allEvents = [];
-    }
-
-    // Sort events by timestamp
-    allEvents.sort((a, b) => {
-      const aTime = typeof a.timestamp === 'string' ? parseFloat(a.timestamp) : a.timestamp || 0;
-      const bTime = typeof b.timestamp === 'string' ? parseFloat(b.timestamp) : b.timestamp || 0;
-      return aTime - bTime;
-    });
+    // Sync and sort all game events
+    const allEvents = sortEventsByTimestamp(await syncAllGameEvents(path));
 
     const currentState = getState();
     const currentGame = currentState.games[path];
     if (!currentGame) {
-      console.warn('[gameStore] Game was detached during sync');
+      logger.warn('Game was detached during sync', {path});
       return;
     }
 
-    // Find create event
+    // Separate create event from other events and validate
     const createEvent = allEvents.find((e) => e.type === 'create') || null;
     const otherEvents = allEvents.filter((e) => e.type !== 'create');
+    const hasValidCreateEvent = validateCreateEvent(createEvent, path);
 
-    if (createEvent) {
-      console.warn('[gameStore] Found create event, marking game as ready');
-    } else if (allEvents.length > 0) {
-      console.warn(
-        '[gameStore] Received events but no create event found. Game will wait for create event via websocket.'
+    // Log if no events or no create event
+    if (!createEvent && allEvents.length > 0) {
+      logger.warn(
+        'Received events but no create event found. Game will wait for create event via websocket',
+        {path}
       );
-    } else {
-      console.warn(
-        '[gameStore] No events received from sync. Game will wait for create event via websocket.'
-      );
+    } else if (allEvents.length === 0) {
+      logger.warn('No events received from sync. Game will wait for create event via websocket', {path});
     }
 
     // Update game with all events
     const updatedGame: GameInstance = {
       ...currentGame,
       createEvent: createEvent || currentGame.createEvent,
-      ready: createEvent ? true : currentGame.ready,
+      ready: hasValidCreateEvent ? true : false, // Explicitly set to false when invalid
       events: otherEvents,
       optimisticEvents: [],
       gameState: computeGameState({
@@ -311,14 +563,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       }),
     };
 
-    console.warn('[gameStore] Setting ready state:', updatedGame.ready, 'for path:', path);
+    logger.debug('Setting ready state', {path, ready: updatedGame.ready});
     setState({
       games: {
         ...currentState.games,
         [path]: updatedGame,
       },
     });
-    console.warn('[gameStore] State updated. Current ready state:', getState().games[path]?.ready);
+    logger.debug('State updated', {path, ready: getState().games[path]?.ready});
 
     // Emit events to subscribers
     if (createEvent) {
@@ -429,14 +681,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     getGame: (path: string) => {
       // Validate path following Firebase best practices
       if (!isValidFirebasePath(path)) {
-        console.error('Invalid game path in getGame', path);
+        logger.error('Invalid game path in getGame', {path});
         throw new Error(`Invalid game path: ${path}`);
       }
 
       // Validate gid extraction
       const gid = extractAndValidateGid(path);
       if (!gid) {
-        console.error('Invalid gid in game path', path);
+        logger.error('Invalid gid in game path', {path});
         throw new Error(`Invalid gid in path: ${path}`);
       }
 
@@ -445,7 +697,8 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         try {
           const gameRef = ref(db, path);
           const eventsRef = ref(db, `${path}/events`);
-          (window as any).game = {path}; // For backward compatibility
+          // For backward compatibility - expose game path on window for debugging
+          (window as unknown as {game: {path: string}}).game = {path};
 
           const newGame: GameInstance = {
             path,
@@ -468,7 +721,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
           return newGame;
         } catch (error) {
-          console.error('Error creating game refs', error);
+          logger.errorWithException('Error creating game refs', error, {path});
           throw error;
         }
       }
@@ -482,14 +735,14 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     attach: async (path: string) => {
       // Validate path following Firebase best practices
       if (!isValidFirebasePath(path)) {
-        console.error('Invalid game path in attach', path);
+        logger.error('Invalid game path in attach', {path});
         throw new Error(`Invalid game path: ${path}`);
       }
 
       // Validate gid extraction
       const gid = extractAndValidateGid(path);
       if (!gid) {
-        console.error('Invalid gid in game path', path);
+        logger.error('Invalid gid in game path', {path});
         throw new Error(`Invalid gid in path: ${path}`);
       }
 
@@ -518,7 +771,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
             },
           });
         } catch (error) {
-          console.error('Error creating game instance', error);
+          logger.errorWithException('Error creating game instance', error, {path});
           throw error;
         }
       }
@@ -545,7 +798,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         },
         (error) => {
           // Error callback following Firebase best practices
-          console.error('Error reading battleData', error);
+          logger.errorWithException('Error reading battleData', error, {path});
         }
       );
 
@@ -765,7 +1018,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     check: (path: string, scope: {r: number; c: number}[]) => {
       if (!scope || scope.length === 0) {
-        console.warn('check called with empty scope');
+        logger.warn('check called with empty scope', {path});
         return;
       }
       addEvent(path, {
@@ -780,7 +1033,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     reveal: (path: string, scope: {r: number; c: number}[]) => {
       if (!scope || scope.length === 0) {
-        console.warn('reveal called with empty scope');
+        logger.warn('reveal called with empty scope', {path});
         return;
       }
       addEvent(path, {
@@ -795,7 +1048,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     reset: (path: string, scope: {r: number; c: number}[], force: boolean) => {
       if (!scope || scope.length === 0) {
-        console.warn('reset called with empty scope');
+        logger.warn('reset called with empty scope', {path});
         return;
       }
       addEvent(path, {

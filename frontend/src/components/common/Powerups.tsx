@@ -1,8 +1,21 @@
 import './css/powerups.css';
 import powerups, {hasExpired, inUse, timeLeft} from '@crosswithfriends/shared/lib/powerups';
 import {Box, Stack} from '@mui/material';
-import _ from 'lodash';
 import React, {useEffect, useState} from 'react';
+
+const groupBy = <T,>(arr: T[], fn: (item: T) => string | number): Record<string, T[]> => {
+  return arr.reduce(
+    (acc, item) => {
+      const key = String(fn(item));
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(item);
+      return acc;
+    },
+    {} as Record<string, T[]>
+  );
+};
 
 import type {Powerup} from '../../types/battle';
 
@@ -69,7 +82,7 @@ const Powerups: React.FC<Props> = ({powerups: powerupsList, handleUsePowerup}) =
       <Box className="powerups--header" sx={{display: 'flex'}}>
         POWERUPS
       </Box>
-      {_.values(_.groupBy(powerupsList, 'type'))
+      {Object.values(groupBy(powerupsList, 'type'))
         .map((powerupGroup) => powerupGroup.filter((powerup: Powerup) => !hasExpired(powerup)))
         .map(
           (powerupGroup: Powerup[]) =>

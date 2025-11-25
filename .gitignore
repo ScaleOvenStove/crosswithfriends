@@ -23,6 +23,13 @@ node_modules
 coverage
 server/coverage
 
+# Playwright
+test-results/
+playwright-report/
+.playwright/
+playwright/.cache/
+*.trace.zip
+
 # production
 build
 

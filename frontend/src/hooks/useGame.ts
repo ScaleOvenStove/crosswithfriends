@@ -7,6 +7,8 @@ import {useCallback, useEffect} from 'react';
 
 import {useGameStore} from '../store/gameStore';
 import type {GameEvent} from '../types/events';
+import type {RawGame} from '../types/rawGame';
+import {logger} from '../utils/logger';
 
 import {useStoreSubscriptions} from './useStoreSubscriptions';
 
@@ -23,7 +25,7 @@ interface UseGameOptions {
 
 interface UseGameReturn {
   game: ReturnType<typeof useGameStore.getState>['games'][string] | undefined;
-  gameState: any | null; // Computed game state (reactive in Zustand)
+  gameState: RawGame | null; // Computed game state (reactive in Zustand)
   attach: () => Promise<void>;
   detach: () => void;
   updateCell: (
@@ -75,8 +77,8 @@ export function useGame(options: UseGameOptions): UseGameReturn {
   const ready = useGameStore((state) => {
     const gameInstance = state.games[path];
     const readyValue = gameInstance?.ready ?? false;
-    if (path && import.meta.env.DEV) {
-      console.warn('[useGame] Ready selector called for', path, 'ready:', readyValue);
+    if (path) {
+      logger.debug('Ready selector called', {path, ready: readyValue});
     }
     return readyValue;
   });

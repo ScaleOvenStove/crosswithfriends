@@ -2,7 +2,6 @@ import './css/compose.css';
 
 import redirect from '@crosswithfriends/shared/lib/redirect';
 import {Box, Stack} from '@mui/material';
-import _ from 'lodash';
 import React, {useState, useEffect, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 
@@ -95,8 +94,8 @@ const Compose: React.FC = () => {
       >
         <h3>Compositions</h3>
         <Stack direction="column">
-          {_.keys(compositions).length === 0 && 'Nothing found'}
-          {_.keys(compositions).map((cid) => (
+          {Object.keys(compositions).length === 0 && 'Nothing found'}
+          {Object.keys(compositions).map((cid) => (
             <div key={cid}>{linkToComposition(cid, compositions[cid])}</div>
           ))}
         </Stack>

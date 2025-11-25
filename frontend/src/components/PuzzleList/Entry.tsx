@@ -1,5 +1,4 @@
 import {Box, Stack, Chip, Tooltip} from '@mui/material';
-import _ from 'lodash';
 import React from 'react';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
@@ -41,9 +40,9 @@ const Entry: React.FC<EntryProps> = ({title, author, pid, status, stats, fencing
     return 'Puzzle'; // shouldn't get here???
   };
 
-  const numSolvesOld = _.size(stats?.solves || []);
+  const numSolvesOld = Object.keys(stats?.solves || {}).length;
   const numSolves = numSolvesOld + (stats?.numSolves || 0);
-  const displayName = _.compact([author.trim(), getSize()]).join(' | ');
+  const displayName = [author.trim(), getSize()].filter(Boolean).join(' | ');
 
   return (
     <Link

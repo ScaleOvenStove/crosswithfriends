@@ -7,6 +7,7 @@ import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
 import {useEffect, useRef} from 'react';
 
 import type {Powerup} from '../types/battle';
+import {logger} from '../utils/logger';
 
 interface UseGamePowerupsOptions {
   battlePath: string;
@@ -112,7 +113,7 @@ export function useGamePowerups({
         });
         onPowerupUsed?.();
       } catch (error) {
-        console.error('Error applying powerup effects', error);
+        logger.errorWithException('Error applying powerup effects', error, {powerupType: powerup.type});
       }
     }
   };

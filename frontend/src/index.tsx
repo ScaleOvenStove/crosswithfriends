@@ -14,6 +14,7 @@ import {GameError} from './components/common/GameError';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import {RoomError} from './components/common/RoomError';
 import {createAppTheme} from './theme/theme';
+import {logger} from './utils/logger';
 
 // Lazy load page components for code splitting
 const Account = lazy(() => import('./pages/Account'));
@@ -206,5 +207,5 @@ if (container) {
   const root = createRoot(container);
   root.render(<Root />);
 } else {
-  console.error('Root element not found');
+  logger.error('Root element not found');
 }

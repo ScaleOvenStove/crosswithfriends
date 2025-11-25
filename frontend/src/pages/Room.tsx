@@ -1,13 +1,26 @@
 import {initialRoomState, roomReducer} from '@crosswithfriends/shared/lib/reducers/room';
 import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 import {Box} from '@mui/material';
-import _ from 'lodash';
 import React, {useEffect, useMemo, useState} from 'react';
 import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
 import {useUpdateEffect} from 'react-use';
 
 import {useRoom} from '../hooks/useRoom';
+
+const throttle = <T extends (...args: any[]) => any>(
+  fn: T,
+  limit: number
+): ((...args: Parameters<T>) => void) => {
+  let inThrottle: boolean;
+  return (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      fn(...args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+};
 
 const ACTIVE_SECONDS_TIMEOUT = 60;
 
@@ -40,7 +53,7 @@ const Room: React.FC = () => {
   }, [rid, sendUserPing]);
 
   useUpdateEffect(() => {
-    const renewActivity = _.throttle(sendUserPing, 1000 * 10);
+    const renewActivity = throttle(sendUserPing, 1000 * 10);
     window.addEventListener('mousemove', renewActivity);
     window.addEventListener('keydown', renewActivity);
     return () => {
@@ -50,13 +63,14 @@ const Room: React.FC = () => {
   }, [rid, sendUserPing]);
   const handleAddGame = () => {
     const gameLink = window.prompt('Enter new game link');
-    const gid = _.last(gameLink?.split('/'));
+    const parts = gameLink?.split('/');
+    const gid = parts?.[parts.length - 1];
     if (gid && gid.match('[a-z0-9-]{1,15}')) {
       setGame(gid);
     }
   };
   const currentTime = useTimer();
-  const currentGame = _.first(roomState.games);
+  const currentGame = roomState.games[0];
   return (
     <Box sx={{display: 'flex', height: '100%', flexDirection: 'column'}}>
       <Helmet title={`Room ${rid}`} />
@@ -106,7 +120,7 @@ const Room: React.FC = () => {
         <div>
           In this room:{' '}
           {
-            _.filter(roomState.users, (user) => user.lastPing > currentTime - ACTIVE_SECONDS_TIMEOUT * 1000)
+            roomState.users.filter((user) => user.lastPing > currentTime - ACTIVE_SECONDS_TIMEOUT * 1000)
               .length
           }{' '}
           <Box component="span" sx={{color: '#DDDDDD'}}>

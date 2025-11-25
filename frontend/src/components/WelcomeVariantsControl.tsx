@@ -1,5 +1,5 @@
 import {Box, Stack} from '@mui/material';
-import clsx from 'clsx';
+import classNames from 'classnames';
 import React from 'react';
 import {Link} from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -52,7 +52,7 @@ export const WelcomeVariantsControl: React.FC<{
       <Link to="/">
         <Box
           component="span"
-          className={clsx({
+          className={classNames({
             selected: !props.fencing,
           })}
           sx={{
@@ -69,7 +69,7 @@ export const WelcomeVariantsControl: React.FC<{
         <Link to="/fencing">
           <Box
             component="span"
-            className={clsx({
+            className={classNames({
               selected: !!props.fencing,
             })}
             sx={{

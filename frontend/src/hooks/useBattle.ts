@@ -3,7 +3,7 @@
  * Provides battle state, actions, and event subscriptions
  */
 
-import {useEffect} from 'react';
+import {useEffect, useMemo} from 'react';
 
 import {useBattleStore} from '../store/battleStore';
 
@@ -64,75 +64,79 @@ export function useBattle(options: UseBattleOptions): UseBattleReturn {
     ready: onReady,
   });
 
-  // Return methods directly without memoization - they're not passed as dependencies
-  return {
-    battle,
-    attach: () => {
-      if (path) {
-        battleStore.attach(path);
-      }
-    },
-    detach: () => {
-      if (path) {
-        battleStore.detach(path);
-      }
-    },
-    start: () => {
-      if (path) {
-        battleStore.start(path);
-      }
-    },
-    setSolved: (team: number) => {
-      if (path) {
-        battleStore.setSolved(path, team);
-      }
-    },
-    addPlayer: (name: string, team: number) => {
-      if (path) {
-        battleStore.addPlayer(path, name, team);
-      }
-    },
-    removePlayer: (name: string, team: number) => {
-      if (path) {
-        battleStore.removePlayer(path, name, team);
-      }
-    },
-    usePowerup: (type: string, team: number) => {
-      if (path) {
-        battleStore.usePowerup(path, type, team);
-      }
-    },
-    checkPickups: (r: number, c: number, game: unknown, team: number) => {
-      if (path) {
-        battleStore.checkPickups(path, r, c, game, team);
-      }
-    },
-    countLivePickups: (cbk: (count: number) => void) => {
-      if (path) {
-        battleStore.countLivePickups(path, cbk);
-      }
-    },
-    spawnPowerups: (n: number, games: unknown[], cbk?: () => void) => {
-      if (path) {
-        battleStore.spawnPowerups(path, n, games, cbk);
-      }
-    },
-    initialize: (pid: number, bid: number, teams?: number) => {
-      if (path) {
-        battleStore.initialize(path, pid, bid, teams);
-      }
-    },
-    subscribe: (event: string, callback: (data: unknown) => void) => {
-      if (path) {
-        return battleStore.subscribe(path, event, callback);
-      }
-      return () => {}; // Return no-op unsubscribe if path is empty
-    },
-    once: (event: string, callback: (data: unknown) => void) => {
-      if (path) {
-        return battleStore.once(path, event, callback);
-      }
-      return () => {}; // Return no-op unsubscribe if path is empty
-    },
-  };
+  // Memoize the return object to provide stable references
+  // battleStore from Zustand is stable, so we only need to depend on path and battle
+  return useMemo(
+    () => ({
+      battle,
+      attach: () => {
+        if (path) {
+          battleStore.attach(path);
+        }
+      },
+      detach: () => {
+        if (path) {
+          battleStore.detach(path);
+        }
+      },
+      start: () => {
+        if (path) {
+          battleStore.start(path);
+        }
+      },
+      setSolved: (team: number) => {
+        if (path) {
+          battleStore.setSolved(path, team);
+        }
+      },
+      addPlayer: (name: string, team: number) => {
+        if (path) {
+          battleStore.addPlayer(path, name, team);
+        }
+      },
+      removePlayer: (name: string, team: number) => {
+        if (path) {
+          battleStore.removePlayer(path, name, team);
+        }
+      },
+      usePowerup: (type: string, team: number) => {
+        if (path) {
+          battleStore.usePowerup(path, type, team);
+        }
+      },
+      checkPickups: (r: number, c: number, game: unknown, team: number) => {
+        if (path) {
+          battleStore.checkPickups(path, r, c, game, team);
+        }
+      },
+      countLivePickups: (cbk: (count: number) => void) => {
+        if (path) {
+          battleStore.countLivePickups(path, cbk);
+        }
+      },
+      spawnPowerups: (n: number, games: unknown[], cbk?: () => void) => {
+        if (path) {
+          battleStore.spawnPowerups(path, n, games, cbk);
+        }
+      },
+      initialize: (pid: number, bid: number, teams?: number) => {
+        if (path) {
+          battleStore.initialize(path, pid, bid, teams);
+        }
+      },
+      subscribe: (event: string, callback: (data: unknown) => void) => {
+        if (path) {
+          return battleStore.subscribe(path, event, callback);
+        }
+        return () => {}; // Return no-op unsubscribe if path is empty
+      },
+      once: (event: string, callback: (data: unknown) => void) => {
+        if (path) {
+          return battleStore.once(path, event, callback);
+        }
+        return () => {}; // Return no-op unsubscribe if path is empty
+      },
+    }),
+    [battle, path, battleStore]
+  );
 }

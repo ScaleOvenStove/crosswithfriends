@@ -3,7 +3,6 @@ import './css/listView.css';
 import {lazy} from '@crosswithfriends/shared/lib/jsUtils';
 import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {toCellIndex} from '@crosswithfriends/shared/types';
-import _ from 'lodash';
 import React, {useMemo, useCallback} from 'react';
 
 import Cell from '../Grid/Cell';
@@ -121,13 +120,7 @@ const ListView: React.FC<ListViewProps> = (props) => {
 
   const getPickup = useCallback(
     (r: number, c: number) => {
-      return (
-        pickups &&
-        _.get(
-          _.find(pickups, ({i, j, pickedUp}) => i === r && j === c && !pickedUp),
-          'type'
-        )
-      );
+      return pickups && pickups.find(({i, j, pickedUp}) => i === r && j === c && !pickedUp)?.type;
     },
     [pickups]
   );
@@ -200,7 +193,7 @@ const ListView: React.FC<ListViewProps> = (props) => {
           pickupType: getPickup(r, c),
           cellStyle,
         };
-        if (_.isNumber(cell.parents?.across)) {
+        if (typeof cell.parents?.across === 'number') {
           const acrossIdx = cell.parents?.across as number;
           cluesCells.across[acrossIdx] = cluesCells.across[acrossIdx] || [];
           cluesCells.across[acrossIdx].push({
@@ -210,7 +203,7 @@ const ListView: React.FC<ListViewProps> = (props) => {
             referenced: isReferenced(r, c, 'across'),
           });
         }
-        if (_.isNumber(cell.parents?.down)) {
+        if (typeof cell.parents?.down === 'number') {
           const downIdx = cell.parents?.down as number;
           cluesCells.down[downIdx] = cluesCells.down[downIdx] || [];
           cluesCells.down[downIdx].push({

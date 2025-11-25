@@ -3,6 +3,8 @@
  * Consolidates all environment variables, API URLs, feature flags, and app configuration
  */
 
+import {logger} from '../utils/logger';
+
 interface FirebaseConfig {
   apiKey: string;
   authDomain: string;
@@ -66,9 +68,10 @@ if (
   isDevelopment &&
   import.meta.env.VITE_DISALLOW_HTTPS_IN_DEV === '1'
 ) {
-  console.warn(
-    '⚠️ HTTPS detected in development mode. This may cause issues with local servers and WebSocket connections. ' +
-      'Consider using HTTP for local development. To disable this warning, remove VITE_DISALLOW_HTTPS_IN_DEV from your environment.'
+  logger.warn(
+    'HTTPS detected in development mode. This may cause issues with local servers and WebSocket connections. ' +
+      'Consider using HTTP for local development. To disable this warning, remove VITE_DISALLOW_HTTPS_IN_DEV from your environment.',
+    {protocol: window.location.protocol}
   );
 }
 

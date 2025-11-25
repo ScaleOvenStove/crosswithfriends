@@ -1,5 +1,5 @@
 import {ThemeProvider, createTheme} from '@mui/material';
-import {renderHook} from '@testing-library/react';
+import {renderHook, act} from '@testing-library/react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 
 import useBreakpoints from '../../hooks/useBreakpoints';
@@ -89,7 +89,9 @@ describe('useBreakpoints', () => {
     });
 
     const firstResult = result.current;
-    rerender();
+    act(() => {
+      rerender();
+    });
     const secondResult = result.current;
 
     // Should return same object reference if values haven't changed
