@@ -1,7 +1,7 @@
 import {describe, it, expect, vi} from 'vitest';
 import formatConverter from '../format';
 import Puz from 'puzjs';
-import GridWrapper from '../wrappers/GridWrapper';
+import GridWrapper from '../wrappers/GridWrapper.js';
 
 // Mock Puz library
 vi.mock('puzjs', () => ({
