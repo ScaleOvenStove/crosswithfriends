@@ -272,16 +272,18 @@ describe('ApiClient', () => {
           })
       );
 
-      const promise = apiClient.get('/test', {timeout: 1000, retries: 0});
+      // Create the request promise
+      const requestPromise = apiClient.get('/test', {timeout: 1000, retries: 0});
+
+      // Suppress unhandled rejection warnings for this test
+      // The rejection is handled by expect().rejects but timing with fake timers causes warnings
+      requestPromise.catch(() => {});
 
       // Advance timers to trigger timeout
       await vi.advanceTimersByTimeAsync(1000);
 
-      try {
-        await promise;
-      } catch (error) {
-        expect(error).toBeDefined();
-      }
+      // The request should reject with timeout error
+      await expect(requestPromise).rejects.toThrow('Request timeout after 1000ms');
 
       vi.useRealTimers();
     });
