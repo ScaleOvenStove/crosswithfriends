@@ -473,5 +473,229 @@ describe('Game Model', () => {
       // The error case would require a more complex scenario
       await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).resolves.toBe(mockGid);
     });
+
+    describe('Old format puzzle support (backward compatibility)', () => {
+      it('should convert old format puzzle with grid field to ipuz format', async () => {
+        const mockGid = 'test-gid-123';
+        const mockPid = 'test-pid-456';
+        const mockPuzzle = {
+          grid: [
+            ['.', 'A', 'B'],
+            ['.', 'C', 'D'],
+          ],
+          info: {
+            title: 'Old Format Puzzle',
+            author: 'Old Author',
+            copyright: '© 2024',
+            description: 'Old description',
+            type: 'Daily Puzzle',
+          },
+          clues: {
+            across: ['', '1', 'First clue', '2', 'Second clue'],
+            down: ['', '3', 'Third clue', '4', 'Fourth clue'],
+          },
+          circles: [],
+          shades: [],
+        };
+
+        (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+        (pool.query as Mock).mockResolvedValue({});
+
+        const result = await gameModel.addInitialGameEvent(mockGid, mockPid);
+
+        expect(puzzleModel.getPuzzle).toHaveBeenCalledWith(mockPid);
+        expect(pool.query).toHaveBeenCalled();
+        expect(result).toBe(mockGid);
+
+        // Verify the event was created with correct metadata from info object
+        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const event = callArgs[4];
+        expect(event.params.game.info.title).toBe('Old Format Puzzle');
+        expect(event.params.game.info.author).toBe('Old Author');
+        expect(event.params.game.info.copyright).toBe('© 2024');
+        expect(event.params.game.info.description).toBe('Old description');
+      });
+
+      it('should handle old format puzzle with circles and shades', async () => {
+        const mockGid = 'test-gid-123';
+        const mockPid = 'test-pid-456';
+        const mockPuzzle = {
+          grid: [
+            ['.', 'A'],
+            ['.', 'B'],
+          ],
+          info: {
+            title: 'Puzzle with Circles',
+            author: 'Test Author',
+          },
+          clues: {
+            across: ['', '1', 'Clue 1'],
+            down: ['', '2', 'Clue 2'],
+          },
+          circles: [1], // Index 1 (row 0, col 1)
+          shades: [3], // Index 3 (row 1, col 1)
+        };
+
+        (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+        (pool.query as Mock).mockResolvedValue({});
+
+        await gameModel.addInitialGameEvent(mockGid, mockPid);
+
+        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const event = callArgs[4];
+        expect(event.params.game.circles).toBeDefined();
+        expect(event.params.game.circles).toContain(1);
+        expect(event.params.game.shades).toBeDefined();
+        expect(event.params.game.shades).toContain(3);
+      });
+
+      it('should handle old format puzzle with missing optional fields', async () => {
+        const mockGid = 'test-gid-123';
+        const mockPid = 'test-pid-456';
+        const mockPuzzle = {
+          grid: [
+            ['.', 'A'],
+            ['.', 'B'],
+          ],
+          info: {
+            title: 'Minimal Puzzle',
+            // Missing author, copyright, description
+          },
+          clues: {
+            across: ['', '1', 'Clue'],
+            down: [],
+          },
+          // Missing circles and shades arrays
+        };
+
+        (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+        (pool.query as Mock).mockResolvedValue({});
+
+        const result = await gameModel.addInitialGameEvent(mockGid, mockPid);
+
+        expect(result).toBe(mockGid);
+        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const event = callArgs[4];
+        expect(event.params.game.info.title).toBe('Minimal Puzzle');
+        expect(event.params.game.info.author).toBe('');
+        expect(event.params.game.info.copyright).toBe('');
+        expect(event.params.game.info.description).toBe('');
+        // When circles/shades arrays are empty, they are set to undefined to save space
+        expect(event.params.game.circles).toBeUndefined();
+        expect(event.params.game.shades).toBeUndefined();
+      });
+
+      it('should throw error for old format puzzle with empty grid', async () => {
+        const mockGid = 'test-gid-123';
+        const mockPid = 'test-pid-456';
+        const mockPuzzle = {
+          grid: [],
+          info: {
+            title: 'Empty Puzzle',
+            author: 'Test Author',
+          },
+          clues: {
+            across: [],
+            down: [],
+          },
+        };
+
+        (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+
+        await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow('empty grid array');
+      });
+
+      it('should throw error for puzzle with unrecognized format', async () => {
+        const mockGid = 'test-gid-123';
+        const mockPid = 'test-pid-456';
+        const mockPuzzle = {
+          // Neither grid nor solution field
+          title: 'Invalid Puzzle',
+          author: 'Test Author',
+        };
+
+        (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+
+        await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow('unrecognized format');
+      });
+
+      it('should use old format when both grid and solution exist (old format checked first)', async () => {
+        const mockGid = 'test-gid-123';
+        const mockPid = 'test-pid-456';
+        const mockPuzzle = {
+          // Has both formats - should use old format (checked first)
+          grid: [
+            ['.', 'X'],
+            ['.', 'Y'],
+          ],
+          solution: [
+            ['.', 'A'],
+            ['.', 'B'],
+          ],
+          puzzle: [
+            [null, 1],
+            [null, 2],
+          ],
+          info: {
+            title: 'Old Format Puzzle',
+            author: 'Old Author',
+          },
+          clues: {
+            across: ['', '1', 'Old clue'],
+            down: [],
+          },
+        };
+
+        (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+        (pool.query as Mock).mockResolvedValue({});
+
+        await gameModel.addInitialGameEvent(mockGid, mockPid);
+
+        // Verify it used old format (grid with 'X' and 'Y', not 'A' and 'B')
+        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const event = callArgs[4];
+        // The solution should be from old format grid, not ipuz solution
+        expect(event.params.game.solution).toEqual([
+          ['.', 'X'],
+          ['.', 'Y'],
+        ]);
+        expect(event.params.game.info.title).toBe('Old Format Puzzle');
+      });
+
+      it('should handle old format puzzle with sparse clue arrays', async () => {
+        const mockGid = 'test-gid-123';
+        const mockPid = 'test-pid-456';
+        const mockPuzzle = {
+          grid: [
+            ['.', 'A', 'B'],
+            ['.', 'C', 'D'],
+          ],
+          info: {
+            title: 'Sparse Clues Puzzle',
+            author: 'Test Author',
+          },
+          clues: {
+            // Sparse array: index 0 is empty, index 1 has clue, etc.
+            across: ['', '1', 'First across', '2', 'Second across'],
+            down: ['', '3', 'First down', '4', 'Second down'],
+          },
+          circles: [],
+          shades: [],
+        };
+
+        (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+        (pool.query as Mock).mockResolvedValue({});
+
+        await gameModel.addInitialGameEvent(mockGid, mockPid);
+
+        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const event = callArgs[4];
+        // Clues should be converted and aligned to grid
+        expect(event.params.game.clues.across).toBeDefined();
+        expect(event.params.game.clues.down).toBeDefined();
+        expect(Array.isArray(event.params.game.clues.across)).toBe(true);
+        expect(Array.isArray(event.params.game.clues.down)).toBe(true);
+      });
+    });
   });
 });
