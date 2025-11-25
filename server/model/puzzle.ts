@@ -153,7 +153,11 @@ const puzzleValidator = Joi.object({
   copyright: string().optional(),
   notes: string().optional(),
   solution: Joi.array()
-    .items(Joi.array().items(Joi.alternatives().try(string(), Joi.valid(null, '#'))).min(1))
+    .items(
+      Joi.array()
+        .items(Joi.alternatives().try(string(), Joi.valid(null, '#')))
+        .min(1)
+    )
     .min(1)
     .required(),
   puzzle: Joi.array()

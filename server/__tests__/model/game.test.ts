@@ -616,9 +616,7 @@ describe('Game Model', () => {
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
 
-        await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow(
-          'unrecognized format'
-        );
+        await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow('unrecognized format');
       });
 
       it('should use old format when both grid and solution exist (old format checked first)', async () => {
