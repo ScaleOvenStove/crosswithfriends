@@ -55,13 +55,13 @@ export default [
         '@typescript-eslint/parser': ['.ts'],
       },
       'import/resolver': {
-        node: {
-          extensions: ['.js', '.ts', '.json'],
-          moduleDirectory: ['node_modules', '../shared'],
-        },
         typescript: {
           alwaysTryTypes: true,
           project: './tsconfig.json',
+        },
+        node: {
+          extensions: ['.js', '.ts', '.json'],
+          paths: ['../shared'],
         },
       },
     },
@@ -109,7 +109,12 @@ export default [
           },
         },
       ],
-      'import/no-unresolved': 'error',
+      'import/no-unresolved': [
+        'error',
+        {
+          ignore: ['^@crosswithfriends/shared'],
+        },
+      ],
       'import/extensions': [
         'error',
         'ignorePackages',
