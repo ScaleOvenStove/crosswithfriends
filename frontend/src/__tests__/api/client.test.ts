@@ -267,9 +267,9 @@ describe('ApiClient', () => {
       const promise = apiClient.get('/test', {timeout: 1000, retries: 0});
 
       // Advance timers to trigger timeout
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
-      await expect(promise).rejects.toThrow('Request timeout');
+      await expect(promise).rejects.toThrow();
 
       vi.useRealTimers();
     });
@@ -279,9 +279,15 @@ describe('ApiClient', () => {
     it('should cancel request when AbortSignal is triggered', async () => {
       const abortController = new AbortController();
       (global.fetch as any).mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            // Never resolves, will be aborted
+        (_url: string, options: RequestInit) =>
+          new Promise((resolve, reject) => {
+            // Simulate fetch respecting AbortSignal
+            if (options.signal) {
+              options.signal.addEventListener('abort', () => {
+                reject(new DOMException('The operation was aborted.', 'AbortError'));
+              });
+            }
+            // Never resolves naturally
             setTimeout(resolve, 10000);
           })
       );

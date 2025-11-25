@@ -26,12 +26,8 @@ ALTER TABLE public.puzzles
 GRANT ALL ON TABLE public.puzzles TO dfacadmin;
 
 -- trigram index for ILIKE %foo% searches https://about.gitlab.com/blog/2016/03/18/fast-search-using-postgresql-trigram-indexes/
--- Supports both ipuz format (content->>'title') and old format (content->'info'->>'title')
 CREATE INDEX puzzle_name_and_title_trigrams
-    ON public.puzzles USING GIST ( (
-        COALESCE(content ->> 'title', content -> 'info' ->> 'title', '') || ' ' ||
-        COALESCE(content ->> 'author', content -> 'info' ->> 'author', '')
-    ) gist_trgm_ops);
+    ON public.puzzles USING GIST ( ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) gist_trgm_ops);
 
 CREATE INDEX puzzle_pid_numeric_desc
     ON public.puzzles USING btree

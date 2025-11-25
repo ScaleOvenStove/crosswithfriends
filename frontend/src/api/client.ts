@@ -189,6 +189,31 @@ class ApiClient {
       const timeoutPromise = ApiClient.createTimeout(timeout, signal);
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
+      // Check if response has error status that should trigger retry
+      if (!response.ok) {
+        const error = new Error(`Request failed: ${response.status} ${response.statusText}`) as ApiError;
+        error.status = response.status;
+        error.statusText = response.statusText;
+
+        // Apply error interceptors
+        let processedError = error;
+        for (const interceptor of this.errorInterceptors) {
+          processedError = await interceptor(processedError);
+        }
+
+        // Retry logic for 5xx errors
+        const retries = processedConfig.retries ?? this.defaultRetries;
+        const retryDelay = processedConfig.retryDelay ?? this.defaultRetryDelay;
+
+        if (attempt < retries && ApiClient.isRetryableError(processedError)) {
+          const delay = ApiClient.calculateRetryDelay(attempt, retryDelay);
+          await ApiClient.sleep(delay);
+          return this.executeRequest(processedConfig, attempt + 1);
+        }
+
+        throw processedError;
+      }
+
       // Apply response interceptors
       let processedResponse = response;
       for (const interceptor of this.responseInterceptors) {
@@ -199,10 +224,12 @@ class ApiClient {
     } catch (error) {
       const apiError = error as ApiError;
 
-      // Apply error interceptors
+      // Apply error interceptors if not already applied
       let processedError = apiError;
-      for (const interceptor of this.errorInterceptors) {
-        processedError = await interceptor(processedError);
+      if (!('status' in apiError) || apiError.status === undefined) {
+        for (const interceptor of this.errorInterceptors) {
+          processedError = await interceptor(processedError);
+        }
       }
 
       // Retry logic

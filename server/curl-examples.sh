@@ -36,7 +36,6 @@ echo "4. Increment GID Counter"
 echo "------------------------"
 curl -X POST "$BASE_URL/counters/gid" \
   -H "Content-Type: application/json" \
-  -d '{}' \
   -w "\nStatus: %{http_code}\n\n"
 
 # Increment PID counter
@@ -44,14 +43,13 @@ echo "5. Increment PID Counter"
 echo "------------------------"
 curl -X POST "$BASE_URL/counters/pid" \
   -H "Content-Type: application/json" \
-  -d '{}' \
   -w "\nStatus: %{http_code}\n\n"
 
 # Create a game (requires valid pid)
 echo "6. Create Game (requires valid pid - may fail if pid doesn't exist)"
 echo "-------------------------------------------------------------------"
-GID=$(curl -s -X POST "$BASE_URL/counters/gid" -H "Content-Type: application/json" -d '{}' | grep -o '"gid":"[^"]*"' | cut -d'"' -f4)
-PID=$(curl -s -X POST "$BASE_URL/counters/pid" -H "Content-Type: application/json" -d '{}' | grep -o '"pid":"[^"]*"' | cut -d'"' -f4)
+GID=$(curl -s -X POST "$BASE_URL/counters/gid" -H "Content-Type: application/json" | grep -o '"gid":"[^"]*"' | cut -d'"' -f4)
+PID=$(curl -s -X POST "$BASE_URL/counters/pid" -H "Content-Type: application/json" | grep -o '"pid":"[^"]*"' | cut -d'"' -f4)
 echo "Using GID: $GID, PID: $PID"
 curl -X POST "$BASE_URL/game" \
   -H "Content-Type: application/json" \
