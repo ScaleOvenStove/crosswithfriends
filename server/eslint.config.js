@@ -61,6 +61,7 @@ export default [
         },
         node: {
           extensions: ['.js', '.ts', '.json'],
+          paths: ['../shared'],
         },
       },
     },
@@ -108,7 +109,12 @@ export default [
           },
         },
       ],
-      'import/no-unresolved': 'error',
+      'import/no-unresolved': [
+        'error',
+        {
+          ignore: ['^@crosswithfriends/shared'],
+        },
+      ],
       'import/extensions': [
         'error',
         'ignorePackages',

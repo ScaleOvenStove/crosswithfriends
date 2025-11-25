@@ -1,6 +1,6 @@
 // ============= Server Values ===========
 
-import type {RoomEvent} from '@shared/roomEvents';
+import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 import {Server as SocketIOServer} from 'socket.io';
 
 import type {GameEvent} from './model/game.js';

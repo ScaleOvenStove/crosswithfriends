@@ -1,4 +1,4 @@
-import type {IncrementGidResponse, IncrementPidResponse} from '@shared/types';
+import type {IncrementGidResponse, IncrementPidResponse} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
 import {incrementGid, incrementPid} from '../model/counters.js';

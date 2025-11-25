@@ -1,4 +1,4 @@
-import type {InfoJson} from '@shared/types';
+import type {InfoJson} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
 import {getGameInfo} from '../model/game.js';

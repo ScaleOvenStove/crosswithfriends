@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeEach, vi, type Mock} from 'vitest';
-import {RoomEventType} from '@shared/roomEvents';
+import {RoomEventType} from '@crosswithfriends/shared/roomEvents';
 import * as roomModel from '../../model/room.js';
 import {pool} from '../../model/pool.js';
 
