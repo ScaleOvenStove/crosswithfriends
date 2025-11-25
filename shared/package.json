@@ -2,16 +2,18 @@
   "name": "@crosswithfriends/shared",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && fix-esm-import-path dist",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },
   "devDependencies": {
     "@vitest/ui": "^4.0.10",
+    "fix-esm-import-path": "^1.10.3",
     "jsdom": "^25.0.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.10"

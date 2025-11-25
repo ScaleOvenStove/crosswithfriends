@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-cycle
-import GridWrapper from './wrappers/GridWrapper';
+import GridWrapper from './wrappers/GridWrapper.js';
 
 export const getOppositeDirection = (direction) =>
   ({

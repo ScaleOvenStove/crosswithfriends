@@ -1,4 +1,4 @@
-import {reduce as gameReducer} from '../reducers/game';
+import {reduce as gameReducer} from '../reducers/game.js';
 
 const MEMO_RATE = 10;
 

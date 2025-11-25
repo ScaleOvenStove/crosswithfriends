@@ -10,8 +10,8 @@ import {
   makeEmptyClues,
   allNums,
   getReferencedClues,
-} from '../gameUtils';
-import GridWrapper from '../wrappers/GridWrapper';
+} from '../gameUtils.js';
+import GridWrapper from '../wrappers/GridWrapper.js';
 
 describe('getOppositeDirection', () => {
   it('should return "down" for "across"', () => {

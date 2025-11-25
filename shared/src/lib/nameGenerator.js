@@ -1,4 +1,4 @@
-import {nameWords} from './names';
+import {nameWords} from './names.js';
 
 const {
   adjectives: rawAdjectiveList,

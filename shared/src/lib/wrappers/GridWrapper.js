@@ -1,6 +1,6 @@
 /* eslint no-continue: "off", no-underscore-dangle: "off" */
 // eslint-disable-next-line import/no-cycle
-import * as gameUtils from '../gameUtils';
+import * as gameUtils from '../gameUtils.js';
 
 function safe_while(condition, step, cap = 500) {
   while (condition() && cap >= 0) {
