@@ -55,12 +55,13 @@ export default [
         '@typescript-eslint/parser': ['.ts'],
       },
       'import/resolver': {
+        node: {
+          extensions: ['.js', '.ts', '.json'],
+          moduleDirectory: ['node_modules', '../shared'],
+        },
         typescript: {
           alwaysTryTypes: true,
           project: './tsconfig.json',
-        },
-        node: {
-          extensions: ['.js', '.ts', '.json'],
         },
       },
     },
