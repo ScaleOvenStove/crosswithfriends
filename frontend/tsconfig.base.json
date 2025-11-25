@@ -19,6 +19,9 @@
     "incremental": true,
     "verbatimModuleSyntax": true,
     "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": false,
     "types": ["vite/client"]
   },
   "include": ["src"]

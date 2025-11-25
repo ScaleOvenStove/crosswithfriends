@@ -1,6 +1,6 @@
 import {makeGrid} from '@crosswithfriends/shared/lib/gameUtils';
+import {convertIpuzClues} from '@crosswithfriends/shared/lib/puzzleUtils';
 import {ref, onValue, get, set, query, orderByChild, equalTo, limitToLast} from 'firebase/database';
-import _ from 'lodash';
 import {create} from 'zustand';
 
 import type {PuzzleData, PuzzleSolveStats, GameListEntry} from '../types/puzzle';
@@ -147,7 +147,7 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
       get(statsRef).then((snapshot) => {
         const statsData = snapshot.val() as {solves?: Record<string, unknown>} | null;
         if (statsData?.solves) {
-          const numSolves = _.keys(statsData.solves).length;
+          const numSolves = Object.keys(statsData.solves).length;
           set(ref(db, `${puzzlelistPath}/stats/numSolves`), numSolves);
         }
       });
@@ -190,26 +190,8 @@ export const usePuzzleStore = create<PuzzleStore>((setState, getState) => {
       );
 
       // Convert ipuz clues format
-      const convertClues = (clueArray: any[]): string[] => {
-        const result: string[] = [];
-        clueArray.forEach((item) => {
-          if (Array.isArray(item) && item.length >= 2) {
-            const num = parseInt(item[0], 10);
-            if (!isNaN(num)) {
-              result[num] = item[1];
-            }
-          } else if (item && typeof item === 'object' && item.number && item.clue) {
-            const num = parseInt(item.number, 10);
-            if (!isNaN(num)) {
-              result[num] = item.clue;
-            }
-          }
-        });
-        return result;
-      };
-
-      const acrossClues = convertClues(ipuz.clues?.across || []);
-      const downClues = convertClues(ipuz.clues?.down || []);
+      const acrossClues = convertIpuzClues(ipuz.clues?.across || []);
+      const downClues = convertIpuzClues(ipuz.clues?.down || []);
 
       const gridObject = makeGrid(solution);
       const clues = gridObject.alignClues({across: acrossClues, down: downClues});

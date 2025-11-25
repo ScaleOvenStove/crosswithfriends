@@ -1,4 +1,18 @@
-import _ from 'lodash';
+const flatten = (arr) => arr.flat();
+const range = (length) => Array.from({length}, (_, i) => i);
+const orderBy = (arr, keys, orders = []) => {
+  return arr.slice().sort((a, b) => {
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const order = orders[i] === 'desc' ? -1 : 1;
+      const aVal = typeof key === 'function' ? key(a) : a[key];
+      const bVal = typeof key === 'function' ? key(b) : b[key];
+      if (aVal < bVal) return -order;
+      if (aVal > bVal) return order;
+    }
+    return 0;
+  });
+};
 
 const BEAM_SEARCH_PARAMS = {
   K: 100,
@@ -8,8 +22,8 @@ const BEAM_SEARCH_PARAMS = {
 const isCandidateComplete = (candidate) => candidate.isComplete();
 
 const getChildrenCandidates = (candidate, scoredWordlist) => {
-  const cells = _.range(candidate.width * candidate.height).filter((cell) => !candidate.isCellComplete(cell));
-  const sortedCells = _.orderBy(
+  const cells = range(candidate.width * candidate.height).filter((cell) => !candidate.isCellComplete(cell));
+  const sortedCells = orderBy(
     cells.map((cell) => ({
       cell,
       score: candidate.computeCellHeuristic(cell, scoredWordlist),
@@ -25,7 +39,7 @@ const getChildrenCandidates = (candidate, scoredWordlist) => {
 };
 
 const takeBestCandidates = (candidates, scoredWordlist, K = BEAM_SEARCH_PARAMS.K) => {
-  const sortedCandidates = _.orderBy(
+  const sortedCandidates = orderBy(
     candidates.map((candidate) => ({
       candidate,
       score: candidate.computeHeuristic(scoredWordlist),
@@ -46,10 +60,10 @@ export default (initialState, scoredWordlist) => {
     bestCandidate = candidates[0];
     console.log('step', step, bestCandidate.computeHeuristic(scoredWordlist, true));
     console.log(bestCandidate.gridString.join(''));
-    const cells = _.range(bestCandidate.width * bestCandidate.height).filter(
+    const cells = range(bestCandidate.width * bestCandidate.height).filter(
       (cell) => !bestCandidate.isCellComplete(cell)
     );
-    const sortedCells = _.orderBy(
+    const sortedCells = orderBy(
       cells.map((cell) => ({
         cell,
         score: bestCandidate.computeCellHeuristic(cell, scoredWordlist),
@@ -62,7 +76,7 @@ export default (initialState, scoredWordlist) => {
     // console.log('candidates', candidates);
     // console.log('scores', _.map(candidates, candidate => candidate.computeHeuristic(scoredWordlist)));
     let done = true;
-    const nextCandidates = _.flatten(
+    const nextCandidates = flatten(
       candidates.map((candidate) => {
         if (isCandidateComplete(candidate)) {
           return [candidate];
@@ -81,7 +95,7 @@ export default (initialState, scoredWordlist) => {
     candidates = takeBestCandidates(nextCandidates, scoredWordlist, BEAM_SEARCH_PARAMS.K);
   }
   console.log('candidates', candidates);
-  const scores = _.map(candidates, (candidate) => candidate.computeHeuristic(scoredWordlist));
+  const scores = candidates.map((candidate) => candidate.computeHeuristic(scoredWordlist));
   console.log('scores');
   console.log(scores.filter((score) => score > 0).length, 'good candidates');
   console.log('final candidate', bestCandidate);

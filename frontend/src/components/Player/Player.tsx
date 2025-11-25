@@ -324,10 +324,8 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
   // Update ref with latest setSelected function
   const setSelectedRefValue = setSelected;
   useEffect(() => {
-    if (setSelectedRef.current !== setSelectedRefValue) {
-      setSelectedRef.current = setSelectedRefValue;
-    }
-  });
+    setSelectedRef.current = setSelectedRefValue;
+  }, [setSelectedRefValue]);
 
   const handlePing = useCallback(
     (r: number, c: number) => {

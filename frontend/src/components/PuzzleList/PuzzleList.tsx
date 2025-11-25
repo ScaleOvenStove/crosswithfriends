@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import React, {useMemo} from 'react';
 
 import './css/puzzleList.css';
@@ -33,11 +32,11 @@ const PuzzleList: React.FC<PuzzleListProps> = ({
       }
     }
 
-    _.keys(userHistory).forEach((gid) => {
+    Object.keys(userHistory).forEach((gid) => {
       if (gid === 'solo') {
-        _.keys(userHistory.solo).forEach((uid) => {
+        Object.keys(userHistory.solo).forEach((uid) => {
           const soloGames = userHistory.solo[uid];
-          _.keys(soloGames).forEach((pid) => {
+          Object.keys(soloGames).forEach((pid) => {
             const {solved} = soloGames[pid];
             setStatus(pid, solved);
           });

@@ -1,6 +1,8 @@
 import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {useRef, useMemo, useCallback} from 'react';
 
+import {logger} from '../../utils/logger';
+
 function safe_while(condition: () => boolean, step: () => void, cap = 500) {
   while (condition() && cap >= 0) {
     step();
@@ -430,7 +432,7 @@ export function useGridControls(
   const handleAction = useCallback(
     (action: string, shiftKey?: boolean) => {
       if (!(action in actions)) {
-        console.error('illegal action', action);
+        logger.error('Illegal action', {action});
         return;
       }
       actions[action as keyof typeof actions](shiftKey);

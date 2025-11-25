@@ -11,10 +11,41 @@ import {downloadBlob, isMobile} from '@crosswithfriends/shared/lib/jsUtils';
 import redirect from '@crosswithfriends/shared/lib/redirect';
 import ComposeHistoryWrapper from '@crosswithfriends/shared/lib/wrappers/ComposeHistoryWrapper';
 import {Box, Stack} from '@mui/material';
-import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
+
+type DebouncedFunc<T extends (...args: any[]) => any> = {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+};
+
+const debounce = <T extends (...args: any[]) => any>(
+  fn: T,
+  delay: number = 0,
+  options?: {leading?: boolean}
+): DebouncedFunc<T> => {
+  let timeout: NodeJS.Timeout;
+  let hasInvoked = false;
+  const debounced = (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    if (options?.leading && !hasInvoked) {
+      fn(...args);
+      hasInvoked = true;
+    }
+    timeout = setTimeout(() => {
+      if (!options?.leading || hasInvoked) {
+        fn(...args);
+      }
+      hasInvoked = false;
+    }, delay);
+  };
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+    hasInvoked = false;
+  };
+  return debounced;
+};
 
 import actions from '../actions';
 import EditableSpan from '../components/common/EditableSpan';
@@ -61,10 +92,10 @@ const Composition: React.FC = () => {
     null
   );
 
-  const handleUpdate = useRef<_.DebouncedFunc<() => void>>();
+  const handleUpdate = useRef<DebouncedFunc<() => void>>();
   useEffect(() => {
     if (!handleUpdate.current) {
-      handleUpdate.current = _.debounce(
+      handleUpdate.current = debounce(
         () => {
           forceUpdate({});
         },
@@ -77,10 +108,10 @@ const Composition: React.FC = () => {
   }, []);
 
   const handleChangeRef =
-    useRef<_.DebouncedFunc<(options?: {isEdit?: boolean; isPublished?: boolean}) => void>>();
+    useRef<DebouncedFunc<(options?: {isEdit?: boolean; isPublished?: boolean}) => void>>();
   useEffect(() => {
     if (!handleChangeRef.current) {
-      handleChangeRef.current = _.debounce(
+      handleChangeRef.current = debounce(
         ({isEdit = true, isPublished = false}: {isEdit?: boolean; isPublished?: boolean} = {}) => {
           if (!historyWrapperRef.current || !user.id) return;
           const comp = historyWrapperRef.current.getSnapshot();
@@ -224,8 +255,8 @@ const Composition: React.FC = () => {
       const oldGrid = composition.grid;
       const oldRows = oldGrid.length;
       const oldCols = oldGrid[0].length;
-      const newGrid = _.range(newRows).map((i) =>
-        _.range(newCols).map((j) => (i < oldRows && j < oldCols ? oldGrid[i][j] : {value: ''}))
+      const newGrid = Array.from({length: newRows}, (_, i) =>
+        Array.from({length: newCols}, (_, j) => (i < oldRows && j < oldCols ? oldGrid[i][j] : {value: ''}))
       );
       compositionHook.setGrid(newGrid);
     },
@@ -281,7 +312,7 @@ const Composition: React.FC = () => {
 
   const otherCursors = useMemo(() => {
     if (!composition || !user.id) return [];
-    return _.filter(composition.cursors, ({id}: {id: string}) => id !== user.id);
+    return composition.cursors.filter(({id}: {id: string}) => id !== user.id);
   }, [composition, user.id]);
 
   if (!compositionHook.ready || !composition) {

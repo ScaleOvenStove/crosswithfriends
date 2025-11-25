@@ -11,7 +11,7 @@ type TestFixtures = {
 };
 
 export const test = base.extend<TestFixtures>({
-  mockSocket: async (_fixtures, use) => {
+  mockSocket: async ({}, use) => {
     const socket = createMockSocket();
     // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(socket);

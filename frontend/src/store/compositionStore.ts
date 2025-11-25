@@ -1,5 +1,4 @@
 import {ref, onChildAdded, off, push, set} from 'firebase/database';
-import _ from 'lodash';
 import {create} from 'zustand';
 
 import type {
@@ -8,6 +7,7 @@ import type {
   CompositionImportContents,
   CompositionGrid,
 } from '../types/composition';
+import {logger} from '../utils/logger';
 
 import {db, SERVER_TIME, type DatabaseReference} from './firebase';
 
@@ -61,7 +61,7 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in subscription callback for ${event}:`, error);
+          logger.errorWithException(`Error in subscription callback for ${event}`, error, {path});
         }
       });
     }
@@ -368,8 +368,8 @@ export const useCompositionStore = create<CompositionStore>((setState, getState)
           title: 'Untitled',
           author: 'Anonymous',
         },
-        grid = _.range(7).map(() =>
-          _.range(7).map(() => ({
+        grid = Array.from({length: 7}, () =>
+          Array.from({length: 7}, () => ({
             value: '',
           }))
         ),

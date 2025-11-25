@@ -57,3 +57,31 @@ export const mockRunTransaction = mockFirebaseDatabase.runTransaction;
 export const mockOnValue = mockFirebaseDatabase.onValue;
 export const mockOff = mockFirebaseDatabase.off;
 export const mockServerTimestamp = mockFirebaseDatabase.serverTimestamp;
+
+// Additional Firebase mocks for more complex operations
+export const mockPush = vi.fn(async (_ref: unknown) => ({
+  key: 'mock-key',
+}));
+
+export const mockRemove = vi.fn(async () => {});
+
+export const mockOnChildAdded = vi.fn((_ref: unknown, _callback: (snapshot: unknown) => void) => {
+  // Return unsubscribe function
+  return () => {};
+});
+
+export const mockQuery = vi.fn((_ref: unknown) => ({
+  path: 'mock-query',
+}));
+
+export const mockOrderByChild = vi.fn((_field: string) => ({
+  path: 'mock-order',
+}));
+
+export const mockEqualTo = vi.fn((_value: unknown) => ({
+  path: 'mock-equal',
+}));
+
+export const mockLimitToLast = vi.fn((_limit: number) => ({
+  path: 'mock-limit',
+}));

@@ -1,3 +1,5 @@
+import {logger} from './utils/logger';
+
 const idKey = 'dfac-id';
 
 function genId(): string {
@@ -22,7 +24,7 @@ function getLocalId(): string {
     cachedId = id;
     return id;
   }
-  console.log('local storage not detected , unable to assign dfac-id');
+  logger.warn('Local storage not detected, unable to assign dfac-id');
   cachedId = genAnonId();
   return cachedId;
 }

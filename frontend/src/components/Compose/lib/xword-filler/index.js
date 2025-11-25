@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import gaussian from 'gaussian';
 import {convertToCandidateGrid, convertFromCandidateGrid} from './candidateGrid';
 import beamSearch from './beamSearch';
@@ -13,7 +12,7 @@ const sample = (mean, stdev) => Math.max(0.0001, mean + normal.ppf(Math.random()
 // returns an object with same keys { word: sampledScore }
 const assignScores = (wordlist) => {
   const result = {};
-  _.forEach(_.keys(wordlist), (k) => {
+  Object.keys(wordlist).forEach((k) => {
     result[k] = sample(wordlist[k].score, wordlist[k].stdev);
   });
   return result;
@@ -21,7 +20,7 @@ const assignScores = (wordlist) => {
 
 const makeWordlist = (words, score = 30, stdev = 10) => {
   const result = {};
-  _.forEach(words, (k) => {
+  words.forEach((k) => {
     k = k.toUpperCase();
     if (k.length > 7) return;
     result[k] = {

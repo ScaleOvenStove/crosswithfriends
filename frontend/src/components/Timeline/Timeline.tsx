@@ -1,7 +1,24 @@
 import {pure, isAncestor} from '@crosswithfriends/shared/lib/jsUtils';
-import _ from 'lodash';
 import React, {useMemo, useRef, useState, useEffect, useCallback} from 'react';
 import './timeline.css';
+
+type DebouncedFunc<T extends (...args: any[]) => any> = {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+};
+
+const throttle = <T extends (...args: any[]) => any>(fn: T, limit: number): DebouncedFunc<T> => {
+  let inThrottle: boolean;
+  const throttled = (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      fn(...args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+  throttled.cancel = () => {};
+  return throttled;
+};
 
 const TIMELINE_COLORS = {
   updateCell: '#9999FFC0',
@@ -72,10 +89,10 @@ const Timeline: React.FC<TimelineProps> = ({history, position, width, onSetPosit
     return length > 0 ? width / length : 0;
   }, [end, begin, width]);
 
-  const updateScrollRef = useRef<_.DebouncedFunc<() => void>>();
+  const updateScrollRef = useRef<DebouncedFunc<() => void>>();
 
   useEffect(() => {
-    updateScrollRef.current = _.throttle(() => {
+    updateScrollRef.current = throttle(() => {
       if (!scrollContainer || !cursorRef.current || !timelineRef.current) {
         return;
       }

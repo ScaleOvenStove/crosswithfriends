@@ -6,6 +6,7 @@
 import io, {type Socket} from 'socket.io-client';
 
 import {SOCKET_HOST} from '../api/constants';
+import {logger} from '../utils/logger';
 
 // Helper to wait for a socket event once
 const onceAsync = (socket: Socket, event: string): Promise<void> =>
@@ -65,9 +66,7 @@ class SocketManager {
           latency: ms,
           timestamp: Date.now(),
         };
-        if (import.meta.env.DEV) {
-          console.debug('[ws] Received latency_pong, latency:', ms, 'ms');
-        }
+        logger.debug('Received latency_pong', {latency: ms});
       }
     });
 
@@ -80,19 +79,17 @@ class SocketManager {
     });
 
     // Debug handlers
-    if (import.meta.env.DEV) {
-      socket.on('connect', () => {
-        console.debug('[ws connect]', Date.now());
-      });
-      socket.on('ping', () => {
-        console.debug('[ws ping]', Date.now());
-      });
-      socket.on('pong', () => {
-        console.debug('[ws pong]', Date.now());
-      });
-    }
+    socket.on('connect', () => {
+      logger.debug('WebSocket connected', {timestamp: Date.now()});
+    });
+    socket.on('ping', () => {
+      logger.debug('WebSocket ping', {timestamp: Date.now()});
+    });
+    socket.on('pong', () => {
+      logger.debug('WebSocket pong', {timestamp: Date.now()});
+    });
 
-    console.log('Connecting to', SOCKET_HOST);
+    logger.info('Connecting to WebSocket', {host: SOCKET_HOST});
 
     // Wait for connection
     if (!socket.connected) {
@@ -105,16 +102,12 @@ class SocketManager {
                 const timestamp = Date.now();
                 try {
                   socket.emit('latency_ping', timestamp);
-                  if (import.meta.env.DEV) {
-                    console.debug('[ws] Sending latency_ping', timestamp);
-                  }
+                  logger.debug('Sending latency_ping', {timestamp});
                 } catch (error) {
-                  console.error('[ws] Error sending latency_ping:', error);
+                  logger.errorWithException('Error sending latency_ping', error);
                 }
               } else {
-                if (import.meta.env.DEV) {
-                  console.debug('[ws] Socket not connected, skipping ping');
-                }
+                logger.debug('Socket not connected, skipping ping');
               }
             };
             // Small delay to ensure server handlers are registered
@@ -136,16 +129,12 @@ class SocketManager {
             const timestamp = Date.now();
             try {
               socket.emit('latency_ping', timestamp);
-              if (import.meta.env.DEV) {
-                console.debug('[ws] Sending latency_ping', timestamp);
-              }
+              logger.debug('Sending latency_ping', {timestamp});
             } catch (error) {
-              console.error('[ws] Error sending latency_ping:', error);
+              logger.errorWithException('Error sending latency_ping', error);
             }
           } else {
-            if (import.meta.env.DEV) {
-              console.debug('[ws] Socket not connected, skipping ping');
-            }
+            logger.debug('Socket not connected, skipping ping');
           }
         };
         // Small delay to ensure server handlers are registered

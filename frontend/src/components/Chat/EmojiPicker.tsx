@@ -1,7 +1,6 @@
 /* eslint react/no-unescaped-entities: "warn" */
 
 import {Box, Stack} from '@mui/material';
-import _ from 'lodash';
 import React, {
   useState,
   useEffect,
@@ -11,6 +10,20 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
+
+const orderBy = <T,>(arr: T[], keys: (keyof T | ((item: T) => any))[], orders?: ('asc' | 'desc')[]): T[] => {
+  return arr.slice().sort((a, b) => {
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const order = orders?.[i] === 'desc' ? -1 : 1;
+      const aVal = typeof key === 'function' ? key(a) : a[key];
+      const bVal = typeof key === 'function' ? key(b) : b[key];
+      if (aVal < bVal) return -order;
+      if (aVal > bVal) return order;
+    }
+    return 0;
+  });
+};
 
 import Emoji from '../common/Emoji';
 
@@ -45,11 +58,14 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
     }, [matches]);
 
     // Replicate getDerivedStateFromProps logic
-    useEffect(() => {
-      if (!selectedEmoji || matches.indexOf(selectedEmoji) === -1) {
-        setSelectedEmoji(matches[0] || null);
-      }
-    }, [matches, selectedEmoji]);
+    React.useLayoutEffect(() => {
+      setSelectedEmoji((currentSelectedEmoji) => {
+        if (!currentSelectedEmoji || matches.indexOf(currentSelectedEmoji) === -1) {
+          return matches[0] || null;
+        }
+        return currentSelectedEmoji;
+      });
+    }, [matches]);
 
     const getDomPosition = useCallback((emoji: string) => {
       const emojiRef = emojiRefs.current[emoji];
@@ -137,7 +153,7 @@ const EmojiPicker = forwardRef<EmojiPickerRef, EmojiPickerProps>(
           if (!pos) return;
           const {cx, cy} = pos;
           // beware, this code is a bit hacky :)
-          const bestMatch = _.orderBy(
+          const bestMatch = orderBy(
             matches
               .filter((emoji) => emoji !== selectedEmoji)
               .map((emoji) => {

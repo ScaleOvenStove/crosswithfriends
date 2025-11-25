@@ -1,5 +1,4 @@
 import redirect from '@crosswithfriends/shared/lib/redirect';
-import _ from 'lodash';
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {Link, useParams, useLocation} from 'react-router-dom';
 
@@ -54,7 +53,7 @@ const Play: React.FC = () => {
       return null;
     }
 
-    return _.keys(userHistory)
+    return Object.keys(userHistory)
       .filter((gid) => userHistory[gid].pid === pid)
       .map((gid) => ({
         ...userHistory[gid],
@@ -162,7 +161,7 @@ const Play: React.FC = () => {
         Your Games
         <table>
           <tbody>
-            {_.map(games, ({gid, time}) => (
+            {games.map(({gid, time}) => (
               <tr key={gid}>
                 <td>
                   <Timestamp time={time} />

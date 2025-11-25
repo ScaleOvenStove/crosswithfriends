@@ -2,11 +2,32 @@ import {isMobile, rand_color} from '@crosswithfriends/shared/lib/jsUtils';
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
 import {Box, Stack, IconButton} from '@mui/material';
-import _ from 'lodash';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {MdChevronLeft} from 'react-icons/md';
 import {useParams, useLocation} from 'react-router-dom';
+
+type DebouncedFunc<T extends (...args: any[]) => any> = {
+  (...args: Parameters<T>): Promise<void>;
+  cancel: () => void;
+};
+
+const debounce = <T extends (...args: any[]) => Promise<void>>(
+  fn: T,
+  delay: number = 0
+): DebouncedFunc<T> => {
+  let timeout: NodeJS.Timeout;
+  const debounced = (...args: Parameters<T>): Promise<void> => {
+    clearTimeout(timeout);
+    return new Promise((resolve) => {
+      timeout = setTimeout(() => {
+        fn(...args).then(resolve);
+      }, delay);
+    });
+  };
+  debounced.cancel = () => clearTimeout(timeout);
+  return debounced;
+};
 
 import Chat from '../components/Chat';
 import GameSkeletonLoader from '../components/common/GameSkeletonLoader';
@@ -19,6 +40,7 @@ import {useBattleSetup} from '../hooks/useBattleSetup';
 import {useGameSetup} from '../hooks/useGameSetup';
 import {useUser} from '../hooks/useUser';
 import {isValidGid, createSafePath} from '../store/firebaseUtils';
+import {logger} from '../utils/logger';
 import type {Powerup, Winner, BattlePlayer, Pickup, BattleData, ChatMessage} from '../types/battle';
 
 const Game: React.FC = () => {
@@ -106,7 +128,7 @@ const Game: React.FC = () => {
           });
           handleChange();
         } catch (error) {
-          console.error('Error applying powerup effects', error);
+          logger.errorWithException('Error applying powerup effects', error, {powerupType: powerupData.type});
         }
       }
     },
@@ -128,7 +150,7 @@ const Game: React.FC = () => {
   // React Query hook for recording solves
   const recordSolveMutation = useRecordSolve({
     onError: (error) => {
-      console.error('Failed to record solve:', error);
+      logger.errorWithException('Failed to record solve', error, {gid});
     },
   });
 
@@ -162,9 +184,9 @@ const Game: React.FC = () => {
 
   // User is now provided by useUser hook - no need for ref
 
-  const handleChangeRef = useRef<_.DebouncedFunc<(options?: {isEdit?: boolean}) => Promise<void>>>();
+  const handleChangeRef = useRef<DebouncedFunc<(options?: {isEdit?: boolean}) => Promise<void>>>();
   if (!handleChangeRef.current) {
-    handleChangeRef.current = _.debounce(async ({isEdit = false}: {isEdit?: boolean} = {}) => {
+    handleChangeRef.current = debounce(async ({isEdit = false}: {isEdit?: boolean} = {}) => {
       const game = gameHook.gameState;
       if (!game || !gameHook.ready) {
         return;
@@ -189,7 +211,7 @@ const Game: React.FC = () => {
             time_to_solve: game.clock.totalTime,
           });
         } else {
-          console.warn('Cannot record solve: invalid data', {
+          logger.warn('Cannot record solve: invalid data', {
             pid: game.pid,
             gid,
             totalTime: game.clock?.totalTime,
@@ -241,8 +263,8 @@ const Game: React.FC = () => {
   useEffect(() => {
     if (prevWinnerRef.current !== winner && winner) {
       const {team: winnerTeam, completedAt} = winner;
-      const winningPlayers = _.filter(_.values(players), {team: winnerTeam});
-      const winningPlayersString = _.join(_.map(winningPlayers, 'name'), ', ');
+      const winningPlayers = Object.values(players).filter((p) => p.team === winnerTeam);
+      const winningPlayersString = winningPlayers.map((p) => p.name).join(', ');
 
       const victoryMessage = `Team ${Number(winnerTeam) + 1} [${winningPlayersString}] won! `;
       const timeMessage = `Time taken: ${Number((completedAt - startedAt!) / 1000)} seconds.`;
@@ -456,8 +478,8 @@ const Game: React.FC = () => {
     }
 
     const userId = user.id || '';
-    const ownPowerups = _.get(powerups, team);
-    const opponentPowerups = _.get(powerups, team !== undefined ? 1 - team : undefined);
+    const ownPowerups = team !== undefined ? powerups?.[team] : undefined;
+    const opponentPowerups = team !== undefined ? powerups?.[1 - team] : undefined;
 
     // Pass gameModel even if it's null - the Game component will handle it
     // Still pass historyWrapper for backward compatibility, but GameComponent uses Zustand
@@ -569,7 +591,7 @@ const Game: React.FC = () => {
       return <GameSkeletonLoader />;
     }
 
-    const teamPowerups = _.get(powerups, team);
+    const teamPowerups = team !== undefined ? powerups?.[team] : undefined;
     const gameElement = showingGame ? renderGame() : null;
     const chatElement = showingChat ? renderChat() : null;
 

@@ -78,7 +78,7 @@ export function useRoom(options: UseRoomOptions): UseRoomReturn {
     syncPromise
       .then(() => {
         if (mounted) {
-          setEvents([]);
+          // Events are already set by subscribeToRoomEvents, just update loading
           setLoading(false);
         }
       })

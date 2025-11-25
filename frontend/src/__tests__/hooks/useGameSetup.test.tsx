@@ -1,0 +1,186 @@
+import {renderHook, waitFor} from '@testing-library/react';
+import {describe, it, expect, vi, beforeEach} from 'vitest';
+
+import {useGameSetup} from '../../hooks/useGameSetup';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import {createMockGameStore} from '../mocks/stores';
+
+const mockUseGame = vi.fn();
+
+// Mock useGame
+vi.mock('../../hooks/useGame', () => ({
+  useGame: (options: unknown) => mockUseGame(options),
+}));
+
+// Mock firebaseUtils
+vi.mock('../../store/firebaseUtils', () => ({
+  createSafePath: vi.fn((prefix: string, id: string) => `${prefix}/${id}`),
+  isValidFirebasePath: vi.fn((path: string) => path.startsWith('/game/')),
+  extractAndValidateGid: vi.fn((path: string) => path.replace('/game/', '')),
+}));
+
+describe('useGameSetup', () => {
+  let mockGameHook: ReturnType<typeof createMockGameStore>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGameHook = createMockGameStore();
+    mockGameHook.attach = vi.fn().mockResolvedValue(undefined);
+    mockGameHook.detach = vi.fn();
+    mockGameHook.gameState = null;
+
+    mockUseGame.mockReturnValue({
+      game: null,
+      gameState: null,
+      attach: mockGameHook.attach,
+      detach: mockGameHook.detach,
+      updateCell: vi.fn(),
+      updateCursor: vi.fn(),
+      addPing: vi.fn(),
+      updateDisplayName: vi.fn(),
+      updateColor: vi.fn(),
+      updateClock: vi.fn(),
+      check: vi.fn(),
+      reveal: vi.fn(),
+      reset: vi.fn(),
+      chat: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+      once: vi.fn(() => () => {}),
+      ready: false,
+    });
+  });
+
+  it('should return game hooks and game states', () => {
+    const {result} = renderHook(() => useGameSetup({gid: 'test-123', opponent: undefined}));
+
+    expect(result.current.gameHook).toBeDefined();
+    expect(result.current.opponentGameHook).toBeDefined();
+    expect(result.current.game).toBeDefined();
+    expect(result.current.opponentGame).toBeDefined();
+  });
+
+  it('should attach game when gid is provided', async () => {
+    renderHook(() => useGameSetup({gid: 'test-123', opponent: undefined}));
+
+    await waitFor(() => {
+      expect(mockGameHook.attach).toHaveBeenCalled();
+    });
+  });
+
+  it('should attach opponent game when opponent is provided', async () => {
+    renderHook(() => useGameSetup({gid: 'test-123', opponent: 'opponent-456'}));
+
+    await waitFor(() => {
+      expect(mockGameHook.attach).toHaveBeenCalledTimes(2); // Both games
+    });
+  });
+
+  it('should call onBattleData when battle data is received', async () => {
+    const onBattleData = vi.fn();
+    const battleData = {team: 0};
+
+    let battleDataCallback: ((data: unknown) => void) | null = null;
+    mockUseGame.mockReturnValueOnce({
+      game: null,
+      gameState: null,
+      attach: mockGameHook.attach,
+      detach: mockGameHook.detach,
+      updateCell: vi.fn(),
+      updateCursor: vi.fn(),
+      addPing: vi.fn(),
+      updateDisplayName: vi.fn(),
+      updateColor: vi.fn(),
+      updateClock: vi.fn(),
+      check: vi.fn(),
+      reveal: vi.fn(),
+      reset: vi.fn(),
+      chat: vi.fn(),
+      subscribe: vi.fn((_path, event, callback) => {
+        if (event === 'battleData') {
+          battleDataCallback = callback;
+          // Call immediately to simulate subscription
+          setTimeout(() => {
+            if (battleDataCallback) {
+              battleDataCallback(battleData);
+            }
+          }, 10);
+        }
+        return () => {};
+      }),
+      once: vi.fn(() => () => {}),
+      ready: false,
+    });
+
+    renderHook(() => useGameSetup({gid: 'test-123', opponent: undefined, onBattleData}));
+
+    await waitFor(
+      () => {
+        expect(onBattleData).toHaveBeenCalledWith(battleData);
+      },
+      {timeout: 1000}
+    );
+  });
+
+  it('should call onArchived when game is archived', async () => {
+    const onArchived = vi.fn();
+
+    let archivedCallback: ((data: unknown) => void) | null = null;
+    mockUseGame.mockReturnValueOnce({
+      game: null,
+      gameState: null,
+      attach: mockGameHook.attach,
+      detach: mockGameHook.detach,
+      updateCell: vi.fn(),
+      updateCursor: vi.fn(),
+      addPing: vi.fn(),
+      updateDisplayName: vi.fn(),
+      updateColor: vi.fn(),
+      updateClock: vi.fn(),
+      check: vi.fn(),
+      reveal: vi.fn(),
+      reset: vi.fn(),
+      chat: vi.fn(),
+      subscribe: vi.fn((_path, event, callback) => {
+        if (event === 'archived') {
+          archivedCallback = callback;
+          // Call immediately to simulate subscription
+          setTimeout(() => {
+            if (archivedCallback) {
+              archivedCallback(undefined);
+            }
+          }, 10);
+        }
+        return () => {};
+      }),
+      once: vi.fn(() => () => {}),
+      ready: false,
+    });
+
+    renderHook(() => useGameSetup({gid: 'test-123', opponent: undefined, onArchived}));
+
+    await waitFor(
+      () => {
+        expect(onArchived).toHaveBeenCalled();
+      },
+      {timeout: 1000}
+    );
+  });
+
+  it('should detach games on unmount', async () => {
+    const {unmount} = renderHook(() => useGameSetup({gid: 'test-123', opponent: 'opponent-456'}));
+
+    await waitFor(() => {
+      expect(mockGameHook.attach).toHaveBeenCalled();
+    });
+
+    unmount();
+
+    expect(mockGameHook.detach).toHaveBeenCalledTimes(2); // Both games
+  });
+
+  it('should not attach if gid is undefined', () => {
+    renderHook(() => useGameSetup({gid: undefined, opponent: undefined}));
+
+    expect(mockGameHook.attach).not.toHaveBeenCalled();
+  });
+});

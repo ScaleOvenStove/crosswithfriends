@@ -21,10 +21,6 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
   const [recentUnlistedPid, setRecentUnlistedPid] = useState<number | null>(null);
   const [publicCheckboxChecked, setPublicCheckboxChecked] = useState(false);
 
-  const handleChangePublicCheckbox = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPublicCheckboxChecked(e.target.checked);
-  }, []);
-
   const renderUploadSuccessModal = useCallback(() => {
     Swal.close();
     if (!recentUnlistedPid) {
@@ -70,37 +66,49 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
     });
   }, []);
 
-  const create = useCallback(async () => {
-    const isPublic = publicCheckboxChecked;
-    const puzzleData = {
-      ...puzzle,
-    };
-    // Remove private field if it exists - isPublic is handled separately
-    delete puzzleData.private;
-    // store in both firebase & pg
-    actions.createPuzzle(puzzleData, (pid: number) => {
-      setPuzzle(null);
-      setRecentUnlistedPid(isPublic ? undefined : pid);
+  const create = useCallback(
+    async (isPublicOverride?: boolean) => {
+      const isPublic = isPublicOverride !== undefined ? isPublicOverride : publicCheckboxChecked;
+      const puzzleData = {
+        ...puzzle,
+      };
+      // Remove private field if it exists - isPublic is handled separately
+      delete puzzleData.private;
+      // Ensure version field exists (required by server validation)
+      if (!puzzleData.version) {
+        puzzleData.version = 'http://ipuz.org/v1';
+      }
+      // store in both firebase & pg
+      actions.createPuzzle(puzzleData, (pid: number) => {
+        setPuzzle(null);
+        setRecentUnlistedPid(isPublic ? undefined : pid);
 
-      createNewPuzzle(
-        {
-          puzzle: puzzleData,
-          pid: pid?.toString(),
-          isPublic,
-        },
-        pid?.toString(),
-        {
-          isPublic,
-        }
-      )
-        .then(renderUploadSuccessModal)
-        .catch(renderUploadFailModal);
-    });
-  }, [puzzle, publicCheckboxChecked, renderUploadSuccessModal, renderUploadFailModal]);
+        createNewPuzzle(
+          {
+            puzzle: puzzleData,
+            pid: pid?.toString(),
+            isPublic,
+          },
+          pid?.toString(),
+          {
+            isPublic,
+          }
+        )
+          .then(renderUploadSuccessModal)
+          .catch(renderUploadFailModal);
+      });
+    },
+    [puzzle, publicCheckboxChecked, renderUploadSuccessModal, renderUploadFailModal]
+  );
 
   const handleUpload = useCallback(
-    (uploadConfirmed: boolean) => {
+    (uploadConfirmed: boolean, isPublicOverride?: boolean) => {
       if (uploadConfirmed) {
+        // If override is provided, update state and use it
+        if (isPublicOverride !== undefined) {
+          setPublicCheckboxChecked(isPublicOverride);
+          return create(isPublicOverride);
+        }
         return create();
       }
       return null;
@@ -127,24 +135,34 @@ const Upload: React.FC<UploadProps> = ({v2, fencing, onCreate}) => {
               </p>
               <div id="unlistedRow">
                 <label>
-                  <input
-                    type="checkbox"
-                    checked={publicCheckboxChecked}
-                    onChange={handleChangePublicCheckbox}
-                  />{' '}
-                  Upload Publicly
+                  <input type="checkbox" id="publicCheckbox" defaultChecked={publicCheckboxChecked} /> Upload
+                  Publicly
                 </label>
               </div>
             </div>
           ),
+          didOpen: () => {
+            // Attach event listener directly to the checkbox in SweetAlert2's DOM
+            const checkbox = document.getElementById('publicCheckbox') as HTMLInputElement;
+            if (checkbox) {
+              checkbox.checked = publicCheckboxChecked;
+              checkbox.addEventListener('change', (e) => {
+                const target = e.target as HTMLInputElement;
+                setPublicCheckboxChecked(target.checked);
+              });
+            }
+          },
         })
         .then((result) => {
           if (result.isConfirmed) {
-            handleUpload(true);
+            // Read checkbox state directly from DOM before calling handleUpload
+            const checkbox = document.getElementById('publicCheckbox') as HTMLInputElement;
+            const isPublic = checkbox ? checkbox.checked : publicCheckboxChecked;
+            handleUpload(true, isPublic);
           }
         });
     },
-    [handleChangePublicCheckbox, handleUpload, publicCheckboxChecked]
+    [handleUpload, publicCheckboxChecked]
   );
 
   const success = useCallback(

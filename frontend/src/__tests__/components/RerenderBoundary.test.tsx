@@ -1,3 +1,4 @@
+import {act} from '@testing-library/react';
 import React from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 
@@ -31,11 +32,13 @@ describe('RerenderBoundary', () => {
 
     expect(getByText('Content 1')).toBeInTheDocument();
 
-    rerender(
-      <RerenderBoundary name="test" hash="hash2">
-        <div>Content 2</div>
-      </RerenderBoundary>
-    );
+    act(() => {
+      rerender(
+        <RerenderBoundary name="test" hash="hash2">
+          <div>Content 2</div>
+        </RerenderBoundary>
+      );
+    });
 
     expect(getByText('Content 2')).toBeInTheDocument();
     expect(consoleDebugSpy).toHaveBeenCalledWith('rerendering', 'test');
@@ -53,11 +56,13 @@ describe('RerenderBoundary', () => {
     expect(getByText('Content 1')).toBeInTheDocument();
     consoleDebugSpy.mockClear(); // Clear initial render log if any
 
-    rerender(
-      <RerenderBoundary name="test" hash="hash1">
-        <div>Content 2</div>
-      </RerenderBoundary>
-    );
+    act(() => {
+      rerender(
+        <RerenderBoundary name="test" hash="hash1">
+          <div>Content 2</div>
+        </RerenderBoundary>
+      );
+    });
 
     // Should still show Content 1 because hash didn't change
     expect(getByText('Content 1')).toBeInTheDocument();
@@ -72,11 +77,13 @@ describe('RerenderBoundary', () => {
       </RerenderBoundary>
     );
 
-    rerender(
-      <RerenderBoundary name="test-component" hash="hash2">
-        <div>Content</div>
-      </RerenderBoundary>
-    );
+    act(() => {
+      rerender(
+        <RerenderBoundary name="test-component" hash="hash2">
+          <div>Content</div>
+        </RerenderBoundary>
+      );
+    });
 
     expect(consoleDebugSpy).toHaveBeenCalledWith('rerendering', 'test-component');
   });

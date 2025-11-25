@@ -1,6 +1,5 @@
 import type {ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
 import {Stack, Box} from '@mui/material';
-import _ from 'lodash';
 import React, {useEffect, useState} from 'react';
 import {Helmet} from 'react-helmet';
 
@@ -16,7 +15,7 @@ const Stats: React.FC<Record<string, never>> = () => {
 
   useEffect(() => {
     user.listUserHistory().then((history: any) => {
-      const recentGames = _.keys(history)
+      const recentGames = Object.keys(history)
         .filter((gid: string) => history[gid]?.solved)
         .sort((gid: string) => history[gid]?.time)
         .reverse()
@@ -48,8 +47,7 @@ const Stats: React.FC<Record<string, never>> = () => {
               <th>Avg squares checked</th>
               <th>Avg squares revealed</th>
             </tr>
-            {_.map(
-              stats?.stats,
+            {(stats?.stats || []).map(
               ({
                 size,
                 nPuzzlesSolved,
@@ -90,8 +88,7 @@ const Stats: React.FC<Record<string, never>> = () => {
               <th># checked squares</th>
               <th># revealed squares</th>
             </tr>
-            {_.map(
-              stats?.history,
+            {(stats?.history || []).map(
               ({gameId, title, size, dateSolved, solveTime, checkedSquareCount, revealedSquareCount}) => (
                 <tr key={gameId}>
                   <td>

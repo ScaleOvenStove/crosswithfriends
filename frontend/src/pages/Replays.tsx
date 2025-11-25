@@ -3,10 +3,21 @@ import './css/replays.css';
 import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
 import {Box, Stack} from '@mui/material';
 import {ref, get} from 'firebase/database';
-import _ from 'lodash';
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
+
+const keyBy = <T,>(arr: T[], key: keyof T): Record<string, T> => {
+  return Object.fromEntries(arr.map((item) => [String(item[key]), item]));
+};
+
+const range = (start: number, end: number, step: number = 1): number[] => {
+  const result: number[] = [];
+  for (let i = start; step > 0 ? i < end : i > end; i += step) {
+    result.push(i);
+  }
+  return result;
+};
 
 import Nav from '../components/common/Nav';
 import Timestamp from '../components/common/Timestamp';
@@ -52,7 +63,7 @@ function getChatters(game: GameWithChat | null | undefined): string[] {
     const {messages} = game.chat;
     if (!messages) return [];
     const chatters: string[] = [];
-    _.values(messages).forEach((msg) => {
+    Object.values(messages).forEach((msg) => {
       if (msg.sender) {
         chatters.push(msg.sender);
       }
@@ -61,7 +72,7 @@ function getChatters(game: GameWithChat | null | undefined): string[] {
   }
   if (game.events) {
     const chatters: string[] = [];
-    _.values(game.events).forEach((event) => {
+    Object.values(game.events).forEach((event) => {
       if (event.type === 'chat' && event.params?.sender) {
         chatters.push(event.params.sender);
       }
@@ -131,7 +142,7 @@ const Replays: React.FC = () => {
 
   const processGame = useCallback((rawGame: RawGameData, gid: string): GameInfo => {
     if (rawGame.events) {
-      const events = _.values(rawGame.events);
+      const events = Object.values(rawGame.events);
       const historyWrapper = new HistoryWrapper(events);
       const game = historyWrapper.getSnapshot();
       const startTime = historyWrapper.createEvent.timestamp / 1000;
@@ -168,20 +179,20 @@ const Replays: React.FC = () => {
         }
         puzzle.listGames(limit).then((rawGames) => {
           if (!rawGames) return;
-          const processedGames = _.map(_.keys(rawGames), (gid) => processGame(rawGames[gid], gid));
-          setGames(_.keyBy(processedGames, 'gid'));
+          const processedGames = Object.keys(rawGames).map((gid) => processGame(rawGames[gid], gid));
+          setGames(keyBy(processedGames, 'gid'));
         });
       });
     } else {
       get(ref(db, '/counters/gid')).then((snapshot) => {
         const gid = Number(snapshot.val());
         Promise.all(
-          _.range(gid - 1, gid - limit - 1, -1).map((g: number) =>
+          range(gid - 1, gid - limit - 1, -1).map((g: number) =>
             get(ref(db, `/game/${g.toString()}`)).then((snapshot) => ({...snapshot.val(), gid: g}))
           )
         ).then((rawGames: Array<RawGameData & {gid: string}>) => {
-          const processedGames = _.map(rawGames, (g) => processGame(g, g.gid));
-          setGames(_.keyBy(processedGames, 'gid'));
+          const processedGames = rawGames.map((g) => processGame(g, g.gid));
+          setGames(keyBy(processedGames, 'gid'));
         });
       });
     }
@@ -213,7 +224,7 @@ const Replays: React.FC = () => {
   }, [puzzle.data]);
 
   const list1Items = useMemo(() => {
-    return _.values(games).map(
+    return Object.values(games).map(
       ({pid: gamePid, gid, solved, startTime, time, chatters, v2, active, title}) => (
         <tr key={gid}>
           {pid ? null : (

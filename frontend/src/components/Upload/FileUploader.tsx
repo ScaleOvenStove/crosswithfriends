@@ -3,6 +3,7 @@ import './css/fileUploader.css';
 import PUZtoIPUZ from '@crosswithfriends/shared/lib/converter/PUZtoIPUZ';
 import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
 import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
+import type {PuzzleJson} from '@crosswithfriends/shared/types';
 import React, {useCallback, useRef, useEffect} from 'react';
 import Dropzone from 'react-dropzone';
 import {MdFileUpload} from 'react-icons/md';
@@ -45,12 +46,12 @@ class UnsupportedFileTypeError extends Error {
 
 interface FileUploaderProps {
   v2?: boolean;
-  success: (puzzle: any) => void;
+  success: (puzzle: PuzzleJson) => void;
   fail: () => void;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
-  const validIpuz = useCallback((puzzle: any) => {
+const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail: _fail}) => {
+  const validIpuz = useCallback((puzzle: unknown): puzzle is PuzzleJson => {
     // Validate ipuz format
     const shape = {
       version: '',
@@ -68,38 +69,79 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
   }, []);
 
   const convertPUZ = useCallback((buffer: ArrayBuffer) => {
-    // Convert .puz directly to ipuz format
+    // Legacy converter - kept for backward compatibility
     return PUZtoIPUZ(buffer);
   }, []);
 
-  const validateIPUZ = useCallback((readerResult: any) => {
-    // For .ipuz files, just parse and validate - no conversion needed
-    try {
-      const ipuz = JSON.parse(new TextDecoder().decode(readerResult));
-      return ipuz;
-    } catch (_e) {
-      throw new Error('Invalid JSON in .ipuz file');
-    }
-  }, []);
-
-  const attemptPuzzleConversionRef = useRef<((readerResult: any, fileType: string) => any) | undefined>(
-    undefined
+  const validateIPUZ = useCallback(
+    async (readerResult: ArrayBuffer | string, _filename?: string): Promise<PuzzleJson> => {
+      // Parse .ipuz files as JSON
+      const text = typeof readerResult === 'string' ? readerResult : new TextDecoder().decode(readerResult);
+      try {
+        const puzzle = JSON.parse(text);
+        if (!validIpuz(puzzle)) {
+          throw new Error('Invalid iPUZ format');
+        }
+        return puzzle;
+      } catch (error) {
+        if (error instanceof Error) {
+          throw new Error(`Invalid iPUZ format: ${error.message}`);
+        }
+        throw new Error('Invalid iPUZ format');
+      }
+    },
+    [validIpuz]
   );
 
+  const attemptPuzzleConversionRef = useRef<
+    | ((
+        readerResult: ArrayBuffer | string,
+        fileType: string,
+        filename?: string
+      ) => Promise<PuzzleJson> | PuzzleJson)
+    | undefined
+  >(undefined);
+
   const attemptPuzzleConversion = useCallback(
-    (readerResult: any, fileType: string): any => {
+    async (
+      readerResult: ArrayBuffer | string | null,
+      fileType: string,
+      filename?: string
+    ): Promise<PuzzleJson> => {
+      if (!readerResult) {
+        throw new Error('No file data provided');
+      }
+
       if (fileType === 'puz') {
-        return convertPUZ(readerResult);
+        // Legacy converter expects ArrayBuffer
+        if (typeof readerResult === 'string') {
+          throw new Error('PUZ files must be binary');
+        }
+        // Legacy converter returns ipuz format (PuzzleJson)
+        return convertPUZ(readerResult) as PuzzleJson;
       } else if (fileType === 'ipuz') {
-        return validateIPUZ(readerResult);
+        return await validateIPUZ(readerResult, filename);
       } else if (fileType === 'jpz') {
         throw new UnsupportedFileTypeError(fileType);
       } else {
+        // fileTypeGuesser expects ArrayBuffer
+        if (typeof readerResult === 'string') {
+          throw new UnknownFileTypeError(fileType);
+        }
         const guessedFileType = fileTypeGuesser(readerResult);
         if (!guessedFileType) {
           throw new UnknownFileTypeError(fileType);
         } else {
-          return attemptPuzzleConversionRef.current?.(readerResult, guessedFileType);
+          // Only support ipuz for auto-detected formats
+          if (guessedFileType === 'ipuz') {
+            return await validateIPUZ(readerResult, filename);
+          }
+          // For other types, try the conversion recursively
+          const result = await attemptPuzzleConversionRef.current?.(readerResult, guessedFileType, filename);
+          if (!result) {
+            throw new Error('Failed to parse puzzle');
+          }
+          return result;
         }
       }
     },
@@ -118,14 +160,30 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
       }
       const fileType = file.name.split('.').pop() || '';
       const reader = new FileReader();
-      reader.addEventListener('loadend', () => {
+      reader.addEventListener('loadend', async () => {
         try {
-          const puzzle = attemptPuzzleConversion(reader.result, fileType);
-          if (validIpuz(puzzle)) {
-            success(puzzle);
-          } else {
-            fail();
+          if (reader.result === null) {
+            throw new Error('Failed to read file');
           }
+          const puzzle = await attemptPuzzleConversion(reader.result, fileType, file.name);
+
+          // Validate the parsed puzzle
+          if (!validIpuz(puzzle)) {
+            throw new Error('Parsed puzzle failed validation');
+          }
+
+          // Additional validation: ensure puzzle has required fields
+          if (!puzzle.solution || puzzle.solution.length === 0) {
+            throw new Error('Puzzle has no solution');
+          }
+          if (!puzzle.puzzle || puzzle.puzzle.length === 0) {
+            throw new Error('Puzzle has no puzzle grid');
+          }
+          if (!puzzle.clues || (!puzzle.clues.Across?.length && !puzzle.clues.Down?.length)) {
+            throw new Error('Puzzle has no clues');
+          }
+
+          success(puzzle);
         } catch (e: unknown) {
           let defaultTitle = 'Something went wrong';
           let defaultText = 'An unknown error occurred';
@@ -168,7 +226,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail}) => {
       });
       reader.readAsArrayBuffer(file);
     },
-    [attemptPuzzleConversion, validIpuz, success, fail]
+    [attemptPuzzleConversion, validIpuz, success]
   );
 
   return (

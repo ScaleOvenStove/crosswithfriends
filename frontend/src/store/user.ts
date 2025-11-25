@@ -9,6 +9,7 @@ import {
 import {ref, get, set, runTransaction} from 'firebase/database';
 
 import getLocalId from '../localAuth';
+import {logger} from '../utils/logger';
 
 import EventEmitter from './EventEmitter';
 import app, {db, SERVER_TIME, getTime} from './firebase';
@@ -34,7 +35,7 @@ export default class User extends EventEmitter {
       this.attached = true;
       this.fb = user;
       this.emit('auth');
-      console.log('Your id is', this.id);
+      logger.info('User authenticated', {id: this.id});
     });
   }
 

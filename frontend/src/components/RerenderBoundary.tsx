@@ -1,6 +1,8 @@
 import React from 'react';
 import {usePrevious} from 'react-use';
 
+import {logger} from '../utils/logger';
+
 const RerenderBoundary: React.FC<{name: string; hash: string}> = (props) => {
   const prevChildren = React.useRef<React.ReactNode>(props.children);
   const prevHash = usePrevious(props.hash);
@@ -8,8 +10,7 @@ const RerenderBoundary: React.FC<{name: string; hash: string}> = (props) => {
 
   React.useEffect(() => {
     if (prevHash !== props.hash) {
-      // eslint-disable-next-line no-console
-      console.debug('rerendering', props.name);
+      logger.debug('Rerendering boundary', {name: props.name, prevHash, newHash: props.hash});
       prevChildren.current = props.children;
       setChildren(props.children);
     }

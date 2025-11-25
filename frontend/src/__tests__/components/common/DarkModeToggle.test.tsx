@@ -1,6 +1,6 @@
 import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
 import {ThemeProvider, CssBaseline} from '@mui/material';
-import {render, screen} from '@testing-library/react';
+import {render, screen, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import {BrowserRouter} from 'react-router-dom';
@@ -86,7 +86,9 @@ describe('DarkModeToggle', () => {
     );
 
     const button = screen.getByLabelText('Toggle dark mode');
-    await user.click(button);
+    await act(async () => {
+      await user.click(button);
+    });
 
     expect(toggleFn).toHaveBeenCalledTimes(1);
   });
@@ -102,7 +104,9 @@ describe('DarkModeToggle', () => {
     );
 
     const button = screen.getByLabelText('Toggle dark mode');
-    await user.hover(button);
+    await act(async () => {
+      await user.hover(button);
+    });
 
     const tooltip = await screen.findByText(/Dark mode: Off/i);
     expect(tooltip).toBeInTheDocument();
@@ -119,7 +123,9 @@ describe('DarkModeToggle', () => {
     );
 
     const button = screen.getByLabelText('Toggle dark mode');
-    await user.hover(button);
+    await act(async () => {
+      await user.hover(button);
+    });
 
     const tooltip = await screen.findByText(/Dark mode: On/i);
     expect(tooltip).toBeInTheDocument();
@@ -136,7 +142,9 @@ describe('DarkModeToggle', () => {
     );
 
     const button = screen.getByLabelText('Toggle dark mode');
-    await user.hover(button);
+    await act(async () => {
+      await user.hover(button);
+    });
 
     const tooltip = await screen.findByText(/System default/i);
     expect(tooltip).toBeInTheDocument();

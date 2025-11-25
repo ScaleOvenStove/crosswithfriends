@@ -1,6 +1,5 @@
 import './css/editableSpan.css';
 import Caret from '@crosswithfriends/shared/lib/caret';
-import _ from 'lodash';
 import React, {
   useRef,
   useState,
@@ -10,6 +9,21 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
+
+type DebouncedFunc<T extends (...args: any[]) => any> = {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+};
+
+const debounce = <T extends (...args: any[]) => any>(fn: T, delay: number = 0): DebouncedFunc<T> => {
+  let timeout: NodeJS.Timeout;
+  const debounced = (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+  debounced.cancel = () => clearTimeout(timeout);
+  return debounced;
+};
 
 interface Props {
   value?: string;
@@ -134,10 +148,10 @@ const EditableSpan = forwardRef<EditableSpanRef, Props>((props, ref) => {
     [onChange, onUnfocus, getText]
   );
 
-  const debouncedHandleKeyUpRef = useRef<_.DebouncedFunc<() => void>>();
+  const debouncedHandleKeyUpRef = useRef<DebouncedFunc<() => void>>();
 
   useEffect(() => {
-    debouncedHandleKeyUpRef.current = _.debounce(() => {
+    debouncedHandleKeyUpRef.current = debounce(() => {
       if (hidden || !spanRef.current) return;
       let result = spanRef.current.textContent || '';
       const nbsp = String.fromCharCode(160);

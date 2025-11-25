@@ -23,6 +23,7 @@ interface UserState {
   fb: FirebaseUser | null;
   id: string | null;
   attach: () => void;
+  detach: () => void;
   logIn: () => void;
   listUserHistory: () => Promise<UserHistory | null>;
   listCompositions: () => Promise<UserCompositions | null>;
@@ -64,6 +65,14 @@ export const useUserStore = create<UserState>((setState, getState) => {
         }
         setState({id});
       });
+    },
+
+    detach: () => {
+      if (unsubscribeAuth) {
+        unsubscribeAuth();
+        unsubscribeAuth = null;
+      }
+      setState({attached: false, fb: null, id: null});
     },
 
     logIn: () => {

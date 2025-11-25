@@ -2,7 +2,6 @@ import './css/index.css';
 import * as emojiLib from '@crosswithfriends/shared/lib/emoji';
 import nameGenerator, {isFromNameGenerator} from '@crosswithfriends/shared/lib/nameGenerator';
 import {Box, Stack, Snackbar, Alert, IconButton} from '@mui/material';
-import _ from 'lodash';
 import React, {
   useState,
   useRef,
@@ -17,6 +16,7 @@ import {Link} from 'react-router-dom';
 
 import Linkify from 'react-linkify';
 
+import {logger} from '../../utils/logger';
 import EditableSpan from '../common/EditableSpan';
 import Emoji from '../common/Emoji';
 import MobileKeyboard from '../Player/MobileKeyboard';
@@ -162,8 +162,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     } else {
       setUsername(currentInitialUsername || '');
     }
-    // Only call updateDisplayName if we have a valid username and the callback is available
-    if (currentInitialUsername && onUpdateDisplayName) {
+    // Only call updateDisplayName if we have a valid username
+    if (currentInitialUsername) {
       handleUpdateDisplayName(currentInitialUsername);
     }
   }, [initialUsername, bid, onUpdateDisplayName, handleUpdateDisplayName]);
@@ -171,7 +171,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   const handleSendMessage = useCallback(
     (message: string) => {
       if (!id || !users[id]) {
-        console.warn('Cannot send message: invalid user id or user not found');
+        logger.warn('Cannot send message: invalid user id or user not found', {id, hasUser: !!users[id]});
         return;
       }
       const displayName = users[id].displayName || username || 'Unknown';
@@ -248,11 +248,11 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       }
 
       const getMessages = (msgData: {messages?: ChatMessage[]}, isOpponent: boolean) =>
-        _.map(msgData.messages, (message) => ({...message, isOpponent}));
+        (msgData.messages || []).map((message) => ({...message, isOpponent}));
 
-      const messages = _.concat(getMessages(data, false), getMessages(opponentData, true));
+      const messages = [...getMessages(data, false), ...getMessages(opponentData, true)];
 
-      return _.sortBy(messages, 'timestamp');
+      return messages.sort((a, b) => a.timestamp - b.timestamp);
     },
     []
   );
@@ -546,7 +546,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
         }
       });
 
-      const bigEmoji = tokens.length <= 3 && _.every(tokens, (token) => token.type === 'emoji');
+      const bigEmoji = tokens.length <= 3 && tokens.every((token) => token.type === 'emoji');
       return (
         <span className="chat--message--text">
           {tokens.map((token, i) => {
@@ -778,34 +778,47 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                 border: '1px solid rgba(76, 175, 80, 0.3)',
               }}
             >
-              <button
-                onClick={handleShareScoreClick}
-                type="button"
-                aria-label="Share your score"
+              <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
-                  cursor: 'pointer',
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  width: '100%',
-                  textAlign: 'left',
-                  font: 'inherit',
-                  color: 'inherit',
                 }}
-                onKeyDown={handleShareScoreKeyDown}
               >
-                <i id="shareText" style={{flex: 1}}>
-                  Congratulations! You solved the puzzle in{' '}
-                  <b>{formatMilliseconds(props.game.clock.totalTime)}</b>. Click here to share your score.
-                  <wbr />
-                </i>
-                <IconButton size="small" title="Copy to Clipboard" sx={{flexShrink: 0}}>
+                <button
+                  onClick={handleShareScoreClick}
+                  type="button"
+                  aria-label="Share your score"
+                  style={{
+                    flex: 1,
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    textAlign: 'left',
+                    font: 'inherit',
+                    color: 'inherit',
+                  }}
+                  onKeyDown={handleShareScoreKeyDown}
+                >
+                  <i id="shareText">
+                    Congratulations! You solved the puzzle in{' '}
+                    <b>{formatMilliseconds(props.game.clock.totalTime)}</b>. Click here to share your score.
+                    <wbr />
+                  </i>
+                </button>
+                <IconButton
+                  size="small"
+                  title="Copy to Clipboard"
+                  sx={{flexShrink: 0}}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyClick();
+                  }}
+                >
                   <MdContentCopy fontSize="small" />
                 </IconButton>
-              </button>
+              </div>
             </div>
           )}
           {messages.map((message) => (

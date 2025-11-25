@@ -1,12 +1,46 @@
 import powerupData from '@crosswithfriends/shared/lib/powerups';
 import GridObject from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
 import {ref, onValue, get, set, push, remove, runTransaction} from 'firebase/database';
-import _ from 'lodash';
 import {create} from 'zustand';
+
+const findKey = <T>(obj: Record<string, T>, fn: (value: T) => boolean): string | undefined => {
+  return Object.keys(obj).find((key) => fn(obj[key]));
+};
+
+const isEqual = (a: any, b: any): boolean => {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (!keysB.includes(key) || !isEqual(a[key], b[key])) return false;
+  }
+  return true;
+};
+
+const intersectionWith = <T>(...arrays: T[][]): T[] => {
+  if (arrays.length === 0) return [];
+  if (arrays.length === 1) return arrays[0];
+  const [first, ...rest] = arrays;
+  return first.filter((item) => rest.every((arr) => arr.some((other) => isEqual(item, other))));
+};
+
+const sample = <T>(arr: T[]): T | undefined => {
+  if (arr.length === 0) return undefined;
+  return arr[Math.floor(Math.random() * arr.length)];
+};
+
+const sampleSize = <T>(arr: T[], n: number): T[] => {
+  const shuffled = arr.slice().sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n);
+};
 
 import actions from '../actions';
 import type {Powerup} from '../types/battle';
 import type {RawGame} from '../types/rawGame';
+import {logger} from '../utils/logger';
+import {createSubscriptionHelpers} from '../utils/subscriptionHelpers';
 
 import {db, type DatabaseReference} from './firebase';
 import {usePuzzleStore} from './puzzleStore';
@@ -43,23 +77,8 @@ interface BattleStore {
 }
 
 export const useBattleStore = create<BattleStore>((setState, getState) => {
-  // Helper function to emit events to subscribers
-  const emit = (path: string, event: string, data: unknown): void => {
-    const state = getState();
-    const battle = state.battles[path];
-    if (!battle) return;
-
-    const subscribers = battle.subscriptions.get(event);
-    if (subscribers) {
-      subscribers.forEach((callback) => {
-        try {
-          callback(data);
-        } catch (error) {
-          console.error(`Error in subscription callback for ${event}:`, error);
-        }
-      });
-    }
-  };
+  // Use shared subscription helpers to eliminate code duplication
+  const {emit, subscribe, once} = createSubscriptionHelpers(() => getState().battles);
 
   return {
     battles: {},
@@ -91,7 +110,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       }
 
       if (!battle) {
-        console.error('Failed to get battle instance for path:', path);
+        logger.error('Failed to get battle instance for path', {path});
         return;
       }
 
@@ -121,8 +140,14 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       const battle = state.battles[path];
       if (!battle) return;
 
+      // Check if already detached (no unsubscribes to clean up)
+      const hasUnsubscribes = battle.unsubscribes && Object.keys(battle.unsubscribes).length > 0;
+      if (!hasUnsubscribes) return; // Already detached, nothing to do
+
+      // Unsubscribe from all Firebase listeners
       Object.values(battle.unsubscribes).forEach((unsubscribe) => unsubscribe());
 
+      // Update state to mark as detached
       setState({
         battles: {
           ...state.battles,
@@ -135,85 +160,9 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       });
     },
 
-    subscribe: (path: string, event: string, callback: (data: unknown) => void) => {
-      const state = getState();
-      const battle = state.battles[path];
-      if (!battle) return () => {};
-
-      // Get or create subscription set for this event
-      if (!battle.subscriptions.has(event)) {
-        battle.subscriptions.set(event, new Set());
-      }
-      const subscribers = battle.subscriptions.get(event)!;
-
-      // Add callback to subscribers
-      subscribers.add(callback);
-
-      // Return unsubscribe function
-      return () => {
-        const currentState = getState();
-        const currentBattle = currentState.battles[path];
-        if (!currentBattle) return;
-
-        const currentSubscribers = currentBattle.subscriptions.get(event);
-        if (currentSubscribers) {
-          currentSubscribers.delete(callback);
-          // Clean up empty sets
-          if (currentSubscribers.size === 0) {
-            currentBattle.subscriptions.delete(event);
-          }
-        }
-      };
-    },
-
-    once: (path: string, event: string, callback: (data: unknown) => void) => {
-      const state = getState();
-      const battle = state.battles[path];
-      if (!battle) return () => {};
-
-      // Wrap callback to auto-unsubscribe after first call
-      let called = false;
-      const wrappedCallback = (data: unknown) => {
-        if (!called) {
-          called = true;
-          callback(data);
-          // Auto-unsubscribe
-          const currentState = getState();
-          const currentBattle = currentState.battles[path];
-          if (currentBattle) {
-            const subscribers = currentBattle.subscriptions.get(event);
-            if (subscribers) {
-              subscribers.delete(wrappedCallback);
-              if (subscribers.size === 0) {
-                currentBattle.subscriptions.delete(event);
-              }
-            }
-          }
-        }
-      };
-
-      // Get or create subscription set for this event
-      if (!battle.subscriptions.has(event)) {
-        battle.subscriptions.set(event, new Set());
-      }
-      const subscribers = battle.subscriptions.get(event)!;
-      subscribers.add(wrappedCallback);
-
-      // Return unsubscribe function
-      return () => {
-        const currentState = getState();
-        const currentBattle = currentState.battles[path];
-        if (!currentBattle) return;
-
-        const currentSubscribers = currentBattle.subscriptions.get(event);
-        if (currentSubscribers) {
-          currentSubscribers.delete(wrappedCallback);
-          if (currentSubscribers.size === 0) {
-            currentBattle.subscriptions.delete(event);
-          }
-        }
-      };
-    },
+    // Use shared subscription methods - eliminates ~80 lines of duplicate code
+    subscribe,
+    once,
 
     start: (path: string) => {
       set(ref(db, `${path}/startedAt`), Date.now());
@@ -238,28 +187,40 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       push(ref(db, `${path}/players`), {name, team});
     },
 
-    removePlayer: (path: string, name: string, team: number) => {
-      get(ref(db, `${path}/players`)).then((snapshot) => {
+    removePlayer: async (path: string, name: string, team: number) => {
+      try {
+        const snapshot = await get(ref(db, `${path}/players`));
         const players = snapshot.val();
-        const playerToRemove = _.findKey(players, {name, team});
+        if (!players) return; // Handle null case
+
+        const playerToRemove = findKey(players, {name, team});
         if (playerToRemove) {
-          remove(ref(db, `${path}/players/${playerToRemove}`));
+          await remove(ref(db, `${path}/players/${playerToRemove}`));
         }
-      });
+      } catch (error) {
+        logger.errorWithException('Error removing player', error, {path, name, team});
+      }
     },
 
-    usePowerup: (path: string, type: string, team: number) => {
-      get(ref(db, `${path}/powerups`)).then((snapshot) => {
+    usePowerup: async (path: string, type: string, team: number) => {
+      try {
+        const snapshot = await get(ref(db, `${path}/powerups`));
         const allPowerups = snapshot.val();
+        if (!allPowerups) return; // Handle null case
+
         const ownPowerups = allPowerups[team];
-        const toUse = _.find(ownPowerups, (powerup: Powerup) => powerup.type === type && !powerup.used);
+        if (!ownPowerups) return; // Handle missing team
+
+        const toUse = ownPowerups.find((powerup: Powerup) => powerup.type === type && !powerup.used);
         if (toUse) {
           emit(path, 'usePowerup', toUse);
           toUse.used = Date.now();
           toUse.target = 1 - team; // For now use on other team.
-          set(ref(db, `${path}/powerups`), allPowerups);
+          await set(ref(db, `${path}/powerups`), allPowerups);
         }
-      });
+      } catch (error) {
+        logger.errorWithException('Error using powerup', error, {path, type, team});
+      }
     },
 
     checkPickups: (
@@ -293,7 +254,7 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
             const solutionCell = solution[i]?.[j];
             if (!gridCell || gridCell.value !== solutionCell) return;
 
-            _.forEach(pickups, (pickup, key: string) => {
+            Object.entries(pickups).forEach(([key, pickup]) => {
               if (pickup.pickedUp) return;
               if (pickup.i === i && pickup.j === j) {
                 pickupsToMark.push(key);
@@ -337,54 +298,64 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
       );
     },
 
-    countLivePickups: (path: string, cbk: (count: number) => void) => {
-      get(ref(db, `${path}/pickups`)).then((snapshot) => {
+    countLivePickups: async (path: string, cbk: (count: number) => void) => {
+      try {
+        const snapshot = await get(ref(db, `${path}/pickups`));
         const pickups = snapshot.val();
-        const live = _.filter(pickups, (p: {pickedUp?: boolean}) => !p.pickedUp);
+        if (!pickups) {
+          cbk(0); // No pickups means 0 live pickups
+          return;
+        }
+        const live = Object.values(pickups).filter((p: {pickedUp?: boolean}) => !p.pickedUp);
         cbk(live.length);
-      });
+      } catch (error) {
+        logger.errorWithException('Error counting live pickups', error, {path});
+        cbk(0); // Return 0 on error
+      }
     },
 
-    spawnPowerups: (path: string, n: number, games: any[], cbk?: () => void) => {
-      const possibleLocationsPerGrid = _.map(games, (game) => {
-        const {grid, solution} = game;
-        const gridObj = new GridObject(grid);
-        return gridObj.getPossiblePickupLocations(solution);
-      });
+    spawnPowerups: async (path: string, n: number, games: any[], cbk?: () => void) => {
+      try {
+        const possibleLocationsPerGrid = games.map((game) => {
+          const {grid, solution} = game;
+          const gridObj = new GridObject(grid);
+          return gridObj.getPossiblePickupLocations(solution);
+        });
 
-      const state = getState();
-      state.countLivePickups(path, (currentNum) => {
+        // Use Promise wrapper to convert callback-based countLivePickups
+        const currentNum = await new Promise<number>((resolve) => {
+          const state = getState();
+          state.countLivePickups(path, resolve);
+        });
+
         if (currentNum > MAX_ON_BOARD) return;
-        const possibleLocations = _.intersectionWith(...possibleLocationsPerGrid, _.isEqual);
 
-        const locations = _.sampleSize(possibleLocations, n);
-
-        const powerupTypes = _.keys(powerupData);
-        const pickups = _.map(locations, ({i, j}: {i: number; j: number}) => ({
+        const possibleLocations = intersectionWith(...possibleLocationsPerGrid, isEqual);
+        const locations = sampleSize(possibleLocations, n);
+        const powerupTypes = Object.keys(powerupData);
+        const pickups = locations.map(({i, j}: {i: number; j: number}) => ({
           i,
           j,
-          type: _.sample(powerupTypes),
+          type: sample(powerupTypes),
         }));
 
-        Promise.all(
-          pickups.map((pickup: {i: number; j: number; type: string}) => {
-            return push(ref(db, `${path}/pickups`), pickup).then(() => {});
-          })
-        ).then(() => {
-          if (cbk) cbk();
-        });
-      });
+        await Promise.all(pickups.map((pickup) => push(ref(db, `${path}/pickups`), pickup)));
+
+        if (cbk) cbk();
+      } catch (error) {
+        logger.errorWithException('Error spawning powerups', error, {path, n, gamesCount: games.length});
+      }
     },
 
     initialize: (path: string, pid: number, bid: number, teams: number = 2) => {
-      const args = _.map(_.range(teams), (team) => ({
+      const args = Array.from({length: teams}, (_, team) => ({
         pid,
         battleData: {bid, team},
       }));
 
-      const powerupTypes = _.keys(powerupData);
-      const powerups = _.map(_.range(teams), () =>
-        _.map(_.sampleSize(powerupTypes, STARTING_POWERUPS), (type) => ({type}))
+      const powerupTypes = Object.keys(powerupData);
+      const powerups = Array.from({length: teams}, () =>
+        sampleSize(powerupTypes, STARTING_POWERUPS).map((type) => ({type}))
       );
 
       // Use Zustand puzzleStore instead of EventEmitter PuzzleModel

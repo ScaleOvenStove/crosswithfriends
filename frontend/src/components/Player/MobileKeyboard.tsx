@@ -1,8 +1,9 @@
 import {Box} from '@mui/material';
-import _ from 'lodash';
 import React, {useState, useEffect, useCallback} from 'react';
 import SimpleKeyboard from 'react-simple-keyboard';
 import 'react-simple-keyboard/build/css/index.css';
+
+import {logger} from '../../utils/logger';
 
 import './css/mobileKeyboard.css';
 
@@ -26,7 +27,7 @@ export const focusKeyboard = (callback: (key: string) => void, layout = 'default
 };
 
 export const unfocusKeyboard = () => {
-  console.trace();
+  logger.debug('Unfocusing keyboard');
 
   if (globalKeyboardState.onUnfocusCallback) {
     globalKeyboardState.onUnfocusCallback();
@@ -63,7 +64,7 @@ const MobileKeyboard: React.FC<MobileKeyboardProps> = ({layout: initialLayout = 
   }, [layout]);
 
   const handleKeyPress = useCallback((button: string) => {
-    const onKeyDown = globalKeyboardState.callback || _.noop;
+    const onKeyDown = globalKeyboardState.callback || (() => {});
     if (button === '{more}') {
       setLayout('more');
     } else if (button === '{abc}') {

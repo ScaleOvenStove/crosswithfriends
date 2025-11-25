@@ -1,9 +1,32 @@
 import type {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '@crosswithfriends/shared/types';
 import {Box, Skeleton} from '@mui/material';
-import _ from 'lodash';
 import React, {useEffect, useRef, useState, useMemo, useCallback} from 'react';
 
+const throttle = <T extends (...args: any[]) => any>(
+  fn: T,
+  limit: number,
+  options?: {trailing?: boolean}
+): ((...args: Parameters<T>) => void) => {
+  let lastRun = 0;
+  let timeout: NodeJS.Timeout | null = null;
+  return (...args: Parameters<T>) => {
+    const now = Date.now();
+    const timeSinceLastRun = now - lastRun;
+    if (timeSinceLastRun >= limit) {
+      fn(...args);
+      lastRun = now;
+    } else if (options?.trailing && !timeout) {
+      timeout = setTimeout(() => {
+        fn(...args);
+        lastRun = Date.now();
+        timeout = null;
+      }, limit - timeSinceLastRun);
+    }
+  };
+};
+
 import {fetchPuzzleList} from '../../api/puzzle_list';
+import {logger} from '../../utils/logger';
 
 import './css/puzzleList.css';
 import Entry from './Entry';
@@ -88,11 +111,11 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         const puzzlesArray = nextPage?.puzzles || [];
         setPuzzles([...currentPuzzles, ...puzzlesArray]);
         setPage(currentPage + 1);
-        setFullyLoaded(_.size(puzzlesArray) < pageSize);
+        setFullyLoaded(puzzlesArray.length < pageSize);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load puzzles';
         setError(errorMessage);
-        console.error('Error fetching puzzles:', err);
+        logger.errorWithException('Error fetching puzzles', err);
       } finally {
         setLoading(false);
       }
@@ -103,7 +126,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
   // Throttled version of fetchMore
   const throttledFetchMore = useMemo(
     () =>
-      _.throttle(
+      throttle(
         async (
           currentPuzzles: typeof puzzles,
           currentPage: number,

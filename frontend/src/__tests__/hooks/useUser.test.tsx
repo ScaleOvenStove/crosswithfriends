@@ -1,4 +1,4 @@
-import {renderHook, waitFor} from '@testing-library/react';
+import {renderHook, waitFor, act} from '@testing-library/react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 
 import {useUser} from '../../hooks/useUser';
@@ -58,7 +58,9 @@ describe('useUser', () => {
     mockStore.attached = true;
     // Trigger re-render
     const {rerender} = renderHook(() => useUser({onAuth: onAuthCallback}));
-    rerender();
+    act(() => {
+      rerender();
+    });
 
     await waitFor(() => {
       expect(onAuthCallback).toHaveBeenCalled();

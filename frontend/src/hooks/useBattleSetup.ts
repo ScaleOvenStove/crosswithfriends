@@ -3,7 +3,7 @@
  * Handles battle attachment and state management
  */
 
-import {useEffect} from 'react';
+import {useEffect, useRef} from 'react';
 
 import type {Powerup, Winner, BattlePlayer, Pickup} from '../types/battle';
 
@@ -64,15 +64,25 @@ export function useBattleSetup({
     },
   });
 
+  // Store latest attach/detach in ref to avoid dependency issues
+  const attachRef = useRef(battleHook.attach);
+  const detachRef = useRef(battleHook.detach);
+  useEffect(() => {
+    attachRef.current = battleHook.attach;
+    detachRef.current = battleHook.detach;
+  }, [battleHook.attach, battleHook.detach]);
+
   // Attach/detach battle when bid changes
+  // Use refs to avoid including battleHook in dependencies (which causes infinite loops)
   useEffect(() => {
     if (bid && battlePath) {
-      battleHook.attach();
+      attachRef.current();
       return () => {
-        battleHook.detach();
+        detachRef.current();
       };
     }
-  }, [bid, battlePath, battleHook]);
+    return undefined;
+  }, [bid, battlePath]);
 
   return {
     battleHook,
