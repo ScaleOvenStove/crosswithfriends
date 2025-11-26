@@ -1,8 +1,15 @@
 
-import * as dotenv from 'dotenv';
+
+
 import { Server as HTTPServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+
+import * as dotenv from 'dotenv';
+
 
 // Load environment variables
 dotenv.config(); // Try loading .env from current directory
@@ -10,11 +17,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-
-
-import cors from '@fastify/cors';
-import rateLimit from '@fastify/rate-limit';
-import fastify from 'fastify';
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Server as SocketIOServer } from 'socket.io';
 
