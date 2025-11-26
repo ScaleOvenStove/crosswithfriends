@@ -1,22 +1,10 @@
-
-
-
 import { Server as HTTPServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
-
 import * as dotenv from 'dotenv';
-
-
-// Load environment variables
-dotenv.config(); // Try loading .env from current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
 import { fastify, type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { Server as SocketIOServer } from 'socket.io';
 
@@ -24,6 +12,11 @@ import apiRouter from './api/router.js';
 import SocketManager from './SocketManager.js';
 import { logger } from './utils/logger.js';
 
+// Load environment variables
+dotenv.config(); // Try loading .env from current directory
+const currentFilename = fileURLToPath(import.meta.url);
+const currentDirname = path.dirname(currentFilename);
+dotenv.config({ path: path.resolve(currentDirname, '../.env') });
 const port = process.env.PORT || 3000;
 
 // ================== Logging ================
