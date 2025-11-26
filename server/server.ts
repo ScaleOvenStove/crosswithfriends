@@ -17,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { fastify, type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { Server as SocketIOServer } from 'socket.io';
 
 import apiRouter from './api/router.js';
