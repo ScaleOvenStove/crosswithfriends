@@ -1,22 +1,28 @@
-import { Server as HTTPServer } from 'http';
+import {Server as HTTPServer} from 'http';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import * as dotenv from 'dotenv';
-import { fastify, type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
-import { Server as SocketIOServer } from 'socket.io';
+import {
+  fastify,
+  type FastifyError,
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+} from 'fastify';
+import {Server as SocketIOServer} from 'socket.io';
 
 import apiRouter from './api/router.js';
 import SocketManager from './SocketManager.js';
-import { logger } from './utils/logger.js';
+import {logger} from './utils/logger.js';
 
 // Load environment variables
 dotenv.config(); // Try loading .env from current directory
 const currentFilename = fileURLToPath(import.meta.url);
 const currentDirname = path.dirname(currentFilename);
-dotenv.config({ path: path.resolve(currentDirname, '../.env') });
+dotenv.config({path: path.resolve(currentDirname, '../.env')});
 const port = process.env.PORT || 3000;
 
 // ================== Logging ================
@@ -25,9 +31,9 @@ function logAllEvents(io: SocketIOServer): void {
   io.on('*', (event: string, ...args: unknown[]) => {
     try {
       const argsStr = JSON.stringify(args);
-      logger.debug({ event, args: argsStr.length > 100 ? argsStr.substring(0, 100) : argsStr }, `[${event}]`);
+      logger.debug({event, args: argsStr.length > 100 ? argsStr.substring(0, 100) : argsStr}, `[${event}]`);
     } catch {
-      logger.debug({ event, args }, `[${event}]`);
+      logger.debug({event, args}, `[${event}]`);
     }
   });
 }
@@ -43,19 +49,19 @@ async function runServer(): Promise<void> {
     const app = fastify({
       logger: isProduction
         ? {
-          level: 'info',
-        }
+            level: 'info',
+          }
         : {
-          level: 'debug',
-          transport: {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              translateTime: 'HH:MM:ss.l',
-              ignore: 'pid,hostname',
+            level: 'debug',
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translateTime: 'HH:MM:ss.l',
+                ignore: 'pid,hostname',
+              },
             },
           },
-        },
     }) as unknown as FastifyInstance;
 
     // Set custom error handler
@@ -133,15 +139,15 @@ async function runServer(): Promise<void> {
         };
       },
       onExceeding: (req) => {
-        logger.warn({ ip: req.ip, url: req.url }, 'Rate limit warning - approaching limit');
+        logger.warn({ip: req.ip, url: req.url}, 'Rate limit warning - approaching limit');
       },
       onExceeded: (req) => {
-        logger.warn({ ip: req.ip, url: req.url }, 'Rate limit exceeded');
+        logger.warn({ip: req.ip, url: req.url}, 'Rate limit exceeded');
       },
     });
 
     // Register API routes
-    await app.register(apiRouter, { prefix: '/api' });
+    await app.register(apiRouter, {prefix: '/api'});
 
     // Initialize Socket.IO after server is ready but before listening
     app.addHook('onReady', () => {
@@ -161,7 +167,7 @@ async function runServer(): Promise<void> {
       logAllEvents(io);
     });
 
-    await app.listen({ port: Number(port), host: '0.0.0.0' });
+    await app.listen({port: Number(port), host: '0.0.0.0'});
     app.log.info(`Listening on port ${port} `);
 
     process.once('SIGUSR2', (): void => {
@@ -173,7 +179,7 @@ async function runServer(): Promise<void> {
       })();
     });
   } catch (err) {
-    logger.error({ err }, 'Failed to start server');
+    logger.error({err}, 'Failed to start server');
     process.exit(1);
   }
 }
