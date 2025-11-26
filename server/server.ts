@@ -1,14 +1,26 @@
-import {Server as HTTPServer} from 'http';
+
+import * as dotenv from 'dotenv';
+import { Server as HTTPServer } from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Load environment variables
+dotenv.config(); // Try loading .env from current directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+
 
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import fastify from 'fastify';
-import type {FastifyError, FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
-import {Server as SocketIOServer} from 'socket.io';
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Server as SocketIOServer } from 'socket.io';
 
 import apiRouter from './api/router.js';
 import SocketManager from './SocketManager.js';
-import {logger} from './utils/logger.js';
+import { logger } from './utils/logger.js';
 
 const port = process.env.PORT || 3000;
 
@@ -18,9 +30,9 @@ function logAllEvents(io: SocketIOServer): void {
   io.on('*', (event: string, ...args: unknown[]) => {
     try {
       const argsStr = JSON.stringify(args);
-      logger.debug({event, args: argsStr.length > 100 ? argsStr.substring(0, 100) : argsStr}, `[${event}]`);
+      logger.debug({ event, args: argsStr.length > 100 ? argsStr.substring(0, 100) : argsStr }, `[${event}]`);
     } catch {
-      logger.debug({event, args}, `[${event}]`);
+      logger.debug({ event, args }, `[${event}]`);
     }
   });
 }
@@ -36,19 +48,19 @@ async function runServer(): Promise<void> {
     const app = fastify({
       logger: isProduction
         ? {
-            level: 'info',
-          }
+          level: 'info',
+        }
         : {
-            level: 'debug',
-            transport: {
-              target: 'pino-pretty',
-              options: {
-                colorize: true,
-                translateTime: 'HH:MM:ss.l',
-                ignore: 'pid,hostname',
-              },
+          level: 'debug',
+          transport: {
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+              translateTime: 'HH:MM:ss.l',
+              ignore: 'pid,hostname',
             },
           },
+        },
     }) as unknown as FastifyInstance;
 
     // Set custom error handler
@@ -121,20 +133,20 @@ async function runServer(): Promise<void> {
         return {
           statusCode: 429,
           error: 'Too Many Requests',
-          message: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+          message: `Rate limit exceeded.Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
           retryAfter: Math.ceil(context.ttl / 1000),
         };
       },
       onExceeding: (req) => {
-        logger.warn({ip: req.ip, url: req.url}, 'Rate limit warning - approaching limit');
+        logger.warn({ ip: req.ip, url: req.url }, 'Rate limit warning - approaching limit');
       },
       onExceeded: (req) => {
-        logger.warn({ip: req.ip, url: req.url}, 'Rate limit exceeded');
+        logger.warn({ ip: req.ip, url: req.url }, 'Rate limit exceeded');
       },
     });
 
     // Register API routes
-    await app.register(apiRouter, {prefix: '/api'});
+    await app.register(apiRouter, { prefix: '/api' });
 
     // Initialize Socket.IO after server is ready but before listening
     app.addHook('onReady', () => {
@@ -154,8 +166,8 @@ async function runServer(): Promise<void> {
       logAllEvents(io);
     });
 
-    await app.listen({port: Number(port), host: '0.0.0.0'});
-    app.log.info(`Listening on port ${port}`);
+    await app.listen({ port: Number(port), host: '0.0.0.0' });
+    app.log.info(`Listening on port ${port} `);
 
     process.once('SIGUSR2', (): void => {
       void (async (): Promise<void> => {
@@ -166,7 +178,7 @@ async function runServer(): Promise<void> {
       })();
     });
   } catch (err) {
-    logger.error({err}, 'Failed to start server');
+    logger.error({ err }, 'Failed to start server');
     process.exit(1);
   }
 }
