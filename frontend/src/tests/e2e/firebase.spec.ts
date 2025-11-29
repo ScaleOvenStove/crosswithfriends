@@ -1,18 +1,20 @@
 /**
  * E2E tests for Firebase Realtime Database integration
- * 
+ *
  * These tests verify that the application correctly interacts with Firebase
  * when running against the Firebase emulator.
  */
 
+import {ref, get, set} from 'firebase/database';
+
 import {test, expect} from '../fixtures';
+
 import {
   getEmulatorDatabase,
   setupTestData,
   clearEmulatorData,
   waitForFirebaseConnection,
 } from './utils/firebase-emulator';
-import {ref, get, set, onValue} from 'firebase/database';
 
 test.describe('Firebase Integration', () => {
   test.beforeEach(async () => {
@@ -51,7 +53,7 @@ test.describe('Firebase Integration', () => {
     // Act - Read data from Firebase
     const db = getEmulatorDatabase();
     await waitForFirebaseConnection(db);
-    
+
     const puzzleRef = ref(db, 'puzzle/test-puzzle-123');
     const snapshot = await get(puzzleRef);
     const data = snapshot.val();
@@ -98,10 +100,10 @@ test.describe('Firebase Integration', () => {
 
     // Act - Navigate to page that might try to write to existing game
     await page.goto('/beta/play/test-puzzle');
-    
+
     // Assert - Page should load (the UI should handle the rule enforcement)
     await expect(page.locator('body')).toBeVisible();
-    
+
     // Note: Full security rule testing is done in unit tests (database.rules.test.ts)
     // E2E tests verify the app behaves correctly when rules are enforced
   });
@@ -123,7 +125,6 @@ test.describe('Firebase Integration', () => {
     await page.goto('/beta/play/test-puzzle');
 
     // Update data in Firebase
-    const gameRef = ref(db, 'game/test-game-realtime/events');
     await set(ref(db, 'game/test-game-realtime/events/event1'), {
       type: 'cell-fill',
       cell: 'A1',
@@ -147,7 +148,7 @@ test.describe('Firebase Integration', () => {
     // Act
     const db = getEmulatorDatabase();
     await waitForFirebaseConnection(db);
-    
+
     const puzzleRef = ref(db, 'puzzle/public-puzzle');
     const snapshot = await get(puzzleRef);
     const data = snapshot.val();
@@ -157,4 +158,3 @@ test.describe('Firebase Integration', () => {
     expect(data.title).toBe('Public Puzzle');
   });
 });
-

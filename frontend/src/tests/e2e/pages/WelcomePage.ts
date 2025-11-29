@@ -13,8 +13,13 @@ export class WelcomePage {
   constructor(page: Page) {
     this.page = page;
     // Use role-based locators where possible, fallback to test IDs
-    this.searchInput = page.getByPlaceholder(/search/i).or(page.getByRole('searchbox')).or(page.locator('[data-testid="search-input"]'));
-    this.puzzleList = page.locator('[data-testid="puzzle-list"]').or(page.getByRole('list', {name: /puzzle/i}));
+    this.searchInput = page
+      .getByPlaceholder(/search/i)
+      .or(page.getByRole('searchbox'))
+      .or(page.locator('[data-testid="search-input"]'));
+    this.puzzleList = page
+      .locator('[data-testid="puzzle-list"]')
+      .or(page.getByRole('list', {name: /puzzle/i}));
     this.filterCheckboxes = page.getByRole('checkbox');
   }
 
@@ -68,7 +73,3 @@ export class WelcomePage {
     }
   }
 }
-
-
-
-

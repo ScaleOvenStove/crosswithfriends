@@ -15,8 +15,12 @@ export class ReplayPage {
   constructor(page: Page) {
     this.page = page;
     this.player = page.locator('[data-testid="replay-player"]').or(page.locator('.replay-player'));
-    this.playButton = page.getByRole('button', {name: /play/i}).or(page.locator('[data-testid="play-button"]'));
-    this.pauseButton = page.getByRole('button', {name: /pause/i}).or(page.locator('[data-testid="pause-button"]'));
+    this.playButton = page
+      .getByRole('button', {name: /play/i})
+      .or(page.locator('[data-testid="play-button"]'));
+    this.pauseButton = page
+      .getByRole('button', {name: /pause/i})
+      .or(page.locator('[data-testid="pause-button"]'));
     this.timeline = page.locator('[data-testid="timeline"]').or(page.locator('.timeline'));
     this.grid = page
       .locator('[data-testid="crossword-grid"]')
@@ -71,7 +75,3 @@ export class ReplayPage {
     return await this.pauseButton.isVisible({timeout: 1000}).catch(() => false);
   }
 }
-
-
-
-

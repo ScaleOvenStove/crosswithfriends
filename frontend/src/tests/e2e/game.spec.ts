@@ -221,7 +221,10 @@ test.describe('Game Page', () => {
       // Assert - Should either show error message or redirect, but not crash
       await expect(page.locator('body')).toBeVisible();
       // Check for error message or redirect
-      const hasError = await page.getByText(/error|not found|invalid/i).isVisible({timeout: 5000}).catch(() => false);
+      const hasError = await page
+        .getByText(/error|not found|invalid/i)
+        .isVisible({timeout: 5000})
+        .catch(() => false);
       const isRedirected = page.url() !== `/game/invalid-nonexistent-game-id-12345`;
       expect(hasError || isRedirected).toBeTruthy();
     });

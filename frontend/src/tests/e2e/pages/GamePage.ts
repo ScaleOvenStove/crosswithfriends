@@ -85,11 +85,13 @@ export class GamePage {
   getCell(testId: string): Locator;
   getCell(rowOrTestId: number | string, col?: number): Locator {
     if (typeof rowOrTestId === 'string') {
-      return this.page.locator(`[data-testid="cell-${rowOrTestId}"]`).or(this.page.locator(`[data-testid^="cell-${rowOrTestId}"]`));
+      return this.page
+        .locator(`[data-testid="cell-${rowOrTestId}"]`)
+        .or(this.page.locator(`[data-testid^="cell-${rowOrTestId}"]`));
     }
-    return this.page.locator(`[data-testid="cell-${rowOrTestId}-${col}"]`).or(
-      this.grid.locator(`tr:nth-child(${rowOrTestId + 1}) td:nth-child(${col! + 1})`)
-    );
+    return this.page
+      .locator(`[data-testid="cell-${rowOrTestId}-${col}"]`)
+      .or(this.grid.locator(`tr:nth-child(${rowOrTestId + 1}) td:nth-child(${col! + 1})`));
   }
 
   /**
@@ -152,16 +154,12 @@ export class GamePage {
    * Get the current clue text
    */
   async getCurrentClue(): Promise<string | null> {
-    const currentClue = this.page.locator('[data-testid="current-clue"]').or(
-      this.page.locator('.clue.active').or(this.page.locator('.clue.selected'))
-    );
+    const currentClue = this.page
+      .locator('[data-testid="current-clue"]')
+      .or(this.page.locator('.clue.active').or(this.page.locator('.clue.selected')));
     if (await currentClue.isVisible({timeout: 2000}).catch(() => false)) {
       return await currentClue.textContent();
     }
     return null;
   }
 }
-
-
-
-

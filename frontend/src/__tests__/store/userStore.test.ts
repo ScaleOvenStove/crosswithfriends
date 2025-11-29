@@ -276,7 +276,12 @@ describe('userStore', () => {
       expect(transactionCallback).toBeDefined();
       if (transactionCallback) {
         const existingItem = {pid: 123, solved: false, time: 1000, v2: true};
-        const result = transactionCallback(existingItem) as {solved: boolean; pid: number; time: number; v2: boolean};
+        const result = transactionCallback(existingItem) as {
+          solved: boolean;
+          pid: number;
+          time: number;
+          v2: boolean;
+        };
         expect(result.solved).toBe(true);
         expect(result.pid).toBe(123);
         expect(result.time).toBe(1000);

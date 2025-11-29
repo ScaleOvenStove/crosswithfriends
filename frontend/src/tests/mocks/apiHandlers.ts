@@ -2,6 +2,7 @@
  * Mock API handlers for Playwright route interception
  */
 import type {Route} from '@playwright/test';
+
 import {
   mockGameData,
   mockPuzzleData,

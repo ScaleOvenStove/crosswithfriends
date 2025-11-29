@@ -194,7 +194,9 @@ const Replay: React.FC = () => {
     };
   }, [recomputeHistory]);
 
-  const setPositionToRenderThrottledRef = useRef<DebouncedFunc<(positionToRender: number) => void> | undefined>(undefined);
+  const setPositionToRenderThrottledRef = useRef<
+    DebouncedFunc<(positionToRender: number) => void> | undefined
+  >(undefined);
   useEffect(() => {
     setPositionToRenderThrottledRef.current = throttle((newPositionToRender: number) => {
       setPositionToRender(newPositionToRender);
@@ -359,7 +361,9 @@ const Replay: React.FC = () => {
     ({r, c}: {r: number; c: number}): void => {
       if (!game || !game.cursors) return;
       const gameCursors = game.cursors;
-      const foundCursor = gameCursors.find((cursorItem: {r: number; c: number; id: number}) => cursorItem.r === r && cursorItem.c === c);
+      const foundCursor = gameCursors.find(
+        (cursorItem: {r: number; c: number; id: number}) => cursorItem.r === r && cursorItem.c === c
+      );
       if (foundCursor !== undefined) {
         followCursorRef.current = foundCursor.id;
       } else {
@@ -490,7 +494,6 @@ const Replay: React.FC = () => {
 
   const renderToolbar = useMemo((): React.ReactNode => {
     if (!game) return undefined;
-    const {clock} = game;
     // In replay mode, use the current replay position (in milliseconds) divided by 1000 to get seconds
     // This ensures the clock updates as the replay position changes
     const replayTime = positionToRender / 1000;
@@ -561,7 +564,6 @@ const Replay: React.FC = () => {
       />
     );
   }, [error, game, colorAttributionMode, listMode, handleUpdateCursor, screenWidth, myColor]);
-
 
   const renderControls = useMemo((): React.ReactNode => {
     const width = isMobile() ? screenWidth - 20 : 1000;

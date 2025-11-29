@@ -11,6 +11,7 @@ interface LogContext {
 
 class Logger {
   private isDevelopment = import.meta.env.DEV;
+  // eslint-disable-next-line no-undef
   private isTest = import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test';
 
   private formatMessage(level: LogLevel, message: string, context?: LogContext): string {

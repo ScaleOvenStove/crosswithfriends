@@ -366,7 +366,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         optimisticParams.autocheck === serverParams.autocheck ||
         optimisticParams.autocheck === undefined ||
         serverParams.autocheck === undefined;
-      
+
       return cellMatch && valueMatch && idMatch && autocheckMatch;
     }
 
@@ -377,9 +377,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       if (!optScope || !srvScope || optScope.length !== srvScope.length) {
         return false;
       }
-      const scopeMatch = optScope.every(
-        (opt, i) => opt.r === srvScope[i]?.r && opt.c === srvScope[i]?.c
-      );
+      const scopeMatch = optScope.every((opt, i) => opt.r === srvScope[i]?.r && opt.c === srvScope[i]?.c);
       return scopeMatch && optimisticParams.id === serverParams.id;
     }
 
@@ -387,7 +385,9 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     if (optimisticEvent.type === 'updateCursor') {
       const optCell = optimisticParams.cell as {r?: number; c?: number} | undefined;
       const srvCell = serverParams.cell as {r?: number; c?: number} | undefined;
-      return optCell?.r === srvCell?.r && optCell?.c === srvCell?.c && optimisticParams.id === serverParams.id;
+      return (
+        optCell?.r === srvCell?.r && optCell?.c === srvCell?.c && optimisticParams.id === serverParams.id
+      );
     }
 
     // For chat events, match by message content and user id
@@ -402,37 +402,39 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       return false;
     }
     const paramsMatch = optKeys.every((key) => optimisticParams[key] === serverParams[key]);
-    
+
     // If params match, we're done
     if (paramsMatch) {
       return true;
     }
-    
+
     // As a fallback, if timestamps are very close (within 5 seconds) and type matches,
     // and for updateCell events, if the cell and user match, consider it a match
     // This handles cases where the server might transform the event slightly
     if (optimisticEvent.type === 'updateCell') {
-      const optTimestamp = typeof optimisticEvent.timestamp === 'string' 
-        ? parseFloat(optimisticEvent.timestamp) 
-        : optimisticEvent.timestamp || 0;
-      const srvTimestamp = typeof serverEvent.timestamp === 'string'
-        ? parseFloat(serverEvent.timestamp)
-        : serverEvent.timestamp || 0;
+      const optTimestamp =
+        typeof optimisticEvent.timestamp === 'string'
+          ? parseFloat(optimisticEvent.timestamp)
+          : optimisticEvent.timestamp || 0;
+      const srvTimestamp =
+        typeof serverEvent.timestamp === 'string'
+          ? parseFloat(serverEvent.timestamp)
+          : serverEvent.timestamp || 0;
       const timeDiff = Math.abs(srvTimestamp - optTimestamp);
       const timeWindow = 2000; // 2 seconds - conservative window for rapid typing
-      
+
       const optCell = optimisticParams.cell as {r?: number; c?: number} | undefined;
       const srvCell = serverParams.cell as {r?: number; c?: number} | undefined;
       const cellMatch = optCell?.r === srvCell?.r && optCell?.c === srvCell?.c;
       const idMatch = optimisticParams.id === serverParams.id;
-      
+
       // If cell and user match, and timestamps are close, it's likely the same event
       // (value might have changed if user typed another character)
       if (cellMatch && idMatch && timeDiff < timeWindow) {
         return true;
       }
     }
-    
+
     return false;
   };
 
@@ -799,14 +801,16 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       if (game.optimisticEvents.length === 0) continue;
 
       const staleEvents = game.optimisticEvents.filter((event) => {
-        const eventTime = typeof event.timestamp === 'string' ? parseFloat(event.timestamp) : event.timestamp || 0;
+        const eventTime =
+          typeof event.timestamp === 'string' ? parseFloat(event.timestamp) : event.timestamp || 0;
         const age = now - eventTime;
         return age > OPTIMISTIC_EVENT_TIMEOUT_MS;
       });
 
       if (staleEvents.length > 0) {
         const updatedOptimisticEvents = game.optimisticEvents.filter((event) => {
-          const eventTime = typeof event.timestamp === 'string' ? parseFloat(event.timestamp) : event.timestamp || 0;
+          const eventTime =
+            typeof event.timestamp === 'string' ? parseFloat(event.timestamp) : event.timestamp || 0;
           const age = now - eventTime;
           return age <= OPTIMISTIC_EVENT_TIMEOUT_MS;
         });
@@ -838,7 +842,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
   };
 
   // Set up periodic cleanup of stale optimistic events
-  const cleanupInterval = setInterval(() => {
+  const _cleanupInterval = setInterval(() => {
     cleanupStaleOptimisticEvents();
   }, 5000); // Run cleanup every 5 seconds
 

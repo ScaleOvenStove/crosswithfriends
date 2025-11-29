@@ -67,7 +67,3 @@ export async function getTextContentSafely(page: Page, selector: string): Promis
   }
   return null;
 }
-
-
-
-

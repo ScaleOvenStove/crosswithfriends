@@ -182,7 +182,6 @@ const Game: React.FC = () => {
     };
   }, []);
 
-
   const handleChangeRef = useRef<DebouncedFunc<(options?: {isEdit?: boolean}) => Promise<void>>>();
   if (!handleChangeRef.current) {
     handleChangeRef.current = debounce(async ({isEdit = false}: {isEdit?: boolean} = {}) => {

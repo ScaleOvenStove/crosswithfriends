@@ -12,9 +12,13 @@ export class RoomPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.gameSelector = page.locator('[data-testid="game-selector"]').or(page.getByRole('combobox', {name: /game/i}));
+    this.gameSelector = page
+      .locator('[data-testid="game-selector"]')
+      .or(page.getByRole('combobox', {name: /game/i}));
     this.noGameMessage = page.getByText(/no game/i).or(page.locator('[data-testid="no-game-message"]'));
-    this.playerList = page.locator('[data-testid="player-list"]').or(page.getByRole('list', {name: /player/i}));
+    this.playerList = page
+      .locator('[data-testid="player-list"]')
+      .or(page.getByRole('list', {name: /player/i}));
   }
 
   /**
@@ -40,7 +44,10 @@ export class RoomPage {
    * Check if a game is selected
    */
   async hasGameSelected(): Promise<boolean> {
-    return await this.noGameMessage.isVisible({timeout: 1000}).then(() => false).catch(() => true);
+    return await this.noGameMessage
+      .isVisible({timeout: 1000})
+      .then(() => false)
+      .catch(() => true);
   }
 
   /**
@@ -53,7 +60,3 @@ export class RoomPage {
     return 0;
   }
 }
-
-
-
-
