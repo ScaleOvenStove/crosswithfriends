@@ -17,7 +17,7 @@ describe('createGame', () => {
 
   it('should call apiClient.post with correct parameters', async () => {
     const mockResponse = {gid: 'test-game-id'};
-    (apiClient.post as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
     const requestData = {pid: '123', title: 'Test Game'};
     const result = await createGame(requestData);

@@ -320,9 +320,15 @@ const reducers = {
     const {action} = params;
     let {clock} = game;
     if (action === 'pause') {
-      // no-op, will be handled by tick
+      clock = {
+        ...clock,
+        paused: true,
+      };
     } else if (action === 'start') {
-      // no-op, will be handled by tick
+      clock = {
+        ...clock,
+        paused: false,
+      };
     } else if (action === 'reset') {
       clock = {
         ...clock,

@@ -1,24 +1,56 @@
 import {test, expect} from '../fixtures';
 
 test.describe('Room Page', () => {
-  test('loads room page with room ID', async ({page}) => {
-    await page.goto('/room/test-room-id');
+  test('should load room page with room ID', async ({page, roomPage}) => {
+    // Arrange & Act
+    await roomPage.goto('test-room-id');
+
+    // Assert
+    await expect(page).toHaveURL(/\/room\//);
     await expect(page.locator('body')).toBeVisible();
   });
 
-  test('displays room interface', async ({page}) => {
-    await page.goto('/room/test-room-id');
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/room\//);
+  test('should display room interface after loading', async ({roomPage}) => {
+    // Arrange & Act
+    await roomPage.goto('test-room-id');
+    await roomPage.waitForRoomLoaded();
+
+    // Assert - Room should be loaded (either with game selector or no game message)
+    const hasGameSelector = await roomPage.gameSelector.isVisible({timeout: 2000}).catch(() => false);
+    const hasNoGameMessage = await roomPage.noGameMessage.isVisible({timeout: 2000}).catch(() => false);
+
+    expect(hasGameSelector || hasNoGameMessage).toBeTruthy();
   });
 
-  test('shows message when no game is selected', async ({page}) => {
-    await page.goto('/room/test-room-id');
-    await page.waitForLoadState('networkidle');
-    // Check for "No game selected" message if it exists
-    const noGameMessage = page.locator('text=/no game/i');
-    if (await noGameMessage.isVisible({timeout: 1000}).catch(() => false)) {
-      await expect(noGameMessage).toBeVisible();
+  test('should show message when no game is selected', async ({roomPage}) => {
+    // Arrange
+    await roomPage.goto('test-room-id');
+    await roomPage.waitForRoomLoaded();
+
+    // Assert
+    const hasNoGame = await roomPage.hasGameSelected();
+    if (!hasNoGame) {
+      await expect(roomPage.noGameMessage).toBeVisible({timeout: 3000});
+    } else {
+      // If a game is selected, verify game selector is visible instead
+      await expect(roomPage.gameSelector).toBeVisible({timeout: 3000});
+    }
+  });
+
+  test('should display player list when available', async ({roomPage}) => {
+    // Arrange
+    await roomPage.goto('test-room-id');
+    await roomPage.waitForRoomLoaded();
+
+    // Act
+    const playerCount = await roomPage.getPlayerCount();
+
+    // Assert - If players exist, list should be visible
+    if (playerCount > 0) {
+      await expect(roomPage.playerList).toBeVisible({timeout: 3000});
+    } else {
+      // If no players, that's also a valid state
+      expect(playerCount).toBe(0);
     }
   });
 });

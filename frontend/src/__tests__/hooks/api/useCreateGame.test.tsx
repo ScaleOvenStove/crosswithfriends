@@ -29,7 +29,7 @@ describe('useCreateGame', () => {
 
   it('should create mutation with createGame function', async () => {
     const mockResponse = {gid: 'test-game-id'};
-    (createGame as any).mockResolvedValue(mockResponse);
+    vi.mocked(createGame).mockResolvedValue(mockResponse);
 
     const {result} = renderHook(() => useCreateGame(), {wrapper});
 
@@ -45,7 +45,7 @@ describe('useCreateGame', () => {
 
   it('should call onSuccess callback when mutation succeeds', async () => {
     const mockResponse = {gid: 'test-game-id'};
-    (createGame as any).mockResolvedValue(mockResponse);
+    vi.mocked(createGame).mockResolvedValue(mockResponse);
     const onSuccess = vi.fn();
 
     const {result} = renderHook(() => useCreateGame({onSuccess}), {wrapper});
@@ -63,7 +63,7 @@ describe('useCreateGame', () => {
 
   it('should call onError callback when mutation fails', async () => {
     const mockError = new Error('Failed to create game');
-    (createGame as any).mockRejectedValue(mockError);
+    vi.mocked(createGame).mockRejectedValue(mockError);
     const onError = vi.fn();
 
     const {result} = renderHook(() => useCreateGame({onError}), {wrapper});

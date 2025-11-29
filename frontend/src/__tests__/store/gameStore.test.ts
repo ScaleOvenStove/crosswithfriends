@@ -73,14 +73,14 @@ describe('gameStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useGameStore.setState({games: {}});
-    (window as any).game = undefined;
+    vi.mocked(window).game = undefined;
   });
 
   describe('getGame', () => {
     it('should create a new game instance if it does not exist', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -98,7 +98,7 @@ describe('gameStore', () => {
     it('should return existing game instance if it exists', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -111,7 +111,7 @@ describe('gameStore', () => {
     });
 
     it('should throw error for invalid path', () => {
-      (ref as any).mockImplementation(() => {
+      vi.mocked(ref).mockImplementation(() => {
         throw new Error('Invalid path');
       });
 
@@ -125,7 +125,7 @@ describe('gameStore', () => {
     it('should subscribe to events and return unsubscribe function', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -143,7 +143,7 @@ describe('gameStore', () => {
     it('should allow multiple subscribers for the same event', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -167,7 +167,7 @@ describe('gameStore', () => {
     it('should subscribe once and auto-unsubscribe', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -186,13 +186,13 @@ describe('gameStore', () => {
     it('should add updateCell event', async () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         if (path === '/game/test-123/battleData') return {path: '/game/test-123/battleData'};
         return {path};
       });
-      (onValue as any).mockReturnValue(vi.fn());
+      vi.mocked(onValue).mockReturnValue(vi.fn());
 
       useGameStore.getState().getGame('/game/test-123');
       await useGameStore.getState().attach('/game/test-123');
@@ -210,7 +210,7 @@ describe('gameStore', () => {
                   grid: [[{}]],
                 },
               },
-            } as any,
+            },
           },
         },
       });
@@ -225,7 +225,7 @@ describe('gameStore', () => {
     it('should not add event if game is not ready', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -245,13 +245,13 @@ describe('gameStore', () => {
     it('should add updateCursor event when game is ready', async () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         if (path === '/game/test-123/battleData') return {path: '/game/test-123/battleData'};
         return {path};
       });
-      (onValue as any).mockReturnValue(vi.fn());
+      vi.mocked(onValue).mockReturnValue(vi.fn());
 
       useGameStore.getState().getGame('/game/test-123');
       await useGameStore.getState().attach('/game/test-123');
@@ -268,7 +268,7 @@ describe('gameStore', () => {
                   grid: [[{}]],
                 },
               },
-            } as any,
+            },
           },
         },
       });
@@ -285,13 +285,13 @@ describe('gameStore', () => {
     it('should add check event with scope', async () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         if (path === '/game/test-123/battleData') return {path: '/game/test-123/battleData'};
         return {path};
       });
-      (onValue as any).mockReturnValue(vi.fn());
+      vi.mocked(onValue).mockReturnValue(vi.fn());
 
       useGameStore.getState().getGame('/game/test-123');
       await useGameStore.getState().attach('/game/test-123');
@@ -308,7 +308,7 @@ describe('gameStore', () => {
                   grid: [[{}]],
                 },
               },
-            } as any,
+            },
           },
         },
       });
@@ -323,7 +323,7 @@ describe('gameStore', () => {
     it('should not add check event with empty scope', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -343,13 +343,13 @@ describe('gameStore', () => {
     it('should add reveal event with scope', async () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         if (path === '/game/test-123/battleData') return {path: '/game/test-123/battleData'};
         return {path};
       });
-      (onValue as any).mockReturnValue(vi.fn());
+      vi.mocked(onValue).mockReturnValue(vi.fn());
 
       useGameStore.getState().getGame('/game/test-123');
       await useGameStore.getState().attach('/game/test-123');
@@ -366,7 +366,7 @@ describe('gameStore', () => {
                   grid: [[{}]],
                 },
               },
-            } as any,
+            },
           },
         },
       });
@@ -383,13 +383,13 @@ describe('gameStore', () => {
     it('should add reset event with scope', async () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         if (path === '/game/test-123/battleData') return {path: '/game/test-123/battleData'};
         return {path};
       });
-      (onValue as any).mockReturnValue(vi.fn());
+      vi.mocked(onValue).mockReturnValue(vi.fn());
 
       useGameStore.getState().getGame('/game/test-123');
       await useGameStore.getState().attach('/game/test-123');
@@ -406,7 +406,7 @@ describe('gameStore', () => {
                   grid: [[{}]],
                 },
               },
-            } as any,
+            },
           },
         },
       });
@@ -423,13 +423,13 @@ describe('gameStore', () => {
     it('should add chat event', async () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         if (path === '/game/test-123/battleData') return {path: '/game/test-123/battleData'};
         return {path};
       });
-      (onValue as any).mockReturnValue(vi.fn());
+      vi.mocked(onValue).mockReturnValue(vi.fn());
 
       useGameStore.getState().getGame('/game/test-123');
       await useGameStore.getState().attach('/game/test-123');
@@ -446,7 +446,7 @@ describe('gameStore', () => {
                   grid: [[{}]],
                 },
               },
-            } as any,
+            },
           },
         },
       });
@@ -463,7 +463,7 @@ describe('gameStore', () => {
     it('should return events for a game', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
@@ -474,7 +474,7 @@ describe('gameStore', () => {
         games: {
           '/game/test-123': {
             ...useGameStore.getState().games['/game/test-123'],
-            events: [{type: 'updateCell', id: 'event-1'}] as any,
+            events: [{type: 'updateCell', id: 'event-1'}],
           },
         },
       });
@@ -490,13 +490,13 @@ describe('gameStore', () => {
     it('should return create event for a game', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
       });
 
-      const createEvent = {type: 'create', id: 'create-1'} as any;
+      const createEvent = {type: 'create', id: 'create-1'};
 
       useGameStore.getState().getGame('/game/test-123');
       useGameStore.setState({
@@ -518,13 +518,13 @@ describe('gameStore', () => {
     it('should clean up subscriptions and remove game', () => {
       const mockRef = {path: '/game/test-123', key: 'test-123'};
       const mockEventsRef = {path: '/game/test-123/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-123') return mockRef;
         if (path === '/game/test-123/events') return mockEventsRef;
         return {path};
       });
       const mockUnsubscribe = vi.fn();
-      (onValue as any).mockReturnValue(mockUnsubscribe);
+      vi.mocked(onValue).mockReturnValue(mockUnsubscribe);
 
       useGameStore.getState().getGame('/game/test-123');
       useGameStore.getState().attach('/game/test-123');
@@ -542,7 +542,7 @@ describe('gameStore', () => {
     beforeEach(() => {
       const mockRef = {path: '/game/test-cache', key: 'test-cache'};
       const mockEventsRef = {path: '/game/test-cache/events', key: 'events'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/game/test-cache') return mockRef;
         if (path === '/game/test-cache/events') return mockEventsRef;
         return {path};
@@ -559,7 +559,7 @@ describe('gameStore', () => {
             solution: [['A']],
           },
         },
-      } as any;
+      };
 
       useGameStore.getState().getGame('/game/test-cache');
       useGameStore.setState({
@@ -594,7 +594,7 @@ describe('gameStore', () => {
             solution: [['A']],
           },
         },
-      } as any;
+      };
 
       useGameStore.getState().getGame('/game/test-cache');
       useGameStore.setState({
@@ -609,14 +609,15 @@ describe('gameStore', () => {
         },
       });
 
-      const _state1 = useGameStore.getState().games['/game/test-cache']?.gameState;
+      // eslint-disable-next-line no-underscore-dangle
+      const _initialState = useGameStore.getState().games['/game/test-cache']?.gameState;
 
       // Add a new event
       useGameStore.setState({
         games: {
           '/game/test-cache': {
             ...useGameStore.getState().games['/game/test-cache'],
-            events: [{id: 'event-1', type: 'updateCell'} as any],
+            events: [{id: 'event-1', type: 'updateCell'}],
             gameState: null, // Force recompute
           },
         },
@@ -624,7 +625,8 @@ describe('gameStore', () => {
 
       // Trigger recompute by accessing selector
       const game = useGameStore.getState().games['/game/test-cache'];
-      const _state2 = game?.gameState;
+      // eslint-disable-next-line no-underscore-dangle
+      const _updatedState = game?.gameState;
 
       // Should be different after events changed (would be if computeGameState was called)
       // Note: In real implementation, the gameState would be recomputed
@@ -641,7 +643,7 @@ describe('gameStore', () => {
             solution: [['A']],
           },
         },
-      } as any;
+      };
 
       useGameStore.getState().getGame('/game/test-cache');
       useGameStore.setState({
@@ -656,14 +658,15 @@ describe('gameStore', () => {
         },
       });
 
-      const _state1 = useGameStore.getState().games['/game/test-cache']?.gameState;
+      // eslint-disable-next-line no-underscore-dangle
+      const _previousState = useGameStore.getState().games['/game/test-cache']?.gameState;
 
       // Add optimistic event
       useGameStore.setState({
         games: {
           '/game/test-cache': {
             ...useGameStore.getState().games['/game/test-cache'],
-            optimisticEvents: [{id: 'optimistic-1', type: 'updateCell'} as any],
+            optimisticEvents: [{id: 'optimistic-1', type: 'updateCell'}],
             gameState: null,
           },
         },

@@ -3,50 +3,96 @@ import {isMobile, toArr} from '@crosswithfriends/shared/lib/jsUtils';
 import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
 import {Box, Stack, Tooltip} from '@mui/material';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
 import {MdPlayArrow, MdPause, MdChevronLeft, MdChevronRight} from 'react-icons/md';
 import {useParams} from 'react-router-dom';
 
 type DebouncedFunc<T extends (...args: any[]) => any> = {
   (...args: Parameters<T>): void;
   cancel: () => void;
+  flush: () => void;
 };
 
 const debounce = <T extends (...args: any[]) => any>(fn: T, delay: number = 0): DebouncedFunc<T> => {
   let timeout: NodeJS.Timeout;
+  let pendingArgs: Parameters<T> | null = null;
   const debounced = (...args: Parameters<T>) => {
+    pendingArgs = args;
     clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
+    if (delay === 0) {
+      // For 0 delay, use queueMicrotask to ensure it executes even with rapid calls
+      timeout = setTimeout(() => {
+        if (pendingArgs) {
+          fn(...pendingArgs);
+          pendingArgs = null;
+        }
+      }, 0);
+    } else {
+      timeout = setTimeout(() => {
+        if (pendingArgs) {
+          fn(...pendingArgs);
+          pendingArgs = null;
+        }
+      }, delay);
+    }
   };
-  debounced.cancel = () => clearTimeout(timeout);
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+    pendingArgs = null;
+  };
+  debounced.flush = () => {
+    clearTimeout(timeout);
+    if (pendingArgs) {
+      fn(...pendingArgs);
+      pendingArgs = null;
+    }
+  };
   return debounced;
 };
 
 const throttle = <T extends (...args: any[]) => any>(fn: T, limit: number): DebouncedFunc<T> => {
   let inThrottle: boolean;
+  let pendingArgs: Parameters<T> | null = null;
+  let timeout: NodeJS.Timeout | null = null;
   const throttled = (...args: Parameters<T>) => {
+    pendingArgs = args;
     if (!inThrottle) {
       fn(...args);
       inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
+      timeout = setTimeout(() => {
+        inThrottle = false;
+        timeout = null;
+      }, limit);
     }
   };
-  throttled.cancel = () => {};
+  throttled.cancel = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+    pendingArgs = null;
+  };
+  throttled.flush = () => {
+    if (pendingArgs && !inThrottle) {
+      fn(...pendingArgs);
+      pendingArgs = null;
+    }
+  };
   return throttled;
 };
 
 const findLastIndex = <T,>(arr: T[], fn: (item: T) => boolean): number => {
   for (let i = arr.length - 1; i >= 0; i--) {
-    if (fn(arr[i])) {
+    const item = arr[i];
+    if (item !== undefined && fn(item)) {
       return i;
     }
   }
   return -1;
 };
 
-import Chat from '../components/Chat';
 import Nav from '../components/common/Nav';
 import Player from '../components/Player';
+import type {PlayerRef} from '../components/Player/Player';
 import {Timeline} from '../components/Timeline/Timeline';
 import Toolbar from '../components/Toolbar';
 import {useGameStore} from '../store';
@@ -91,10 +137,7 @@ const Replay: React.FC = () => {
   const [screenWidth, setScreenWidth] = useState<number>(0);
   const [myColor, _setMyColor] = useState<string>('#000000');
   const controlsRef = useRef<HTMLDivElement | null>(null);
-  const gameRef = useRef<{setSelected: (selected: {r: number; c: number}) => void} | null>(null);
-  const chatRef = useRef<{focus: () => void} | null>(null);
-  const scrubLeftRef = useRef<SVGElement | null>(null);
-  const scrubRightRef = useRef<SVGElement | null>(null);
+  const gameRef = useRef<PlayerRef | null>(null);
 
   const gid = useMemo(() => {
     return params.gid || '';
@@ -133,41 +176,45 @@ const Replay: React.FC = () => {
     const newFilteredHistory = newHistory.filter(
       (event) => event.type !== 'updateCursor' && event.type !== 'chat'
     );
-    const newPosition = position || newHistory[0].gameTimestamp;
+    const newPosition = position || (newHistory[0]?.gameTimestamp ?? 0);
     setHistory(newHistory);
     setFilteredHistory(newFilteredHistory);
     setPosition(newPosition);
   }, [position]);
 
-  const debouncedRecomputeHistoryRef = useRef<DebouncedFunc<() => void>>();
+  const debouncedRecomputeHistoryRef = useRef<DebouncedFunc<() => void> | undefined>(undefined);
   useEffect(() => {
-    if (!debouncedRecomputeHistoryRef.current) {
-      debouncedRecomputeHistoryRef.current = debounce(recomputeHistory);
-    }
+    // Flush any pending execution from the old debounced function before creating a new one
+    debouncedRecomputeHistoryRef.current?.flush();
+    debouncedRecomputeHistoryRef.current = debounce(recomputeHistory, 0);
     return () => {
+      // Flush before cancelling to ensure any pending execution completes
+      debouncedRecomputeHistoryRef.current?.flush();
       debouncedRecomputeHistoryRef.current?.cancel();
     };
   }, [recomputeHistory]);
 
-  const setPositionToRenderThrottledRef = useRef<DebouncedFunc<(positionToRender: number) => void>>();
+  const setPositionToRenderThrottledRef = useRef<
+    DebouncedFunc<(positionToRender: number) => void> | undefined
+  >(undefined);
   useEffect(() => {
-    if (!setPositionToRenderThrottledRef.current) {
-      setPositionToRenderThrottledRef.current = throttle((newPositionToRender: number) => {
-        setPositionToRender(newPositionToRender);
-        if (controlsRef.current) {
-          controlsRef.current.focus();
-        }
-      }, 200);
-    }
+    setPositionToRenderThrottledRef.current = throttle((newPositionToRender: number) => {
+      setPositionToRender(newPositionToRender);
+      if (controlsRef.current) {
+        controlsRef.current.focus();
+      }
+    }, 200);
     return () => {
       setPositionToRenderThrottledRef.current?.cancel();
     };
-  }, []);
+  }, [setPositionToRender]);
 
   const handleSetPosition = useCallback(
     (newPosition: number, isAutoplay: boolean = false): void => {
       if (history.length === 0) return;
-      const clampedPosition = Math.min(newPosition, history[history.length - 1].gameTimestamp);
+      const lastEvent = history[history.length - 1];
+      if (!lastEvent) return;
+      const clampedPosition = Math.min(newPosition, lastEvent.gameTimestamp);
       setPosition(clampedPosition);
       setPositionToRenderThrottledRef.current?.(clampedPosition);
       if (!isAutoplay && autoplayEnabled) {
@@ -177,13 +224,30 @@ const Replay: React.FC = () => {
     [history, autoplayEnabled]
   );
 
+  // Store latest values in refs to avoid dependency issues
+  const autoplayEnabledRef = useRef(autoplayEnabled);
+  const historyRef = useRef(history);
+  const positionRef = useRef(position);
+  const autoplaySpeedRef = useRef(autoplaySpeed);
+  const handleSetPositionRef = useRef(handleSetPosition);
+
+  useEffect(() => {
+    autoplayEnabledRef.current = autoplayEnabled;
+    historyRef.current = history;
+    positionRef.current = position;
+    autoplaySpeedRef.current = autoplaySpeed;
+    handleSetPositionRef.current = handleSetPosition;
+  }, [autoplayEnabled, history, position, autoplaySpeed, handleSetPosition]);
+
+  // Setup/teardown effect - only depends on gid
   useEffect(() => {
     const path = `/game/${gid}`;
     const historyWrapper = new HistoryWrapper();
     historyWrapperRef.current = historyWrapper;
 
-    const unsubscribeWsEvent = gameStore.subscribe(path, 'wsEvent', (event: GameEvent) => {
+    const unsubscribeWsEvent = gameStore.subscribe(path, 'wsEvent', (data: unknown) => {
       try {
+        const event = data as GameEvent;
         if (historyWrapperRef.current) {
           historyWrapperRef.current.addEvent(event);
           debouncedRecomputeHistoryRef.current?.();
@@ -192,8 +256,9 @@ const Replay: React.FC = () => {
         setError(err as Error);
       }
     });
-    const unsubscribeWsCreateEvent = gameStore.subscribe(path, 'wsCreateEvent', (event: GameEvent) => {
+    const unsubscribeWsCreateEvent = gameStore.subscribe(path, 'wsCreateEvent', (data: unknown) => {
       try {
+        const event = data as GameEvent;
         if (historyWrapperRef.current) {
           historyWrapperRef.current.setCreateEvent(event);
           debouncedRecomputeHistoryRef.current?.();
@@ -220,10 +285,36 @@ const Replay: React.FC = () => {
       }, 100);
     }
 
+    return () => {
+      // Flush any pending debounced executions before cleanup
+      debouncedRecomputeHistoryRef.current?.flush();
+      unsubscribeWsEvent();
+      unsubscribeWsCreateEvent();
+      gameStore.detach(path);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gid]); // gameStore is stable from Zustand, doesn't need to be in deps
+
+  // Autoplay interval effect - separate from setup/teardown
+  useEffect(() => {
+    if (!autoplayEnabled) {
+      if (autoplayIntervalRef.current) {
+        clearInterval(autoplayIntervalRef.current);
+        autoplayIntervalRef.current = null;
+      }
+      return;
+    }
+
     autoplayIntervalRef.current = setInterval(() => {
-      if (autoplayEnabled && history.length > 0) {
-        if (position < history[history.length - 1].gameTimestamp) {
-          handleSetPosition(position + 100 * autoplaySpeed, true);
+      const currentHistory = historyRef.current;
+      const currentPosition = positionRef.current;
+      const currentSpeed = autoplaySpeedRef.current;
+      const currentHandleSetPosition = handleSetPositionRef.current;
+
+      if (currentHistory.length > 0) {
+        const lastEvent = currentHistory[currentHistory.length - 1];
+        if (lastEvent && currentPosition < lastEvent.gameTimestamp) {
+          currentHandleSetPosition(currentPosition + 100 * currentSpeed, true);
         } else {
           setAutoplayEnabled(false);
         }
@@ -233,15 +324,10 @@ const Replay: React.FC = () => {
     return () => {
       if (autoplayIntervalRef.current) {
         clearInterval(autoplayIntervalRef.current);
+        autoplayIntervalRef.current = null;
       }
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      unsubscribeWsEvent();
-      unsubscribeWsCreateEvent();
-      gameStore.detach(path);
     };
-  }, [gid, autoplayEnabled, history, position, autoplaySpeed, handleSetPosition, gameStore]);
+  }, [autoplayEnabled]);
 
   useEffect(() => {
     if (!gameRef.current) return;
@@ -255,7 +341,7 @@ const Replay: React.FC = () => {
     }
 
     if (followCursorRef.current !== undefined) {
-      const cursor = gameCursors.find((c) => c.id === followCursorRef.current);
+      const cursor = gameCursors.find((c: {id: number}) => c.id === followCursorRef.current);
       if (cursor && gameRef.current) {
         gameRef.current.setSelected({
           r: cursor.r,
@@ -275,7 +361,9 @@ const Replay: React.FC = () => {
     ({r, c}: {r: number; c: number}): void => {
       if (!game || !game.cursors) return;
       const gameCursors = game.cursors;
-      const foundCursor = gameCursors.find((cursorItem) => cursorItem.r === r && cursorItem.c === c);
+      const foundCursor = gameCursors.find(
+        (cursorItem: {r: number; c: number; id: number}) => cursorItem.r === r && cursorItem.c === c
+      );
       if (foundCursor !== undefined) {
         followCursorRef.current = foundCursor.id;
       } else {
@@ -293,7 +381,10 @@ const Replay: React.FC = () => {
         setLeft(true);
       }
       if (index === -1) return;
-      handleSetPosition(events[index].gameTimestamp);
+      const event = events[index];
+      if (event) {
+        handleSetPosition(event.gameTimestamp);
+      }
     },
     [position, history, filteredHistory, left, handleSetPosition]
   );
@@ -306,7 +397,10 @@ const Replay: React.FC = () => {
         setRight(true);
       }
       if (index === -1) return;
-      handleSetPosition(events[index].gameTimestamp);
+      const event = events[index];
+      if (event) {
+        handleSetPosition(event.gameTimestamp);
+      }
     },
     [position, history, filteredHistory, right, handleSetPosition]
   );
@@ -384,7 +478,7 @@ const Replay: React.FC = () => {
     }
   }, []);
 
-  const renderHeader = useCallback((): JSX.Element | null => {
+  const renderHeader = useMemo((): React.ReactNode => {
     if (!game || error) {
       return null;
     }
@@ -398,17 +492,18 @@ const Replay: React.FC = () => {
     );
   }, [game, error]);
 
-  const renderToolbar = useCallback((): JSX.Element | undefined => {
+  const renderToolbar = useMemo((): React.ReactNode => {
     if (!game) return undefined;
-    const {clock} = game;
-    const {totalTime} = clock;
+    // In replay mode, use the current replay position (in milliseconds) divided by 1000 to get seconds
+    // This ensures the clock updates as the replay position changes
+    const replayTime = positionToRender / 1000;
     return (
       <Toolbar
         v2
         replayMode
         gid={gid}
         mobile={isMobile()}
-        pausedTime={totalTime}
+        pausedTime={replayTime}
         colorAttributionMode={colorAttributionMode}
         listMode={listMode}
         onToggleColorAttributionMode={() => {
@@ -419,9 +514,9 @@ const Replay: React.FC = () => {
         }}
       />
     );
-  }, [game, gid, colorAttributionMode, listMode]);
+  }, [game, gid, colorAttributionMode, listMode, positionToRender]);
 
-  const renderPlayer = useMemo((): JSX.Element => {
+  const renderPlayer = useMemo((): React.ReactNode => {
     if (error) {
       return <div>Error loading replay</div>;
     }
@@ -436,6 +531,11 @@ const Replay: React.FC = () => {
       return <div>Loading grid...</div>;
     }
 
+    // Validate clues before accessing it
+    if (!clues) {
+      return <div>Loading clues...</div>;
+    }
+
     const cols = grid[0].length;
     const rows = grid.length;
     const width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
@@ -448,8 +548,8 @@ const Replay: React.FC = () => {
         circles={circles}
         shades={shades}
         clues={{
-          across: toArr(clues.across),
-          down: toArr(clues.down),
+          across: toArr(clues.across).filter((c): c is string => c !== undefined),
+          down: toArr(clues.down).filter((c): c is string => c !== undefined),
         }}
         cursors={cursors}
         frozen={solved}
@@ -463,21 +563,9 @@ const Replay: React.FC = () => {
         listMode={listMode}
       />
     );
-  }, [error, game, colorAttributionMode, listMode, handleUpdateCursor, screenWidth]);
+  }, [error, game, colorAttributionMode, listMode, handleUpdateCursor, screenWidth, myColor]);
 
-  const _renderChat = useCallback((): JSX.Element | null => {
-    if (error || !game) {
-      return null;
-    }
-
-    return (
-      <div className="replay--chat">
-        <Chat ref={chatRef} info={game.info} data={game.chat} colors={game.colors} hideChatBar />
-      </div>
-    );
-  }, [error, game]);
-
-  const renderControls = useMemo((): JSX.Element => {
+  const renderControls = useMemo((): React.ReactNode => {
     const width = isMobile() ? screenWidth - 20 : 1000;
 
     // renders the controls / state
@@ -502,7 +590,6 @@ const Replay: React.FC = () => {
         ) : null}
         <div className="replay--control-icons">
           <MdChevronLeft
-            ref={scrubLeftRef}
             className={`scrub ${left ? 'active' : ''}`}
             onMouseDown={handleMouseDownLeft}
             onMouseUp={handleMouseUpLeft}
@@ -528,7 +615,6 @@ const Replay: React.FC = () => {
           </div>
           <Tooltip title="Shortcut: Right Arrow">
             <MdChevronRight
-              ref={scrubRightRef}
               className={`scrub ${right ? 'active' : ''}`}
               onMouseDown={handleMouseDownRight}
               onTouchStart={handleMouseDownRight}
@@ -593,12 +679,19 @@ const Replay: React.FC = () => {
     return game.info.title;
   }, [game]);
 
+  // Set document title
+  useEffect(() => {
+    const title = puzzleTitle ? `Replay ${gid}: ${puzzleTitle}` : `Replay ${gid}`;
+    document.title = title;
+    return () => {
+      document.title = 'Cross with Friends';
+    };
+  }, [gid, puzzleTitle]);
+
   return (
     <Stack direction="column" className="replay">
+      {/* @ts-expect-error - Nav component has incompatible React type definitions */}
       {!isMobile() && <Nav v2 />}
-      <Helmet>
-        <title>{`Replay ${gid}: ${puzzleTitle}`}</title>
-      </Helmet>
       {!isMobile() && (
         <div
           style={{
@@ -607,10 +700,10 @@ const Replay: React.FC = () => {
             paddingBottom: 20,
           }}
         >
-          {renderHeader()}
+          {renderHeader}
         </div>
       )}
-      {renderToolbar()}
+      {renderToolbar}
       <Stack
         direction="column"
         sx={{
@@ -619,14 +712,14 @@ const Replay: React.FC = () => {
           border: '1px solid #E2E2E2',
         }}
       >
-        <Box sx={{flex: 1, padding: isMobile() ? 0 : 2.5}}>{renderPlayer()}</Box>
+        <Box sx={{flex: 1, padding: isMobile() ? 0 : 2.5}}>{renderPlayer}</Box>
         <div
           style={{
             zIndex: 1,
             // flex: 1,
           }}
         >
-          {renderControls()}
+          {renderControls}
         </div>
       </Stack>
       {/* Controls:

@@ -17,7 +17,7 @@ describe('fetchPuzzleList', () => {
 
   it('should call apiClient.get with query parameters', async () => {
     const mockResponse = {puzzles: [], total: 0};
-    (apiClient.get as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
     const query = {
       page: 1,
@@ -31,7 +31,7 @@ describe('fetchPuzzleList', () => {
     const result = await fetchPuzzleList(query);
 
     expect(apiClient.get).toHaveBeenCalled();
-    const callUrl = (apiClient.get as any).mock.calls[0][0];
+    const callUrl = vi.mocked(apiClient.get).mock.calls[0][0];
     expect(callUrl).toContain('page=1');
     expect(callUrl).toContain('pageSize=10');
     // URL encoding - brackets are encoded as %5B and %5D
@@ -41,7 +41,7 @@ describe('fetchPuzzleList', () => {
   });
 
   it('should throw error if response is missing puzzles property', async () => {
-    (apiClient.get as any).mockResolvedValue({total: 0});
+    vi.mocked(apiClient.get).mockResolvedValue({total: 0});
 
     const query = {page: 1, pageSize: 10, filter: {sizeFilter: {Mini: false, Standard: false}}};
 

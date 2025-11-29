@@ -58,15 +58,16 @@ const REMOTE_SERVER = isDevelopment ? DEV_REMOTE_SERVER_URL : PROD_REMOTE_SERVER
 
 // Use https for staging/production, http only for localhost
 const REMOTE_SERVER_URL = REMOTE_SERVER.includes('localhost')
-  ? `${window.location.protocol}//${REMOTE_SERVER}`
+  ? `${typeof window !== 'undefined' ? window.location.protocol : 'http:'}//${REMOTE_SERVER}`
   : `https://${REMOTE_SERVER}`;
 
 // Warn about HTTPS in development (can cause issues with local servers)
 // Only warn if explicitly disallowed via environment flag
 if (
+  typeof window !== 'undefined' &&
   window.location.protocol === 'https' &&
   isDevelopment &&
-  import.meta.env.VITE_DISALLOW_HTTPS_IN_DEV === '1'
+  import.meta.env['VITE_DISALLOW_HTTPS_IN_DEV'] === '1'
 ) {
   logger.warn(
     'HTTPS detected in development mode. This may cause issues with local servers and WebSocket connections. ' +
@@ -100,7 +101,7 @@ const FIREBASE_CONFIGS: Record<string, FirebaseConfig> = {
 };
 
 const env = getEnvVar('VITE_ENV', import.meta.env.MODE);
-const selectedFirebaseConfig = FIREBASE_CONFIGS[env] || FIREBASE_CONFIGS.development;
+const selectedFirebaseConfig = FIREBASE_CONFIGS[env] || FIREBASE_CONFIGS['development'];
 
 export const config: Config = {
   env: {
@@ -114,7 +115,7 @@ export const config: Config = {
     useLocalServer,
   },
   firebase: {
-    config: selectedFirebaseConfig,
+    config: selectedFirebaseConfig!,
     offline: false,
   },
   features: {

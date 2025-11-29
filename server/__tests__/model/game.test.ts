@@ -1,5 +1,6 @@
 import {describe, it, expect, beforeEach, vi, type Mock} from 'vitest';
 import * as gameModel from '../../model/game.js';
+import type {GameEvent} from '../../model/game.js';
 import {pool} from '../../model/pool.js';
 import * as puzzleModel from '../../model/puzzle.js';
 
@@ -123,7 +124,7 @@ describe('Game Model', () => {
   describe('addGameEvent', () => {
     it('should insert game event into database', async () => {
       const mockGid = 'test-gid-123';
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         user: 'user123',
         timestamp: 1234567890,
         type: 'updateCell',
@@ -153,7 +154,7 @@ describe('Game Model', () => {
 
     it('should handle null user in event', async () => {
       const mockGid = 'test-gid-123';
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         user: null,
         timestamp: 1234567890,
         type: 'updateCell',
@@ -170,7 +171,7 @@ describe('Game Model', () => {
     it('should convert timestamp to ISO string', async () => {
       const mockGid = 'test-gid-123';
       const timestamp = 1234567890000; // Milliseconds
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         timestamp,
         type: 'updateCell',
         params: {cell: {r: 0, c: 1}, value: 'A', autocheck: false, id: 'user123'},
@@ -187,7 +188,7 @@ describe('Game Model', () => {
 
     it('should handle invalid timestamp by using current time', async () => {
       const mockGid = 'test-gid-123';
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         timestamp: NaN,
         type: 'updateCell',
         params: {cell: {r: 0, c: 1}, value: 'A', autocheck: false, id: 'user123'},

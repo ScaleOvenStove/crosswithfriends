@@ -32,7 +32,7 @@ export interface EnhancedCellData extends CellData {
   shaded: boolean;
   referenced: boolean;
   canFlipColor: boolean;
-  pickupType: keyof typeof powerups;
+  pickupType?: keyof typeof powerups;
 
   // Styles
   attributionColor: string;

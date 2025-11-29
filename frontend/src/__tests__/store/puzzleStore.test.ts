@@ -31,7 +31,7 @@ describe('puzzleStore', () => {
   describe('getPuzzle', () => {
     it('should create a new puzzle instance if it does not exist', () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
 
       const puzzle = usePuzzleStore.getState().getPuzzle('/puzzle/123', 123);
 
@@ -45,7 +45,7 @@ describe('puzzleStore', () => {
 
     it('should return existing puzzle instance if it exists', () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
 
       const puzzle1 = usePuzzleStore.getState().getPuzzle('/puzzle/123', 123);
       const puzzle2 = usePuzzleStore.getState().getPuzzle('/puzzle/123', 123);
@@ -57,9 +57,9 @@ describe('puzzleStore', () => {
   describe('attach', () => {
     it('should subscribe to puzzle data', () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
       const mockUnsubscribe = vi.fn();
-      (onValue as any).mockImplementation((_ref, callback) => {
+      vi.mocked(onValue).mockImplementation((_ref, callback) => {
         // Simulate snapshot
         callback({val: () => ({title: 'Test Puzzle'})});
         return mockUnsubscribe;
@@ -82,9 +82,9 @@ describe('puzzleStore', () => {
 
     it('should not attach if already attached', () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
       const mockUnsubscribe = vi.fn();
-      (onValue as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockUnsubscribe);
+      vi.mocked(onValue).mockReturnValue(mockUnsubscribe);
 
       usePuzzleStore.getState().getPuzzle('/puzzle/123', 123);
       usePuzzleStore.getState().attach('/puzzle/123');
@@ -102,10 +102,10 @@ describe('puzzleStore', () => {
   describe('detach', () => {
     it('should unsubscribe from puzzle data', () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
       const mockUnsubscribe = vi.fn();
       let onValueCallCount = 0;
-      (onValue as unknown as ReturnType<typeof vi.fn>).mockImplementation((_ref, callback) => {
+      vi.mocked(onValue).mockImplementation((_ref, callback) => {
         onValueCallCount += 1;
         // Simulate snapshot callback
         callback({val: () => ({title: 'Test Puzzle'})});
@@ -143,12 +143,12 @@ describe('puzzleStore', () => {
   describe('waitForReady', () => {
     it('should resolve immediately if puzzle is ready', async () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
 
       // Ensure puzzle is detached first
       usePuzzleStore.getState().detach('/puzzle/123');
 
-      (onValue as any).mockImplementation((_ref, callback) => {
+      vi.mocked(onValue).mockImplementation((_ref, callback) => {
         // Call callback immediately to set puzzle as ready
         callback({val: () => ({title: 'Test'})});
         return vi.fn();
@@ -166,10 +166,10 @@ describe('puzzleStore', () => {
 
     it('should wait for puzzle to become ready', async () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
-      let _callback: ((snapshot: any) => void) | null = null;
-      (onValue as any).mockImplementation((_ref, cb) => {
-        _callback = cb;
+      vi.mocked(ref).mockReturnValue(mockRefValue);
+      let _snapshotCallback: ((snapshot: unknown) => void) | null = null;
+      vi.mocked(onValue).mockImplementation((_ref, cb) => {
+        _snapshotCallback = cb;
         return vi.fn();
       });
 
@@ -211,7 +211,7 @@ describe('puzzleStore', () => {
 
     it('should timeout if puzzle does not become ready', async () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
 
       usePuzzleStore.getState().getPuzzle('/puzzle/123', 123);
       usePuzzleStore.setState({
@@ -236,14 +236,14 @@ describe('puzzleStore', () => {
     it('should log solve stats', async () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
       const mockStatsRef = {path: '/stats/123', key: '123'};
-      (ref as any).mockImplementation((db, path) => {
+      vi.mocked(ref).mockImplementation((db, path) => {
         if (path === '/puzzle/123') return mockRefValue;
         if (path === '/stats/123') return mockStatsRef;
         if (path === '/stats/123/solves/gid-1') return {path: '/stats/123/solves/gid-1'};
         if (path === '/puzzlelist/123') return {path: '/puzzlelist/123'};
         return {path};
       });
-      (get as any).mockResolvedValue({
+      vi.mocked(get).mockResolvedValue({
         val: () => ({
           solves: {
             'gid-1': {time: 100},
@@ -251,7 +251,7 @@ describe('puzzleStore', () => {
           },
         }),
       });
-      (set as any).mockResolvedValue(undefined);
+      vi.mocked(set).mockResolvedValue(undefined);
 
       usePuzzleStore.getState().getPuzzle('/puzzle/123', 123);
       usePuzzleStore.getState().logSolve('/puzzle/123', 'gid-1', {time: 100, correct: true});
@@ -271,7 +271,7 @@ describe('puzzleStore', () => {
   describe('toGame', () => {
     it('should convert puzzle data to game format', () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
 
       const puzzleData = {
         solution: [
@@ -325,7 +325,7 @@ describe('puzzleStore', () => {
 
     it('should return null if puzzle data is null', () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
 
       usePuzzleStore.getState().getPuzzle('/puzzle/123', 123);
       usePuzzleStore.setState({
@@ -348,13 +348,13 @@ describe('puzzleStore', () => {
   describe('listGames', () => {
     it('should list games for a puzzle', async () => {
       const mockRefValue = {path: '/puzzle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRefValue);
+      vi.mocked(ref).mockReturnValue(mockRefValue);
       const mockQuery = {path: '/game'};
-      (query as any).mockReturnValue(mockQuery);
-      (orderByChild as any).mockReturnValue(mockQuery);
-      (equalTo as any).mockReturnValue(mockQuery);
-      (limitToLast as any).mockReturnValue(mockQuery);
-      (get as any).mockResolvedValue({
+      vi.mocked(query).mockReturnValue(mockQuery);
+      vi.mocked(orderByChild).mockReturnValue(mockQuery);
+      vi.mocked(equalTo).mockReturnValue(mockQuery);
+      vi.mocked(limitToLast).mockReturnValue(mockQuery);
+      vi.mocked(get).mockResolvedValue({
         val: () => ({
           'game-1': {pid: 123, title: 'Game 1'},
           'game-2': {pid: 123, title: 'Game 2'},

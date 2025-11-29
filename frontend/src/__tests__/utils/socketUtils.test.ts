@@ -35,7 +35,7 @@ describe('emitAsync', () => {
       emit: vi.fn((_event, _data, callback) => {
         if (callback) callback();
       }),
-    } as any;
+    };
 
     const promise = emitAsync(mockSocket, 'test_event', {data: 'test'});
 
@@ -48,7 +48,7 @@ describe('emitAsync', () => {
       emit: vi.fn((_event, _arg1, _arg2, callback) => {
         if (callback) callback();
       }),
-    } as any;
+    };
 
     const promise = emitAsync(mockSocket, 'test_event', 'arg1', 'arg2');
 
@@ -63,7 +63,7 @@ describe('onceAsync', () => {
       once: vi.fn((_event, callback) => {
         callback('test-data');
       }),
-    } as any;
+    };
 
     const promise = onceAsync(mockSocket, 'test_event');
 
