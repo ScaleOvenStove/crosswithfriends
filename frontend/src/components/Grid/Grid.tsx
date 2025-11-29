@@ -240,6 +240,7 @@ const Grid: React.FC<GridProps> = (props) => {
 
   return (
     <table
+      data-testid="crossword-grid"
       style={{
         width: cols * size,
         height: gridData.length * size,
@@ -254,6 +255,7 @@ const Grid: React.FC<GridProps> = (props) => {
                 <td
                   key={`${cellProps.r}_${cellProps.c}`}
                   className="grid--cell"
+                  data-testid={`cell-${cellProps.r}-${cellProps.c}`}
                   data-rc={`${cellProps.r} ${cellProps.c}`}
                   style={{
                     width: size,

@@ -32,9 +32,9 @@ describe('useGamePowerups', () => {
         gameState,
         opponentGameState,
         battleHook,
-        gameHook: {gameState} as any,
-        opponentGameHook: {gameState: opponentGameState} as any,
-        gameComponentRef: gameComponentRef as any,
+        gameHook: {gameState},
+        opponentGameHook: {gameState: opponentGameState},
+        gameComponentRef: gameComponentRef,
       })
     );
 
@@ -58,9 +58,9 @@ describe('useGamePowerups', () => {
         gameState,
         opponentGameState,
         battleHook,
-        gameHook: {gameState} as any,
-        opponentGameHook: {gameState: opponentGameState} as any,
-        gameComponentRef: gameComponentRef as any,
+        gameHook: {gameState},
+        opponentGameHook: {gameState: opponentGameState},
+        gameComponentRef: gameComponentRef,
       })
     );
 
@@ -80,9 +80,9 @@ describe('useGamePowerups', () => {
         gameState,
         opponentGameState,
         battleHook: null,
-        gameHook: {gameState} as any,
-        opponentGameHook: {gameState: opponentGameState} as any,
-        gameComponentRef: gameComponentRef as any,
+        gameHook: {gameState},
+        opponentGameHook: {gameState: opponentGameState},
+        gameComponentRef: gameComponentRef,
       })
     );
 
@@ -106,9 +106,9 @@ describe('useGamePowerups', () => {
         gameState,
         opponentGameState,
         battleHook,
-        gameHook: {gameState} as any,
-        opponentGameHook: {gameState: opponentGameState} as any,
-        gameComponentRef: gameComponentRef as any,
+        gameHook: {gameState},
+        opponentGameHook: {gameState: opponentGameState},
+        gameComponentRef: gameComponentRef,
       })
     );
 
@@ -136,9 +136,9 @@ describe('useGamePowerups', () => {
           gameState,
           opponentGameState,
           battleHook,
-          gameHook: {gameState} as any,
-          opponentGameHook: {gameState: opponentGameState} as any,
-          gameComponentRef: gameComponentRef as any,
+          gameHook: {gameState},
+          opponentGameHook: {gameState: opponentGameState},
+          gameComponentRef: gameComponentRef,
         }),
       {initialProps: {battlePath: '/battle/123'}}
     );

@@ -17,7 +17,7 @@ describe('fetchStats', () => {
 
   it('should call apiClient.post with query parameters', async () => {
     const mockResponse = {stats: []};
-    (apiClient.post as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
     const query = {page: 1, pageSize: 10};
     const result = await fetchStats(query);

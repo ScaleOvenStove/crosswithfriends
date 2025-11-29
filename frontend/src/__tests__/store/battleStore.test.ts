@@ -68,7 +68,7 @@ describe('battleStore', () => {
   describe('getBattle', () => {
     it('should create a new battle instance if it does not exist', () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRef);
+      vi.mocked(ref).mockReturnValue(mockRef);
 
       const battle = useBattleStore.getState().getBattle('/battle/123');
 
@@ -82,7 +82,7 @@ describe('battleStore', () => {
 
     it('should return existing battle instance if it exists', () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRef);
+      vi.mocked(ref).mockReturnValue(mockRef);
 
       const battle1 = useBattleStore.getState().getBattle('/battle/123');
       const battle2 = useBattleStore.getState().getBattle('/battle/123');
@@ -94,7 +94,7 @@ describe('battleStore', () => {
   describe('attach', () => {
     it('should subscribe to battle data', () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockImplementation((_db: unknown, path: string) => {
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
         if (path === '/battle/123') return mockRef;
         if (path === '/battle/123/games') return {path: '/battle/123/games'};
         if (path === '/battle/123/powerups') return {path: '/battle/123/powerups'};
@@ -105,7 +105,7 @@ describe('battleStore', () => {
         return {path};
       });
       const mockUnsubscribe = vi.fn();
-      (onValue as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockUnsubscribe);
+      vi.mocked(onValue).mockReturnValue(mockUnsubscribe);
 
       const battle = useBattleStore.getState().getBattle('/battle/123');
       if (!battle) {
@@ -118,13 +118,13 @@ describe('battleStore', () => {
 
     it('should create battle instance if it does not exist when attaching', () => {
       const mockRef = {path: '/battle/nonexistent', key: 'nonexistent'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockImplementation((_db: unknown, path: string) => {
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
         if (path === '/battle/nonexistent') return mockRef;
         if (path.startsWith('/battle/nonexistent/')) return {path};
         return {path};
       });
       const mockUnsubscribe = vi.fn();
-      (onValue as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockUnsubscribe);
+      vi.mocked(onValue).mockReturnValue(mockUnsubscribe);
 
       useBattleStore.getState().attach('/battle/nonexistent');
 
@@ -136,13 +136,13 @@ describe('battleStore', () => {
   describe('detach', () => {
     it('should unsubscribe from battle data', () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockImplementation((_db: unknown, path: string) => {
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
         if (path === '/battle/123') return mockRef;
         if (path.startsWith('/battle/123/')) return {path};
         return {path};
       });
       const mockUnsubscribe = vi.fn();
-      (onValue as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockUnsubscribe);
+      vi.mocked(onValue).mockReturnValue(mockUnsubscribe);
 
       useBattleStore.getState().getBattle('/battle/123');
       useBattleStore.getState().attach('/battle/123');
@@ -155,7 +155,7 @@ describe('battleStore', () => {
   describe('subscribe', () => {
     it('should subscribe to events and return unsubscribe function', () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRef);
+      vi.mocked(ref).mockReturnValue(mockRef);
 
       useBattleStore.getState().getBattle('/battle/123');
 
@@ -168,7 +168,7 @@ describe('battleStore', () => {
 
     it('should allow multiple subscribers for the same event', () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRef);
+      vi.mocked(ref).mockReturnValue(mockRef);
 
       useBattleStore.getState().getBattle('/battle/123');
 
@@ -190,7 +190,7 @@ describe('battleStore', () => {
   describe('once', () => {
     it('should subscribe once and auto-unsubscribe', () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as any).mockReturnValue(mockRef);
+      vi.mocked(ref).mockReturnValue(mockRef);
 
       useBattleStore.getState().getBattle('/battle/123');
 
@@ -204,8 +204,8 @@ describe('battleStore', () => {
   describe('start', () => {
     it('should set startedAt timestamp', () => {
       const mockRef = {path: '/battle/123/startedAt', key: 'startedAt'};
-      (ref as any).mockReturnValue(mockRef);
-      (set as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      vi.mocked(ref).mockReturnValue(mockRef);
+      vi.mocked(set).mockResolvedValue(undefined);
 
       useBattleStore.getState().getBattle('/battle/123');
       useBattleStore.getState().start('/battle/123');
@@ -217,8 +217,8 @@ describe('battleStore', () => {
   describe('setSolved', () => {
     it('should set winner using transaction', () => {
       const mockRef = {path: '/battle/123/winner', key: 'winner'};
-      (ref as any).mockReturnValue(mockRef);
-      (runTransaction as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      vi.mocked(ref).mockReturnValue(mockRef);
+      vi.mocked(runTransaction).mockImplementation(
         (_ref: unknown, callback: (current: unknown) => unknown) => {
           callback(null);
           return Promise.resolve({});
@@ -230,13 +230,60 @@ describe('battleStore', () => {
 
       expect(runTransaction).toHaveBeenCalled();
     });
+
+    it('should not overwrite existing winner', () => {
+      const mockRef = {path: '/battle/123/winner', key: 'winner'};
+      vi.mocked(ref).mockReturnValue(mockRef);
+      let transactionCallback: ((current: unknown) => unknown) | null = null;
+      vi.mocked(runTransaction).mockImplementation(
+        (_ref: unknown, callback: (current: unknown) => unknown) => {
+          transactionCallback = callback;
+          return Promise.resolve({});
+        }
+      );
+
+      useBattleStore.getState().getBattle('/battle/123');
+      useBattleStore.getState().setSolved('/battle/123', 0);
+
+      expect(transactionCallback).toBeDefined();
+      if (transactionCallback) {
+        // If winner already exists, should return it unchanged
+        const existingWinner = {team: 1, completedAt: 1000};
+        const result = transactionCallback(existingWinner);
+        expect(result).toBe(existingWinner);
+      }
+    });
+
+    it('should set winner with team and completedAt when no winner exists', () => {
+      const mockRef = {path: '/battle/123/winner', key: 'winner'};
+      vi.mocked(ref).mockReturnValue(mockRef);
+      let transactionCallback: ((current: unknown) => unknown) | null = null;
+      vi.mocked(runTransaction).mockImplementation(
+        (_ref: unknown, callback: (current: unknown) => unknown) => {
+          transactionCallback = callback;
+          return Promise.resolve({});
+        }
+      );
+
+      useBattleStore.getState().getBattle('/battle/123');
+      useBattleStore.getState().setSolved('/battle/123', 0);
+
+      expect(transactionCallback).toBeDefined();
+      if (transactionCallback) {
+        // If no winner exists, should set new winner
+        const result = transactionCallback(null) as {team: number; completedAt: number};
+        expect(result.team).toBe(0);
+        expect(result.completedAt).toBeGreaterThan(0);
+        expect(typeof result.completedAt).toBe('number');
+      }
+    });
   });
 
   describe('addPlayer', () => {
     it('should add player to battle', () => {
       const mockRef = {path: '/battle/123/players', key: 'players'};
-      (ref as any).mockReturnValue(mockRef);
-      (push as unknown as ReturnType<typeof vi.fn>).mockReturnValue({key: 'player-1'});
+      vi.mocked(ref).mockReturnValue(mockRef);
+      vi.mocked(push).mockReturnValue({key: 'player-1'});
 
       useBattleStore.getState().getBattle('/battle/123');
       useBattleStore.getState().addPlayer('/battle/123', 'Player 1', 0);
@@ -248,17 +295,17 @@ describe('battleStore', () => {
   describe('removePlayer', () => {
     it('should remove player from battle', async () => {
       const mockRef = {path: '/battle/123/players', key: 'players'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockImplementation((_db: unknown, path: string) => {
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
         if (path === '/battle/123/players') return mockRef;
         if (path === '/battle/123/players/player-1') return {path: '/battle/123/players/player-1'};
         return {path};
       });
-      (get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(get).mockResolvedValue({
         val: () => ({
           'player-1': {name: 'Player 1', team: 0},
         }),
       });
-      (remove as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      vi.mocked(remove).mockResolvedValue(undefined);
 
       useBattleStore.getState().getBattle('/battle/123');
       useBattleStore.getState().removePlayer('/battle/123', 'Player 1', 0);
@@ -267,19 +314,69 @@ describe('battleStore', () => {
 
       expect(get).toHaveBeenCalled();
     });
+
+    it('should handle null players gracefully', async () => {
+      const mockRef = {path: '/battle/123/players', key: 'players'};
+      vi.mocked(ref).mockReturnValue(mockRef);
+      vi.mocked(get).mockResolvedValue({
+        val: () => null,
+      });
+
+      useBattleStore.getState().getBattle('/battle/123');
+      await useBattleStore.getState().removePlayer('/battle/123', 'Player 1', 0);
+
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    it('should find and remove correct player by name and team', async () => {
+      const mockRef = {path: '/battle/123/players', key: 'players'};
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
+        if (path === '/battle/123/players') return mockRef;
+        if (path === '/battle/123/players/player-2') return {path: '/battle/123/players/player-2'};
+        return {path};
+      });
+      vi.mocked(get).mockResolvedValue({
+        val: () => ({
+          'player-1': {name: 'Player 1', team: 0},
+          'player-2': {name: 'Player 2', team: 1},
+          'player-3': {name: 'Player 1', team: 1}, // Same name, different team
+        }),
+      });
+      vi.mocked(remove).mockResolvedValue(undefined);
+
+      useBattleStore.getState().getBattle('/battle/123');
+      await useBattleStore.getState().removePlayer('/battle/123', 'Player 2', 1);
+
+      expect(remove).toHaveBeenCalledWith({path: '/battle/123/players/player-2'});
+    });
+
+    it('should not remove player if name and team do not match', async () => {
+      const mockRef = {path: '/battle/123/players', key: 'players'};
+      vi.mocked(ref).mockReturnValue(mockRef);
+      vi.mocked(get).mockResolvedValue({
+        val: () => ({
+          'player-1': {name: 'Player 1', team: 0},
+        }),
+      });
+
+      useBattleStore.getState().getBattle('/battle/123');
+      await useBattleStore.getState().removePlayer('/battle/123', 'Player 2', 0);
+
+      expect(remove).not.toHaveBeenCalled();
+    });
   });
 
   describe('usePowerup', () => {
     it('should use powerup for team', async () => {
       const mockRef = {path: '/battle/123/powerups', key: 'powerups'};
-      (ref as any).mockReturnValue(mockRef);
-      (get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(ref).mockReturnValue(mockRef);
+      vi.mocked(get).mockResolvedValue({
         val: () => ({
           0: [{type: 'reveal', used: false}],
           1: [],
         }),
       });
-      (set as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      vi.mocked(set).mockResolvedValue(undefined);
 
       useBattleStore.getState().getBattle('/battle/123');
       useBattleStore.getState().usePowerup('/battle/123', 'reveal', 0);
@@ -293,15 +390,15 @@ describe('battleStore', () => {
   describe('checkPickups', () => {
     it('should check for pickups at cell location', async () => {
       const mockRef = {path: '/battle/123/pickups', key: 'pickups'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockImplementation((_db: unknown, path: string) => {
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
         if (path === '/battle/123/pickups') return mockRef;
         if (path === '/battle/123/powerups') return {path: '/battle/123/powerups'};
         return {path};
       });
-      (get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(get).mockResolvedValue({
         val: () => ({}),
       });
-      (set as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      vi.mocked(set).mockResolvedValue(undefined);
 
       const mockGame = {
         grid: [
@@ -323,13 +420,175 @@ describe('battleStore', () => {
 
       expect(get).toHaveBeenCalled();
     });
+
+    it('should mark pickups as pickedUp when cell is correct', async () => {
+      const mockPickupsRef = {path: '/battle/123/pickups', key: 'pickups'};
+      const mockPowerupsRef = {path: '/battle/123/powerups', key: 'powerups'};
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
+        if (path === '/battle/123/pickups') return mockPickupsRef;
+        if (path === '/battle/123/powerups') return mockPowerupsRef;
+        return {path};
+      });
+
+      const mockPickups = {
+        'pickup-1': {i: 0, j: 0, type: 'reveal', pickedUp: false},
+        'pickup-2': {i: 1, j: 1, type: 'check', pickedUp: false},
+      };
+
+      vi.mocked(get).mockImplementation((ref) => {
+        if (ref === mockPickupsRef) {
+          return Promise.resolve({val: () => mockPickups});
+        }
+        return Promise.resolve({val: () => ({})});
+      });
+
+      let pickupTransactionCallback: ((current: unknown) => unknown) | null = null;
+      vi.mocked(runTransaction).mockImplementation((ref, callback) => {
+        if (ref === mockPickupsRef) {
+          pickupTransactionCallback = callback;
+        }
+        return Promise.resolve({});
+      });
+
+      const mockGame = {
+        grid: [[{value: 'A'}], [{value: ''}]],
+        solution: [['A'], ['B']],
+      };
+
+      useBattleStore.getState().getBattle('/battle/123');
+      useBattleStore
+        .getState()
+        .checkPickups('/battle/123', 0, 0, mockGame as {grid: unknown[][]; solution: string[][]}, 0);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(pickupTransactionCallback).toBeDefined();
+      if (pickupTransactionCallback) {
+        const result = pickupTransactionCallback(mockPickups) as Record<string, {pickedUp: boolean}>;
+        expect(result['pickup-1'].pickedUp).toBe(true);
+      }
+    });
+
+    it('should add powerups to team when pickup is collected', async () => {
+      const mockPickupsRef = {path: '/battle/123/pickups', key: 'pickups'};
+      const mockPowerupsRef = {path: '/battle/123/powerups', key: 'powerups'};
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
+        if (path === '/battle/123/pickups') return mockPickupsRef;
+        if (path === '/battle/123/powerups') return mockPowerupsRef;
+        return {path};
+      });
+
+      const mockPickups = {
+        'pickup-1': {i: 0, j: 0, type: 'reveal', pickedUp: false},
+      };
+
+      vi.mocked(get).mockImplementation((ref) => {
+        if (ref === mockPickupsRef) {
+          return Promise.resolve({val: () => mockPickups});
+        }
+        return Promise.resolve({val: () => ({})});
+      });
+
+      let powerupTransactionCallback: ((current: unknown) => unknown) | null = null;
+      vi.mocked(runTransaction).mockImplementation((ref, callback) => {
+        if (ref === mockPowerupsRef) {
+          powerupTransactionCallback = callback;
+        }
+        return Promise.resolve({});
+      });
+
+      const mockGame = {
+        grid: [[{value: 'A'}]],
+        solution: [['A']],
+      };
+
+      useBattleStore.getState().getBattle('/battle/123');
+      useBattleStore
+        .getState()
+        .checkPickups('/battle/123', 0, 0, mockGame as {grid: unknown[][]; solution: string[][]}, 0);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(powerupTransactionCallback).toBeDefined();
+      if (powerupTransactionCallback) {
+        const result = powerupTransactionCallback({}) as Record<number, Array<{type: string}>>;
+        expect(result[0]).toBeDefined();
+        expect(result[0].some((p) => p.type === 'reveal')).toBe(true);
+      }
+    });
+
+    it('should not mark pickup if cell value does not match solution', async () => {
+      const mockPickupsRef = {path: '/battle/123/pickups', key: 'pickups'};
+      const mockPowerupsRef = {path: '/battle/123/powerups', key: 'powerups'};
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
+        if (path === '/battle/123/pickups') return mockPickupsRef;
+        if (path === '/battle/123/powerups') return mockPowerupsRef;
+        return {path};
+      });
+
+      const mockPickups = {
+        'pickup-1': {i: 0, j: 0, type: 'reveal', pickedUp: false},
+      };
+
+      vi.mocked(get).mockResolvedValue({
+        val: () => mockPickups,
+      });
+
+      const mockGame = {
+        grid: [[{value: 'B'}]], // Wrong value
+        solution: [['A']],
+      };
+
+      useBattleStore.getState().getBattle('/battle/123');
+      useBattleStore
+        .getState()
+        .checkPickups('/battle/123', 0, 0, mockGame as {grid: unknown[][]; solution: string[][]}, 0);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not call transaction if no pickups match
+      expect(runTransaction).not.toHaveBeenCalled();
+    });
+
+    it('should not process already picked up items', async () => {
+      const mockPickupsRef = {path: '/battle/123/pickups', key: 'pickups'};
+      const mockPowerupsRef = {path: '/battle/123/powerups', key: 'powerups'};
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
+        if (path === '/battle/123/pickups') return mockPickupsRef;
+        if (path === '/battle/123/powerups') return mockPowerupsRef;
+        return {path};
+      });
+
+      const mockPickups = {
+        'pickup-1': {i: 0, j: 0, type: 'reveal', pickedUp: true}, // Already picked up
+      };
+
+      vi.mocked(get).mockResolvedValue({
+        val: () => mockPickups,
+      });
+
+      const mockGame = {
+        grid: [[{value: 'A'}]],
+        solution: [['A']],
+      };
+
+      useBattleStore.getState().getBattle('/battle/123');
+      useBattleStore
+        .getState()
+        .checkPickups('/battle/123', 0, 0, mockGame as {grid: unknown[][]; solution: string[][]}, 0);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not process already picked up items
+      expect(runTransaction).not.toHaveBeenCalled();
+    });
   });
 
   describe('countLivePickups', () => {
     it('should count live pickups', async () => {
       const mockRef = {path: '/battle/123/pickups', key: 'pickups'};
-      (ref as any).mockReturnValue(mockRef);
-      (get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(ref).mockReturnValue(mockRef);
+      vi.mocked(get).mockResolvedValue({
         val: () => ({
           'pickup-1': {pickedUp: false},
           'pickup-2': {pickedUp: true},
@@ -351,14 +610,14 @@ describe('battleStore', () => {
   describe('spawnPowerups', () => {
     it('should spawn powerups', async () => {
       const mockRef = {path: '/battle/123/pickups', key: 'pickups'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockImplementation((_db: unknown, path: string) => {
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
         if (path === '/battle/123/pickups') return mockRef;
         return {path};
       });
-      (get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(get).mockResolvedValue({
         val: () => ({}), // No existing pickups
       });
-      (push as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({key: 'pickup-1'});
+      vi.mocked(push).mockResolvedValue({key: 'pickup-1'});
 
       const mockGames = [
         {
@@ -387,22 +646,22 @@ describe('battleStore', () => {
   describe('initialize', () => {
     it('should initialize battle', async () => {
       const mockRef = {path: '/battle/123', key: '123'};
-      (ref as unknown as ReturnType<typeof vi.fn>).mockImplementation((_db: unknown, path: string) => {
+      vi.mocked(ref).mockImplementation((_db: unknown, path: string) => {
         if (path === '/battle/123') return mockRef;
         if (path === '/battle/123/gids') return {path: '/battle/123/gids'};
         if (path === '/battle/123/powerups') return {path: '/battle/123/powerups'};
         if (path === '/puzzle/123') return {path: '/puzzle/123'};
         return {path};
       });
-      (set as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-      (get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(set).mockResolvedValue(undefined);
+      vi.mocked(get).mockResolvedValue({
         val: () => null,
       });
 
       // Reset mocks
       vi.clearAllMocks();
       const puzzleStore = usePuzzleStore.getState();
-      (puzzleStore.waitForReady as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      vi.mocked(puzzleStore.waitForReady).mockResolvedValue(undefined);
 
       useBattleStore.getState().getBattle('/battle/123');
 

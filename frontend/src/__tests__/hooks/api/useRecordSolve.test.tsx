@@ -28,7 +28,7 @@ describe('useRecordSolve', () => {
   );
 
   it('should create mutation with recordSolve function', async () => {
-    (recordSolve as any).mockResolvedValue(undefined);
+    vi.mocked(recordSolve).mockResolvedValue(undefined);
 
     const {result} = renderHook(() => useRecordSolve(), {wrapper});
 
@@ -43,7 +43,7 @@ describe('useRecordSolve', () => {
   });
 
   it('should call onSuccess callback when mutation succeeds', async () => {
-    (recordSolve as any).mockResolvedValue(undefined);
+    vi.mocked(recordSolve).mockResolvedValue(undefined);
     const onSuccess = vi.fn();
 
     const {result} = renderHook(() => useRecordSolve({onSuccess}), {wrapper});
@@ -57,7 +57,7 @@ describe('useRecordSolve', () => {
 
   it('should call onError callback when mutation fails', async () => {
     const mockError = new Error('Failed to record solve');
-    (recordSolve as any).mockRejectedValue(mockError);
+    vi.mocked(recordSolve).mockRejectedValue(mockError);
     const onError = vi.fn();
 
     const {result} = renderHook(() => useRecordSolve({onError}), {wrapper});

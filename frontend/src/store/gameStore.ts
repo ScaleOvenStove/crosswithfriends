@@ -327,6 +327,116 @@ export const useGameStore = create<GameStore>((setState, getState) => {
   };
 
   /**
+   * Matches an optimistic event with a server event by comparing their content
+   * Returns true if the events match (same type and params, within timestamp tolerance)
+   */
+  const matchesOptimisticEvent = (optimisticEvent: GameEvent, serverEvent: GameEvent): boolean => {
+    // First try exact ID match (fastest)
+    if (optimisticEvent.id && serverEvent.id && optimisticEvent.id === serverEvent.id) {
+      return true;
+    }
+
+    // Match by type
+    if (optimisticEvent.type !== serverEvent.type) {
+      return false;
+    }
+
+    // Match by params content (deep comparison of relevant fields)
+    const optimisticParams = optimisticEvent.params as Record<string, unknown> | undefined;
+    const serverParams = serverEvent.params as Record<string, unknown> | undefined;
+
+    if (!optimisticParams || !serverParams) {
+      return false;
+    }
+
+    // For updateCell events, match by cell coordinates, value, autocheck, and user id
+    // Note: color and pencil might differ, so we don't match on those
+    if (optimisticEvent.type === 'updateCell') {
+      const optCell = optimisticParams.cell as {r?: number; c?: number} | undefined;
+      const srvCell = serverParams.cell as {r?: number; c?: number} | undefined;
+      if (!optCell || !srvCell) {
+        return false;
+      }
+      // Match on the essential fields that uniquely identify the update
+      const cellMatch = optCell.r === srvCell.r && optCell.c === srvCell.c;
+      const valueMatch = optimisticParams.value === serverParams.value;
+      const idMatch = optimisticParams.id === serverParams.id;
+      // autocheck might be transformed by server, so we make it optional
+      const autocheckMatch =
+        optimisticParams.autocheck === serverParams.autocheck ||
+        optimisticParams.autocheck === undefined ||
+        serverParams.autocheck === undefined;
+      
+      return cellMatch && valueMatch && idMatch && autocheckMatch;
+    }
+
+    // For check/reveal events, match by scope and user id
+    if (optimisticEvent.type === 'check' || optimisticEvent.type === 'reveal') {
+      const optScope = optimisticParams.scope as Array<{r?: number; c?: number}> | undefined;
+      const srvScope = serverParams.scope as Array<{r?: number; c?: number}> | undefined;
+      if (!optScope || !srvScope || optScope.length !== srvScope.length) {
+        return false;
+      }
+      const scopeMatch = optScope.every(
+        (opt, i) => opt.r === srvScope[i]?.r && opt.c === srvScope[i]?.c
+      );
+      return scopeMatch && optimisticParams.id === serverParams.id;
+    }
+
+    // For cursor events, match by cell and user id
+    if (optimisticEvent.type === 'updateCursor') {
+      const optCell = optimisticParams.cell as {r?: number; c?: number} | undefined;
+      const srvCell = serverParams.cell as {r?: number; c?: number} | undefined;
+      return optCell?.r === srvCell?.r && optCell?.c === srvCell?.c && optimisticParams.id === serverParams.id;
+    }
+
+    // For chat events, match by message content and user id
+    if (optimisticEvent.type === 'sendChatMessage') {
+      return optimisticParams.message === serverParams.message && optimisticParams.id === serverParams.id;
+    }
+
+    // For other events, do a shallow comparison of params
+    const optKeys = Object.keys(optimisticParams).sort();
+    const srvKeys = Object.keys(serverParams).sort();
+    if (optKeys.length !== srvKeys.length) {
+      return false;
+    }
+    const paramsMatch = optKeys.every((key) => optimisticParams[key] === serverParams[key]);
+    
+    // If params match, we're done
+    if (paramsMatch) {
+      return true;
+    }
+    
+    // As a fallback, if timestamps are very close (within 5 seconds) and type matches,
+    // and for updateCell events, if the cell and user match, consider it a match
+    // This handles cases where the server might transform the event slightly
+    if (optimisticEvent.type === 'updateCell') {
+      const optTimestamp = typeof optimisticEvent.timestamp === 'string' 
+        ? parseFloat(optimisticEvent.timestamp) 
+        : optimisticEvent.timestamp || 0;
+      const srvTimestamp = typeof serverEvent.timestamp === 'string'
+        ? parseFloat(serverEvent.timestamp)
+        : serverEvent.timestamp || 0;
+      const timeDiff = Math.abs(srvTimestamp - optTimestamp);
+      const timeWindow = 2000; // 2 seconds - conservative window for rapid typing
+      
+      const optCell = optimisticParams.cell as {r?: number; c?: number} | undefined;
+      const srvCell = serverParams.cell as {r?: number; c?: number} | undefined;
+      const cellMatch = optCell?.r === srvCell?.r && optCell?.c === srvCell?.c;
+      const idMatch = optimisticParams.id === serverParams.id;
+      
+      // If cell and user match, and timestamps are close, it's likely the same event
+      // (value might have changed if user typed another character)
+      if (cellMatch && idMatch && timeDiff < timeWindow) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  /**
    * Creates a game event handler that processes incoming websocket events
    */
   const createGameEventHandler = (
@@ -346,9 +456,46 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       }
 
       // Remove from optimistic events if it was optimistic
-      const updatedOptimisticEvents = currentGame.optimisticEvents.filter(
-        (ev) => ev.id !== processedEvent.id
-      );
+      // Try to match by ID first, then by content
+      const beforeCount = currentGame.optimisticEvents.length;
+      const updatedOptimisticEvents = currentGame.optimisticEvents.filter((ev) => {
+        // Keep events that don't match
+        const matches = matchesOptimisticEvent(ev, processedEvent);
+        if (matches) {
+          logger.debug('Matched optimistic event with server event', {
+            path,
+            optimisticType: ev.type,
+            serverType: processedEvent.type,
+            optimisticId: ev.id,
+            serverId: processedEvent.id,
+            optimisticParams: ev.params,
+            serverParams: processedEvent.params,
+          });
+        }
+        return !matches;
+      });
+
+      // Log if we removed an optimistic event (for debugging)
+      if (updatedOptimisticEvents.length < beforeCount) {
+        const removedCount = beforeCount - updatedOptimisticEvents.length;
+        logger.info('Removed optimistic event(s) after server confirmation', {
+          path,
+          removedCount,
+          eventType: processedEvent.type,
+          remainingOptimistic: updatedOptimisticEvents.length,
+        });
+      } else if (beforeCount > 0) {
+        // Log when we have optimistic events but didn't match any
+        logger.debug('Server event did not match any optimistic events', {
+          path,
+          serverEventType: processedEvent.type,
+          serverEventId: processedEvent.id,
+          serverParams: processedEvent.params,
+          optimisticCount: beforeCount,
+          optimisticTypes: currentGame.optimisticEvents.map((e) => e.type),
+          optimisticIds: currentGame.optimisticEvents.map((e) => e.id),
+        });
+      }
 
       // Add event to events array
       const updatedEvents = [...currentGame.events, processedEvent];
@@ -636,6 +783,67 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     await connectToWebsocket(path);
     await pushEventToWebsocket(path, event);
   };
+
+  /**
+   * Cleans up stale optimistic events that haven't been confirmed after a timeout
+   * Events older than OPTIMISTIC_EVENT_TIMEOUT_MS are considered stale and removed
+   */
+  const OPTIMISTIC_EVENT_TIMEOUT_MS = 10000; // 10 seconds
+  const cleanupStaleOptimisticEvents = (): void => {
+    const state = getState();
+    const now = Date.now();
+    let hasChanges = false;
+    const updatedGames: Record<string, GameInstance> = {};
+
+    for (const [path, game] of Object.entries(state.games)) {
+      if (game.optimisticEvents.length === 0) continue;
+
+      const staleEvents = game.optimisticEvents.filter((event) => {
+        const eventTime = typeof event.timestamp === 'string' ? parseFloat(event.timestamp) : event.timestamp || 0;
+        const age = now - eventTime;
+        return age > OPTIMISTIC_EVENT_TIMEOUT_MS;
+      });
+
+      if (staleEvents.length > 0) {
+        const updatedOptimisticEvents = game.optimisticEvents.filter((event) => {
+          const eventTime = typeof event.timestamp === 'string' ? parseFloat(event.timestamp) : event.timestamp || 0;
+          const age = now - eventTime;
+          return age <= OPTIMISTIC_EVENT_TIMEOUT_MS;
+        });
+
+        logger.warn('Removing stale optimistic events', {
+          path,
+          removedCount: staleEvents.length,
+          eventTypes: staleEvents.map((e) => e.type),
+        });
+
+        const updatedGame: GameInstance = {
+          ...game,
+          optimisticEvents: updatedOptimisticEvents,
+        };
+        updatedGame.gameState = computeGameState(updatedGame);
+        updatedGames[path] = updatedGame;
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      setState({
+        games: {
+          ...state.games,
+          ...updatedGames,
+        },
+      });
+    }
+  };
+
+  // Set up periodic cleanup of stale optimistic events
+  const cleanupInterval = setInterval(() => {
+    cleanupStaleOptimisticEvents();
+  }, 5000); // Run cleanup every 5 seconds
+
+  // Store cleanup interval ID for potential cleanup on unmount (though Zustand store persists)
+  // Note: In a real app, you might want to clear this interval when the store is destroyed
 
   const pushEventToWebsocket = async (path: string, event: GameEvent): Promise<unknown> => {
     const state = getState();

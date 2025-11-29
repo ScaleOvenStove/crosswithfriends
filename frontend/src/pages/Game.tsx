@@ -182,7 +182,6 @@ const Game: React.FC = () => {
     };
   }, []);
 
-  // User is now provided by useUser hook - no need for ref
 
   const handleChangeRef = useRef<DebouncedFunc<(options?: {isEdit?: boolean}) => Promise<void>>>();
   if (!handleChangeRef.current) {
@@ -275,6 +274,39 @@ const Game: React.FC = () => {
     }
     prevWinnerRef.current = winner;
   }, [winner, startedAt, players]);
+
+  // Auto-start timer when game becomes ready (if it's a fresh game that hasn't been started)
+  const autoStartedTimersRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (gameHook.ready && game && gid) {
+      logger.debug('Auto-start timer check', {
+        gid,
+        ready: gameHook.ready,
+        hasGame: !!game,
+        solved: game.solved,
+        hasClock: !!game.clock,
+        clockPaused: game.clock?.paused,
+        clockTotalTime: game.clock?.totalTime,
+        clockLastUpdated: game.clock?.lastUpdated,
+        alreadyStarted: autoStartedTimersRef.current.has(gid),
+      });
+
+      if (
+        !game.solved &&
+        game.clock &&
+        game.clock.paused &&
+        game.clock.totalTime === 0 &&
+        (game.clock.lastUpdated === 0 || !game.clock.lastUpdated) &&
+        !autoStartedTimersRef.current.has(gid)
+      ) {
+        // Mark this game as having auto-started to prevent multiple calls
+        autoStartedTimersRef.current.add(gid);
+        gameHook.updateClock('start');
+        logger.debug('Auto-started game timer', {gid});
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameHook.ready, game, gid]);
 
   const showingGame = useMemo(() => {
     return !mobile || mode === 'game';
@@ -609,13 +641,14 @@ const Game: React.FC = () => {
         <Box
           sx={{
             flex: 1,
-            overflow: 'auto',
+            overflow: 'hidden',
             display: 'flex',
             padding: {xs: '2px', sm: '5px', md: '8px'},
             flexDirection: {xs: 'column', sm: 'row'},
             gap: {xs: 0, sm: 1, md: 2},
             minHeight: 0,
             maxHeight: '100%',
+            height: '100%',
           }}
         >
           <Box
@@ -635,6 +668,9 @@ const Game: React.FC = () => {
                 minWidth: {xs: '100%', sm: 'auto'},
                 maxWidth: {xs: '100%', sm: 'none'},
                 width: '100%',
+                minHeight: 0,
+                height: '100%',
+                overflow: 'hidden',
               }}
             >
               {gameElement}

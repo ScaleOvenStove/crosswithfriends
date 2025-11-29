@@ -2,7 +2,7 @@ import {getAuth, onAuthStateChanged, signInWithPopup, FacebookAuthProvider} from
 import {ref, get, set, runTransaction} from 'firebase/database';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 
-import {useUserStore} from '../../store/userStore';
+import {useUserStore, getUser} from '../../store/userStore';
 import {mockFirebaseAuth} from '../mocks/firebase';
 
 // Mock Firebase Auth
@@ -40,13 +40,13 @@ describe('userStore', () => {
     vi.clearAllMocks();
     // Reset store state and detach any existing subscriptions
     useUserStore.getState().detach();
-    (getAuth as any).mockReturnValue(mockFirebaseAuth);
-    (onAuthStateChanged as any).mockImplementation((_auth, callback) => {
+    vi.mocked(getAuth).mockReturnValue(mockFirebaseAuth);
+    vi.mocked(onAuthStateChanged).mockImplementation((_auth, callback) => {
       // Return unsubscribe function
       Promise.resolve().then(() => callback({uid: 'test-user'}));
       return () => {};
     });
-    (FacebookAuthProvider as any).mockClear();
+    vi.mocked(FacebookAuthProvider).mockClear();
   });
 
   describe('initial state', () => {
@@ -62,7 +62,7 @@ describe('userStore', () => {
   describe('attach', () => {
     it('should set up auth state listener', () => {
       const unsubscribe = vi.fn();
-      (onAuthStateChanged as any).mockReturnValue(unsubscribe);
+      vi.mocked(onAuthStateChanged).mockReturnValue(unsubscribe);
 
       useUserStore.getState().attach();
 
@@ -71,17 +71,17 @@ describe('userStore', () => {
 
     it('should not set up multiple listeners', () => {
       const unsubscribe = vi.fn();
-      (onAuthStateChanged as any).mockImplementation((_auth, _callback) => {
+      vi.mocked(onAuthStateChanged).mockImplementation((_auth, _callback) => {
         // Store unsubscribe in closure
         return unsubscribe;
       });
 
       useUserStore.getState().attach();
-      const firstCallCount = (onAuthStateChanged as any).mock.calls.length;
+      const firstCallCount = vi.mocked(onAuthStateChanged).mock.calls.length;
 
       // Second attach should not call onAuthStateChanged again
       useUserStore.getState().attach();
-      const secondCallCount = (onAuthStateChanged as any).mock.calls.length;
+      const secondCallCount = vi.mocked(onAuthStateChanged).mock.calls.length;
 
       // Should only be called once
       expect(firstCallCount).toBe(1);
@@ -89,7 +89,7 @@ describe('userStore', () => {
     });
 
     it('should update state when auth state changes', async () => {
-      (onAuthStateChanged as any).mockImplementation((_auth, callback) => {
+      vi.mocked(onAuthStateChanged).mockImplementation((_auth, callback) => {
         // Call the callback with a test user to simulate auth state change
         Promise.resolve().then(() => callback({uid: 'test-user-id'}));
         return () => {};
@@ -108,7 +108,7 @@ describe('userStore', () => {
 
   describe('logIn', () => {
     it('should call signInWithPopup', async () => {
-      (signInWithPopup as any).mockResolvedValue({
+      vi.mocked(signInWithPopup).mockResolvedValue({
         user: {uid: 'test-uid'},
       });
 
@@ -125,8 +125,8 @@ describe('userStore', () => {
         'game-1': {pid: 123, solved: true},
         'game-2': {pid: 456, solved: false},
       };
-      (ref as any).mockReturnValue({path: '/user/test-id/history'});
-      (get as any).mockResolvedValue({val: () => mockHistory});
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/history'});
+      vi.mocked(get).mockResolvedValue({val: () => mockHistory});
 
       useUserStore.setState({id: 'test-id', attached: true});
 
@@ -152,8 +152,8 @@ describe('userStore', () => {
         'comp-1': {title: 'Comp 1', author: 'Author 1'},
         'comp-2': {title: 'Comp 2', author: 'Author 2'},
       };
-      (ref as any).mockReturnValue({path: '/user/test-id/compositions'});
-      (get as any).mockResolvedValue({val: () => mockCompositions});
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/compositions'});
+      vi.mocked(get).mockResolvedValue({val: () => mockCompositions});
 
       useUserStore.setState({id: 'test-id', attached: true});
 
@@ -173,8 +173,8 @@ describe('userStore', () => {
 
   describe('joinComposition', () => {
     it('should add composition to user when id exists', async () => {
-      (ref as any).mockReturnValue({path: '/user/test-id/compositions/comp-1'});
-      (set as any).mockResolvedValue(undefined);
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/compositions/comp-1'});
+      vi.mocked(set).mockResolvedValue(undefined);
 
       useUserStore.setState({id: 'test-id', attached: true});
 
@@ -201,8 +201,8 @@ describe('userStore', () => {
 
   describe('joinGame', () => {
     it('should add game to user history when id exists', async () => {
-      (ref as any).mockReturnValue({path: '/user/test-id/history/game-1'});
-      (set as any).mockResolvedValue(undefined);
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/history/game-1'});
+      vi.mocked(set).mockResolvedValue(undefined);
 
       useUserStore.setState({id: 'test-id', attached: true});
 
@@ -222,8 +222,8 @@ describe('userStore', () => {
 
   describe('markSolved', () => {
     it('should mark game as solved when id exists', () => {
-      (ref as any).mockReturnValue({path: '/user/test-id/history/game-1'});
-      (runTransaction as any).mockImplementation((_ref, callback) => {
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/history/game-1'});
+      vi.mocked(runTransaction).mockImplementation((_ref, callback) => {
         callback({solved: false, pid: 123});
         return Promise.resolve({});
       });
@@ -242,12 +242,53 @@ describe('userStore', () => {
 
       expect(runTransaction).not.toHaveBeenCalled();
     });
+
+    it('should handle null item in transaction by returning null', () => {
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/history/game-1'});
+      let transactionCallback: ((item: unknown) => unknown) | null = null;
+      vi.mocked(runTransaction).mockImplementation((_ref, callback) => {
+        transactionCallback = callback;
+        return Promise.resolve({});
+      });
+
+      useUserStore.setState({id: 'test-id', attached: true});
+      useUserStore.getState().markSolved('game-1');
+
+      expect(transactionCallback).toBeDefined();
+      if (transactionCallback) {
+        // Test that null item returns null
+        const result = transactionCallback(null);
+        expect(result).toBeNull();
+      }
+    });
+
+    it('should preserve existing properties when marking as solved', () => {
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/history/game-1'});
+      let transactionCallback: ((item: unknown) => unknown) | null = null;
+      vi.mocked(runTransaction).mockImplementation((_ref, callback) => {
+        transactionCallback = callback;
+        return Promise.resolve({});
+      });
+
+      useUserStore.setState({id: 'test-id', attached: true});
+      useUserStore.getState().markSolved('game-1');
+
+      expect(transactionCallback).toBeDefined();
+      if (transactionCallback) {
+        const existingItem = {pid: 123, solved: false, time: 1000, v2: true};
+        const result = transactionCallback(existingItem) as {solved: boolean; pid: number; time: number; v2: boolean};
+        expect(result.solved).toBe(true);
+        expect(result.pid).toBe(123);
+        expect(result.time).toBe(1000);
+        expect(result.v2).toBe(true);
+      }
+    });
   });
 
   describe('recordUsername', () => {
     it('should record username when id exists', () => {
-      (ref as any).mockReturnValue({path: '/user/test-id/names/username'});
-      (runTransaction as any).mockImplementation((_ref, callback) => {
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/names/username'});
+      vi.mocked(runTransaction).mockImplementation((_ref, callback) => {
         callback(0);
         return Promise.resolve({});
       });
@@ -265,6 +306,65 @@ describe('userStore', () => {
       useUserStore.getState().recordUsername('testuser');
 
       expect(runTransaction).not.toHaveBeenCalled();
+    });
+
+    it('should increment count from 0 when username does not exist', () => {
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/names/username'});
+      let transactionCallback: ((count: number) => number) | null = null;
+      vi.mocked(runTransaction).mockImplementation((_ref, callback) => {
+        transactionCallback = callback;
+        return Promise.resolve({});
+      });
+
+      useUserStore.setState({id: 'test-id', attached: true});
+      useUserStore.getState().recordUsername('testuser');
+
+      expect(transactionCallback).toBeDefined();
+      if (transactionCallback) {
+        // Test default parameter (count = 0)
+        const result = transactionCallback(0);
+        expect(result).toBe(1);
+      }
+    });
+
+    it('should increment existing count when username already exists', () => {
+      vi.mocked(ref).mockReturnValue({path: '/user/test-id/names/username'});
+      let transactionCallback: ((count: number) => number) | null = null;
+      vi.mocked(runTransaction).mockImplementation((_ref, callback) => {
+        transactionCallback = callback;
+        return Promise.resolve({});
+      });
+
+      useUserStore.setState({id: 'test-id', attached: true});
+      useUserStore.getState().recordUsername('testuser');
+
+      expect(transactionCallback).toBeDefined();
+      if (transactionCallback) {
+        // Test incrementing existing count
+        const result = transactionCallback(5);
+        expect(result).toBe(6);
+      }
+    });
+  });
+
+  describe('getUser', () => {
+    it('should return null when not attached', () => {
+      useUserStore.setState({attached: false, fb: null, id: null});
+      expect(getUser()).toBeNull();
+    });
+
+    it('should return local ID when disableFbLogin is true and attached', () => {
+      useUserStore.setState({attached: true, fb: null, id: 'local-user-id'});
+      // getUser uses getLocalId() which is mocked to return 'local-user-id'
+      expect(getUser()).toBe('local-user-id');
+    });
+
+    // Note: Firebase login is disabled (disableFbLogin = true in userStore.ts)
+    // so getUser() always returns local ID when attached, never Firebase UID
+
+    it('should return local ID when attached but no fb user', () => {
+      useUserStore.setState({attached: true, fb: null, id: 'local-user-id'});
+      expect(getUser()).toBe('local-user-id');
     });
   });
 });

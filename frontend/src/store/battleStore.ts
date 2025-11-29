@@ -193,7 +193,9 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
         const players = snapshot.val();
         if (!players) return; // Handle null case
 
-        const playerToRemove = findKey(players, {name, team});
+        const playerToRemove = findKey(players, (player: {name?: string; team?: number}) => 
+          player.name === name && player.team === team
+        );
         if (playerToRemove) {
           await remove(ref(db, `${path}/players/${playerToRemove}`));
         }
@@ -330,7 +332,11 @@ export const useBattleStore = create<BattleStore>((setState, getState) => {
 
         if (currentNum > MAX_ON_BOARD) return;
 
-        const possibleLocations = intersectionWith(...possibleLocationsPerGrid, isEqual);
+        // Filter out any non-array values and ensure all are arrays
+        const validLocationArrays = possibleLocationsPerGrid.filter((arr): arr is any[] => 
+          Array.isArray(arr)
+        );
+        const possibleLocations = intersectionWith(...validLocationArrays);
         const locations = sampleSize(possibleLocations, n);
         const powerupTypes = Object.keys(powerupData);
         const pickups = locations.map(({i, j}: {i: number; j: number}) => ({

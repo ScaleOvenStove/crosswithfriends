@@ -18,7 +18,7 @@ describe('puzzle API', () => {
   describe('createNewPuzzle', () => {
     it('should call apiClient.post with correct parameters', async () => {
       const mockResponse = {pid: 'test-puzzle-id'};
-      (apiClient.post as any).mockResolvedValue(mockResponse);
+      vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
       const puzzle = {title: 'Test Puzzle', author: 'Test Author'};
       const result = await createNewPuzzle(puzzle, '123', {isPublic: true});
@@ -33,7 +33,7 @@ describe('puzzle API', () => {
 
     it('should use default isPublic value when not provided', async () => {
       const mockResponse = {pid: 'test-puzzle-id'};
-      (apiClient.post as any).mockResolvedValue(mockResponse);
+      vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
       const puzzle = {title: 'Test Puzzle', author: 'Test Author'};
       await createNewPuzzle(puzzle);
@@ -49,7 +49,7 @@ describe('puzzle API', () => {
   describe('recordSolve', () => {
     it('should call apiClient.post with correct parameters', async () => {
       const mockResponse = {success: true};
-      (apiClient.post as any).mockResolvedValue(mockResponse);
+      vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
       const result = await recordSolve('123', 'game-456', 1000);
 

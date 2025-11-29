@@ -66,9 +66,7 @@ describe('Toast', () => {
     renderWithProviders(<Toast open message="Test message" onClose={onClose} />);
 
     const closeButton = screen.getByRole('button', {name: /close/i});
-    await act(async () => {
-      await user.click(closeButton);
-    });
+    await user.click(closeButton);
 
     expect(onClose).toHaveBeenCalledTimes(1);
     vi.useFakeTimers(); // Restore fake timers for other tests

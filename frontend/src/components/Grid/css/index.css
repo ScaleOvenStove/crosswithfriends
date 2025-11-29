@@ -11,4 +11,5 @@
   border: 1px solid #aaaaaa;
   box-sizing: border-box;
   overflow: hidden; /* Prevent cell content from overlapping borders */
+  aspect-ratio: 1; /* Ensure cells stay square */
 }
