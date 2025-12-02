@@ -3,7 +3,7 @@
  * Provides game state and actions
  */
 
-import {useCallback, useEffect} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 
 import {useGameStore} from '../store/gameStore';
 import type {GameEvent} from '../types/events';
@@ -65,22 +65,33 @@ export function useGame(options: UseGameOptions): UseGameReturn {
     onBattleData,
   } = options;
   const gameStore = useGameStore();
-  // Use selector to get reactive updates when game state changes
+
+  // Use ref to track previous gameState to avoid unnecessary re-renders
+  const prevGameStateRef = useRef<RawGame | null>(null);
+
+  // Optimized selector: only return game instance reference (stable)
+  // Components should subscribe to specific game properties they need
   const game = useGameStore((state) => state.games[path]);
-  // Get gameState reactively - this will trigger re-renders when it changes
-  // Using a more specific selector to ensure reactivity
-  const gameState = useGameStore((state) => {
-    const gameInstance = state.games[path];
-    return gameInstance?.gameState ?? null;
-  });
-  // Get ready state reactively - this ensures re-renders when ready changes
+
+  // Get gameState reactively with shallow comparison optimization
+  // Only re-render if gameState reference actually changes
+  const gameState = useGameStore(
+    (state) => {
+      const gameInstance = state.games[path];
+      return gameInstance?.gameState ?? null;
+    },
+    (a, b) => {
+      // Custom equality: only re-render if gameState reference changes
+      const aState = a.games[path]?.gameState ?? null;
+      const bState = b.games[path]?.gameState ?? null;
+      return aState === bState;
+    }
+  );
+
+  // Get ready state reactively - optimized to only return boolean
   const ready = useGameStore((state) => {
     const gameInstance = state.games[path];
-    const readyValue = gameInstance?.ready ?? false;
-    if (path) {
-      logger.debug('Ready selector called', {path, ready: readyValue});
-    }
-    return readyValue;
+    return gameInstance?.ready ?? false;
   });
 
   // Ensure game instance exists (lazy initialization) - skip if path is empty

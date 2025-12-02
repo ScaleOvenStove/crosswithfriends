@@ -1,11 +1,11 @@
 import {isMobile, rand_color} from '@crosswithfriends/shared/lib/jsUtils';
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
-import {Box, Stack, IconButton} from '@mui/material';
+import {Box, Stack, IconButton, Alert, Snackbar} from '@mui/material';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
 import {MdChevronLeft} from 'react-icons/md';
-import {useParams, useLocation} from 'react-router-dom';
+import {useParams} from 'react-router-dom';
 
 type DebouncedFunc<T extends (...args: any[]) => any> = {
   (...args: Parameters<T>): Promise<void>;
@@ -40,51 +40,79 @@ import {useBattleSetup} from '../hooks/useBattleSetup';
 import {useGameSetup} from '../hooks/useGameSetup';
 import {useUser} from '../hooks/useUser';
 import {isValidGid, createSafePath} from '../store/firebaseUtils';
-import type {Powerup, Winner, BattlePlayer, Pickup, BattleData, ChatMessage} from '../types/battle';
+import type {Powerup, Winner, BattlePlayer, Pickup, BattleData} from '../types/battle';
 import {logger} from '../utils/logger';
+
+// Consolidate battle-related state
+interface BattleState {
+  bid: number | undefined;
+  team: number | undefined;
+  opponent: string | undefined;
+  startedAt: number | undefined;
+  winner: Winner | undefined;
+  players: Record<string, BattlePlayer> | undefined;
+  pickups: Record<string, Pickup> | undefined;
+  powerups: Record<number, Powerup[]> | undefined;
+}
 
 const Game: React.FC = () => {
   const params = useParams<{gid?: string; rid?: string}>();
-  const location = useLocation();
 
+  // Core state
   const [gid, setGid] = useState<string | undefined>(params.gid);
   const [_rid, setRid] = useState<string | undefined>(params.rid);
   const [mobile, setMobile] = useState<boolean>(isMobile());
-  const [mode, setMode] = useState<string>('game');
+  const [mode, setMode] = useState<'game' | 'chat'>('game');
   const [chatCollapsed, setChatCollapsed] = useState<boolean>(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState<number>(0);
-  const [powerups, setPowerups] = useState<Record<number, Powerup[]> | undefined>(undefined);
-  const [lastReadChat, setLastReadChat] = useState<number>(0);
-  const [bid, setBid] = useState<number | undefined>(undefined);
-  const [team, setTeam] = useState<number | undefined>(undefined);
-  const [opponent, setOpponent] = useState<string | undefined>(undefined);
-  const [startedAt, setStartedAt] = useState<number | undefined>(undefined);
-  const [winner, setWinner] = useState<Winner | undefined>(undefined);
-  const [players, setPlayers] = useState<Record<string, BattlePlayer> | undefined>(undefined);
-  const [pickups, setPickups] = useState<Record<string, Pickup> | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
   const [_archived, setArchived] = useState<boolean>(false);
 
+  // Consolidated battle state
+  const [battleState, setBattleState] = useState<BattleState>({
+    bid: undefined,
+    team: undefined,
+    opponent: undefined,
+    startedAt: undefined,
+    winner: undefined,
+    players: undefined,
+    pickups: undefined,
+    powerups: undefined,
+  });
+
+  // Refs
+  const gameComponentRef = useRef<{
+    player?: {state?: {selected?: unknown}};
+    handleSelectClue?: (direction: string, number: number) => void;
+    focus?: () => void;
+  } | null>(null);
+  const chatRef = useRef<{focus: () => void} | null>(null);
+  const lastRecordedSolveRef = useRef<string | undefined>(undefined);
+  const powerupIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const displayNameKeyRef = useRef<string | null>(null);
+  const updatingDisplayNameRef = useRef<boolean>(false);
+  const gameHookRef = useRef<ReturnType<typeof useGameSetup>['gameHook'] | null>(null);
+  const prevWinnerRef = useRef<Winner | undefined>(undefined);
+  const autoStartedTimersRef = useRef<Set<string>>(new Set());
+  const prevReadyRef = useRef<boolean>(false);
+
   // Get initial username
-  const usernameKey = useMemo(() => {
-    return `username_${window.location.href}`;
-  }, []);
+  const usernameKey = useMemo(() => `username_${window.location.href}`, []);
 
   const initialUsername = useMemo(() => {
-    return localStorage.getItem(usernameKey) !== null
-      ? localStorage.getItem(usernameKey)!
-      : localStorage.getItem('username_default') !== null
-        ? localStorage.getItem('username_default')!
-        : nameGenerator();
+    return localStorage.getItem(usernameKey) ?? localStorage.getItem('username_default') ?? nameGenerator();
   }, [usernameKey]);
 
   // Use game setup hook
   const {gameHook, opponentGameHook, game, opponentGame} = useGameSetup({
     gid,
-    opponent,
+    opponent: battleState.opponent,
     onBattleData: (data: BattleData) => {
-      const {bid: battleId, team: battleTeam} = data;
-      setBid(battleId);
-      setTeam(battleTeam);
+      setBattleState((prev) => ({
+        ...prev,
+        bid: data.bid,
+        team: data.team,
+      }));
     },
     onArchived: () => {
       setArchived(true);
@@ -92,30 +120,35 @@ const Game: React.FC = () => {
     initialUsername,
   });
 
+  // Update gameHook ref
+  gameHookRef.current = gameHook;
+
   // Use battle setup hook
   const {battleHook} = useBattleSetup({
-    bid,
-    team,
+    bid: battleState.bid,
+    team: battleState.team,
     onGames: (games: string[]) => {
-      if (team !== undefined && games.length > 1 - team) {
-        const opponentGame = games[1 - team];
-        setOpponent(opponentGame);
+      if (battleState.team !== undefined && games.length > 1 - battleState.team) {
+        setBattleState((prev) => ({
+          ...prev,
+          opponent: games[1 - battleState.team!],
+        }));
       }
     },
     onPowerups: (value) => {
-      setPowerups(value);
+      setBattleState((prev) => ({...prev, powerups: value}));
     },
     onStartedAt: (value) => {
-      setStartedAt(value);
+      setBattleState((prev) => ({...prev, startedAt: value}));
     },
     onWinner: (value) => {
-      setWinner(value);
+      setBattleState((prev) => ({...prev, winner: value}));
     },
     onPlayers: (value) => {
-      setPlayers(value);
+      setBattleState((prev) => ({...prev, players: value}));
     },
     onPickups: (value) => {
-      setPickups(value);
+      setBattleState((prev) => ({...prev, pickups: value}));
     },
     onUsePowerup: (powerupData) => {
       if (gameComponentRef.current?.player) {
@@ -127,120 +160,112 @@ const Game: React.FC = () => {
             selected,
           });
           handleChange();
-        } catch (error) {
-          logger.errorWithException('Error applying powerup effects', error, {powerupType: powerupData.type});
+        } catch (err) {
+          const powerupErrorMessage = err instanceof Error ? err.message : 'Failed to apply powerup';
+          setError(powerupErrorMessage);
+          logger.errorWithException('Error applying powerup effects', err, {powerupType: powerupData.type});
         }
       }
     },
   });
-  const gameComponentRef = useRef<{
-    player?: {state?: {selected?: unknown}};
-    handleSelectClue?: (direction: string, number: number) => void;
-    focus?: () => void;
-  } | null>(null);
-  const chatRef = useRef<{focus?: () => void} | null>(null);
-  const lastRecordedSolveRef = useRef<string | undefined>(undefined);
-  const powerupIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const displayNameSetRef = useRef<string | null>(null); // Track if we've set display name for this user/game
-  const updatingDisplayNameRef = useRef<boolean>(false); // Prevent concurrent updates
 
-  // Use Zustand user hook instead of EventEmitter User class
+  // Use Zustand user hook
   const user = useUser();
 
   // React Query hook for recording solves
   const recordSolveMutation = useRecordSolve({
-    onError: (error) => {
-      logger.errorWithException('Failed to record solve', error, {gid});
+    onError: (solveError) => {
+      const errorMessage = solveError instanceof Error ? solveError.message : 'Failed to record solve';
+      setError(errorMessage);
+      logger.errorWithException('Failed to record solve', solveError, {gid});
     },
   });
 
-  const beta = useMemo(() => true, []);
-
-  const _query = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const result: Record<string, string> = {};
-    params.forEach((value, key) => {
-      result[key] = value;
-    });
-    return result;
-  }, [location.search]);
-
   const userColorKey = useMemo(() => 'user_color', []);
 
+  // Update params when route changes
   useEffect(() => {
     setGid(params.gid);
     setRid(params.rid);
   }, [params.gid, params.rid]);
 
+  // Handle window resize with debouncing
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
     const handleResize = () => {
-      setMobile(isMobile());
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setMobile(isMobile());
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
   }, []);
 
+  // Debounced change handler
   const handleChangeRef = useRef<DebouncedFunc<(options?: {isEdit?: boolean}) => Promise<void>>>();
   if (!handleChangeRef.current) {
-    handleChangeRef.current = debounce(async ({isEdit = false}: {isEdit?: boolean} = {}) => {
-      const game = gameHook.gameState;
-      if (!game || !gameHook.ready) {
+    handleChangeRef.current = debounce(async (options: {isEdit?: boolean} = {}) => {
+      const isEdit = options.isEdit ?? false;
+      const currentGame = gameHook.gameState;
+      if (!currentGame || !gameHook.ready) {
         return;
       }
-      if (isEdit && user.id) {
-        await user.joinGame(gid!, {
-          pid: game.pid,
+      if (isEdit && user.id && gid) {
+        await user.joinGame(String(gid), {
+          pid: currentGame.pid,
           solved: false,
           v2: true,
         });
       }
-      if (game.solved) {
+      if (currentGame.solved) {
         if (lastRecordedSolveRef.current === gid) return;
         lastRecordedSolveRef.current = gid;
-        // Note: puzzleModel logging would need to be handled differently with Zustand
-        // This functionality may need to be refactored if puzzleModel is still needed
-        // Validate data before calling recordSolve to prevent 400 errors
-        if (game.pid && gid && typeof game.clock?.totalTime === 'number' && game.clock.totalTime >= 0) {
+        if (
+          currentGame.pid &&
+          gid &&
+          typeof currentGame.clock?.totalTime === 'number' &&
+          currentGame.clock.totalTime >= 0
+        ) {
           recordSolveMutation.mutate({
-            pid: game.pid,
-            gid,
-            time_to_solve: game.clock.totalTime,
+            pid: currentGame.pid,
+            gid: String(gid),
+            time_to_solve: currentGame.clock.totalTime,
           });
         } else {
           logger.warn('Cannot record solve: invalid data', {
-            pid: game.pid,
+            pid: currentGame.pid,
             gid,
-            totalTime: game.clock?.totalTime,
+            totalTime: currentGame.clock?.totalTime,
           });
         }
-        if (user.id) {
-          user.markSolved(gid!);
+        if (user.id && gid) {
+          user.markSolved(String(gid));
         }
-        if (battleHook && team !== undefined) {
-          battleHook.setSolved(team);
+        if (battleHook && battleState.team !== undefined) {
+          battleHook.setSolved(battleState.team);
         }
       }
     });
   }
 
   const handleChange = useCallback((options?: {isEdit?: boolean}) => {
-    handleChangeRef.current?.(options);
+    if (handleChangeRef.current) {
+      handleChangeRef.current(options || {});
+    }
   }, []);
 
-  // Battle is handled by battleHook - no separate initialization needed
-  // Battle data comes from gameHook.onBattleData callback
-  const battlePath = bid ? `/battle/${bid}` : '';
-
-  // Opponent game is handled by opponentGameHook - no separate initialization needed
-  // Set up powerup spawning interval when both games are ready
+  // Set up powerup spawning interval
   useEffect(() => {
     if (powerupIntervalRef.current) {
       clearInterval(powerupIntervalRef.current);
       powerupIntervalRef.current = null;
     }
 
+    const battlePath = battleState.bid ? `/battle/${battleState.bid}` : '';
     if (battlePath && gameHook.gameState && opponentGameHook.gameState) {
       powerupIntervalRef.current = setInterval(() => {
         if (battleHook) {
@@ -255,41 +280,31 @@ const Game: React.FC = () => {
         powerupIntervalRef.current = null;
       }
     };
-  }, [battlePath, gameHook.gameState, opponentGameHook.gameState, battleHook]);
+  }, [battleState.bid, gameHook.gameState, opponentGameHook.gameState, battleHook]);
 
-  const prevWinnerRef = useRef<Winner | undefined>(undefined);
+  // Handle winner announcement
   useEffect(() => {
-    if (prevWinnerRef.current !== winner && winner) {
-      const {team: winnerTeam, completedAt} = winner;
-      const winningPlayers = Object.values(players).filter((p) => p.team === winnerTeam);
+    if (prevWinnerRef.current !== battleState.winner && battleState.winner) {
+      const {team: winnerTeam, completedAt} = battleState.winner;
+      const winningPlayers = Object.values(battleState.players || {}).filter((p) => p.team === winnerTeam);
       const winningPlayersString = winningPlayers.map((p) => p.name).join(', ');
 
       const victoryMessage = `Team ${Number(winnerTeam) + 1} [${winningPlayersString}] won! `;
-      const timeMessage = `Time taken: ${Number((completedAt - startedAt!) / 1000)} seconds.`;
+      const timeMessage =
+        battleState.startedAt !== undefined
+          ? `Time taken: ${Number((completedAt - battleState.startedAt) / 1000)} seconds.`
+          : '';
 
       if (gameHook.ready) {
         gameHook.chat('BattleBot', '', victoryMessage + timeMessage);
       }
     }
-    prevWinnerRef.current = winner;
-  }, [winner, startedAt, players]);
+    prevWinnerRef.current = battleState.winner;
+  }, [battleState.winner, battleState.startedAt, battleState.players, gameHook]);
 
-  // Auto-start timer when game becomes ready (if it's a fresh game that hasn't been started)
-  const autoStartedTimersRef = useRef<Set<string>>(new Set());
+  // Auto-start timer when game becomes ready
   useEffect(() => {
     if (gameHook.ready && game && gid) {
-      logger.debug('Auto-start timer check', {
-        gid,
-        ready: gameHook.ready,
-        hasGame: !!game,
-        solved: game.solved,
-        hasClock: !!game.clock,
-        clockPaused: game.clock?.paused,
-        clockTotalTime: game.clock?.totalTime,
-        clockLastUpdated: game.clock?.lastUpdated,
-        alreadyStarted: autoStartedTimersRef.current.has(gid),
-      });
-
       if (
         !game.solved &&
         game.clock &&
@@ -298,38 +313,111 @@ const Game: React.FC = () => {
         (game.clock.lastUpdated === 0 || !game.clock.lastUpdated) &&
         !autoStartedTimersRef.current.has(gid)
       ) {
-        // Mark this game as having auto-started to prevent multiple calls
         autoStartedTimersRef.current.add(gid);
         gameHook.updateClock('start');
         logger.debug('Auto-started game timer', {gid});
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameHook.ready, game, gid]);
+  }, [gameHook.ready, game, gid, gameHook]);
 
-  const showingGame = useMemo(() => {
-    return !mobile || mode === 'game';
-  }, [mobile, mode]);
+  // Simplified display name update logic
+  useEffect(() => {
+    const key = `${gid}-${user.id}-${initialUsername}`;
+    const hook = gameHookRef.current;
 
-  const showingChat = useMemo(() => {
-    return !mobile || mode === 'chat';
-  }, [mobile, mode]);
+    // Skip if already processed
+    if (displayNameKeyRef.current === key || !gid || !user.id || !initialUsername || !hook) {
+      return;
+    }
 
-  // Game state comes from useGameSetup hook
+    // Wait for hook to be ready
+    if (!hook.ready || !hook.gameState || !hook.game) {
+      return;
+    }
+
+    // Check if display name needs updating
+    const currentDisplayName = hook.gameState?.['users']?.[user.id]?.displayName;
+    if (currentDisplayName === initialUsername) {
+      displayNameKeyRef.current = key;
+      return;
+    }
+
+    // Update display name
+    if (!updatingDisplayNameRef.current) {
+      updatingDisplayNameRef.current = true;
+      hook.updateDisplayName(user.id, initialUsername);
+      displayNameKeyRef.current = key;
+      setTimeout(() => {
+        updatingDisplayNameRef.current = false;
+      }, 100);
+    }
+  }, [gid, user.id, initialUsername]);
+
+  // Also check when game becomes ready
+  useEffect(() => {
+    const hook = gameHookRef.current;
+    const currentReady = hook?.ready ?? false;
+    const previousReady = prevReadyRef.current;
+
+    if (!previousReady && currentReady && !updatingDisplayNameRef.current) {
+      const key = `${gid}-${user.id}-${initialUsername}`;
+      if (
+        displayNameKeyRef.current !== key &&
+        gid &&
+        user.id &&
+        initialUsername &&
+        hook?.gameState &&
+        hook?.game
+      ) {
+        const currentDisplayName = hook.gameState?.['users']?.[user.id]?.displayName;
+        if (currentDisplayName !== initialUsername) {
+          updatingDisplayNameRef.current = true;
+          hook.updateDisplayName(user.id, initialUsername);
+          displayNameKeyRef.current = key;
+          setTimeout(() => {
+            updatingDisplayNameRef.current = false;
+          }, 100);
+        } else {
+          displayNameKeyRef.current = key;
+        }
+      }
+    }
+
+    prevReadyRef.current = currentReady;
+  });
+
+  // Reset display name tracking when game or user changes
+  useEffect(() => {
+    displayNameKeyRef.current = null;
+    updatingDisplayNameRef.current = false;
+  }, [gid, user.id]);
+
+  // Computed values
+  const showingGame = useMemo(() => !mobile || mode === 'game', [mobile, mode]);
+  const showingChat = useMemo(() => !mobile || mode === 'chat', [mobile, mode]);
 
   const unreads = useMemo(() => {
-    if (!game?.chat?.messages) return false;
-    const lastMessage = Math.max(...game.chat.messages.map((m: ChatMessage) => m.timestamp));
-    return lastMessage > lastReadChat;
-  }, [game, lastReadChat]);
+    if (!game?.chat?.messages || !Array.isArray(game.chat.messages)) return false;
+    // Unreads are tracked internally by Chat component
+    return true;
+  }, [game]);
 
   const userColor = useMemo(() => {
     if (!game || !user.id) return rand_color();
-    const color = game.users[user.id]?.color || localStorage.getItem(userColorKey) || rand_color();
+    const gameUsers = (game as {users?: Record<string, {color?: string}>})['users'];
+    const color = gameUsers?.[user.id]?.color || localStorage.getItem(userColorKey) || rand_color();
     localStorage.setItem(userColorKey, color);
     return color;
   }, [game, user.id, userColorKey]);
 
+  const puzzleTitle = useMemo(() => {
+    if (!gameHook.ready || !game?.info?.title) {
+      return 'Crossword Puzzle';
+    }
+    return game.info.title;
+  }, [gameHook.ready, game]);
+
+  // Event handlers
   const handleToggleChat = useCallback((): void => {
     if (mobile) {
       setMode((prev) => (prev === 'game' ? 'chat' : 'game'));
@@ -347,114 +435,12 @@ const Game: React.FC = () => {
     [gameHook]
   );
 
-  const gameHookRef = useRef(gameHook);
-  gameHookRef.current = gameHook;
-
-  // Extract primitive values to use in dependencies
-  const _gameReady = gameHook.ready;
-  const _gameState = gameHook.gameState;
-  const _gameInstance = gameHook.game;
-
   const handleUpdateDisplayName = useCallback((id: string, displayName: string): void => {
-    // Only update if game is ready, attached, and has gameState
-    // This ensures the game instance exists in the store before we try to add events
     const hook = gameHookRef.current;
-    if (hook.ready && hook.gameState && hook.game) {
+    if (hook?.ready && hook?.gameState && hook?.game) {
       hook.updateDisplayName(id, displayName);
     }
   }, []);
-
-  // Reset display name tracking when game or user changes
-  useEffect(() => {
-    displayNameSetRef.current = null;
-    updatingDisplayNameRef.current = false;
-  }, [gid, user.id]);
-
-  // Update display name - only runs when gid, user.id, or initialUsername changes
-  // Uses refs to check hook state without causing dependency loops
-  useEffect(() => {
-    // Prevent concurrent updates
-    if (updatingDisplayNameRef.current) {
-      return;
-    }
-
-    const key = `${gid}-${user.id}-${initialUsername}`;
-
-    // Skip if we've already processed this exact combination
-    if (displayNameSetRef.current === key) {
-      return;
-    }
-
-    // Get current values from hook (not from deps to avoid loops)
-    const hook = gameHookRef.current;
-    if (!gid || !user.id || !initialUsername) {
-      return;
-    }
-
-    // Only proceed if hook is ready
-    if (!hook?.ready || !hook?.gameState || !hook?.game) {
-      // Not ready yet - don't mark as processed so we can retry when ready
-      return;
-    }
-
-    // Check if display name is already set in game state
-    const currentDisplayName = hook.gameState?.users?.[user.id]?.displayName;
-    if (currentDisplayName === initialUsername) {
-      // Already correct - mark as processed without calling updateDisplayName
-      displayNameSetRef.current = key;
-      return;
-    }
-
-    // Set flag to prevent concurrent calls
-    updatingDisplayNameRef.current = true;
-
-    // Only update if different - this will trigger a store update
-    hook.updateDisplayName(user.id, initialUsername);
-
-    // Mark as processed immediately to prevent retrying even if store updates
-    displayNameSetRef.current = key;
-
-    // Reset flag after a short delay to allow store update to complete
-    setTimeout(() => {
-      updatingDisplayNameRef.current = false;
-    }, 100);
-  }, [gid, user.id, initialUsername]); // Only depend on these - check hook state inside
-
-  // Also check when game becomes ready (using ref to track transition)
-  const prevReadyRef = useRef<boolean>(false);
-  useEffect(() => {
-    const hook = gameHookRef.current;
-    const currentReady = hook?.ready ?? false;
-    const previousReady = prevReadyRef.current;
-
-    // Only act when ready transitions from false to true
-    if (!previousReady && currentReady && !updatingDisplayNameRef.current) {
-      const key = `${gid}-${user.id}-${initialUsername}`;
-      // Only update if we haven't already processed this combo
-      if (
-        displayNameSetRef.current !== key &&
-        gid &&
-        user.id &&
-        initialUsername &&
-        hook?.gameState &&
-        hook?.game
-      ) {
-        const currentDisplayName = hook.gameState?.users?.[user.id]?.displayName;
-        if (currentDisplayName !== initialUsername) {
-          updatingDisplayNameRef.current = true;
-          hook.updateDisplayName(user.id, initialUsername);
-          displayNameSetRef.current = key;
-          setTimeout(() => {
-            updatingDisplayNameRef.current = false;
-          }, 100);
-        } else {
-          displayNameSetRef.current = key;
-        }
-      }
-    }
-
-    prevReadyRef.current = currentReady;
-  }); // Check on every render but only act on ready transition
 
   const handleUpdateColor = useCallback(
     (id: string, color: string): void => {
@@ -466,14 +452,7 @@ const Game: React.FC = () => {
     [userColorKey, gameHook]
   );
 
-  const updateSeenChatMessage = useCallback(
-    (message: ChatMessage): void => {
-      if (message.timestamp > lastReadChat) {
-        setLastReadChat(message.timestamp);
-      }
-    },
-    [lastReadChat]
-  );
+  // Note: updateSeenChatMessage is handled internally by Chat component
 
   const handleUnfocusGame = useCallback((): void => {
     if (chatRef.current) {
@@ -483,77 +462,80 @@ const Game: React.FC = () => {
 
   const handleUnfocusChat = useCallback((): void => {
     if (gameComponentRef.current) {
-      gameComponentRef.current.focus();
+      gameComponentRef.current.focus?.();
     }
   }, []);
 
   const handleSelectClue = useCallback((direction: string, number: number): void => {
-    if (gameComponentRef.current) {
-      gameComponentRef.current.handleSelectClue(direction, number);
-    }
+    gameComponentRef.current?.handleSelectClue?.(direction, number);
   }, []);
 
   const handleUsePowerup = useCallback(
     (powerup: Powerup): void => {
-      if (battleHook && team !== undefined) {
-        battleHook.usePowerup(powerup.type, team);
+      if (battleHook && battleState.team !== undefined) {
+        battleHook.usePowerup(powerup.type, battleState.team);
       }
     },
-    [team, battleHook]
+    [battleState.team, battleHook]
   );
 
+  const handleShareLinkDisappeared = useCallback(() => {
+    setScrollToBottomTrigger((prev) => prev + 1);
+  }, []);
+
+  const handleCloseError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  // Render functions
   const renderGame = useCallback((): JSX.Element | undefined => {
-    // Use Zustand gameState instead of HistoryWrapper
     if (!game) {
       return undefined;
     }
 
     const userId = user.id || '';
-    const ownPowerups = team !== undefined ? powerups?.[team] : undefined;
-    const opponentPowerups = team !== undefined ? powerups?.[1 - team] : undefined;
+    const ownPowerups = battleState.team !== undefined ? battleState.powerups?.[battleState.team] : undefined;
+    const opponentPowerups =
+      battleState.team !== undefined ? battleState.powerups?.[1 - battleState.team] : undefined;
 
-    // Pass gameModel even if it's null - the Game component will handle it
-    // Still pass historyWrapper for backward compatibility, but GameComponent uses Zustand
     return (
       <GameComponent
         ref={gameComponentRef}
-        beta={beta}
+        beta={true}
         id={userId}
         gid={gid}
         myColor={userColor}
-        gameModel={gameHook as unknown} // Pass hook methods as gameModel interface
+        gameModel={gameHook as unknown}
         onUnfocus={handleUnfocusGame}
         onChange={handleChange}
         onToggleChat={handleToggleChat}
         mobile={mobile}
         ownPowerups={ownPowerups}
         opponentPowerups={opponentPowerups}
-        pickups={pickups}
-        battleModel={battleHook as unknown} // Pass hook methods as battleModel interface
-        team={team}
-        unreads={unreads}
+        pickups={battleState.pickups}
+        battleModel={battleHook as unknown}
+        team={battleState.team}
+        unreads={unreads ? 1 : 0}
         scrollToBottomTrigger={scrollToBottomTrigger}
       />
     );
   }, [
-    beta,
+    game,
     gid,
     userColor,
     mobile,
-    powerups,
-    team,
-    pickups,
+    battleState.team,
+    battleState.powerups,
+    battleState.pickups,
     unreads,
     handleUnfocusGame,
     handleChange,
     handleToggleChat,
-    game, // Use game from Zustand
+    gameHook,
+    battleHook,
+    scrollToBottomTrigger,
+    user.id,
   ]);
-
-  const handleShareLinkDisappeared = useCallback(() => {
-    // Trigger scroll to bottom in game component
-    setScrollToBottomTrigger((prev) => prev + 1);
-  }, []);
 
   const renderChat = useCallback((): JSX.Element | undefined => {
     if (!gameHook.ready || !game) {
@@ -561,17 +543,39 @@ const Game: React.FC = () => {
     }
 
     const userId = user.id || '';
-    // Validate gid before creating path
     const gamePath = gid && isValidGid(gid) ? createSafePath('/game', gid) : undefined;
+    const gameUsers =
+      (game as {users?: Record<string, {displayName: string; color?: string; teamId?: string}>})['users'] ||
+      {};
+    const gameChat =
+      (
+        game as {
+          chat?: {
+            messages?: Array<{text: string; senderId: string; timestamp: number; isOpponent?: boolean}>;
+          };
+        }
+      )['chat'] || {};
+    const gameInfo = (game as {info?: {title: string; description?: string; author?: string; type?: string}})[
+      'info'
+    ];
+    const gameData = {
+      info: gameInfo || {title: 'Untitled Puzzle'},
+      clock: (game as {clock?: {totalTime: number}})['clock'] || {totalTime: 0},
+      pid: (game as {pid?: number})['pid'] || 0,
+      solved: (game as {solved?: boolean})['solved'] || false,
+      clues: (game as {clues?: {across: string[]; down: string[]}})['clues'] || {across: [], down: []},
+      fencingUsers: (game as {fencingUsers?: string[]})['fencingUsers'],
+      isFencing: (game as {isFencing?: boolean})['isFencing'],
+    };
     return (
       <Chat
         ref={chatRef}
-        info={game.info}
+        info={gameInfo}
         path={gamePath || ''}
-        data={game.chat}
-        game={game}
+        data={gameChat}
+        game={gameData}
         gid={gid}
-        users={game.users}
+        users={gameUsers}
         id={userId}
         myColor={userColor}
         onChat={handleChat}
@@ -581,21 +585,25 @@ const Game: React.FC = () => {
         onToggleChat={handleToggleChat}
         onSelectClue={handleSelectClue}
         mobile={mobile}
-        opponentData={opponentGame?.chat}
-        bid={bid}
-        updateSeenChatMessage={updateSeenChatMessage}
+        opponentData={
+          opponentGame?.chat as
+            | {messages?: Array<{text: string; senderId: string; timestamp: number; isOpponent?: boolean}>}
+            | undefined
+        }
+        bid={battleState.bid}
         initialUsername={initialUsername}
         collapsed={chatCollapsed}
         onShareLinkDisappeared={handleShareLinkDisappeared}
       />
     );
   }, [
+    gameHook.ready,
     game,
     gid,
     userColor,
     mobile,
     opponentGame,
-    bid,
+    battleState.bid,
     initialUsername,
     handleChat,
     handleUpdateDisplayName,
@@ -603,26 +611,18 @@ const Game: React.FC = () => {
     handleUnfocusChat,
     handleToggleChat,
     handleSelectClue,
-    updateSeenChatMessage,
     chatCollapsed,
     handleShareLinkDisappeared,
+    user.id,
   ]);
 
-  const puzzleTitle = useMemo((): string => {
-    if (!gameHook.ready || !game) {
-      return '';
-    }
-    if (!game.info) return '';
-    return game.info.title;
-  }, [game]);
-
   const renderContent = useCallback((): JSX.Element => {
-    // Show skeleton loader while game is loading
     if (!gameHook.ready || !game) {
       return <GameSkeletonLoader />;
     }
 
-    const teamPowerups = team !== undefined ? powerups?.[team] : undefined;
+    const teamPowerups =
+      battleState.team !== undefined ? battleState.powerups?.[battleState.team] : undefined;
     const gameElement = showingGame ? renderGame() : null;
     const chatElement = showingChat ? renderChat() : null;
 
@@ -638,6 +638,9 @@ const Game: React.FC = () => {
       <>
         <Nav v2 />
         <Box
+          component="main"
+          role="main"
+          aria-label="Game area"
           sx={{
             flex: 1,
             overflow: 'hidden',
@@ -651,13 +654,15 @@ const Game: React.FC = () => {
           }}
         >
           <Box
+            component="section"
+            aria-label="Game board"
             sx={{
               flex: chatCollapsed ? 1 : {xs: 1, sm: '0 0 75%'},
               position: 'relative',
               display: 'flex',
               flexDirection: 'column',
               transition: 'flex 0.3s ease',
-              minWidth: 0, // Allow shrinking
+              minWidth: 0,
             }}
           >
             <Stack
@@ -677,6 +682,8 @@ const Game: React.FC = () => {
             {chatCollapsed && !mobile && (
               <IconButton
                 onClick={handleToggleChat}
+                aria-label="Expand chat panel"
+                aria-expanded="false"
                 sx={{
                   position: 'absolute',
                   right: 8,
@@ -690,17 +697,25 @@ const Game: React.FC = () => {
                     backgroundColor: 'action.hover',
                     transform: 'translateY(-50%) translateX(-4px)',
                   },
+                  '&:focus-visible': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                    outlineOffset: 2,
+                  },
                   transition: 'transform 0.2s ease',
                   zIndex: 10,
                   display: {xs: 'none', sm: 'flex'},
                 }}
                 title="Expand chat"
               >
-                <MdChevronLeft />
+                <MdChevronLeft aria-hidden="true" />
               </IconButton>
             )}
           </Box>
           <Box
+            component="aside"
+            aria-label="Chat panel"
+            aria-expanded={!chatCollapsed}
             sx={{
               flex: chatCollapsed ? '0 0 0' : {xs: '1 1 auto', sm: '0 0 25%'},
               minWidth: chatCollapsed ? 0 : {xs: '100%', sm: '280px', md: '320px'},
@@ -725,11 +740,12 @@ const Game: React.FC = () => {
     showingGame,
     showingChat,
     chatCollapsed,
-    powerups,
-    team,
+    battleState.team,
+    battleState.powerups,
     renderGame,
     renderChat,
     handleUsePowerup,
+    handleToggleChat,
     gameHook.ready,
     game,
   ]);
@@ -738,6 +754,8 @@ const Game: React.FC = () => {
     <Stack
       className="room"
       direction="column"
+      role="application"
+      aria-label="Crossword game"
       sx={{
         flex: 1,
         width: '100%',
@@ -751,6 +769,16 @@ const Game: React.FC = () => {
         <title>{puzzleTitle}</title>
       </Helmet>
       {renderContent()}
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={handleCloseError}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert onClose={handleCloseError} severity="error" sx={{width: '100%'}}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Stack>
   );
 };

@@ -10,6 +10,8 @@
   min-height: 0;
   align-items: flex-start;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -25,6 +27,8 @@
   .clues {
     padding: 0px 5px 0px 5px;
     gap: 5px;
+    /* Reduce vertical spacing on mobile */
+    max-height: 100%;
   }
 
   .clues--list--title {
@@ -36,6 +40,8 @@
     padding-top: 4px;
     padding-bottom: 4px;
     font-size: 13px;
+    /* Ensure full text is visible */
+    min-height: auto;
   }
 
   .clues--list--scroll--clue--number {
@@ -46,6 +52,10 @@
   .clues--list--scroll--clue--text {
     font-size: 13px;
     line-height: 17px;
+    /* Ensure text wraps properly on mobile */
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 }
 
@@ -199,6 +209,11 @@
 
 .clues--list--scroll--clue--text {
   margin-left: 10px;
+  /* Ensure text is fully visible and not clipped */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  text-overflow: clip;
 }
 
 .clues--list--scroll--clue--hint {

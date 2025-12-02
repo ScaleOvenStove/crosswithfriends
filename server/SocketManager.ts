@@ -143,7 +143,7 @@ class SocketManager {
             if (ack) void ack({error: 'Invalid game ID'});
             return;
           }
-          const events = await getGameEvents(gid);
+          const {events} = await getGameEvents(gid);
           logger.debug({gid, eventCount: events.length}, '[socket] Syncing game events');
           if (ack) void ack(events);
         } catch (error) {
@@ -151,6 +151,54 @@ class SocketManager {
           if (ack) void ack({error: 'Failed to sync game events'});
         }
       });
+
+      socket.on('sync_recent_game_events', async (data: {gid: string; limit?: number}, ack) => {
+        try {
+          if (typeof data !== 'object' || !data.gid) {
+            if (ack) void ack({error: 'Invalid request'});
+            return;
+          }
+
+          const {events, total} = await getGameEvents(data.gid, {limit: data.limit || 1000});
+          logger.debug(
+            {gid: data.gid, eventCount: events.length, total},
+            '[socket] Syncing recent game events'
+          );
+          if (ack) void ack({events, total});
+        } catch (error) {
+          logger.error({err: error, gid: data.gid}, '[socket] Error syncing recent game events');
+          if (ack) void ack({error: 'Failed to sync recent game events'});
+        }
+      });
+
+      socket.on(
+        'sync_archived_game_events',
+        async (data: {gid: string; offset?: number; limit?: number}, ack) => {
+          try {
+            if (typeof data !== 'object' || !data.gid) {
+              if (ack) void ack({error: 'Invalid request'});
+              return;
+            }
+
+            // Calculate offset for archived events (events before the recent ones)
+            const {total} = await getGameEvents(data.gid);
+            const recentLimit = 1000;
+            const archivedOffset = Math.max(0, total - recentLimit - (data.offset || 0));
+            const archivedLimit = data.limit || 1000;
+
+            const {events} = await getGameEvents(data.gid, {
+              limit: archivedLimit,
+              offset: archivedOffset,
+            });
+
+            logger.debug({gid: data.gid, eventCount: events.length}, '[socket] Syncing archived game events');
+            if (ack) void ack(events);
+          } catch (error) {
+            logger.error({err: error, gid: data.gid}, '[socket] Error syncing archived game events');
+            if (ack) void ack({error: 'Failed to sync archived game events'});
+          }
+        }
+      );
 
       socket.on('game_event', async (message, ack) => {
         try {

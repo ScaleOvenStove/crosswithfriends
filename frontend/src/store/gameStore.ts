@@ -33,6 +33,39 @@ const castNullsToUndefined = <T>(obj: T): T => {
 
 const CURRENT_VERSION = 1.0;
 
+// Game cleanup configuration constants
+const MAX_GAMES_IN_MEMORY = 10;
+const GAME_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const GAME_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
+// Subscription tracking (only in development mode to avoid production overhead)
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+interface SubscriptionTracker {
+  path: string;
+  event: string;
+  callback: Function;
+  createdAt: number;
+  lastUsed: number;
+}
+
+interface EventArchive {
+  archivedEvents: GameEvent[];
+  unarchivedAt?: number;
+  url?: string;
+  compressed?: boolean;
+}
+
+interface ConflictState {
+  id: string;
+  optimisticEvent: GameEvent;
+  serverEvent: GameEvent;
+  baseState: unknown;
+  conflictType: 'simple' | 'complex';
+  description: string;
+  timestamp: number;
+}
+
 interface GameInstance {
   path: string;
   ref: DatabaseReference;
@@ -41,12 +74,18 @@ interface GameInstance {
   socket?: Socket;
   battleData?: unknown;
   ready: boolean; // Whether the game has been initialized and is ready
-  events: GameEvent[]; // All events for HistoryWrapper compatibility
+  events: GameEvent[]; // Recent events (last 1000) for HistoryWrapper compatibility
+  archivedEvents?: EventArchive; // Archived older events
+  totalEventCount: number; // Total number of events (including archived)
   gameState: RawGame | null; // Computed game state from events (reactive in Zustand)
   optimisticEvents: GameEvent[]; // Optimistic events that haven't been confirmed
+  conflicts: ConflictState[]; // Conflicts that need resolution
   subscriptions: Map<string, Set<(data: unknown) => void>>; // Map-based subscription system
   unsubscribeBattleData?: () => void;
   unsubscribeSocket?: () => void;
+  lastAccessTime: number; // Timestamp of last access to this game
+  createdAt: number; // Timestamp when game was created
+  subscriptionTrackers?: SubscriptionTracker[]; // Optional subscription tracking (development only)
 }
 
 interface GameStore {
@@ -78,11 +117,38 @@ interface GameStore {
   once: (path: string, event: string, callback: (data: unknown) => void) => () => void; // Subscribe once, auto-unsubscribe after first call
   checkArchive: (path: string) => void;
   unarchive: (path: string) => void;
-  getEvents: (path: string) => GameEvent[]; // Get all events for HistoryWrapper
+  getEvents: (path: string) => GameEvent[]; // Get all events for HistoryWrapper (recent + archived if loaded)
   getCreateEvent: (path: string) => GameEvent | null; // Get create event
+  loadArchivedEvents: (path: string, offset?: number, limit?: number) => Promise<GameEvent[]>; // Load archived events on demand
+  syncRecentGameEvents: (path: string, limit?: number) => Promise<GameEvent[]>; // Sync only recent events
+  resolveConflict: (path: string, conflictId: string, resolution: 'local' | 'server' | 'merge') => void; // Resolve a conflict
+  getConflicts: (path: string) => ConflictState[]; // Get conflicts for a game
+  cleanupStaleGames: (maxAge?: number) => void;
+  getGameCount: () => number;
+  MAX_GAMES_IN_MEMORY: number;
+  GAME_CLEANUP_INTERVAL_MS: number;
+  GAME_MAX_AGE_MS: number;
+  getSubscriptionStats: () => Record<string, {count: number; events: string[]}>;
 }
 
 export const useGameStore = create<GameStore>((setState, getState) => {
+  // Helper function to update last access time for a game
+  const updateAccessTime = (path: string): void => {
+    const state = getState();
+    const game = state.games[path];
+    if (game) {
+      setState({
+        games: {
+          ...state.games,
+          [path]: {
+            ...game,
+            lastAccessTime: Date.now(),
+          },
+        },
+      });
+    }
+  };
+
   // Helper function to validate that a create event has a valid grid
   const isValidCreateEvent = (event: GameEvent | null): boolean => {
     if (!event || event.type !== 'create') return false;
@@ -108,7 +174,46 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     optimisticEventsLength: number;
     lastState: RawGame | null;
   }
+
+  // LRU cache implementation for game state cache
+  const MAX_CACHE_SIZE = 50;
+  const CACHE_CLEANUP_THRESHOLD = 0.8; // Clean when 80% full (40 entries)
   const gameStateCache = new Map<string, GameStateCache>();
+  const cacheAccessOrder: string[] = []; // Tracks access order for LRU eviction
+
+  /**
+   * Updates cache access order (moves key to end = most recently used)
+   */
+  const updateCacheAccessOrder = (key: string): void => {
+    const index = cacheAccessOrder.indexOf(key);
+    if (index !== -1) {
+      cacheAccessOrder.splice(index, 1);
+    }
+    cacheAccessOrder.push(key);
+  };
+
+  /**
+   * Evicts least recently used cache entries when threshold is exceeded
+   */
+  const evictCacheIfNeeded = (): void => {
+    const currentSize = gameStateCache.size;
+    const threshold = Math.floor(MAX_CACHE_SIZE * CACHE_CLEANUP_THRESHOLD);
+
+    if (currentSize >= threshold) {
+      const toEvict = currentSize - threshold + 1; // Evict enough to stay under threshold
+      const keysToEvict = cacheAccessOrder.splice(0, toEvict);
+
+      logger.debug('Evicting cache entries', {
+        evictingCount: keysToEvict.length,
+        cacheSizeBefore: currentSize,
+        cacheSizeAfter: gameStateCache.size - keysToEvict.length,
+      });
+
+      for (const key of keysToEvict) {
+        gameStateCache.delete(key);
+      }
+    }
+  };
 
   // Helper function to compute game state from events with incremental update optimization
   const computeGameState = (game: GameInstance): RawGame | null => {
@@ -134,6 +239,8 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       cache.optimisticEventsLength === currentOptimisticLength &&
       cache.lastState
     ) {
+      // Update access order for LRU
+      updateCacheAccessOrder(game.path);
       logger.debug('computeGameState - Cache hit (no changes)', {
         path: game.path,
         eventsLength: currentEventsLength,
@@ -177,13 +284,20 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         }
       }
 
-      // Update cache
+      // Update cache and access order
+      const wasNew = !gameStateCache.has(game.path);
       gameStateCache.set(game.path, {
         createEventId,
         eventsLength: currentEventsLength,
         optimisticEventsLength: currentOptimisticLength,
         lastState: state,
       });
+      updateCacheAccessOrder(game.path);
+
+      // Evict if needed (only check on new entries to avoid overhead)
+      if (wasNew) {
+        evictCacheIfNeeded();
+      }
 
       return state;
     }
@@ -264,13 +378,20 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       state = gameReducer(state, event, {isOptimistic: true});
     }
 
-    // Update cache with new state
+    // Update cache with new state and access order
+    const wasNew = !gameStateCache.has(game.path);
     gameStateCache.set(game.path, {
       createEventId,
       eventsLength: currentEventsLength,
       optimisticEventsLength: currentOptimisticLength,
       lastState: state,
     });
+    updateCacheAccessOrder(game.path);
+
+    // Evict if needed (only check on new entries to avoid overhead)
+    if (wasNew) {
+      evictCacheIfNeeded();
+    }
 
     return state;
   };
@@ -283,9 +404,20 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
     const subscribers = game.subscriptions.get(event);
     if (subscribers) {
+      const now = Date.now();
       subscribers.forEach((callback) => {
         try {
           callback(data);
+
+          // Update lastUsed timestamp for subscription tracker (development only)
+          if (isDevelopment && game.subscriptionTrackers) {
+            const tracker = game.subscriptionTrackers.find(
+              (t) => t.path === path && t.event === event && t.callback === callback
+            );
+            if (tracker) {
+              tracker.lastUsed = now;
+            }
+          }
         } catch (error) {
           logger.errorWithException(`Error in subscription callback for ${event}`, error, {path});
         }
@@ -324,6 +456,59 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         },
       },
     });
+  };
+
+  /**
+   * Checks if two events are for the same resource (for conflict detection)
+   */
+  const checkSameResource = (event1: GameEvent, event2: GameEvent): boolean => {
+    if (event1.type !== event2.type) return false;
+
+    const params1 = event1.params as Record<string, unknown>;
+    const params2 = event2.params as Record<string, unknown>;
+
+    // For updateCell events, check if same cell
+    if (event1.type === 'updateCell' && event2.type === 'updateCell') {
+      const cell1 = params1.cell as {r?: number; c?: number} | undefined;
+      const cell2 = params2.cell as {r?: number; c?: number} | undefined;
+      return cell1?.r === cell2?.r && cell1?.c === cell2?.c;
+    }
+
+    // For other events, check if they have matching identifiers
+    // This is a simplified check - can be expanded
+    return JSON.stringify(params1) === JSON.stringify(params2);
+  };
+
+  /**
+   * Determines conflict type (simple vs complex)
+   */
+  const determineConflictType = (optimistic: GameEvent, server: GameEvent): 'simple' | 'complex' => {
+    // Simple conflicts: timestamp differences, minor value changes
+    // Complex conflicts: structural changes, multiple field conflicts
+    if (optimistic.type === 'updateCell' && server.type === 'updateCell') {
+      const optParams = optimistic.params as {value?: string; cell?: unknown};
+      const srvParams = server.params as {value?: string; cell?: unknown};
+
+      // If only value differs, it's a simple conflict
+      if (JSON.stringify(optParams.cell) === JSON.stringify(srvParams.cell)) {
+        return 'simple';
+      }
+    }
+
+    return 'complex';
+  };
+
+  /**
+   * Generates user-friendly conflict description
+   */
+  const generateConflictDescription = (optimistic: GameEvent, server: GameEvent): string => {
+    if (optimistic.type === 'updateCell' && server.type === 'updateCell') {
+      const optParams = optimistic.params as {cell?: {r?: number; c?: number}; value?: string};
+      const srvParams = server.params as {cell?: {r?: number; c?: number}; value?: string};
+      return `Cell at row ${optParams.cell?.r}, column ${optParams.cell?.c} was changed both locally (${optParams.value}) and on the server (${srvParams.value}).`;
+    }
+
+    return `A conflict occurred between your local change and the server. Both changes affect the same resource.`;
   };
 
   /**
@@ -477,6 +662,50 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         return !matches;
       });
 
+      // Check for conflicts: if server event is for same resource as optimistic event
+      const potentialConflicts: ConflictState[] = [];
+
+      if (beforeCount > 0 && updatedOptimisticEvents.length === beforeCount) {
+        // No optimistic events were matched, check for conflicts
+        for (const optimisticEvent of currentGame.optimisticEvents) {
+          // Check if events are for the same resource (e.g., same cell)
+          const isSameResource = checkSameResource(optimisticEvent, processedEvent);
+
+          if (isSameResource && optimisticEvent.type === processedEvent.type) {
+            // Conflict detected - same resource, different values
+            const conflictId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+            const baseState = currentGame.gameState; // State before optimistic update
+
+            // Determine conflict type
+            const conflictType = determineConflictType(optimisticEvent, processedEvent);
+            const description = generateConflictDescription(optimisticEvent, processedEvent);
+
+            potentialConflicts.push({
+              id: conflictId,
+              optimisticEvent,
+              serverEvent: processedEvent,
+              baseState,
+              conflictType,
+              description,
+              timestamp: Date.now(),
+            });
+
+            logger.warn('Conflict detected between optimistic and server event', {
+              path,
+              conflictId,
+              optimisticType: optimisticEvent.type,
+              serverType: processedEvent.type,
+              conflictType,
+            });
+          }
+        }
+
+        // Emit conflict events for UI to handle
+        potentialConflicts.forEach((conflict) => {
+          emit(path, 'conflict', conflict);
+        });
+      }
+
       // Log if we removed an optimistic event (for debugging)
       if (updatedOptimisticEvents.length < beforeCount) {
         const removedCount = beforeCount - updatedOptimisticEvents.length;
@@ -494,6 +723,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           serverEventId: processedEvent.id,
           serverParams: processedEvent.params,
           optimisticCount: beforeCount,
+          conflictCount: potentialConflicts.length,
           optimisticTypes: currentGame.optimisticEvents.map((e) => e.type),
           optimisticIds: currentGame.optimisticEvents.map((e) => e.id),
         });
@@ -502,11 +732,16 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       // Add event to events array
       const updatedEvents = [...currentGame.events, processedEvent];
 
+      // Get conflicts from updated state (add new conflicts detected above)
+      const existingConflicts = currentGame.conflicts || [];
+      const allConflicts = [...existingConflicts, ...potentialConflicts];
+
       // Compute new game state
       const updatedGame: GameInstance = {
         ...currentGame,
         events: updatedEvents,
         optimisticEvents: updatedOptimisticEvents,
+        conflicts: allConflicts,
       };
 
       if (processedEvent.type === 'create') {
@@ -570,14 +805,24 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     };
   };
 
+  // Constants for event archiving
+  const RECENT_EVENTS_LIMIT = 1000; // Only load last 1000 events initially
+  const _ARCHIVE_THRESHOLD = 1000; // Archive events older than this count (for future use)
+
   /**
-   * Syncs all game events from the server
+   * Syncs recent game events from the server (last N events)
+   * This is the new default method to reduce memory usage
    */
-  const syncAllGameEvents = async (path: string): Promise<GameEvent[]> => {
+  const syncRecentGameEvents = async (
+    path: string,
+    limit: number = RECENT_EVENTS_LIMIT
+  ): Promise<GameEvent[]> => {
     const gid = path.substring(6);
-    logger.info('Syncing all game events', {gid});
+    logger.info('Syncing recent game events', {gid, limit});
 
     try {
+      // TODO: Update backend to support limit parameter
+      // For now, we'll get all events but only store recent ones
       const response = (await socketManager.emitAsync('sync_all_game_events', gid)) as unknown[];
 
       if (!response || !Array.isArray(response)) {
@@ -586,13 +831,72 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       }
 
       const allEvents = response.map((event: unknown) => castNullsToUndefined(event) as GameEvent);
-      logger.info('Received events from sync_all_game_events', {gid, eventCount: allEvents.length});
-      return allEvents;
+
+      // Only return recent events (last N)
+      const recentEvents = allEvents.slice(-limit);
+      logger.info('Received recent events', {
+        gid,
+        totalCount: allEvents.length,
+        recentCount: recentEvents.length,
+      });
+
+      // Store total count for reference
+      const state = getState();
+      const game = state.games[path];
+      if (game) {
+        setState({
+          games: {
+            ...state.games,
+            [path]: {
+              ...game,
+              totalEventCount: allEvents.length,
+            },
+          },
+        });
+      }
+
+      return recentEvents;
     } catch (error) {
-      logger.errorWithException('Error syncing game events', error, {path});
+      logger.errorWithException('Error syncing recent game events', error, {path});
       return [];
     }
   };
+
+  /**
+   * Syncs all game events from the server (legacy method, kept for backward compatibility)
+   * @deprecated Use syncRecentGameEvents instead for better performance
+   */
+  const _syncAllGameEvents = async (path: string): Promise<GameEvent[]> => {
+    return syncRecentGameEvents(path, RECENT_EVENTS_LIMIT);
+  };
+
+  /**
+   * Loads archived events on demand
+   * Backend should support pagination with offset and limit
+   */
+  const loadArchivedEventsImpl = async (
+    path: string,
+    offset: number = 0,
+    limit: number = 1000
+  ): Promise<GameEvent[]> => {
+    const gid = path.substring(6);
+    logger.info('Loading archived events', {gid, offset, limit});
+
+    try {
+      // TODO: Implement backend endpoint: sync_archived_game_events
+      // For now, return empty array as placeholder
+      // const response = await socketManager.emitAsync('sync_archived_game_events', { gid, offset, limit });
+
+      logger.warn('Archived events loading not yet implemented on backend', {gid});
+      return [];
+    } catch (error) {
+      logger.errorWithException('Error loading archived events', error, {path, offset, limit});
+      return [];
+    }
+  };
+
+  // Alias for export
+  const loadArchivedEvents = loadArchivedEventsImpl;
 
   /**
    * Sorts events by timestamp
@@ -672,8 +976,8 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       await socketManager.emitAsync('join_game', reconnectGid);
     });
 
-    // Sync and sort all game events
-    const allEvents = sortEventsByTimestamp(await syncAllGameEvents(path));
+    // Sync and sort recent game events (only last 1000)
+    const recentEvents = sortEventsByTimestamp(await syncRecentGameEvents(path, RECENT_EVENTS_LIMIT));
 
     const currentState = getState();
     const currentGame = currentState.games[path];
@@ -683,26 +987,28 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     }
 
     // Separate create event from other events and validate
-    const createEvent = allEvents.find((e) => e.type === 'create') || null;
-    const otherEvents = allEvents.filter((e) => e.type !== 'create');
+    // Note: Create event should always be in recent events (it's the first event)
+    const createEvent = recentEvents.find((e) => e.type === 'create') || null;
+    const otherEvents = recentEvents.filter((e) => e.type !== 'create');
     const hasValidCreateEvent = validateCreateEvent(createEvent, path);
 
     // Log if no events or no create event
-    if (!createEvent && allEvents.length > 0) {
+    if (!createEvent && recentEvents.length > 0) {
       logger.warn(
         'Received events but no create event found. Game will wait for create event via websocket',
         {path}
       );
-    } else if (allEvents.length === 0) {
+    } else if (recentEvents.length === 0) {
       logger.warn('No events received from sync. Game will wait for create event via websocket', {path});
     }
 
-    // Update game with all events
+    // Update game with recent events
     const updatedGame: GameInstance = {
       ...currentGame,
       createEvent: createEvent || currentGame.createEvent,
       ready: hasValidCreateEvent ? true : false, // Explicitly set to false when invalid
       events: otherEvents,
+      totalEventCount: currentGame.totalEventCount || recentEvents.length,
       optimisticEvents: [],
       gameState: computeGameState({
         ...currentGame,
@@ -849,6 +1155,118 @@ export const useGameStore = create<GameStore>((setState, getState) => {
   // Store cleanup interval ID for potential cleanup on unmount (though Zustand store persists)
   // Note: In a real app, you might want to clear this interval when the store is destroyed
 
+  /**
+   * Cleans up stale games based on age and implements LRU eviction when limit is exceeded
+   * @param maxAge - Optional max age in milliseconds (defaults to GAME_MAX_AGE_MS)
+   */
+  const cleanupStaleGames = (maxAge?: number): void => {
+    const state = getState();
+    const now = Date.now();
+    const ageThreshold = maxAge ?? GAME_MAX_AGE_MS;
+    const gamesToDetach: string[] = [];
+
+    // First, collect games that are older than the threshold
+    for (const [path, game] of Object.entries(state.games)) {
+      const age = now - game.lastAccessTime;
+      if (age > ageThreshold) {
+        gamesToDetach.push(path);
+        logger.info('Marking game for cleanup due to age', {
+          path,
+          ageMinutes: Math.round(age / (60 * 1000)),
+          lastAccessTime: new Date(game.lastAccessTime).toISOString(),
+        });
+      }
+    }
+
+    // Detach stale games
+    for (const path of gamesToDetach) {
+      state.detach(path);
+    }
+
+    // Check if we still exceed the limit after removing stale games
+    const currentState = getState();
+    const currentGameCount = Object.keys(currentState.games).length;
+    let lruDetachedCount = 0;
+
+    if (currentGameCount > MAX_GAMES_IN_MEMORY) {
+      // Sort games by lastAccessTime (oldest first) for LRU eviction
+      const gamesArray = Object.entries(currentState.games).map(([path, game]) => ({
+        path,
+        lastAccessTime: game.lastAccessTime,
+      }));
+
+      gamesArray.sort((a, b) => a.lastAccessTime - b.lastAccessTime);
+
+      // Detach oldest games until we're under the limit
+      const excessCount = currentGameCount - MAX_GAMES_IN_MEMORY;
+      const lruGamesToDetach = gamesArray.slice(0, excessCount);
+      lruDetachedCount = lruGamesToDetach.length;
+
+      logger.info('LRU eviction: detaching games to stay under limit', {
+        currentCount: currentGameCount,
+        maxAllowed: MAX_GAMES_IN_MEMORY,
+        detachingCount: lruDetachedCount,
+        games: lruGamesToDetach.map((g) => ({
+          path: g.path,
+          lastAccessMinutes: Math.round((now - g.lastAccessTime) / (60 * 1000)),
+        })),
+      });
+
+      for (const {path} of lruGamesToDetach) {
+        currentState.detach(path);
+      }
+    }
+
+    if (gamesToDetach.length > 0 || lruDetachedCount > 0) {
+      const finalState = getState();
+      logger.debug('Game cleanup completed', {
+        gamesRemaining: Object.keys(finalState.games).length,
+        detachedCount: gamesToDetach.length + lruDetachedCount,
+      });
+    }
+  };
+
+  /**
+   * Gets the current number of games in memory
+   */
+  const getGameCount = (): number => {
+    const state = getState();
+    return Object.keys(state.games).length;
+  };
+
+  /**
+   * Gets subscription statistics for debugging (development only)
+   */
+  const getSubscriptionStats = (): Record<string, {count: number; events: string[]}> => {
+    const state = getState();
+    const stats: Record<string, {count: number; events: string[]}> = {};
+
+    for (const [path, game] of Object.entries(state.games)) {
+      const eventSet = new Set<string>();
+      let totalCount = 0;
+
+      for (const [event, subscribers] of game.subscriptions.entries()) {
+        const count = subscribers.size;
+        totalCount += count;
+        if (count > 0) {
+          eventSet.add(event);
+        }
+      }
+
+      stats[path] = {
+        count: totalCount,
+        events: Array.from(eventSet),
+      };
+    }
+
+    return stats;
+  };
+
+  // Set up periodic cleanup of stale games
+  const _gameCleanupInterval = setInterval(() => {
+    cleanupStaleGames();
+  }, GAME_CLEANUP_INTERVAL_MS);
+
   const pushEventToWebsocket = async (path: string, event: GameEvent): Promise<unknown> => {
     const state = getState();
     const game = state.games[path];
@@ -912,6 +1330,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           // For backward compatibility - expose game path on window for debugging
           (window as unknown as {game: {path: string}}).game = {path};
 
+          const now = Date.now();
           const newGame: GameInstance = {
             path,
             ref: gameRef,
@@ -919,9 +1338,13 @@ export const useGameStore = create<GameStore>((setState, getState) => {
             createEvent: null,
             ready: false,
             events: [],
+            totalEventCount: 0,
             gameState: null,
             optimisticEvents: [],
+            conflicts: [],
             subscriptions: new Map(),
+            lastAccessTime: now,
+            createdAt: now,
           };
 
           setState({
@@ -941,6 +1364,8 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       if (!game) {
         throw new Error(`Failed to get or create game at path: ${path}`);
       }
+      // Update access time on every getGame call
+      updateAccessTime(path);
       return game;
     },
 
@@ -965,6 +1390,7 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           // Create game instance if it doesn't exist
           const gameRef = ref(db, path);
           const eventsRef = ref(db, `${path}/events`);
+          const now = Date.now();
           game = {
             path,
             ref: gameRef,
@@ -972,9 +1398,13 @@ export const useGameStore = create<GameStore>((setState, getState) => {
             createEvent: null,
             ready: false,
             events: [],
+            totalEventCount: 0,
             gameState: null,
             optimisticEvents: [],
+            conflicts: [],
             subscriptions: new Map(),
+            lastAccessTime: now,
+            createdAt: now,
           };
           setState({
             games: {
@@ -1014,6 +1444,9 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         }
       );
 
+      // Update access time when attaching
+      updateAccessTime(path);
+
       setState({
         games: {
           ...state.games,
@@ -1050,6 +1483,31 @@ export const useGameStore = create<GameStore>((setState, getState) => {
         // Just remove the event listeners
       }
 
+      // Clean up cache entry for this game
+      gameStateCache.delete(path);
+      const cacheIndex = cacheAccessOrder.indexOf(path);
+      if (cacheIndex !== -1) {
+        cacheAccessOrder.splice(cacheIndex, 1);
+      }
+
+      // Clean up subscription trackers and warn about orphaned subscriptions
+      if (isDevelopment && game.subscriptionTrackers && game.subscriptionTrackers.length > 0) {
+        const activeSubscriptions = game.subscriptions;
+        let activeCount = 0;
+        for (const subscribers of activeSubscriptions.values()) {
+          activeCount += subscribers.size;
+        }
+
+        if (game.subscriptionTrackers.length > activeCount) {
+          logger.warn('Orphaned subscriptions detected on detach', {
+            path,
+            trackedCount: game.subscriptionTrackers.length,
+            activeCount,
+            orphanedCount: game.subscriptionTrackers.length - activeCount,
+          });
+        }
+      }
+
       // Only update state if the game actually exists and will be removed
       // This prevents unnecessary state updates that could trigger re-renders
       if (state.games[path]) {
@@ -1075,6 +1533,36 @@ export const useGameStore = create<GameStore>((setState, getState) => {
       // Add callback to subscribers
       subscribers.add(callback);
 
+      // Track subscription in development mode
+      if (isDevelopment) {
+        if (!game.subscriptionTrackers) {
+          game.subscriptionTrackers = [];
+        }
+        const now = Date.now();
+        const tracker: SubscriptionTracker = {
+          path,
+          event,
+          callback,
+          createdAt: now,
+          lastUsed: now,
+        };
+        game.subscriptionTrackers.push(tracker);
+
+        // Warn if subscription count is growing unbounded
+        const totalSubscriptions = game.subscriptionTrackers.length;
+        if (totalSubscriptions > 50) {
+          logger.warn('High subscription count detected - potential leak', {
+            path,
+            subscriptionCount: totalSubscriptions,
+            event,
+          });
+        }
+
+        // Note: We don't call setState here to avoid triggering infinite loops.
+        // The subscription trackers are only for debugging/logging purposes,
+        // so we can mutate the array directly without causing re-renders.
+      }
+
       // Return unsubscribe function
       return () => {
         const currentState = getState();
@@ -1087,6 +1575,20 @@ export const useGameStore = create<GameStore>((setState, getState) => {
           // Clean up empty sets
           if (currentSubscribers.size === 0) {
             currentGame.subscriptions.delete(event);
+          }
+        }
+
+        // Remove tracker in development mode
+        if (isDevelopment && currentGame.subscriptionTrackers) {
+          const trackerIndex = currentGame.subscriptionTrackers.findIndex(
+            (t) => t.path === path && t.event === event && t.callback === callback
+          );
+          if (trackerIndex !== -1) {
+            currentGame.subscriptionTrackers.splice(trackerIndex, 1);
+            // Clean up empty array
+            if (currentGame.subscriptionTrackers.length === 0) {
+              delete currentGame.subscriptionTrackers;
+            }
           }
         }
       };
@@ -1384,7 +1886,15 @@ export const useGameStore = create<GameStore>((setState, getState) => {
     getEvents: (path: string): GameEvent[] => {
       const state = getState();
       const game = state.games[path];
-      return game?.events || [];
+      if (!game) return [];
+
+      // Return recent events + archived events if loaded
+      const recentEvents = game.events || [];
+      const archivedEvents = game.archivedEvents?.archivedEvents || [];
+
+      // Combine and sort by timestamp
+      const allEvents = [...archivedEvents, ...recentEvents];
+      return sortEventsByTimestamp(allEvents);
     },
 
     getCreateEvent: (path: string): GameEvent | null => {
@@ -1405,5 +1915,103 @@ export const useGameStore = create<GameStore>((setState, getState) => {
 
       return game.gameState || null;
     },
+
+    syncRecentGameEvents: async (path: string, limit?: number): Promise<GameEvent[]> => {
+      return syncRecentGameEvents(path, limit);
+    },
+    loadArchivedEvents: async (path: string, offset?: number, limit?: number): Promise<GameEvent[]> => {
+      return loadArchivedEvents(path, offset, limit);
+    },
+    resolveConflict: (path: string, conflictId: string, resolution: 'local' | 'server' | 'merge') => {
+      const state = getState();
+      const game = state.games[path];
+      if (!game) return;
+
+      const conflict = game.conflicts.find((c) => c.id === conflictId);
+      if (!conflict) return;
+
+      // Remove conflict
+      const updatedConflicts = game.conflicts.filter((c) => c.id !== conflictId);
+
+      // Apply resolution
+      if (resolution === 'local') {
+        // Keep optimistic event, remove server event from events
+        const updatedEvents = game.events.filter((e) => e.id !== conflict.serverEvent.id);
+        // Add optimistic event to events
+        const updatedEventsWithLocal = [...updatedEvents, conflict.optimisticEvent];
+
+        setState({
+          games: {
+            ...state.games,
+            [path]: {
+              ...game,
+              events: updatedEventsWithLocal,
+              conflicts: updatedConflicts,
+              optimisticEvents: game.optimisticEvents.filter((e) => e.id !== conflict.optimisticEvent.id),
+            },
+          },
+        });
+      } else if (resolution === 'server') {
+        // Remove optimistic event, keep server event
+        const updatedOptimisticEvents = game.optimisticEvents.filter(
+          (e) => e.id !== conflict.optimisticEvent.id
+        );
+
+        setState({
+          games: {
+            ...state.games,
+            [path]: {
+              ...game,
+              optimisticEvents: updatedOptimisticEvents,
+              conflicts: updatedConflicts,
+            },
+          },
+        });
+      } else if (resolution === 'merge') {
+        // Merge both changes (simplified - would need more sophisticated merge logic)
+        // For now, prefer server event but log merge
+        logger.info('Merging conflict', {path, conflictId});
+        const updatedOptimisticEvents = game.optimisticEvents.filter(
+          (e) => e.id !== conflict.optimisticEvent.id
+        );
+
+        setState({
+          games: {
+            ...state.games,
+            [path]: {
+              ...game,
+              optimisticEvents: updatedOptimisticEvents,
+              conflicts: updatedConflicts,
+            },
+          },
+        });
+      }
+
+      // Recompute game state
+      const updatedGame = getState().games[path];
+      if (updatedGame) {
+        const newGameState = computeGameState(updatedGame);
+        setState({
+          games: {
+            ...state.games,
+            [path]: {
+              ...updatedGame,
+              gameState: newGameState,
+            },
+          },
+        });
+      }
+    },
+    getConflicts: (path: string): ConflictState[] => {
+      const state = getState();
+      const game = state.games[path];
+      return game?.conflicts || [];
+    },
+    cleanupStaleGames,
+    getGameCount,
+    MAX_GAMES_IN_MEMORY,
+    GAME_CLEANUP_INTERVAL_MS,
+    GAME_MAX_AGE_MS,
+    getSubscriptionStats,
   };
 });

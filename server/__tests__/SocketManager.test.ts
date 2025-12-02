@@ -231,7 +231,7 @@ describe('SocketManager', () => {
       ];
       const ack = vi.fn();
 
-      (gameModel.getGameEvents as Mock).mockResolvedValue(mockEvents);
+      (gameModel.getGameEvents as Mock).mockResolvedValue({events: mockEvents, total: 2});
 
       const syncHandler = (mockSocket.on as Mock).mock.calls.find(
         (call) => call[0] === 'sync_all_game_events'
@@ -241,6 +241,127 @@ describe('SocketManager', () => {
         await syncHandler(gid, ack);
         expect(gameModel.getGameEvents).toHaveBeenCalledWith(gid);
         expect(ack).toHaveBeenCalledWith(mockEvents);
+      }
+    });
+
+    it('should handle sync_recent_game_events', async () => {
+      const data = {gid: 'test-gid-123', limit: 100};
+      const mockEvents = [
+        {type: 'create', timestamp: 1000},
+        {type: 'updateCell', timestamp: 2000},
+      ];
+      const ack = vi.fn();
+
+      (gameModel.getGameEvents as Mock).mockResolvedValue({events: mockEvents, total: 5});
+
+      const syncHandler = (mockSocket.on as Mock).mock.calls.find(
+        (call) => call[0] === 'sync_recent_game_events'
+      )?.[1];
+
+      if (syncHandler) {
+        await syncHandler(data, ack);
+        expect(gameModel.getGameEvents).toHaveBeenCalledWith(data.gid, {limit: 100});
+        expect(ack).toHaveBeenCalledWith({events: mockEvents, total: 5});
+      }
+    });
+
+    it('should handle sync_recent_game_events with default limit', async () => {
+      const data = {gid: 'test-gid-123'};
+      const mockEvents = [{type: 'create', timestamp: 1000}];
+      const ack = vi.fn();
+
+      (gameModel.getGameEvents as Mock).mockResolvedValue({events: mockEvents, total: 1});
+
+      const syncHandler = (mockSocket.on as Mock).mock.calls.find(
+        (call) => call[0] === 'sync_recent_game_events'
+      )?.[1];
+
+      if (syncHandler) {
+        await syncHandler(data, ack);
+        expect(gameModel.getGameEvents).toHaveBeenCalledWith(data.gid, {limit: 1000});
+        expect(ack).toHaveBeenCalledWith({events: mockEvents, total: 1});
+      }
+    });
+
+    it('should handle sync_recent_game_events with invalid request', async () => {
+      const data = {};
+      const ack = vi.fn();
+
+      const syncHandler = (mockSocket.on as Mock).mock.calls.find(
+        (call) => call[0] === 'sync_recent_game_events'
+      )?.[1];
+
+      if (syncHandler) {
+        await syncHandler(data, ack);
+        expect(ack).toHaveBeenCalledWith({error: 'Invalid request'});
+        expect(gameModel.getGameEvents).not.toHaveBeenCalled();
+      }
+    });
+
+    it('should handle sync_archived_game_events', async () => {
+      const data = {gid: 'test-gid-123', offset: 0, limit: 50};
+      const mockEvents = [{type: 'updateCell', timestamp: 2000}];
+      const ack = vi.fn();
+
+      (gameModel.getGameEvents as Mock)
+        .mockResolvedValueOnce({events: [], total: 1050}) // First call to get total
+        .mockResolvedValueOnce({events: mockEvents, total: 1050}); // Second call with pagination
+
+      const syncHandler = (mockSocket.on as Mock).mock.calls.find(
+        (call) => call[0] === 'sync_archived_game_events'
+      )?.[1];
+
+      if (syncHandler) {
+        await syncHandler(data, ack);
+        expect(gameModel.getGameEvents).toHaveBeenCalledTimes(2);
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(1, data.gid);
+        // archivedOffset = Math.max(0, 1050 - 1000 - 0) = 50
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(2, data.gid, {
+          limit: 50,
+          offset: 50,
+        });
+        expect(ack).toHaveBeenCalledWith(mockEvents);
+      }
+    });
+
+    it('should handle sync_archived_game_events with default values', async () => {
+      const data = {gid: 'test-gid-123'};
+      const mockEvents = [{type: 'updateCell', timestamp: 2000}];
+      const ack = vi.fn();
+
+      (gameModel.getGameEvents as Mock)
+        .mockResolvedValueOnce({events: [], total: 2000}) // First call to get total
+        .mockResolvedValueOnce({events: mockEvents, total: 2000}); // Second call with pagination
+
+      const syncHandler = (mockSocket.on as Mock).mock.calls.find(
+        (call) => call[0] === 'sync_archived_game_events'
+      )?.[1];
+
+      if (syncHandler) {
+        await syncHandler(data, ack);
+        expect(gameModel.getGameEvents).toHaveBeenCalledTimes(2);
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(1, data.gid);
+        // archivedOffset = Math.max(0, 2000 - 1000 - 0) = 1000
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(2, data.gid, {
+          limit: 1000,
+          offset: 1000,
+        });
+        expect(ack).toHaveBeenCalledWith(mockEvents);
+      }
+    });
+
+    it('should handle sync_archived_game_events with invalid request', async () => {
+      const data = {};
+      const ack = vi.fn();
+
+      const syncHandler = (mockSocket.on as Mock).mock.calls.find(
+        (call) => call[0] === 'sync_archived_game_events'
+      )?.[1];
+
+      if (syncHandler) {
+        await syncHandler(data, ack);
+        expect(ack).toHaveBeenCalledWith({error: 'Invalid request'});
+        expect(gameModel.getGameEvents).not.toHaveBeenCalled();
       }
     });
 

@@ -1,6 +1,7 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import {visualizer} from 'rollup-plugin-visualizer';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -8,8 +9,6 @@ export default defineConfig({
     react({
       include: /\.(jsx|js|tsx|ts)$/,
       jsxRuntime: 'automatic',
-      // Enable Fast Refresh
-      fastRefresh: true,
     }),
   ],
   // Use import.meta.env instead of process.env (Vite best practice)
@@ -62,9 +61,48 @@ export default defineConfig({
     // Optimize chunk splitting
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['react-flexview', 'react-icons'],
+        manualChunks: (id) => {
+          // React and core dependencies
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router')
+          ) {
+            return 'react-vendor';
+          }
+          // UI libraries
+          if (id.includes('node_modules/@mui') || id.includes('node_modules/@emotion')) {
+            return 'mui-vendor';
+          }
+          // Firebase
+          if (id.includes('node_modules/firebase')) {
+            return 'firebase-vendor';
+          }
+          // Socket.io
+          if (id.includes('node_modules/socket.io')) {
+            return 'socket-vendor';
+          }
+          // Heavy UI components - split into separate chunks
+          if (id.includes('node_modules/react-color')) {
+            return 'react-color';
+          }
+          if (id.includes('node_modules/react-confetti')) {
+            return 'react-confetti';
+          }
+          if (id.includes('node_modules/sweetalert2')) {
+            return 'sweetalert2';
+          }
+          if (id.includes('node_modules/react-simple-keyboard')) {
+            return 'react-keyboard';
+          }
+          // Other UI libraries
+          if (id.includes('node_modules/react-flexview') || id.includes('node_modules/react-icons')) {
+            return 'ui-vendor';
+          }
+          // Shared library
+          if (id.includes('shared/src')) {
+            return 'shared';
+          }
         },
       },
     },

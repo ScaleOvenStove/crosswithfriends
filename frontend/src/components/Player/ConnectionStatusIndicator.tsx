@@ -94,7 +94,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({op
       case 'connecting':
         return 'Connecting...';
       case 'syncing':
-        return `${optimisticCounter} pending`;
+        return `Saving...`;
       case 'disconnected':
         return 'Disconnected';
       default:
@@ -108,7 +108,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({op
       return `Synced (${connectionStatus.latency}ms, ${quality})`;
     }
     if (status === 'syncing') {
-      return `${optimisticCounter} change${optimisticCounter === 1 ? '' : 's'} pending sync`;
+      return `Saving ${optimisticCounter} change${optimisticCounter === 1 ? '' : 's'}...`;
     }
     return getStatusText();
   };

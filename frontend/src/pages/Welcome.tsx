@@ -1,7 +1,16 @@
 import './css/welcome.css';
 
 import {isMobile, colorAverage} from '@crosswithfriends/shared/lib/jsUtils';
-import {Box, Stack, Autocomplete, TextField, Checkbox, FormControlLabel} from '@mui/material';
+import {
+  Box,
+  Stack,
+  Autocomplete,
+  TextField,
+  Checkbox,
+  FormControlLabel,
+  Alert,
+  Snackbar,
+} from '@mui/material';
 import classnames from 'classnames';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
 import {Helmet} from 'react-helmet';
@@ -29,6 +38,7 @@ import PuzzleList from '../components/PuzzleList';
 import Upload from '../components/Upload';
 import {WelcomeVariantsControl} from '../components/WelcomeVariantsControl';
 import {useUser} from '../hooks/useUser';
+import {logger} from '../utils/logger';
 
 const BLUE = '#6aa9f4';
 const WHITE = '#FFFFFF';
@@ -55,9 +65,11 @@ interface Props {
 }
 
 const Welcome: React.FC<Props> = (props) => {
-  const [userHistory, setUserHistory] = useState<Record<string, any>>({});
+  const [userHistory, setUserHistory] = useState<Record<string, unknown>>({});
   const [motion, setMotion] = useState<number | undefined>(undefined);
   const [searchFocused, setSearchFocused] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mobile, setMobile] = useState<boolean>(isMobile());
 
   const user = useUser();
   const [uploadedPuzzles, setUploadedPuzzles] = useState<number>(0);
@@ -65,13 +77,35 @@ const Welcome: React.FC<Props> = (props) => {
   const navHeightRef = useRef<number>(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
-  const mobile = useMemo(() => isMobile(), []);
+
+  // Handle window resize with debouncing
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setMobile(isMobile());
+      }, 150);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const handleAuth = useCallback((): void => {
     if (user.id) {
-      user.listUserHistory().then((history) => {
-        setUserHistory(history);
-      });
+      user
+        .listUserHistory()
+        .then((history) => {
+          setUserHistory(history);
+        })
+        .catch((err) => {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load puzzle history';
+          setError(errorMessage);
+          logger.errorWithException('Failed to load user history', err);
+        });
     }
   }, [user]);
 
@@ -89,9 +123,7 @@ const Welcome: React.FC<Props> = (props) => {
     };
   }, [handleAuth, user]);
 
-  const showingSidebar = useMemo(() => {
-    return !mobile;
-  }, [mobile]);
+  const showingSidebar = useMemo(() => !mobile, [mobile]);
 
   const motionValue = useMemo(() => {
     if (motion === undefined) return 0;
@@ -114,6 +146,7 @@ const Welcome: React.FC<Props> = (props) => {
       top,
       height,
       opacity: searchFocused && motionValue === 1 ? 0 : 1,
+      transition: 'opacity 0.2s ease',
     };
   }, [mobile, motionValue, searchFocused, navHeight]);
 
@@ -124,6 +157,7 @@ const Welcome: React.FC<Props> = (props) => {
     return {
       opacity,
       transform: `translateY(${translateY}px)`,
+      transition: 'opacity 0.2s ease, transform 0.2s ease',
     };
   }, [mobile, motionValue, navHeight]);
 
@@ -133,6 +167,7 @@ const Welcome: React.FC<Props> = (props) => {
     return {
       transform: `translateY(${translateY}px)`,
       zIndex: 2,
+      transition: 'transform 0.2s ease',
     };
   }, [mobile, motionValue, navHeight]);
 
@@ -188,6 +223,10 @@ const Welcome: React.FC<Props> = (props) => {
     setSearchFocused(false);
   }, []);
 
+  const handleCloseError = useCallback(() => {
+    setError(null);
+  }, []);
+
   const searchStyle = useMemo((): React.CSSProperties => {
     if (!mobile) return {flexGrow: 1};
     const color = colorAverage(BLUE, WHITE, colorMotion);
@@ -197,6 +236,7 @@ const Welcome: React.FC<Props> = (props) => {
       color,
       width: `${width * 100}%`,
       zIndex,
+      transition: 'width 0.3s ease, color 0.3s ease',
     };
   }, [mobile, colorMotion, searchFocused, motionValue]);
 
@@ -211,6 +251,7 @@ const Welcome: React.FC<Props> = (props) => {
       backgroundColor,
       paddingTop,
       paddingBottom,
+      transition: 'color 0.3s ease, background-color 0.3s ease, padding 0.3s ease',
     };
   }, [mobile, colorMotion, motionValue]);
 
@@ -222,6 +263,12 @@ const Welcome: React.FC<Props> = (props) => {
     e.stopPropagation();
   }, []);
 
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Escape' && searchInputRef.current) {
+      searchInputRef.current.blur();
+    }
+  }, []);
+
   const filterGroup = useCallback(
     (
       header: string,
@@ -229,9 +276,11 @@ const Welcome: React.FC<Props> = (props) => {
       handleChange: (header: string, name: string, on: boolean) => void
     ) => {
       return (
-        <Box sx={{mb: 1}}>
-          <Box sx={{fontWeight: 600, mb: 0.5, color: 'text.primary'}}>{header}</Box>
-          <Stack direction="column" spacing={0.5}>
+        <Box component="fieldset" sx={{mb: 1, border: 'none', padding: 0, margin: 0}}>
+          <Box component="legend" sx={{fontWeight: 600, mb: 0.5, color: 'text.primary'}}>
+            {header}
+          </Box>
+          <Stack direction="column" spacing={0.5} role="group" aria-label={`${header} filters`}>
             {Object.keys(items).map((name) => (
               <FormControlLabel
                 key={name}
@@ -240,6 +289,7 @@ const Welcome: React.FC<Props> = (props) => {
                     checked={items[name]}
                     onChange={(e) => handleChange(header, name, e.target.checked)}
                     size="small"
+                    aria-label={`Filter by ${name}`}
                   />
                 }
                 label={name}
@@ -259,18 +309,26 @@ const Welcome: React.FC<Props> = (props) => {
   );
 
   return (
-    <Stack className={classnames('welcome', {mobile})} direction="column" sx={{flex: 1}}>
+    <Stack
+      className={classnames('welcome', {mobile})}
+      direction="column"
+      role="main"
+      aria-label="Puzzle list"
+      sx={{flex: 1}}
+    >
       <Helmet>
         <title>Cross with Friends</title>
       </Helmet>
-      <div className="welcome--nav" style={navStyle}>
+      <nav className="welcome--nav" style={navStyle} aria-label="Main navigation">
         <Nav v2 mobile={mobile} textStyle={navTextStyle} linkStyle={navLinkStyle} divRef={navRef} />
-      </div>
+      </nav>
       <Box sx={{flex: 1, flexBasis: 1, display: 'flex'}}>
         {showingSidebar && (
           <Stack
+            component="aside"
             className="welcome--sidebar"
             direction="column"
+            aria-label="Filters and controls"
             sx={{
               flexShrink: 0,
               width: 240,
@@ -302,7 +360,9 @@ const Welcome: React.FC<Props> = (props) => {
         )}
         <Stack className="welcome--main" direction="column" sx={{flex: 1}}>
           <Box
+            component="section"
             className="welcome--searchbar--container"
+            aria-label="Search puzzles"
             sx={{
               flexShrink: 0,
               display: 'flex',
@@ -323,16 +383,31 @@ const Welcome: React.FC<Props> = (props) => {
             >
               {mobile ? (
                 <>
-                  <MdSearch className="welcome--searchicon" onTouchEnd={handleSearchIconTouchEnd} />
+                  <MdSearch
+                    className="welcome--searchicon"
+                    onTouchEnd={handleSearchIconTouchEnd}
+                    role="button"
+                    aria-label="Focus search input"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        searchInputRef.current?.focus();
+                      }
+                    }}
+                  />
                   <input
                     ref={searchInputRef}
                     style={searchInputStyle}
-                    placeholder=" "
+                    placeholder="Search puzzles..."
                     onFocus={handleSearchFocus}
                     onBlur={handleSearchBlur}
                     onChange={handleSearchInput}
+                    onKeyDown={handleSearchKeyDown}
                     defaultValue={props.search}
                     className="welcome--searchbar"
+                    aria-label="Search puzzles"
+                    type="search"
                   />
                 </>
               ) : (
@@ -351,10 +426,13 @@ const Welcome: React.FC<Props> = (props) => {
                       placeholder="Search puzzles..."
                       variant="outlined"
                       size="small"
+                      aria-label="Search puzzles"
                       InputProps={{
                         ...params.InputProps,
                         startAdornment: (
                           <Box
+                            component="span"
+                            aria-hidden="true"
                             sx={{
                               display: 'flex',
                               alignItems: 'center',
@@ -380,6 +458,11 @@ const Welcome: React.FC<Props> = (props) => {
                               borderWidth: '2px',
                             },
                           },
+                          '&:focus-within': {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main',
+                            },
+                          },
                         },
                       }}
                     />
@@ -400,6 +483,16 @@ const Welcome: React.FC<Props> = (props) => {
           />
         </Stack>
       </Box>
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={handleCloseError}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert onClose={handleCloseError} severity="error" sx={{width: '100%'}}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Stack>
   );
 };
