@@ -2,6 +2,7 @@ import React, {Component, ErrorInfo, ReactNode} from 'react';
 
 import {IS_DEVELOPMENT} from '../../config';
 import {logger} from '../../utils/logger';
+
 import ErrorDisplay from './ErrorDisplay';
 
 interface Props {

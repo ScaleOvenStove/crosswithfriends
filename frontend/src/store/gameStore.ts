@@ -39,12 +39,12 @@ const GAME_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const GAME_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 
 // Subscription tracking (only in development mode to avoid production overhead)
-const isDevelopment = process.env.NODE_ENV === 'development';
+const isDevelopment = import.meta.env.MODE === 'development';
 
 interface SubscriptionTracker {
   path: string;
   event: string;
-  callback: Function;
+  callback: (data: unknown) => void;
   createdAt: number;
   lastUsed: number;
 }

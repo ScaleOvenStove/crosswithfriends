@@ -61,7 +61,7 @@ const OfflineIndicator: React.FC = () => {
         <>
           <Box sx={{fontSize: '20px'}}>📵</Box>
           <Box sx={{flex: 1, fontSize: '14px'}}>
-            You're offline. Actions will be synced when you're back online.
+            You&apos;re offline. Actions will be synced when you&apos;re back online.
           </Box>
           {queuedActions.length > 0 && (
             <Chip

@@ -3,12 +3,11 @@
  * Provides game state and actions
  */
 
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect} from 'react';
 
 import {useGameStore} from '../store/gameStore';
 import type {GameEvent} from '../types/events';
 import type {RawGame} from '../types/rawGame';
-import {logger} from '../utils/logger';
 
 import {useStoreSubscriptions} from './useStoreSubscriptions';
 
@@ -66,27 +65,15 @@ export function useGame(options: UseGameOptions): UseGameReturn {
   } = options;
   const gameStore = useGameStore();
 
-  // Use ref to track previous gameState to avoid unnecessary re-renders
-  const prevGameStateRef = useRef<RawGame | null>(null);
-
   // Optimized selector: only return game instance reference (stable)
   // Components should subscribe to specific game properties they need
   const game = useGameStore((state) => state.games[path]);
 
-  // Get gameState reactively with shallow comparison optimization
-  // Only re-render if gameState reference actually changes
-  const gameState = useGameStore(
-    (state) => {
-      const gameInstance = state.games[path];
-      return gameInstance?.gameState ?? null;
-    },
-    (a, b) => {
-      // Custom equality: only re-render if gameState reference changes
-      const aState = a.games[path]?.gameState ?? null;
-      const bState = b.games[path]?.gameState ?? null;
-      return aState === bState;
-    }
-  );
+  // Get gameState reactively - Zustand handles reference equality automatically
+  const gameState = useGameStore((state) => {
+    const gameInstance = state.games[path];
+    return gameInstance?.gameState ?? null;
+  });
 
   // Get ready state reactively - optimized to only return boolean
   const ready = useGameStore((state) => {
@@ -103,10 +90,26 @@ export function useGame(options: UseGameOptions): UseGameReturn {
 
   // Set up event listeners using generic subscription hook - skip if path is empty
   useStoreSubscriptions(gameStore, path || '', {
-    event: onEvent,
-    wsEvent: onWsEvent,
-    wsCreateEvent: onWsCreateEvent,
-    wsOptimisticEvent: onWsOptimisticEvent,
+    event: onEvent
+      ? (data: unknown) => {
+          onEvent(data as GameEvent);
+        }
+      : undefined,
+    wsEvent: onWsEvent
+      ? (data: unknown) => {
+          onWsEvent(data as GameEvent);
+        }
+      : undefined,
+    wsCreateEvent: onWsCreateEvent
+      ? (data: unknown) => {
+          onWsCreateEvent(data as GameEvent);
+        }
+      : undefined,
+    wsOptimisticEvent: onWsOptimisticEvent
+      ? (data: unknown) => {
+          onWsOptimisticEvent(data as GameEvent);
+        }
+      : undefined,
     reconnect: onReconnect,
     archived: onArchived,
     battleData: onBattleData,
