@@ -17,13 +17,36 @@ import {logger} from '../utils/logger.js';
 import {pool} from './pool.js';
 import {getPuzzle} from './puzzle.js';
 
-export async function getGameEvents(gid: string): Promise<GameEvent[]> {
+export async function getGameEvents(
+  gid: string,
+  options?: {limit?: number; offset?: number}
+): Promise<{events: GameEvent[]; total: number}> {
   const startTime = Date.now();
-  const res = await pool.query('SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC', [gid]);
+
+  let query = 'SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC';
+  const params: unknown[] = [gid];
+
+  if (options?.limit) {
+    query += ' LIMIT $2';
+    params.push(options.limit);
+
+    if (options?.offset) {
+      query += ' OFFSET $3';
+      params.push(options.offset);
+    }
+  }
+
+  const res = await pool.query(query, params);
   const events = res.rows.map((row) => row.event_payload);
+
+  // Get total count
+  const countRes = await pool.query('SELECT COUNT(*) FROM game_events WHERE gid=$1', [gid]);
+  const total = parseInt(countRes.rows[0].count, 10);
+
   const ms = Date.now() - startTime;
   logger.debug(`getGameEvents(${gid}) took ${ms}ms`);
-  return events;
+
+  return {events, total};
 }
 
 export async function getGameInfo(gid: string): Promise<GameJson['info']> {

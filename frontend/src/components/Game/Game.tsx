@@ -887,4 +887,4 @@ const Game: React.FC<GameProps> = (props) => {
   );
 };
 
-export default Game;
+export default React.memo(Game);

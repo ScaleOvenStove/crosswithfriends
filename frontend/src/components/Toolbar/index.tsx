@@ -636,7 +636,16 @@ const Toolbar: React.FC<Props> = (props) => {
         <div
           className={`toolbar--color-attribution-toggle`}
           title="Color Attribution"
+          aria-label="Toggle color attribution mode"
+          role="button"
+          tabIndex={0}
           onClick={onToggleColorAttributionMode}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onToggleColorAttributionMode();
+            }
+          }}
         >
           {colorAttributionMode ? <RiPaintFill /> : <RiPaintLine />}
         </div>
@@ -646,7 +655,16 @@ const Toolbar: React.FC<Props> = (props) => {
       <div
         className={`toolbar--color-attribution-toggle${colorAttributionMode ? ' on' : ''}`}
         title="Color Attribution"
+        aria-label="Toggle color attribution mode"
+        role="button"
+        tabIndex={0}
         onClick={onToggleColorAttributionMode}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggleColorAttributionMode();
+          }
+        }}
       >
         <RiPaintFill />
       </div>
@@ -661,11 +679,32 @@ const Toolbar: React.FC<Props> = (props) => {
           <MdBorderAll
             onClick={handleToggleListView}
             className={`toolbar--list-view${listMode ? ' on' : ''}`}
+            aria-label="Switch to grid view"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggleListView();
+              }
+            }}
           />
         );
       }
       return (
-        <MdList onClick={handleToggleListView} className={`toolbar--list-view${listMode ? ' on' : ''}`} />
+        <MdList
+          onClick={handleToggleListView}
+          className={`toolbar--list-view${listMode ? ' on' : ''}`}
+          aria-label="Switch to list view"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleToggleListView();
+            }
+          }}
+        />
       );
     }
     return (
@@ -674,6 +713,15 @@ const Toolbar: React.FC<Props> = (props) => {
         onClick={handleToggleListView}
         onMouseDown={handleMouseDown}
         title="List View"
+        aria-label="Toggle list view"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggleListView();
+          }
+        }}
       >
         <i className="fa fa-list" />
       </div>

@@ -1,6 +1,8 @@
-import React from 'react';
-import {CirclePicker} from 'react-color';
+import React, {lazy, Suspense} from 'react';
 import {useToggle} from 'react-use';
+
+// Lazy load react-color to reduce initial bundle size
+const CirclePicker = lazy(() => import('react-color').then((module) => ({default: module.CirclePicker})));
 
 interface ColorPickerProps {
   color: string;
@@ -59,10 +61,10 @@ const ColorPicker: React.FC<ColorPickerProps> = (props) => {
         {'\u25CF '}
       </button>
       {isActive ? (
-        <>
+        <Suspense fallback={<div style={{height: '150px'}}>Loading color picker...</div>}>
           <CirclePicker color={color} onChangeComplete={handleChangeComplete} />
           <br />
-        </>
+        </Suspense>
       ) : null}
     </>
   );

@@ -1,5 +1,7 @@
-import React, {useState, useEffect, useCallback} from 'react';
-import Confetti from 'react-confetti';
+import React, {useState, useEffect, useCallback, lazy, Suspense} from 'react';
+
+// Lazy load react-confetti to reduce initial bundle size
+const Confetti = lazy(() => import('react-confetti'));
 
 const ConfettiComponent: React.FC = () => {
   const [done, setDone] = useState<boolean>(false);
@@ -19,7 +21,11 @@ const ConfettiComponent: React.FC = () => {
   }, []);
 
   if (done) return null;
-  return <Confetti numberOfPieces={numberOfPieces} onConfettiComplete={handleConfettiComplete} />;
+  return (
+    <Suspense fallback={null}>
+      <Confetti numberOfPieces={numberOfPieces} onConfettiComplete={handleConfettiComplete} />
+    </Suspense>
+  );
 };
 
 export default ConfettiComponent;

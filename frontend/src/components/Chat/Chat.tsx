@@ -330,8 +330,13 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
       <div className="chat--header">
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
           <div style={{flex: 1}}>
-            <div className="chat--header--title">{title}</div>
-            <div className="chat--header--subtitle">{type && `${type} | By ${author}`}</div>
+            {/* Hide title/author on desktop since it's shown in main content area */}
+            {mobile && (
+              <>
+                <div className="chat--header--title">{title}</div>
+                <div className="chat--header--subtitle">{type && `${type} | By ${author}`}</div>
+              </>
+            )}
             {desc && (
               <div className="chat--header--description">
                 <strong>Note: </strong>
@@ -351,6 +356,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
             <IconButton
               size="small"
               onClick={handleToggleChat}
+              aria-label={collapsed ? 'Expand chat panel' : 'Collapse chat panel'}
+              aria-expanded={!collapsed}
               sx={{
                 flexShrink: 0,
                 marginLeft: 1,
@@ -359,7 +366,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
               }}
               title={collapsed ? 'Expand chat' : 'Collapse chat'}
             >
-              {collapsed ? <MdChevronLeft /> : <MdChevronRight />}
+              {collapsed ? <MdChevronLeft aria-hidden="true" /> : <MdChevronRight aria-hidden="true" />}
             </IconButton>
           )}
         </div>
@@ -395,7 +402,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
     return props.hideChatBar ? null : (
       <div className="chat--username">
         {'You are '}
-        <ColorPicker color={props.myColor} onUpdateColor={handleUpdateColor} />
+        <ColorPicker color={props.myColor ?? '#000000'} onUpdateColor={handleUpdateColor} />
         <EditableSpan
           ref={usernameInputRef}
           className="chat--username--input"
@@ -752,6 +759,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                   size="small"
                   onClick={handleCopyClick}
                   title="Copy to Clipboard"
+                  aria-label="Copy link to clipboard"
                   sx={{flexShrink: 0}}
                 >
                   <MdContentCopy fontSize="small" />
@@ -760,6 +768,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                   size="small"
                   onClick={handleDismissShareMessage}
                   title="Dismiss"
+                  aria-label="Dismiss share message"
                   sx={{flexShrink: 0}}
                 >
                   <MdClose fontSize="small" />
@@ -810,6 +819,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
                 <IconButton
                   size="small"
                   title="Copy to Clipboard"
+                  aria-label="Copy score to clipboard"
                   sx={{flexShrink: 0}}
                   onClick={(e) => {
                     e.stopPropagation();

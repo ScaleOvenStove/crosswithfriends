@@ -1,6 +1,20 @@
 .entry--container {
-  margin-left: 25px;
-  margin-top: 25px;
+  /* Container for react-window grid cell */
+  box-sizing: border-box;
+  position: relative;
+  overflow: visible;
+}
+
+.entry--container > div {
+  /* Wrapper div with margin for spacing */
+  box-sizing: border-box;
+}
+
+.entry {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .entry--icon {
@@ -11,7 +25,7 @@
 }
 
 .mobile .entry--container {
-  margin: 18px auto 0;
+  /* Mobile spacing handled by react-window padding */
 }
 
 .mobile .entry {
