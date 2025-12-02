@@ -1,5 +1,6 @@
 import {describe, it, expect, beforeEach, vi, type Mock} from 'vitest';
 import * as gameModel from '../../model/game.js';
+import type {GameEvent} from '../../model/game.js';
 import {pool} from '../../model/pool.js';
 import * as puzzleModel from '../../model/puzzle.js';
 
@@ -26,25 +27,98 @@ describe('Game Model', () => {
         {type: 'updateCell', timestamp: 2000},
       ];
 
-      (pool.query as Mock).mockResolvedValue({
-        rows: mockEvents.map((event) => ({event_payload: event})),
-      });
+      (pool.query as Mock)
+        .mockResolvedValueOnce({
+          rows: mockEvents.map((event) => ({event_payload: event})),
+        })
+        .mockResolvedValueOnce({
+          rows: [{count: '2'}],
+        });
 
-      const events = await gameModel.getGameEvents(mockGid);
+      const result = await gameModel.getGameEvents(mockGid);
 
       expect(pool.query).toHaveBeenCalledWith(
         'SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC',
         [mockGid]
       );
-      expect(events).toEqual(mockEvents);
+      expect(pool.query).toHaveBeenCalledWith('SELECT COUNT(*) FROM game_events WHERE gid=$1', [mockGid]);
+      expect(result.events).toEqual(mockEvents);
+      expect(result.total).toBe(2);
     });
 
     it('should return empty array when no events exist', async () => {
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValue({rows: []});
+      (pool.query as Mock).mockResolvedValueOnce({rows: []}).mockResolvedValueOnce({
+        rows: [{count: '0'}],
+      });
 
-      const events = await gameModel.getGameEvents(mockGid);
-      expect(events).toEqual([]);
+      const result = await gameModel.getGameEvents(mockGid);
+      expect(result.events).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should support limit parameter', async () => {
+      const mockGid = 'test-gid-123';
+      const mockEvents = [
+        {type: 'create', timestamp: 1000},
+        {type: 'updateCell', timestamp: 2000},
+      ];
+
+      (pool.query as Mock)
+        .mockResolvedValueOnce({
+          rows: mockEvents.map((event) => ({event_payload: event})),
+        })
+        .mockResolvedValueOnce({
+          rows: [{count: '5'}],
+        });
+
+      const result = await gameModel.getGameEvents(mockGid, {limit: 2});
+
+      expect(pool.query).toHaveBeenCalledWith(
+        'SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC LIMIT $2',
+        [mockGid, 2]
+      );
+      expect(result.events).toEqual(mockEvents);
+      expect(result.total).toBe(5);
+    });
+
+    it('should support limit and offset parameters', async () => {
+      const mockGid = 'test-gid-123';
+      const mockEvents = [{type: 'updateCell', timestamp: 2000}];
+
+      (pool.query as Mock)
+        .mockResolvedValueOnce({
+          rows: mockEvents.map((event) => ({event_payload: event})),
+        })
+        .mockResolvedValueOnce({
+          rows: [{count: '5'}],
+        });
+
+      const result = await gameModel.getGameEvents(mockGid, {limit: 1, offset: 1});
+
+      expect(pool.query).toHaveBeenCalledWith(
+        'SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC LIMIT $2 OFFSET $3',
+        [mockGid, 1, 1]
+      );
+      expect(result.events).toEqual(mockEvents);
+      expect(result.total).toBe(5);
+    });
+
+    it('should return correct total count', async () => {
+      const mockGid = 'test-gid-123';
+      const mockEvents = [{type: 'create', timestamp: 1000}];
+
+      (pool.query as Mock)
+        .mockResolvedValueOnce({
+          rows: mockEvents.map((event) => ({event_payload: event})),
+        })
+        .mockResolvedValueOnce({
+          rows: [{count: '100'}],
+        });
+
+      const result = await gameModel.getGameEvents(mockGid, {limit: 1});
+      expect(result.total).toBe(100);
+      expect(result.events.length).toBe(1);
     });
   });
 
@@ -123,7 +197,7 @@ describe('Game Model', () => {
   describe('addGameEvent', () => {
     it('should insert game event into database', async () => {
       const mockGid = 'test-gid-123';
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         user: 'user123',
         timestamp: 1234567890,
         type: 'updateCell',
@@ -153,7 +227,7 @@ describe('Game Model', () => {
 
     it('should handle null user in event', async () => {
       const mockGid = 'test-gid-123';
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         user: null,
         timestamp: 1234567890,
         type: 'updateCell',
@@ -170,7 +244,7 @@ describe('Game Model', () => {
     it('should convert timestamp to ISO string', async () => {
       const mockGid = 'test-gid-123';
       const timestamp = 1234567890000; // Milliseconds
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         timestamp,
         type: 'updateCell',
         params: {cell: {r: 0, c: 1}, value: 'A', autocheck: false, id: 'user123'},
@@ -187,7 +261,7 @@ describe('Game Model', () => {
 
     it('should handle invalid timestamp by using current time', async () => {
       const mockGid = 'test-gid-123';
-      const mockEvent = {
+      const mockEvent: GameEvent = {
         timestamp: NaN,
         type: 'updateCell',
         params: {cell: {r: 0, c: 1}, value: 'A', autocheck: false, id: 'user123'},

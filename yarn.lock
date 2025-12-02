@@ -1364,6 +1364,7 @@ __metadata:
     "@emotion/react": "npm:^11.14.0"
     "@emotion/styled": "npm:^11.14.1"
     "@eslint/js": "npm:^9.39.1"
+    "@firebase/rules-unit-testing": "npm:^5.0.0"
     "@mui/material": "npm:^7.3.5"
     "@playwright/experimental-ct-react": "npm:^1.56.1"
     "@playwright/test": "npm:^1.56.1"
@@ -1383,6 +1384,7 @@ __metadata:
     "@types/react-linkify": "npm:^1.0.4"
     "@types/react-router": "npm:^5.1.20"
     "@types/react-router-dom": "npm:^5.3.3"
+    "@types/react-window": "npm:^2.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.47.0"
     "@typescript-eslint/parser": "npm:^8.47.0"
     "@vitejs/plugin-react": "npm:^5.1.1"
@@ -1415,6 +1417,8 @@ __metadata:
     react-router-dom: "npm:^7.9.6"
     react-simple-keyboard: "npm:^3.8.136"
     react-use: "npm:^17.6.0"
+    react-window: "npm:^2.2.3"
+    rollup-plugin-visualizer: "npm:^6.0.5"
     socket.io-client: "npm:^4.8.1"
     superagent: "npm:^10.2.3"
     sweetalert2: "npm:^11.26.3"
@@ -2542,6 +2546,15 @@ __metadata:
   peerDependencies:
     "@firebase/app": 0.x
   checksum: 10c0/840904660b671969d9bb72cea0af77aaef46491711d76a0dea2a637c512c3f7b65dfc1fa4635c202f14de9da47108cccc94e8fcf7a1a25e380a8e2e448a0c70d
+  languageName: node
+  linkType: hard
+
+"@firebase/rules-unit-testing@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "@firebase/rules-unit-testing@npm:5.0.0"
+  peerDependencies:
+    firebase: ^12.0.0
+  checksum: 10c0/2165daa55bd5356279aabfa23c8d3f4779f67dbc50be27f54bf563f642be8f9b1446a2353a92313fe74aa9755e0c43642641b6195541310c9a9f25faee0942a1
   languageName: node
   linkType: hard
 
@@ -4071,6 +4084,15 @@ __metadata:
   peerDependencies:
     "@types/react": "*"
   checksum: 10c0/0441b8b47c69312c89ec0760ba477ba1a0808a10ceef8dc1c64b1013ed78517332c30f18681b0ec0b53542731f1ed015169fed1d127cc91222638ed955478ec7
+  languageName: node
+  linkType: hard
+
+"@types/react-window@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@types/react-window@npm:2.0.0"
+  dependencies:
+    react-window: "npm:*"
+  checksum: 10c0/4de05bf54c3947a68878f1ddcc019db27811d2390aae2e4eb1ab83bff134d6a2f20318555e06b891234df946528470d7c01e43dff759209ec75c54cbda034acf
   languageName: node
   linkType: hard
 
@@ -6095,6 +6117,13 @@ __metadata:
     es-errors: "npm:^1.3.0"
     gopd: "npm:^1.0.1"
   checksum: 10c0/dea0606d1483eb9db8d930d4eac62ca0fa16738b0b3e07046cddfacf7d8c868bbe13fa0cb263eb91c7d0d527960dc3f2f2471a69ed7816210307f6744fe62e37
+  languageName: node
+  linkType: hard
+
+"define-lazy-prop@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "define-lazy-prop@npm:2.0.0"
+  checksum: 10c0/db6c63864a9d3b7dc9def55d52764968a5af296de87c1b2cc71d8be8142e445208071953649e0386a8cc37cfcf9a2067a47207f1eb9ff250c2a269658fdae422
   languageName: node
   linkType: hard
 
@@ -8836,6 +8865,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"is-docker@npm:^2.0.0, is-docker@npm:^2.1.1":
+  version: 2.2.1
+  resolution: "is-docker@npm:2.2.1"
+  bin:
+    is-docker: cli.js
+  checksum: 10c0/e828365958d155f90c409cdbe958f64051d99e8aedc2c8c4cd7c89dcf35329daed42f7b99346f7828df013e27deb8f721cf9408ba878c76eb9e8290235fbcdcc
+  languageName: node
+  linkType: hard
+
 "is-extendable@npm:^0.1.0, is-extendable@npm:^0.1.1":
   version: 0.1.1
   resolution: "is-extendable@npm:0.1.1"
@@ -9141,6 +9179,15 @@ __metadata:
   version: 1.0.2
   resolution: "is-windows@npm:1.0.2"
   checksum: 10c0/b32f418ab3385604a66f1b7a3ce39d25e8881dee0bd30816dc8344ef6ff9df473a732bcc1ec4e84fe99b2f229ae474f7133e8e93f9241686cfcf7eebe53ba7a5
+  languageName: node
+  linkType: hard
+
+"is-wsl@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "is-wsl@npm:2.2.0"
+  dependencies:
+    is-docker: "npm:^2.0.0"
+  checksum: 10c0/a6fa2d370d21be487c0165c7a440d567274fbba1a817f2f0bfa41cc5e3af25041d84267baa22df66696956038a43973e72fca117918c91431920bdef490fa25e
   languageName: node
   linkType: hard
 
@@ -10870,6 +10917,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"open@npm:^8.0.0":
+  version: 8.4.2
+  resolution: "open@npm:8.4.2"
+  dependencies:
+    define-lazy-prop: "npm:^2.0.0"
+    is-docker: "npm:^2.1.1"
+    is-wsl: "npm:^2.2.0"
+  checksum: 10c0/bb6b3a58401dacdb0aad14360626faf3fb7fba4b77816b373495988b724fb48941cad80c1b65d62bb31a17609b2cd91c41a181602caea597ca80dfbcc27e84c9
+  languageName: node
+  linkType: hard
+
 "optionator@npm:^0.9.3":
   version: 0.9.4
   resolution: "optionator@npm:0.9.4"
@@ -11831,6 +11889,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-window@npm:*, react-window@npm:^2.2.3":
+  version: 2.2.3
+  resolution: "react-window@npm:2.2.3"
+  peerDependencies:
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  checksum: 10c0/7e97381b269560038c4c76c4ae17121d87efb628fce840fe382e73ae0e9816d4b68384a402340b0a08f9e4a47d8bd7328ae8502fd26b0d9399339a20e1c550be
+  languageName: node
+  linkType: hard
+
 "react@npm:^19.2.0":
   version: 19.2.0
   resolution: "react@npm:19.2.0"
@@ -12273,6 +12341,28 @@ __metadata:
   version: 1.4.1
   resolution: "rfdc@npm:1.4.1"
   checksum: 10c0/4614e4292356cafade0b6031527eea9bc90f2372a22c012313be1dcc69a3b90c7338158b414539be863fa95bfcb2ddcd0587be696841af4e6679d85e62c060c7
+  languageName: node
+  linkType: hard
+
+"rollup-plugin-visualizer@npm:^6.0.5":
+  version: 6.0.5
+  resolution: "rollup-plugin-visualizer@npm:6.0.5"
+  dependencies:
+    open: "npm:^8.0.0"
+    picomatch: "npm:^4.0.2"
+    source-map: "npm:^0.7.4"
+    yargs: "npm:^17.5.1"
+  peerDependencies:
+    rolldown: 1.x || ^1.0.0-beta
+    rollup: 2.x || 3.x || 4.x
+  peerDependenciesMeta:
+    rolldown:
+      optional: true
+    rollup:
+      optional: true
+  bin:
+    rollup-plugin-visualizer: dist/bin/cli.js
+  checksum: 10c0/3824626e97d5033fbb3aa1bbe93c8c17a8569bc47e33c941bde6b90404f2cae70b26fec1b623bd393c3e076338014196c91726ed2c96218edc67e1f21676f7ef
   languageName: node
   linkType: hard
 
@@ -13008,6 +13098,13 @@ __metadata:
   version: 0.6.1
   resolution: "source-map@npm:0.6.1"
   checksum: 10c0/ab55398007c5e5532957cb0beee2368529618ac0ab372d789806f5718123cc4367d57de3904b4e6a4170eb5a0b0f41373066d02ca0735a0c4d75c7d328d3e011
+  languageName: node
+  linkType: hard
+
+"source-map@npm:^0.7.4":
+  version: 0.7.6
+  resolution: "source-map@npm:0.7.6"
+  checksum: 10c0/59f6f05538539b274ba771d2e9e32f6c65451982510564438e048bc1352f019c6efcdc6dd07909b1968144941c14015c2c7d4369fb7c4d7d53ae769716dcc16c
   languageName: node
   linkType: hard
 
@@ -14901,7 +14998,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yargs@npm:17.7.2, yargs@npm:^17.7.2":
+"yargs@npm:17.7.2, yargs@npm:^17.5.1, yargs@npm:^17.7.2":
   version: 17.7.2
   resolution: "yargs@npm:17.7.2"
   dependencies:

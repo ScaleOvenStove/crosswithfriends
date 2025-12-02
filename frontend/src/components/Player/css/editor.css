@@ -11,6 +11,15 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .editor--main {
+    flex-direction: column;
+    margin-top: 10px;
+  }
 }
 
 .editor--main--clue-bar {
@@ -39,6 +48,12 @@
   align-items: center;
 }
 
+@media (max-width: 900px) {
+  .editor--main--clue-bar--text {
+    max-width: 100%;
+  }
+}
+
 .editor--main--clue-bar--text .editable-span {
   padding: 5px;
 }
@@ -48,6 +63,16 @@
   flex-direction: column;
   align-items: auto;
   flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .editor--main--left {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
 }
 
 .editor--main--left--grid {
@@ -63,6 +88,17 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .editor--right {
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+  }
 }
 
 .editor--main--clues {
@@ -70,14 +106,54 @@
   display: flex;
   padding: 0px 20px 0px 20px;
   min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .editor--main--clues {
+    flex-direction: column;
+    padding: 0px 10px 0px 10px;
+    max-height: 50vh;
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 600px) {
+  .editor--main--clues {
+    padding: 0px 5px 0px 5px;
+    max-height: 40vh;
+    min-height: 150px;
+  }
 }
 
 .editor--main--clues--list {
   width: 200px;
+  min-width: 180px;
   display: flex;
   flex-direction: column;
   margin-left: 5px;
   padding-right: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .editor--main--clues--list {
+    width: 100%;
+    min-width: 100%;
+    margin-left: 0;
+    padding-right: 0;
+    max-width: 100%;
+    flex: 1 1 50%;
+  }
+}
+
+@media (max-width: 600px) {
+  .editor--main--clues--list {
+    flex: 1 1 auto;
+  }
 }
 
 .editor--main--clues--list--title {
@@ -144,6 +220,26 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .editor--right--hints {
+    padding: 12px;
+    min-height: 200px;
+    max-height: 50vh;
+    flex: 0 1 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .editor--right--hints {
+    padding: 10px;
+    min-height: 150px;
+    max-height: 40vh;
+  }
 }
 
 .editor--grid-size {

@@ -4,7 +4,31 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {useBattleSetup} from '../../hooks/useBattleSetup';
 
 // Mock useBattle - must be defined before the mock
-const mockBattleHook = {
+const mockBattleHook: {
+  battle: null;
+  attach: ReturnType<typeof vi.fn>;
+  detach: ReturnType<typeof vi.fn>;
+  start: ReturnType<typeof vi.fn>;
+  setSolved: ReturnType<typeof vi.fn>;
+  addPlayer: ReturnType<typeof vi.fn>;
+  removePlayer: ReturnType<typeof vi.fn>;
+  usePowerup: ReturnType<typeof vi.fn>;
+  checkPickups: ReturnType<typeof vi.fn>;
+  countLivePickups: ReturnType<typeof vi.fn>;
+  spawnPowerups: ReturnType<typeof vi.fn>;
+  initialize: ReturnType<typeof vi.fn>;
+  subscribe: ReturnType<typeof vi.fn>;
+  once: ReturnType<typeof vi.fn>;
+  callbacks?: {
+    onGames?: (games: string[]) => void;
+    onPowerups?: (powerups: unknown) => void;
+    onStartedAt?: (startedAt: number) => void;
+    onPlayers?: (players: unknown) => void;
+    onWinner?: (winner: unknown) => void;
+    onPickups?: (pickups: unknown) => void;
+    onUsePowerup?: (powerup: unknown) => void;
+  };
+} = {
   battle: null,
   attach: vi.fn(),
   detach: vi.fn(),
@@ -33,7 +57,7 @@ vi.mock('../../hooks/useBattle', () => ({
     onUsePowerup?: (powerup: unknown) => void;
   }) => {
     // Store callbacks for test access
-    (mockBattleHook as any).callbacks = {
+    mockBattleHook.callbacks = {
       onGames: options.onGames,
       onPowerups: options.onPowerups,
       onStartedAt: options.onStartedAt,
@@ -77,11 +101,11 @@ describe('useBattleSetup', () => {
 
     // Simulate games event by calling the stored callback
     await waitFor(() => {
-      expect((mockBattleHook as any).callbacks?.onGames).toBeDefined();
+      expect(mockBattleHook.callbacks?.onGames).toBeDefined();
     });
 
     // Trigger the callback
-    (mockBattleHook as any).callbacks.onGames(games);
+    mockBattleHook.callbacks?.onGames(games);
 
     // Wait for the callback to be called
     await waitFor(
@@ -100,11 +124,11 @@ describe('useBattleSetup', () => {
 
     // Simulate powerups event by calling the stored callback
     await waitFor(() => {
-      expect((mockBattleHook as any).callbacks?.onPowerups).toBeDefined();
+      expect(mockBattleHook.callbacks?.onPowerups).toBeDefined();
     });
 
     // Trigger the callback
-    (mockBattleHook as any).callbacks.onPowerups(powerups);
+    mockBattleHook.callbacks?.onPowerups(powerups);
 
     // Wait for the callback to be called
     await waitFor(

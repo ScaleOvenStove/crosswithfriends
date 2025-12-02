@@ -32,20 +32,29 @@ const PuzzleList: React.FC<PuzzleListProps> = ({
       }
     }
 
-    if (!userHistory) return statuses;
+    if (!userHistory) {
+      return statuses;
+    }
 
     Object.keys(userHistory).forEach((gid) => {
       if (gid === 'solo') {
-        Object.keys(userHistory.solo).forEach((uid) => {
-          const soloGames = userHistory.solo[uid];
-          Object.keys(soloGames).forEach((pid) => {
-            const {solved} = soloGames[pid];
-            setStatus(pid, solved);
+        if (userHistory.solo && typeof userHistory.solo === 'object') {
+          Object.keys(userHistory.solo).forEach((uid) => {
+            const soloGames = userHistory.solo[uid];
+            if (soloGames && typeof soloGames === 'object') {
+              Object.keys(soloGames).forEach((pid) => {
+                const {solved} = soloGames[pid];
+                setStatus(pid, solved);
+              });
+            }
           });
-        });
+        }
       } else {
-        const {pid, solved} = userHistory[gid];
-        setStatus(pid, solved);
+        const gameData = userHistory[gid];
+        if (gameData && typeof gameData === 'object') {
+          const {pid, solved} = gameData;
+          setStatus(pid, solved);
+        }
       }
     });
 

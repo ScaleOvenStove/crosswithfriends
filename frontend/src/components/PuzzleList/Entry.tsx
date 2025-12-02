@@ -1,5 +1,5 @@
 import {Box, Stack, Chip, Tooltip} from '@mui/material';
-import React from 'react';
+import React, {useMemo} from 'react';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
 import {Link} from 'react-router-dom';
@@ -29,7 +29,7 @@ const Entry: React.FC<EntryProps> = ({title, author, pid, status, stats, fencing
 
   const handleMouseLeave = () => {};
 
-  const getSize = () => {
+  const size = useMemo(() => {
     const {type} = info;
     if (type === 'Daily Puzzle') {
       return 'Standard';
@@ -38,18 +38,29 @@ const Entry: React.FC<EntryProps> = ({title, author, pid, status, stats, fencing
       return 'Mini';
     }
     return 'Puzzle'; // shouldn't get here???
-  };
+  }, [info.type]);
 
-  const numSolvesOld = Object.keys(stats?.solves || {}).length;
-  const numSolves = numSolvesOld + (stats?.numSolves || 0);
-  const displayName = [author.trim(), getSize()].filter(Boolean).join(' | ');
+  const numSolves = useMemo(() => {
+    const numSolvesOld = Object.keys(stats?.solves || {}).length;
+    return numSolvesOld + (stats?.numSolves || 0);
+  }, [stats?.solves, stats?.numSolves]);
+
+  const displayName = useMemo(() => {
+    return [author.trim(), size].filter(Boolean).join(' | ');
+  }, [author, size]);
 
   return (
     <Link
       to={`/beta/play/${pid}${fencing ? '?fencing=1' : ''}`}
-      style={{textDecoration: 'none', color: 'initial'}}
+      style={{textDecoration: 'none', color: 'initial', display: 'flex', width: '100%', height: '100%'}}
     >
-      <Stack className="entry" direction="column" onClick={handleClick} onMouseLeave={handleMouseLeave}>
+      <Stack
+        className="entry"
+        direction="column"
+        onClick={handleClick}
+        onMouseLeave={handleMouseLeave}
+        sx={{width: '100%', height: '100%', flex: 1}}
+      >
         <Box className="entry--top--left" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
           <Box sx={{flexGrow: 1, minWidth: 0, display: 'flex'}}>
             <Tooltip title={displayName} arrow>
@@ -135,4 +146,4 @@ const Entry: React.FC<EntryProps> = ({title, author, pid, status, stats, fencing
   );
 };
 
-export default Entry;
+export default React.memo(Entry);

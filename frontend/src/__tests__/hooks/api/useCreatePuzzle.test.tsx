@@ -29,7 +29,7 @@ describe('useCreatePuzzle', () => {
 
   it('should create mutation with createNewPuzzle function', async () => {
     const mockResponse = {pid: 'test-puzzle-id'};
-    (createNewPuzzle as any).mockResolvedValue(mockResponse);
+    vi.mocked(createNewPuzzle).mockResolvedValue(mockResponse);
 
     const {result} = renderHook(() => useCreatePuzzle(), {wrapper});
 
@@ -49,7 +49,7 @@ describe('useCreatePuzzle', () => {
 
   it('should use default isPublic value when not provided', async () => {
     const mockResponse = {pid: 'test-puzzle-id'};
-    (createNewPuzzle as any).mockResolvedValue(mockResponse);
+    vi.mocked(createNewPuzzle).mockResolvedValue(mockResponse);
 
     const {result} = renderHook(() => useCreatePuzzle(), {wrapper});
 
@@ -67,7 +67,7 @@ describe('useCreatePuzzle', () => {
 
   it('should call onSuccess callback when mutation succeeds', async () => {
     const mockResponse = {pid: 'test-puzzle-id'};
-    (createNewPuzzle as any).mockResolvedValue(mockResponse);
+    vi.mocked(createNewPuzzle).mockResolvedValue(mockResponse);
     const onSuccess = vi.fn();
 
     const {result} = renderHook(() => useCreatePuzzle({onSuccess}), {wrapper});
@@ -87,7 +87,7 @@ describe('useCreatePuzzle', () => {
 
   it('should call onError callback when mutation fails', async () => {
     const mockError = new Error('Failed to create puzzle');
-    (createNewPuzzle as any).mockRejectedValue(mockError);
+    vi.mocked(createNewPuzzle).mockRejectedValue(mockError);
     const onError = vi.fn();
 
     const {result} = renderHook(() => useCreatePuzzle({onError}), {wrapper});

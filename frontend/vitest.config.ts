@@ -10,21 +10,30 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/build/**',
-      '**/src/tests/**', // Exclude all Playwright tests in src/tests/
-      'src/tests/**', // Also exclude with this pattern
+      '**/src/tests/e2e/**', // Exclude Playwright e2e tests
+      '**/src/tests/components/**', // Exclude component tests (Playwright CT)
       '**/*.e2e.spec.ts',
       '**/*.e2e.spec.tsx',
       '**/*.spec.ts',
       '**/*.spec.tsx',
       '**/playwright*.ts', // Exclude Playwright config files
     ],
-    // Only include actual vitest unit test files (if any exist)
-    // Note: All current tests are Playwright-based, so this will find no tests until vitest tests are added
-    // Exclude src/tests directory explicitly from include
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Include vitest unit test files, including Firebase rules tests
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'src/tests/firebase/**/*.test.ts', // Include Firebase rules tests
+    ],
     globals: true,
-    environment: 'jsdom',
+    environment: 'jsdom', // Default to jsdom for React component tests
+    // Use different environments for different test types
+    environmentMatchGlobs: [
+      ['**/tests/firebase/**', 'node'], // Firebase rules tests need Node.js environment
+    ],
     setupFiles: ['./src/__tests__/setup.ts'],
+    env: {
+      NODE_ENV: 'test',
+    },
   },
   resolve: {
     alias: [

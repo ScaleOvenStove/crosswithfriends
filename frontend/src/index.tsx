@@ -12,6 +12,7 @@ import {AccountError} from './components/common/AccountError';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import {GameError} from './components/common/GameError';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import OfflineIndicator from './components/common/OfflineIndicator';
 import {RoomError} from './components/common/RoomError';
 import {createAppTheme} from './theme/theme';
 import {logger} from './utils/logger';
@@ -107,6 +108,7 @@ const Root: React.FC = () => {
           <CssBaseline />
           <Router>
             <GlobalContext.Provider value={{toggleMolesterMoons, darkModePreference}}>
+              <OfflineIndicator />
               <div className={classnames('router-wrapper', {mobile: isMobile()})}>
                 <Suspense fallback={<RouteLoading />}>
                   <Routes>

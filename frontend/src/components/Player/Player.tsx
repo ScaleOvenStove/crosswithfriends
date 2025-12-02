@@ -735,7 +735,9 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '4px',
-                  padding: '4px 8px',
+                  padding: '8px 8px 12px 8px',
+                  marginTop: '4px',
+                  minHeight: '32px',
                 }}
               >
                 <ConnectionStatusIndicator optimisticCounter={props.optimisticCounter} />

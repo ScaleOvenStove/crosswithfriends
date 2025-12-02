@@ -5,5 +5,15 @@
   "hosting": {
     "public": "frontend/build",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  },
+  "emulators": {
+    "database": {
+      "port": 9000
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
   }
 }

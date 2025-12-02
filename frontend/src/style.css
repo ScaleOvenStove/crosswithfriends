@@ -17,6 +17,14 @@ body,
   max-height: 100vh;
   overflow: hidden;
   font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
+  /* Ensure proper text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.router-wrapper {
+  position: relative;
 }
 
 /* Allow scrolling within main content areas, but not the page itself */

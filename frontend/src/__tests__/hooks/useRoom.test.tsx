@@ -1,4 +1,4 @@
-import {renderHook, waitFor} from '@testing-library/react';
+import {renderHook, waitFor, act} from '@testing-library/react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 
 import {useRoom} from '../../hooks/useRoom';
@@ -52,16 +52,18 @@ describe('useRoom', () => {
     mockSocket.on.mockImplementation((event, callback) => {
       if (event === 'room_event') {
         // Store callback for later use
-        (mockSocket as any).roomEventCallback = callback;
+        vi.mocked(mockSocket).roomEventCallback = callback;
       }
     });
   });
 
-  it('should initialize with empty events', () => {
+  it('should initialize with empty events', async () => {
     const {result} = renderHook(() => useRoom({rid: 'test-room'}));
 
-    expect(result.current.events).toEqual([]);
-    expect(result.current.loading).toBe(true);
+    await waitFor(() => {
+      expect(result.current.events).toEqual([]);
+      expect(result.current.loading).toBe(true);
+    });
   });
 
   it('should subscribe to room events', async () => {
@@ -134,7 +136,11 @@ describe('useRoom', () => {
     // Simulate receiving a new event
     const newEvent = {type: 'userPing', params: {userId: 'user2'}};
     if (roomEventCallback) {
-      roomEventCallback(newEvent);
+      await act(async () => {
+        roomEventCallback(newEvent);
+        // Allow React to process the state update
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
     }
 
     await waitFor(
