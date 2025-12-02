@@ -63,7 +63,7 @@ const PuzzleList: React.FC<PuzzleListProps> = ({
 
   const filter = useMemo(
     () => ({
-      nameOrTitleFilter: search,
+      nameOrTitleFilter: search || '',
       sizeFilter,
     }),
     [search, sizeFilter]
