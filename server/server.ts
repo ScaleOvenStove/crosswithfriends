@@ -1,15 +1,28 @@
 import {Server as HTTPServer} from 'http';
+import path from 'path';
+import {fileURLToPath} from 'url';
 
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
-import fastify from 'fastify';
-import type {FastifyError, FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
+import * as dotenv from 'dotenv';
+import {
+  fastify,
+  type FastifyError,
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+} from 'fastify';
 import {Server as SocketIOServer} from 'socket.io';
 
 import apiRouter from './api/router.js';
 import SocketManager from './SocketManager.js';
 import {logger} from './utils/logger.js';
 
+// Load environment variables
+dotenv.config(); // Try loading .env from current directory
+const currentFilename = fileURLToPath(import.meta.url);
+const currentDirname = path.dirname(currentFilename);
+dotenv.config({path: path.resolve(currentDirname, '../.env')});
 const port = process.env.PORT || 3000;
 
 // ================== Logging ================
@@ -121,7 +134,7 @@ async function runServer(): Promise<void> {
         return {
           statusCode: 429,
           error: 'Too Many Requests',
-          message: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+          message: `Rate limit exceeded.Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
           retryAfter: Math.ceil(context.ttl / 1000),
         };
       },
@@ -155,7 +168,7 @@ async function runServer(): Promise<void> {
     });
 
     await app.listen({port: Number(port), host: '0.0.0.0'});
-    app.log.info(`Listening on port ${port}`);
+    app.log.info(`Listening on port ${port} `);
 
     process.once('SIGUSR2', (): void => {
       void (async (): Promise<void> => {

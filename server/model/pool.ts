@@ -17,6 +17,11 @@ const poolConfig: pg.PoolConfig = {
   database: process.env.PGDATABASE,
 };
 
+// If DATABASE_URL is provided (e.g. in Docker or Heroku), use it
+if (process.env.DATABASE_URL) {
+  poolConfig.connectionString = process.env.DATABASE_URL;
+}
+
 // Only include password if it's explicitly set and non-empty
 // Empty strings can cause SCRAM authentication errors
 const password = process.env.PGPASSWORD;
