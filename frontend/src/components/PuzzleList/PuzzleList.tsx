@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, { useMemo } from 'react';
 
 import './css/puzzleList.css';
 import NewPuzzleList from './NewPuzzleList';
@@ -32,17 +32,19 @@ const PuzzleList: React.FC<PuzzleListProps> = ({
       }
     }
 
+    if (!userHistory) return statuses;
+
     Object.keys(userHistory).forEach((gid) => {
       if (gid === 'solo') {
         Object.keys(userHistory.solo).forEach((uid) => {
           const soloGames = userHistory.solo[uid];
           Object.keys(soloGames).forEach((pid) => {
-            const {solved} = soloGames[pid];
+            const { solved } = soloGames[pid];
             setStatus(pid, solved);
           });
         });
       } else {
-        const {pid, solved} = userHistory[gid];
+        const { pid, solved } = userHistory[gid];
         setStatus(pid, solved);
       }
     });
@@ -52,7 +54,7 @@ const PuzzleList: React.FC<PuzzleListProps> = ({
 
   const filter = useMemo(
     () => ({
-      nameOrTitleFilter: search,
+      nameOrTitleFilter: search || '',
       sizeFilter,
     }),
     [search, sizeFilter]
