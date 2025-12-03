@@ -7,7 +7,6 @@ import {useParams} from 'react-router-dom';
 import {useRoom} from '../hooks/useRoom';
 import {useUpdateEffect} from '../hooks/useUpdateEffect';
 
-
 const throttle = <T extends (...args: any[]) => any>(
   fn: T,
   limit: number

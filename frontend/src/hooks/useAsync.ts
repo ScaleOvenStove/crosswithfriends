@@ -19,7 +19,7 @@ export function useAsync<T>(asyncFn: () => Promise<T>): {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-     
+
     setError(undefined);
 
     asyncFn()
