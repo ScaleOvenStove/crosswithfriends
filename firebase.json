@@ -2,13 +2,28 @@
   "database": {
     "rules": "database.rules.json"
   },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "hosting": {
     "public": "frontend/build",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   },
   "emulators": {
+    "auth": {
+      "port": 9099
+    },
     "database": {
       "port": 9000
+    },
+    "storage": {
+      "port": 9199
     },
     "ui": {
       "enabled": true,
