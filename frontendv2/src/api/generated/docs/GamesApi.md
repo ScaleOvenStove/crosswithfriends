@@ -2,12 +2,10 @@
 
 All URIs are relative to *https://www.crosswithfriends.com/api*
 
-| Method | HTTP request | Description |
-|------------- | ------------- | -------------|
-| [**createGame**](GamesApi.md#creategameoperation) | **POST** /game | Create a new game |
-| [**getGameById**](GamesApi.md#getgamebyid) | **GET** /game/{gid} | Get game by ID |
-
-
+| Method                                            | HTTP request        | Description       |
+| ------------------------------------------------- | ------------------- | ----------------- |
+| [**createGame**](GamesApi.md#creategameoperation) | **POST** /game      | Create a new game |
+| [**getGameById**](GamesApi.md#getgamebyid)        | **GET** /game/{gid} | Get game by ID    |
 
 ## createGame
 
@@ -49,10 +47,9 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **createGameRequest** | [CreateGameRequest](CreateGameRequest.md) |  | |
+| Name                  | Type                                      | Description | Notes |
+| --------------------- | ----------------------------------------- | ----------- | ----- |
+| **createGameRequest** | [CreateGameRequest](CreateGameRequest.md) |             |       |
 
 ### Return type
 
@@ -67,15 +64,14 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
+| **500**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
 
 ## getGameById
 
@@ -88,14 +84,11 @@ Retrieves game information including puzzle details and solve time
 ### Example
 
 ```ts
-import {
-  Configuration,
-  GamesApi,
-} from '';
+import { Configuration, GamesApi } from '';
 import type { GetGameByIdRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new GamesApi();
 
   const body = {
@@ -117,10 +110,9 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **gid** | `string` | Game ID | [Defaults to `undefined`] |
+| Name    | Type     | Description | Notes                     |
+| ------- | -------- | ----------- | ------------------------- |
+| **gid** | `string` | Game ID     | [Defaults to `undefined`] |
 
 ### Return type
 
@@ -135,13 +127,12 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
-| **404** | Default Response |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
+| **404**     | Default Response | -                |
+| **500**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-

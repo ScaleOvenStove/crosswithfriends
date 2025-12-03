@@ -62,11 +62,11 @@ export function CreatePuzzleRequestPuzzleCluesFromJSONTyped(
   if (json == null) {
     return json;
   }
-  
+
   // Handle both capitalized (Across/Down) and lowercase (across/down) keys for backward compatibility
   const acrossData = json['Across'] || json['across'];
   const downData = json['Down'] || json['down'];
-  
+
   return {
     ...json,
     across:
