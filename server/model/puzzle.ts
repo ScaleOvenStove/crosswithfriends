@@ -75,8 +75,7 @@ export function convertOldFormatToIpuz(puzzle: PuzzleJson): PuzzleJson {
         const startsDown = r === 0 || prevRow?.[c] === '.' || prevRow?.[c] === '#';
         const hasAcrossWord =
           startsAcross && c < width - 1 && solutionRow[c + 1] !== '.' && solutionRow[c + 1] !== '#';
-        const hasDownWord =
-          startsDown && r < height - 1 && nextRow?.[c] !== '.' && nextRow?.[c] !== '#';
+        const hasDownWord = startsDown && r < height - 1 && nextRow?.[c] !== '.' && nextRow?.[c] !== '#';
 
         const cellIdx = r * width + c;
         const hasCircle = circles.includes(cellIdx);
