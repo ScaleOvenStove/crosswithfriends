@@ -57,20 +57,26 @@ export function convertOldFormatToIpuz(puzzle: PuzzleJson): PuzzleJson {
 
   for (let r = 0; r < height; r++) {
     const row: (number | string | {cell: number; style: {shapebg?: string; fillbg?: string}} | null)[] = [];
+    const solutionRow = solution[r];
+    if (!solutionRow) {
+      continue;
+    }
     for (let c = 0; c < width; c++) {
-      const cell = solution[r][c];
+      const cell = solutionRow[c];
       const isBlack = cell === '.' || cell === null || cell === '#';
 
       if (isBlack) {
         row.push('#');
       } else {
         // Determine if this cell starts a word
-        const startsAcross = c === 0 || solution[r][c - 1] === '.' || solution[r][c - 1] === '#';
-        const startsDown = r === 0 || solution[r - 1][c] === '.' || solution[r - 1][c] === '#';
+        const prevRow = r > 0 ? solution[r - 1] : undefined;
+        const nextRow = r < height - 1 ? solution[r + 1] : undefined;
+        const startsAcross = c === 0 || solutionRow[c - 1] === '.' || solutionRow[c - 1] === '#';
+        const startsDown = r === 0 || prevRow?.[c] === '.' || prevRow?.[c] === '#';
         const hasAcrossWord =
-          startsAcross && c < width - 1 && solution[r][c + 1] !== '.' && solution[r][c + 1] !== '#';
+          startsAcross && c < width - 1 && solutionRow[c + 1] !== '.' && solutionRow[c + 1] !== '#';
         const hasDownWord =
-          startsDown && r < height - 1 && solution[r + 1][c] !== '.' && solution[r + 1][c] !== '#';
+          startsDown && r < height - 1 && nextRow?.[c] !== '.' && nextRow?.[c] !== '#';
 
         const cellIdx = r * width + c;
         const hasCircle = circles.includes(cellIdx);
