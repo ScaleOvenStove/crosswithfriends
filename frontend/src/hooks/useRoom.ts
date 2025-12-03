@@ -68,6 +68,7 @@ export function useRoom(options: UseRoomOptions): UseRoomReturn {
     if (!socket) return;
 
     let mounted = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
 
     const {syncPromise, unsubscribe} = subscribeToRoomEvents(socket, rid, setEvents);

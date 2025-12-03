@@ -3,9 +3,10 @@ import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 import {Box} from '@mui/material';
 import React, {useEffect, useMemo, useState} from 'react';
 import {useParams} from 'react-router-dom';
-import {useUpdateEffect} from '../hooks/useUpdateEffect';
 
 import {useRoom} from '../hooks/useRoom';
+import {useUpdateEffect} from '../hooks/useUpdateEffect';
+
 
 const throttle = <T extends (...args: any[]) => any>(
   fn: T,

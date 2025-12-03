@@ -1,6 +1,6 @@
 import React from 'react';
-import {usePrevious} from '../hooks/usePrevious';
 
+import {usePrevious} from '../hooks/usePrevious';
 import {logger} from '../utils/logger';
 
 const RerenderBoundary: React.FC<{name: string; hash: string}> = (props) => {

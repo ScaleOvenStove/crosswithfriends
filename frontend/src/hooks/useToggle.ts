@@ -18,4 +18,3 @@ export function useToggle(initialValue = false): [boolean, (value?: boolean) => 
 
   return [value, toggle];
 }
-

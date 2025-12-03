@@ -14,7 +14,7 @@ const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
 export const Linkify: React.FC<LinkifyProps> = ({children, componentDecorator}) => {
   if (typeof children !== 'string') {
-    return <>{children}</>;
+    return children ?? null;
   }
 
   const text = children;
@@ -25,7 +25,7 @@ export const Linkify: React.FC<LinkifyProps> = ({children, componentDecorator}) 
   const matches = Array.from(text.matchAll(URL_REGEX));
 
   if (matches.length === 0) {
-    return <>{text}</>;
+    return text;
   }
 
   for (const match of matches) {
@@ -39,10 +39,14 @@ export const Linkify: React.FC<LinkifyProps> = ({children, componentDecorator}) 
 
     // Add the link
     if (componentDecorator) {
-      parts.push(componentDecorator(url, url, key++));
+      const currentKey = key;
+      key += 1;
+      parts.push(componentDecorator(url, url, currentKey));
     } else {
+      const currentKey = key;
+      key += 1;
       parts.push(
-        <a key={key++} href={url} target="_blank" rel="noopener noreferrer">
+        <a key={currentKey} href={url} target="_blank" rel="noopener noreferrer">
           {url}
         </a>
       );
@@ -56,8 +60,7 @@ export const Linkify: React.FC<LinkifyProps> = ({children, componentDecorator}) 
     parts.push(text.substring(lastIndex));
   }
 
-  return <>{parts}</>;
+  return parts;
 };
 
 export default Linkify;
-

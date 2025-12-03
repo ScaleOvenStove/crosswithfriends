@@ -13,8 +13,6 @@
 try {
   // Use a synchronous approach to patch react-is
   // We'll try to access it via the module cache or global
-  const reactIsId = 'react-is';
-
   // Try to patch via dynamic import (but wait for it)
   import('react-is')
     .then((reactIsModule) => {

@@ -15,11 +15,9 @@ import {MdClose, MdContentCopy, MdChevronRight, MdChevronLeft} from 'react-icons
 import {Link} from 'react-router-dom';
 
 import Linkify from '../../utils/linkify';
-
 import {logger} from '../../utils/logger';
 import EditableSpan from '../common/EditableSpan';
 import Emoji from '../common/Emoji';
-import MobileKeyboard from '../Player/MobileKeyboard';
 import {formatMilliseconds} from '../Toolbar/Clock';
 
 import ChatBar, {type ChatBarRef} from './ChatBar';

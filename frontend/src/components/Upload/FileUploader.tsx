@@ -7,6 +7,7 @@ import type {PuzzleJson} from '@crosswithfriends/shared/types';
 import React, {useCallback, useRef, useEffect} from 'react';
 import {MdFileUpload} from 'react-icons/md';
 import Swal from 'sweetalert2';
+
 import {useDropzone} from '../../utils/useDropzone';
 
 class UnknownFileTypeError extends Error {

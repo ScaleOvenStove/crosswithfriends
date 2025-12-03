@@ -1,7 +1,7 @@
 import type {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '@crosswithfriends/shared/types';
 import {Box, Skeleton, Button, Typography} from '@mui/material';
-import React, {useEffect, useRef, useState, useMemo, useCallback} from 'react';
 import {useVirtualizer} from '@tanstack/react-virtual';
+import React, {useEffect, useRef, useState, useMemo, useCallback} from 'react';
 
 import {fetchPuzzleList} from '../../api/puzzle_list';
 import {logger} from '../../utils/logger';

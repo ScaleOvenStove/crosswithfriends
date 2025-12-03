@@ -1,5 +1,6 @@
-import confetti from 'canvas-confetti';
 import React, {useEffect, useRef} from 'react';
+
+import confetti from 'canvas-confetti';
 
 const ConfettiComponent: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);

@@ -4,8 +4,8 @@
  * This intercepts ALL imports of hoist-non-react-statics and fixes the REACT_STATICS issue
  */
 
-import * as ReactIs from 'react-is';
 import type React from 'react';
+import * as ReactIs from 'react-is';
 
 // Ensure REACT_STATICS exists before we try to use it
 // This is the key fix for React 19 compatibility
@@ -108,7 +108,7 @@ function hoistNonReactStatics<T extends React.ComponentType<any>>(
         if (!(key in targetComponent)) {
           (targetComponent as any)[key] = (sourceComponent as any)[key];
         }
-      } catch (e) {
+      } catch (_e) {
         // Silently ignore errors when copying statics
       }
     }
@@ -118,4 +118,3 @@ function hoistNonReactStatics<T extends React.ComponentType<any>>(
 }
 
 export default hoistNonReactStatics;
-

@@ -62,4 +62,3 @@ export function trackError(errorType: string): void {
 export function getErrorStats(): Record<string, number> {
   return Object.fromEntries(errorCounts);
 }
-

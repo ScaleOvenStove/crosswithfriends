@@ -35,4 +35,3 @@ declare module 'canvas-confetti' {
   const confetti: Confetti;
   export default confetti;
 }
-

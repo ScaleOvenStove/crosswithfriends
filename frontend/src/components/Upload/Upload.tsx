@@ -2,6 +2,7 @@ import './css/index.css';
 
 import React, {useState, useCallback} from 'react';
 import Swal from 'sweetalert2';
+
 import actions from '../../actions';
 import {createNewPuzzle} from '../../api/puzzle';
 

@@ -4,16 +4,9 @@ import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/G
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import {Box, Stack} from '@mui/material';
 import React, {useState, useEffect, useCallback} from 'react';
-import {useUpdateEffect} from '../../hooks/useUpdateEffect';
 import type {Socket as SocketIOClient} from 'socket.io-client';
 
-const filter = <T,>(arr: T[], fn: (item: T) => boolean): T[] => arr.filter(fn);
-
-const minBy = <T,>(arr: T[], fn: (item: T) => number): T | undefined => {
-  if (arr.length === 0) return undefined;
-  return arr.reduce((min, item) => (fn(item) < fn(min) ? item : min));
-};
-
+import {useUpdateEffect} from '../../hooks/useUpdateEffect';
 import {useUser} from '../../hooks/useUser';
 import {emitAsync} from '../../sockets/emitAsync';
 import {useSocket} from '../../sockets/useSocket';
@@ -32,6 +25,13 @@ import {useGameEvents} from './useGameEvents';
 import type {GameEventsHook} from './useGameEvents';
 import {usePlayerActions} from './usePlayerActions';
 import {useToolbarActions} from './useToolbarActions';
+
+const filter = <T,>(arr: T[], fn: (item: T) => boolean): T[] => arr.filter(fn);
+
+const minBy = <T,>(arr: T[], fn: (item: T) => number): T | undefined => {
+  if (arr.length === 0) return undefined;
+  return arr.reduce((min, item) => (fn(item) < fn(min) ? item : min));
+};
 
 /**
  * Subscribes to Socket.io game events for a specific game.

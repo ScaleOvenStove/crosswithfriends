@@ -75,4 +75,3 @@ export class ReplayPage {
     return await this.pauseButton.isVisible({timeout: 1000}).catch(() => false);
   }
 }
-
