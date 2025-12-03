@@ -3,7 +3,6 @@ import './css/compose.css';
 import redirect from '@crosswithfriends/shared/lib/redirect';
 import {Box, Stack} from '@mui/material';
 import React, {useState, useEffect, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
 
 import actions from '../actions';
 import Nav from '../components/common/Nav';
@@ -57,12 +56,13 @@ const Compose: React.FC = () => {
     []
   );
 
+  useEffect(() => {
+    document.title = 'Cross with Friends: Compose';
+  }, []);
+
   return (
     <Stack direction="column" className="compositions">
       <Nav v2 composeEnabled />
-      <Helmet>
-        <title>Cross with Friends: Compose</title>
-      </Helmet>
       <Box sx={{flexShrink: 0, display: 'flex', justifyContent: 'center'}}>
         Limit: {limit}
         &nbsp;

@@ -5,12 +5,10 @@ import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
 import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
 import type {PuzzleJson} from '@crosswithfriends/shared/types';
 import React, {useCallback, useRef, useEffect} from 'react';
-import Dropzone from 'react-dropzone';
 import {MdFileUpload} from 'react-icons/md';
 import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
 
-const swal = withReactContent(Swal);
+import {useDropzone} from '../../utils/useDropzone';
 
 class UnknownFileTypeError extends Error {
   errorType: string;
@@ -212,7 +210,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail: _fail}) =
             }
           }
 
-          swal.fire({
+          Swal.fire({
             title: defaultTitle,
             text: defaultText,
             icon: defaultIcon,
@@ -229,29 +227,32 @@ const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail: _fail}) =
     [attemptPuzzleConversion, validIpuz, success]
   );
 
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({
+    onDrop,
+    accept: {
+      'application/octet-stream': ['.puz', '.ipuz'],
+    },
+  });
+
   return (
-    <Dropzone onDrop={onDrop}>
-      {({getRootProps, getInputProps, isDragActive}) => (
-        <div
-          {...getRootProps()}
-          className="file-uploader"
-          style={{
-            ...(isDragActive && {
-              outline: '3px solid var(--main-blue)',
-              outlineOffset: '-10px',
-            }),
-          }}
-        >
-          <input {...getInputProps()} />
-          <div className={`file-uploader--wrapper ${v2 ? 'v2' : ''}`}>
-            <div className="file-uploader--box">
-              <MdFileUpload className="file-uploader--box--icon" />
-              Import .puz or .ipuz file
-            </div>
-          </div>
+    <div
+      {...getRootProps()}
+      className="file-uploader"
+      style={{
+        ...(isDragActive && {
+          outline: '3px solid var(--main-blue)',
+          outlineOffset: '-10px',
+        }),
+      }}
+    >
+      <input {...getInputProps()} />
+      <div className={`file-uploader--wrapper ${v2 ? 'v2' : ''}`}>
+        <div className="file-uploader--box">
+          <MdFileUpload className="file-uploader--box--icon" />
+          Import .puz or .ipuz file
         </div>
-      )}
-    </Dropzone>
+      </div>
+    </div>
   );
 };
 

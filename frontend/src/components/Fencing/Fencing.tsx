@@ -4,17 +4,9 @@ import type {GameEvent} from '@crosswithfriends/shared/fencingGameEvents/types/G
 import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import {Box, Stack} from '@mui/material';
 import React, {useState, useEffect, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
-import {useUpdateEffect} from 'react-use';
 import type {Socket as SocketIOClient} from 'socket.io-client';
 
-const filter = <T,>(arr: T[], fn: (item: T) => boolean): T[] => arr.filter(fn);
-
-const minBy = <T,>(arr: T[], fn: (item: T) => number): T | undefined => {
-  if (arr.length === 0) return undefined;
-  return arr.reduce((min, item) => (fn(item) < fn(min) ? item : min));
-};
-
+import {useUpdateEffect} from '../../hooks/useUpdateEffect';
 import {useUser} from '../../hooks/useUser';
 import {emitAsync} from '../../sockets/emitAsync';
 import {useSocket} from '../../sockets/useSocket';
@@ -33,6 +25,13 @@ import {useGameEvents} from './useGameEvents';
 import type {GameEventsHook} from './useGameEvents';
 import {usePlayerActions} from './usePlayerActions';
 import {useToolbarActions} from './useToolbarActions';
+
+const filter = <T,>(arr: T[], fn: (item: T) => boolean): T[] => arr.filter(fn);
+
+const minBy = <T,>(arr: T[], fn: (item: T) => number): T | undefined => {
+  if (arr.length === 0) return undefined;
+  return arr.reduce((min, item) => (fn(item) < fn(min) ? item : min));
+};
 
 /**
  * Subscribes to Socket.io game events for a specific game.
@@ -235,6 +234,10 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
     });
   }, [sendEvent, id, teamId]);
 
+  useEffect(() => {
+    document.title = `Fencing ${gid}`;
+  }, [gid]);
+
   const handleChat = useCallback(
     (username: string, userId: string, message: string) => {
       sendEvent({
@@ -280,7 +283,6 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
       <Nav hidden={false} v2 canLogin={false} divRef={null} linkStyle={null} mobile={null} />
       <Box sx={{flex: 1, overflow: 'auto', display: 'flex'}}>
         <Box sx={{flex: 1, display: 'flex', padding: 3, flexDirection: 'column'}}>
-          <Helmet title={`Fencing ${gid}`} />
           <Box sx={{flex: 1}}>
             <FencingCountdown playerActions={playerActions} gameState={gameState} gameEventsHook={eventsHook}>
               {gameState.loaded && gameState.started && (

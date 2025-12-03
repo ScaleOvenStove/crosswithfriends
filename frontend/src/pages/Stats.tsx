@@ -1,7 +1,6 @@
 import type {ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
 import {Stack, Box} from '@mui/material';
 import React, {useEffect, useState} from 'react';
-import {Helmet} from 'react-helmet';
 
 import {fetchStats} from '../api/stats';
 import Nav from '../components/common/Nav';
@@ -12,6 +11,10 @@ const Stats: React.FC<Record<string, never>> = () => {
   const user = useUser();
 
   const [stats, setStats] = useState<ListPuzzleStatsResponse | null>(null);
+
+  useEffect(() => {
+    document.title = 'Stats';
+  }, []);
 
   useEffect(() => {
     user.listUserHistory().then((history: any) => {
@@ -29,9 +32,6 @@ const Stats: React.FC<Record<string, never>> = () => {
   return (
     <Stack direction="column" className="replays">
       <Nav hidden={false} v2 canLogin={false} divRef={null} linkStyle={null} mobile={null} />
-      <Helmet>
-        <title>Stats</title>
-      </Helmet>
 
       <div>
         <Box component="h2" sx={{textAlign: 'center'}}>

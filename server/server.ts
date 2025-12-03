@@ -4,6 +4,8 @@ import {fileURLToPath} from 'url';
 
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import * as dotenv from 'dotenv';
 import {
   fastify,
@@ -62,6 +64,15 @@ async function runServer(): Promise<void> {
               },
             },
           },
+      ajv: {
+        customOptions: {
+          // Allow OpenAPI keywords like 'example' in schemas
+          strict: false,
+          removeAdditional: false,
+          coerceTypes: true,
+          allErrors: true,
+        },
+      },
     }) as unknown as FastifyInstance;
 
     // Set custom error handler
@@ -112,6 +123,55 @@ async function runServer(): Promise<void> {
       });
     });
 
+    // Register Swagger plugin
+    await app.register(swagger, {
+      openapi: {
+        info: {
+          title: 'CrossWithFriends API',
+          description: 'API for the CrossWithFriends crossword puzzle platform',
+          version: '1.0.0',
+          contact: {
+            name: 'CrossWithFriends',
+          },
+        },
+        servers: [
+          {
+            url: 'https://www.crosswithfriends.com/api',
+            description: 'Production server',
+          },
+          {
+            url: 'https://crosswithfriendsbackend-staging.onrender.com/api',
+            description: 'Staging server',
+          },
+          {
+            url: 'http://localhost:3021/api',
+            description: 'Local development server',
+          },
+        ],
+        tags: [
+          {name: 'Health', description: 'Health check endpoints'},
+          {name: 'Games', description: 'Game management endpoints'},
+          {name: 'Puzzles', description: 'Puzzle management endpoints'},
+          {name: 'Stats', description: 'Statistics endpoints'},
+          {name: 'Counters', description: 'ID counter endpoints'},
+          {name: 'Link Preview', description: 'Link preview and oEmbed endpoints'},
+        ],
+        components: {
+          schemas: {},
+        },
+      },
+    });
+
+    // Register Swagger UI
+    await app.register(swaggerUi, {
+      routePrefix: '/api/docs',
+      uiConfig: {
+        docExpansion: 'list',
+        deepLinking: true,
+      },
+      staticCSP: true,
+    });
+
     // Register CORS plugin
     await app.register(cors, {
       origin: true,
@@ -119,7 +179,7 @@ async function runServer(): Promise<void> {
 
     // Register rate limiting plugin
     await app.register(rateLimit, {
-      max: 500, // Maximum 500 requests
+      max: 1000, // Maximum 500 requests
       timeWindow: '15 minutes', // Per 15-minute window
       cache: 10000, // Cache up to 10000 different IPs
       allowList: (req) => {

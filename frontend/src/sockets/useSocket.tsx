@@ -1,5 +1,4 @@
-import {useState} from 'react';
-import {useAsync} from 'react-use';
+import {useEffect, useState} from 'react';
 import type {Socket as SocketIOClient} from 'socket.io-client';
 
 import {getSocket} from './getSocket';
@@ -20,8 +19,18 @@ import {getSocket} from './getSocket';
  */
 export const useSocket = () => {
   const [socket, setSocket] = useState<SocketIOClient>();
-  useAsync(async () => {
-    setSocket(await getSocket());
-  });
+
+  useEffect(() => {
+    let cancelled = false;
+    getSocket().then((sock) => {
+      if (!cancelled) {
+        setSocket(sock);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return socket;
 };

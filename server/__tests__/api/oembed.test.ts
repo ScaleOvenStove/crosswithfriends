@@ -30,16 +30,15 @@ describe('OEmbed API', () => {
       });
     });
 
-    it('should handle missing author parameter', async () => {
+    it('should return 400 when author parameter is missing', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/oembed',
       });
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
-      expect(body).toHaveProperty('type');
-      expect(body).toHaveProperty('version');
+      expect(body.statusCode).toBe(400);
     });
 
     it('should handle empty string author parameter', async () => {

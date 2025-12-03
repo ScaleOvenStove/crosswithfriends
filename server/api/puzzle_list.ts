@@ -1,9 +1,10 @@
 import type {ListPuzzleRequestFilters, ListPuzzleResponse} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {listPuzzles} from '../model/puzzle.js';
+import {listPuzzles, convertOldFormatToIpuz} from '../model/puzzle.js';
 
 import {createHttpError} from './errors.js';
+import {ErrorResponseSchema} from './schemas.js';
 
 interface PuzzleListQuery {
   page: string;
@@ -15,8 +16,45 @@ interface PuzzleListQuery {
 
 // eslint-disable-next-line require-await
 async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
+  const getOptions = {
+    schema: {
+      operationId: 'listPuzzles',
+      tags: ['Puzzles'],
+      summary: 'List puzzles',
+      description: 'Get a paginated list of puzzles with optional filters',
+      querystring: {
+        type: 'object',
+        required: ['page', 'pageSize'],
+        properties: {
+          page: {type: 'string', description: 'Page number'},
+          pageSize: {type: 'string', description: 'Number of items per page'},
+          sizeMini: {type: 'string', description: 'Filter for mini puzzles (true/false)'},
+          sizeStandard: {type: 'string', description: 'Filter for standard puzzles (true/false)'},
+          nameOrTitle: {type: 'string', description: 'Filter by name or title'},
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            puzzles: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+  };
+
   fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzleResponse}>(
-    '/',
+    '',
+    getOptions,
     async (request: FastifyRequest<{Querystring: PuzzleListQuery}>, _reply: FastifyReply) => {
       const page = Number.parseInt(request.query.page, 10);
       const pageSize = Number.parseInt(request.query.pageSize, 10);
@@ -35,39 +73,13 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
 
       const rawPuzzleList = await listPuzzles(filters, pageSize, page * pageSize);
       const puzzles = rawPuzzleList.map((puzzle) => {
-        // IMPORTANT: Production and staging share the same database.
-        // Handle both old format (with info object) and ipuz format (title/author at root)
-        const content = puzzle.content;
-
-        // If content already has info object (old format), use it as-is
-        if ('info' in content && typeof content.info === 'object') {
-          return {
-            pid: puzzle.pid,
-            content,
-            stats: {numSolves: puzzle.times_solved},
-          };
-        }
-
-        // Otherwise, transform ipuz format to include info object for frontend compatibility
-        // ipuz has title/author at root, but frontend expects content.info.title/author
-        const solution = (content.solution || []) as (string | null)[][];
-        const type = solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
-
-        // Create content with info object for frontend
-        const contentWithInfo = {
-          ...content,
-          info: {
-            type,
-            title: (content.title as string | undefined) || '',
-            author: (content.author as string | undefined) || '',
-            copyright: (content.copyright as string | undefined) || '',
-            description: (content.notes as string | undefined) || '',
-          },
-        };
+        // Convert old format to ipuz format for consistency
+        // All puzzles returned to clients are now in pure ipuz format
+        const content = convertOldFormatToIpuz(puzzle.content);
 
         return {
           pid: puzzle.pid,
-          content: contentWithInfo,
+          content,
           stats: {numSolves: puzzle.times_solved},
         };
       });

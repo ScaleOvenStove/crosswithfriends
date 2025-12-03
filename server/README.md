@@ -436,8 +436,16 @@ The server uses PostgreSQL connection pooling via the `pg` library. Connection p
 
 2. **Initialize the database schema:**
 
+   You can use the migration system (recommended):
+
    ```bash
-   ./create_fresh_dbs.sh
+   yarn migrate
+   ```
+
+   Or use the legacy script:
+
+   ```bash
+   ./create_fresh_dbs.sh dfac
    ```
 
    Or manually:
@@ -461,6 +469,45 @@ The server uses PostgreSQL connection pooling via the `pg` library. Connection p
    ```bash
    source .envrc
    ```
+
+### Database Migrations
+
+The project uses a migration system to track and apply database schema changes. Migrations are stored in the `server/migrations/` directory.
+
+#### Check Migration Status
+
+To check if your database is up to date with all migrations:
+
+```bash
+yarn check-migrations
+```
+
+This will show:
+
+- Which migrations have been applied
+- Which migrations are missing
+- When each migration was applied
+
+#### Apply Missing Migrations
+
+To automatically apply any missing migrations:
+
+```bash
+yarn migrate
+```
+
+This will:
+
+- Check for missing migrations
+- Apply them in order
+- Record them in the `schema_migrations` table
+
+#### Migration System Details
+
+- Migrations are tracked in the `schema_migrations` table
+- Each migration file is checksummed to detect modifications
+- Migrations are applied in alphabetical order (by filename)
+- The migration system automatically creates the tracking table if it doesn't exist
 
 ### Environment Variables
 

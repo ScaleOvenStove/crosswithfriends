@@ -5,7 +5,6 @@ import redirect from '@crosswithfriends/shared/lib/redirect';
 import {Box, Stack} from '@mui/material';
 import classnames from 'classnames';
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
 
 import {useBattle} from '../hooks/useBattle';
@@ -68,6 +67,10 @@ const Battle: React.FC = () => {
       battle.removePlayer(name, team);
     }
   }, [name, team, redirecting, battle]);
+
+  useEffect(() => {
+    document.title = 'Down For A Battle';
+  }, []);
 
   useEffect(() => {
     battle.attach();
@@ -141,9 +144,6 @@ const Battle: React.FC = () => {
         height: '100%',
       }}
     >
-      <Helmet>
-        <title>Down For A Battle</title>
-      </Helmet>
       <Box className="battle--main" sx={{flex: 1, display: 'flex'}}>
         <Stack direction="column" sx={{flexShrink: 0}}>
           {typeof team !== 'number' && (

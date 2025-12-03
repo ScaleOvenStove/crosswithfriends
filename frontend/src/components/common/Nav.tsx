@@ -4,9 +4,6 @@ import classnames from 'classnames';
 import React from 'react';
 import {Link} from 'react-router-dom';
 import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
-
-const swal = withReactContent(Swal);
 
 import {useUser} from '../../hooks/useUser';
 
@@ -67,11 +64,11 @@ function LogIn({style}: LogInProps): JSX.Element | null {
 }
 
 function showInfo(): void {
-  swal.fire({
+  Swal.fire({
     title: 'crosswithfriends.com',
     icon: 'info',
-    html: (
-      <div className="swal-text swal-text--no-margin">
+    html: `
+      <div class="swal-text swal-text--no-margin">
         <p>
           Cross with Friends is an online website for sharing crosswords and playing collaboratively with
           friends in real time. Join the&nbsp;
@@ -80,7 +77,7 @@ function showInfo(): void {
           </a>
           &nbsp;for more discussion.
         </p>
-        <hr className="info--hr" />
+        <hr class="info--hr" />
         <p>
           Cross with Friends is open to contributions from developers of any level or experience. For more
           information or to report any issues, check out the project on&nbsp;
@@ -90,7 +87,7 @@ function showInfo(): void {
           .
         </p>
       </div>
-    ),
+    `,
   });
 }
 

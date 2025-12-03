@@ -14,12 +14,10 @@ import React, {
 import {MdClose, MdContentCopy, MdChevronRight, MdChevronLeft} from 'react-icons/md';
 import {Link} from 'react-router-dom';
 
-import Linkify from 'react-linkify';
-
+import Linkify from '../../utils/linkify';
 import {logger} from '../../utils/logger';
 import EditableSpan from '../common/EditableSpan';
 import Emoji from '../common/Emoji';
-import MobileKeyboard from '../Player/MobileKeyboard';
 import {formatMilliseconds} from '../Toolbar/Clock';
 
 import ChatBar, {type ChatBarRef} from './ChatBar';
@@ -659,16 +657,9 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
   );
 
   const renderMobileKeyboard = useCallback(() => {
-    if (!props.mobile) {
-      return null;
-    }
-
-    return (
-      <Box sx={{flexShrink: 0}}>
-        <MobileKeyboard layout="uppercase" />
-      </Box>
-    );
-  }, [props.mobile]);
+    // Keyboard disabled to avoid React 19 compatibility issues
+    return null;
+  }, []);
 
   const renderChatSubheader = useCallback(() => {
     if (props.subheader) return props.subheader;

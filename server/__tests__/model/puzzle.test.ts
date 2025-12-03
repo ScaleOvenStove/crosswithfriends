@@ -16,12 +16,17 @@ describe('Puzzle Model', () => {
   });
 
   describe('getPuzzle', () => {
-    it('should retrieve puzzle from database', async () => {
+    it('should retrieve and return ipuz puzzle unchanged', async () => {
       const mockPid = 'test-pid-123';
       const mockPuzzle = {
+        version: 'http://ipuz.org/v2',
+        kind: ['http://ipuz.org/crossword#1'],
+        dimensions: {width: 2, height: 1},
         title: 'Test Puzzle',
         author: 'Test Author',
         solution: [['.', 'A']],
+        puzzle: [['#', 1]],
+        clues: {Across: [], Down: []},
       };
 
       (pool.query as Mock).mockResolvedValue({
@@ -34,11 +39,182 @@ describe('Puzzle Model', () => {
       expect(puzzle).toEqual(mockPuzzle);
     });
 
+    it('should convert old format puzzle to ipuz format', async () => {
+      const mockPid = 'test-pid-old';
+      const oldFormatPuzzle = {
+        grid: [
+          ['.', 'C', 'A', 'T'],
+          ['D', 'O', 'G', '.'],
+        ],
+        info: {
+          title: 'Old Puzzle',
+          author: 'Old Author',
+          copyright: '© 2023',
+          description: 'Old description',
+          type: 'Mini Puzzle',
+        },
+        clues: {
+          across: ['', '1', 'Feline pet', '4', 'Canine pet'],
+          down: ['', '2', 'Letter A', '3', 'Letter T'],
+        },
+        circles: [1, 5],
+        shades: [],
+      };
+
+      (pool.query as Mock).mockResolvedValue({
+        rows: [{content: oldFormatPuzzle}],
+      });
+
+      const puzzle = await puzzleModel.getPuzzle(mockPid);
+
+      // Should be converted to ipuz format
+      expect(puzzle.version).toBe('http://ipuz.org/v2');
+      expect(puzzle.kind).toEqual(['http://ipuz.org/crossword#1']);
+      expect(puzzle.dimensions).toEqual({width: 4, height: 2});
+      expect(puzzle.title).toBe('Old Puzzle');
+      expect(puzzle.author).toBe('Old Author');
+      expect(puzzle.solution).toEqual([
+        ['.', 'C', 'A', 'T'],
+        ['D', 'O', 'G', '.'],
+      ]);
+      expect(puzzle.clues?.Across).toEqual([
+        ['1', 'Feline pet'],
+        ['4', 'Canine pet'],
+      ]);
+      expect(puzzle.clues?.Down).toEqual([
+        ['2', 'Letter A'],
+        ['3', 'Letter T'],
+      ]);
+      // Puzzle grid should have numbers assigned
+      expect(puzzle.puzzle).toBeDefined();
+    });
+
     it('should throw error when puzzle not found', async () => {
       const mockPid = 'nonexistent-pid';
       (pool.query as Mock).mockResolvedValue({rows: []});
 
       await expect(puzzleModel.getPuzzle(mockPid)).rejects.toThrow(`Puzzle ${mockPid} not found`);
+    });
+  });
+
+  describe('convertOldFormatToIpuz', () => {
+    it('should return ipuz puzzle unchanged', () => {
+      const ipuzPuzzle = {
+        version: 'http://ipuz.org/v2',
+        kind: ['http://ipuz.org/crossword#1'],
+        dimensions: {width: 3, height: 3},
+        title: 'Test',
+        author: 'Author',
+        solution: [['A', 'B', 'C']],
+        puzzle: [[1, 2, 3]],
+        clues: {Across: [], Down: []},
+      };
+
+      const result = puzzleModel.convertOldFormatToIpuz(ipuzPuzzle);
+      expect(result).toEqual(ipuzPuzzle);
+    });
+
+    it('should convert old format with grid to ipuz', () => {
+      const oldPuzzle = {
+        grid: [
+          ['C', 'A', 'T'],
+          ['.', '.', '.'],
+          ['D', 'O', 'G'],
+        ],
+        info: {
+          title: 'Animals',
+          author: 'Tester',
+          copyright: '© 2024',
+          description: 'Animal words',
+        },
+        clues: {
+          across: ['', '1', 'Meow', '3', 'Woof'],
+          down: ['', '1', 'Letter C', '2', 'Letter A'],
+        },
+        circles: [0, 1],
+        shades: [6],
+      };
+
+      const result = puzzleModel.convertOldFormatToIpuz(oldPuzzle as any);
+
+      expect(result.version).toBe('http://ipuz.org/v2');
+      expect(result.kind).toEqual(['http://ipuz.org/crossword#1']);
+      expect(result.dimensions).toEqual({width: 3, height: 3});
+      expect(result.title).toBe('Animals');
+      expect(result.author).toBe('Tester');
+      expect(result.copyright).toBe('© 2024');
+      expect(result.notes).toBe('Animal words');
+      expect(result.solution).toEqual([
+        ['C', 'A', 'T'],
+        ['.', '.', '.'],
+        ['D', 'O', 'G'],
+      ]);
+      expect(result.clues?.Across).toEqual([
+        ['1', 'Meow'],
+        ['3', 'Woof'],
+      ]);
+      expect(result.clues?.Down).toEqual([
+        ['1', 'Letter C'],
+        ['2', 'Letter A'],
+      ]);
+
+      // Check puzzle grid structure
+      expect(result.puzzle).toBeDefined();
+      expect(result.puzzle?.length).toBe(3);
+
+      // First row: position 0 has circle and number 1, position 1 has circle but no number (cell 0)
+      expect(result.puzzle?.[0]?.[0]).toEqual({cell: 1, style: {shapebg: 'circle'}});
+      expect(result.puzzle?.[0]?.[1]).toEqual({cell: 0, style: {shapebg: 'circle'}});
+
+      // Black cells should be '#'
+      expect(result.puzzle?.[1]?.[0]).toBe('#');
+      expect(result.puzzle?.[1]?.[1]).toBe('#');
+      expect(result.puzzle?.[1]?.[2]).toBe('#');
+
+      // Third row should have number 2 (shade at index 6, sequential numbering)
+      // [0][0] gets 1 (CAT across), [2][0] gets 2 (DOG across)
+      expect(result.puzzle?.[2]?.[0]).toEqual({cell: 2, style: {fillbg: 'gray'}});
+    });
+
+    it('should handle old format without circles or shades', () => {
+      const oldPuzzle = {
+        grid: [
+          ['A', 'B'],
+          ['C', 'D'],
+        ],
+        info: {
+          title: 'Simple',
+          author: 'Me',
+        },
+        clues: {
+          across: ['', '1', 'AB', '2', 'CD'],
+          down: ['', '1', 'AC', '2', 'BD'],
+        },
+      };
+
+      const result = puzzleModel.convertOldFormatToIpuz(oldPuzzle as any);
+
+      expect(result.solution).toEqual([
+        ['A', 'B'],
+        ['C', 'D'],
+      ]);
+
+      // Puzzle grid should not have circle/shade styles
+      // [0][0] gets 1 (AB across, AC down), [0][1] gets 2 (BD down), [1][0] gets 3 (CD across)
+      expect(result.puzzle?.[0]?.[0]).toBe(1);
+      expect(result.puzzle?.[1]?.[0]).toBe(3);
+    });
+
+    it('should throw error for empty grid', () => {
+      const oldPuzzle = {
+        grid: [],
+        info: {title: 'Empty', author: 'None'},
+        clues: {across: [], down: []},
+      };
+
+      expect(() => puzzleModel.convertOldFormatToIpuz(oldPuzzle as any)).toThrow(
+        'Old format puzzle has empty grid'
+      );
     });
   });
 
@@ -318,8 +494,14 @@ describe('Puzzle Model', () => {
           description: 'Old description',
           type: 'Daily Puzzle',
         },
-        grid: [],
-        solution: [],
+        grid: [
+          ['A', 'B'],
+          ['C', 'D'],
+        ], // Need valid grid for conversion
+        clues: {
+          across: ['', '1', 'AB', '2', 'CD'],
+          down: ['', '1', 'AC', '2', 'BD'],
+        },
       };
 
       (pool.query as Mock).mockResolvedValue({
@@ -328,12 +510,14 @@ describe('Puzzle Model', () => {
 
       const info = await puzzleModel.getPuzzleInfo(mockPid);
 
+      // Type is determined from puzzle size, not from info.type
+      // The grid is 2x2, which would be classified as "Mini Puzzle"
       expect(info).toEqual({
         title: 'Old Format Puzzle',
         author: 'Old Author',
         copyright: '© 2023',
         description: 'Old description',
-        type: 'Daily Puzzle',
+        type: 'Mini Puzzle',
       });
     });
 

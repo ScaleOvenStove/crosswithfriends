@@ -8,6 +8,148 @@ import {pool} from './pool.js';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
+/**
+ * Converts old puzzle format (with 'grid' and 'info') to ipuz format
+ * This ensures all puzzles returned from the API are in the standard ipuz format
+ */
+export function convertOldFormatToIpuz(puzzle: PuzzleJson): PuzzleJson {
+  // Check if this is old format
+  const isOldFormat = 'grid' in puzzle && Array.isArray((puzzle as {grid?: unknown}).grid);
+
+  // If already ipuz format, return as-is
+  if (!isOldFormat) {
+    return puzzle;
+  }
+
+  logger.debug('Converting old format puzzle to ipuz format');
+
+  const oldPuzzle = puzzle as {
+    grid?: string[][];
+    info?: {title?: string; author?: string; copyright?: string; description?: string; type?: string};
+    clues?: {down?: string[]; across?: string[]};
+    circles?: number[];
+    shades?: number[];
+  };
+
+  const grid = oldPuzzle.grid || [];
+  if (grid.length === 0 || !grid[0] || grid[0].length === 0) {
+    throw new Error('Old format puzzle has empty grid');
+  }
+
+  const height = grid.length;
+  const width = grid[0].length;
+  const info = oldPuzzle.info || {};
+
+  // Convert grid to solution format (same structure for old format)
+  const solution = grid.map((row) => row.map((cell) => cell));
+
+  // Generate puzzle grid with cell numbers
+  // We need to determine which cells are starts of words to assign numbers
+  let cellNumber = 1;
+  const puzzleGrid: (
+    | number
+    | string
+    | {cell: number; style: {shapebg?: string; fillbg?: string}}
+    | null
+  )[][] = [];
+  const circles = oldPuzzle.circles || [];
+  const shades = oldPuzzle.shades || [];
+
+  for (let r = 0; r < height; r++) {
+    const row: (number | string | {cell: number; style: {shapebg?: string; fillbg?: string}} | null)[] = [];
+    const solutionRow = solution[r];
+    if (!solutionRow) {
+      continue;
+    }
+    for (let c = 0; c < width; c++) {
+      const cell = solutionRow[c];
+      const isBlack = cell === '.' || cell === null || cell === '#';
+
+      if (isBlack) {
+        row.push('#');
+      } else {
+        // Determine if this cell starts a word
+        const prevRow = r > 0 ? solution[r - 1] : undefined;
+        const nextRow = r < height - 1 ? solution[r + 1] : undefined;
+        const startsAcross = c === 0 || solutionRow[c - 1] === '.' || solutionRow[c - 1] === '#';
+        const startsDown = r === 0 || prevRow?.[c] === '.' || prevRow?.[c] === '#';
+        const hasAcrossWord =
+          startsAcross && c < width - 1 && solutionRow[c + 1] !== '.' && solutionRow[c + 1] !== '#';
+        const hasDownWord = startsDown && r < height - 1 && nextRow?.[c] !== '.' && nextRow?.[c] !== '#';
+
+        const cellIdx = r * width + c;
+        const hasCircle = circles.includes(cellIdx);
+        const hasShade = shades.includes(cellIdx);
+
+        if (hasAcrossWord || hasDownWord) {
+          // Cell starts a word, gets a number
+          if (hasCircle || hasShade) {
+            const style: {shapebg?: string; fillbg?: string} = {};
+            if (hasCircle) style.shapebg = 'circle';
+            if (hasShade) style.fillbg = 'gray';
+            row.push({cell: cellNumber, style});
+          } else {
+            row.push(cellNumber);
+          }
+          cellNumber += 1;
+        } else {
+          // Cell doesn't start a word
+          if (hasCircle || hasShade) {
+            const style: {shapebg?: string; fillbg?: string} = {};
+            if (hasCircle) style.shapebg = 'circle';
+            if (hasShade) style.fillbg = 'gray';
+            row.push({cell: 0, style});
+          } else {
+            row.push('0');
+          }
+        }
+      }
+    }
+    puzzleGrid.push(row);
+  }
+
+  // Convert clues from sparse array format to ipuz format
+  const oldAcross = oldPuzzle.clues?.across || [];
+  const oldDown = oldPuzzle.clues?.down || [];
+
+  const acrossClues: [string, string][] = [];
+  for (let i = 1; i < oldAcross.length; i += 2) {
+    const number = oldAcross[i];
+    const clue = oldAcross[i + 1];
+    if (number && clue) {
+      acrossClues.push([number, clue]);
+    }
+  }
+
+  const downClues: [string, string][] = [];
+  for (let i = 1; i < oldDown.length; i += 2) {
+    const number = oldDown[i];
+    const clue = oldDown[i + 1];
+    if (number && clue) {
+      downClues.push([number, clue]);
+    }
+  }
+
+  // Create ipuz format puzzle
+  const ipuzPuzzle: PuzzleJson = {
+    version: 'http://ipuz.org/v2',
+    kind: ['http://ipuz.org/crossword#1'],
+    dimensions: {width, height},
+    title: info.title || '',
+    author: info.author || '',
+    copyright: info.copyright || '',
+    notes: info.description || '',
+    solution,
+    puzzle: puzzleGrid,
+    clues: {
+      Across: acrossClues,
+      Down: downClues,
+    },
+  };
+
+  return ipuzPuzzle;
+}
+
 export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   const startTime = Date.now();
   const {rows} = await pool.query(
@@ -25,7 +167,9 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   if (!firstRow) {
     throw new Error(`Puzzle ${pid} not found`);
   }
-  return firstRow.content;
+
+  // Always return ipuz format to clients
+  return convertOldFormatToIpuz(firstRow.content);
 }
 
 const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string[] => {

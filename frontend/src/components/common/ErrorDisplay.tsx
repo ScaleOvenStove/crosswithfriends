@@ -112,7 +112,7 @@ export function categorizeError(error: Error | null): ErrorDetails {
         {
           label: 'Go to Login',
           action: () => {
-            window.location.href = '/account';
+            window.location.assign('/account');
           },
           primary: true,
         },
@@ -135,7 +135,7 @@ export function categorizeError(error: Error | null): ErrorDetails {
         {
           label: 'Go Home',
           action: () => {
-            window.location.href = '/';
+            window.location.assign('/');
           },
           primary: true,
         },
@@ -160,7 +160,7 @@ export function categorizeError(error: Error | null): ErrorDetails {
         {
           label: 'Go Home',
           action: () => {
-            window.location.href = '/';
+            window.location.assign('/');
           },
           primary: true,
         },
@@ -209,7 +209,7 @@ export function categorizeError(error: Error | null): ErrorDetails {
         {
           label: 'Go Home',
           action: () => {
-            window.location.href = '/';
+            window.location.assign('/');
           },
         },
       ],
@@ -272,7 +272,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     if (onNavigateHome) {
       onNavigateHome();
     } else {
-      window.location.href = '/';
+      window.location.assign('/');
     }
   };
 

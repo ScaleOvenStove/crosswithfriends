@@ -1,7 +1,7 @@
 import type {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '@crosswithfriends/shared/types';
 import {Box, Skeleton, Button, Typography} from '@mui/material';
+import {useVirtualizer} from '@tanstack/react-virtual';
 import React, {useEffect, useRef, useState, useMemo, useCallback} from 'react';
-import {Grid, type GridImperativeAPI} from 'react-window';
 
 import {fetchPuzzleList} from '../../api/puzzle_list';
 import {logger} from '../../utils/logger';
@@ -74,7 +74,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
   const {filter, fencing, onScroll: onScrollProp} = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<GridImperativeAPI>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [fullyLoaded, setFullyLoaded] = useState<boolean>(false);
@@ -335,6 +335,14 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
     return Math.ceil(puzzleData.length / columnCount);
   }, [puzzleData.length, columnCount]);
 
+  // TanStack Virtual row virtualizer
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => totalItemHeight,
+    overscan: 5,
+  });
+
   // Get item data for a specific index
   const getItemData = useCallback(
     (index: number) => {
@@ -394,11 +402,17 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       if (newIndex !== currentIndex) {
         setFocusedIndex(newIndex);
         focusedIndexRef.current = newIndex;
-        // Scroll item into view if needed - using manual scroll calculation
-        if (gridRef.current && containerRef.current) {
+        // Scroll item into view if needed
+        if (parentRef.current) {
           const targetRow = Math.floor(newIndex / columnCount);
-          const scrollTop = targetRow * totalItemHeight;
-          containerRef.current.scrollTop = scrollTop;
+          const virtualRow = rowVirtualizer.getVirtualItems().find((item) => item.index === targetRow);
+          if (virtualRow) {
+            virtualRow.element?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+          } else {
+            // If row not in view, scroll to it
+            const scrollTop = targetRow * totalItemHeight;
+            parentRef.current.scrollTop = scrollTop;
+          }
         }
         const item = getItemData(newIndex);
         if (item) {
@@ -406,7 +420,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         }
       }
     },
-    [puzzleData.length, columnCount, getItemData, fencing, totalItemHeight]
+    [puzzleData.length, columnCount, getItemData, fencing, rowVirtualizer]
   );
 
   // Update focused index ref when state changes
@@ -414,37 +428,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
     focusedIndexRef.current = focusedIndex;
   }, [focusedIndex]);
 
-  // Cell renderer wrapper for react-window
-  const CellRenderer = useCallback(
-    ({
-      columnIndex,
-      rowIndex,
-      style,
-      ariaAttributes,
-    }: {
-      ariaAttributes: {'aria-colindex': number; role: 'gridcell'};
-      columnIndex: number;
-      rowIndex: number;
-      style: React.CSSProperties;
-    }) => {
-      const index = rowIndex * columnCount + columnIndex;
-      const item = getItemData(index);
-      const isFocused = focusedIndex === index;
-
-      return (
-        <Cell
-          style={style}
-          ariaAttributes={ariaAttributes}
-          itemData={item}
-          spacing={itemSpacing}
-          isFocused={isFocused}
-        />
-      );
-    },
-    [columnCount, getItemData, itemSpacing, focusedIndex]
-  );
-
-  // Handle scroll events from react-window Grid
+  // Handle scroll events
   const onScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const target = event.currentTarget;
@@ -590,28 +574,75 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         <>
           {containerSize.width > 0 && containerSize.height > 0 && (
             <div
+              ref={parentRef}
               onKeyDown={handleKeyDown}
+              onScroll={onScroll}
               tabIndex={0}
               role="grid"
               aria-label="Puzzle grid"
               aria-rowcount={rowCount}
               aria-colcount={columnCount}
-              style={{width: '100%', height: '100%', outline: 'none'}}
+              style={{
+                width: '100%',
+                height: '100%',
+                outline: 'none',
+                overflow: 'auto',
+              }}
             >
-              <Grid
-                gridRef={gridRef}
-                columnCount={columnCount}
-                columnWidth={totalItemWidth}
-                rowCount={rowCount}
-                rowHeight={totalItemHeight}
-                onScroll={onScroll}
-                cellComponent={CellRenderer}
-                cellProps={{}}
+              <div
                 style={{
-                  width: containerSize.width,
-                  height: containerSize.height,
+                  width: `${columnCount * totalItemWidth}px`,
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  position: 'relative',
                 }}
-              />
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+                  <div
+                    key={virtualRow.key}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                      display: 'flex',
+                    }}
+                  >
+                    {Array.from({length: columnCount}, (_, columnIndex) => {
+                      const index = virtualRow.index * columnCount + columnIndex;
+                      if (index >= puzzleData.length) return null;
+                      const item = getItemData(index);
+                      const isFocused = focusedIndex === index;
+
+                      return (
+                        <div
+                          key={columnIndex}
+                          style={{
+                            width: `${totalItemWidth}px`,
+                            height: '100%',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Cell
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                            }}
+                            ariaAttributes={{
+                              'aria-colindex': columnIndex + 1,
+                              role: 'gridcell',
+                            }}
+                            itemData={item}
+                            spacing={itemSpacing}
+                            isFocused={isFocused}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {loading && puzzles.length > 0 && (

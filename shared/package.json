@@ -11,10 +11,15 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },
+  "dependencies": {
+    "moment": "^2.30.1",
+    "puzjs": "^1.0.2",
+    "utility-types": "^3.11.0"
+  },
   "devDependencies": {
     "@vitest/ui": "^4.0.10",
     "fix-esm-import-path": "^1.10.3",
-    "jsdom": "^25.0.1",
+    "jsdom": "^27.2.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.10"
   },

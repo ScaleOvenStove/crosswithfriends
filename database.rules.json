@@ -80,6 +80,46 @@
     "myCompositions": {
       ".read": true,
       ".write": true
+    },
+    "presence": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['status', 'lastSeen'])"
+      }
+    },
+    "userProfiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['uid', 'displayName'])"
+      }
+    },
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        "messages": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$messageId": {
+            ".validate": "newData.hasChildren(['userId', 'userName', 'message', 'timestamp']) && newData.child('userId').val() == auth.uid"
+          }
+        },
+        "participants": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid"
+          }
+        }
+      }
+    },
+    "games": {
+      "$gameId": {
+        ".read": "auth != null",
+        "state": {
+          ".write": "auth != null"
+        }
+      }
     }
   }
 }

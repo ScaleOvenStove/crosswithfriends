@@ -204,12 +204,10 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
         return keys.map(([r, c]) => ({r, c})).filter(({r, c}) => gridObj.isWhite(r, c));
       },
       setSelected: (sel: {r: number; c: number}) => {
-        if (setSelectedRef.current) {
-          setSelectedRef.current(sel);
-        }
+        setSelected(sel);
       },
     }),
-    [gridObj, selectedAdjusted, direction]
+    [gridObj, selectedAdjusted, direction, setSelected]
   );
 
   const updateSize = useCallback(() => {
@@ -286,8 +284,6 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
     [isValidDirection, selectedAdjusted]
   );
 
-  const setSelectedRef = useRef<(sel: {r: number; c: number}) => void>(() => {});
-
   const setSelected = useCallback(
     (sel: {r: number; c: number}) => {
       if (cursorLockedRef.current) return;
@@ -320,12 +316,6 @@ const Player = forwardRef<PlayerRef, PlayerProps>((props, ref) => {
     },
     [gridObj, isValidDirection, direction, selectedAdjusted, props.updateCursor]
   );
-
-  // Update ref with latest setSelected function
-  const setSelectedRefValue = setSelected;
-  useEffect(() => {
-    setSelectedRef.current = setSelectedRefValue;
-  }, [setSelectedRefValue]);
 
   const handlePing = useCallback(
     (r: number, c: number) => {
