@@ -11,6 +11,8 @@ export default defineConfig({
       jsxRuntime: 'automatic',
     }),
   ],
+  envDir: '..', // Load .env from workspace root
+
   // Use import.meta.env instead of process.env (Vite best practice)
   // Note: Some third-party libraries may still reference process, so we provide a polyfill
   define: {
