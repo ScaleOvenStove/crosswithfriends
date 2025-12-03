@@ -6,6 +6,7 @@ import {getPuzzleInfo} from '../model/puzzle.js';
 import {isFBMessengerCrawler, isLinkExpanderBot} from '../utils/link_preview_util.js';
 
 import {createHttpError} from './errors.js';
+import {ErrorResponseSchema} from './schemas.js';
 
 interface LinkPreviewQuery {
   url: string;
@@ -13,8 +14,37 @@ interface LinkPreviewQuery {
 
 // eslint-disable-next-line require-await
 async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
+  const getOptions = {
+    schema: {
+      operationId: 'getLinkPreview',
+      tags: ['Link Preview'],
+      summary: 'Get link preview',
+      description: 'Generates Open Graph metadata for social media link previews',
+      querystring: {
+        type: 'object',
+        required: ['url'],
+        properties: {
+          url: {type: 'string', description: 'URL to generate preview for'},
+        },
+      },
+      response: {
+        200: {
+          type: 'string',
+          description: 'HTML with Open Graph metadata',
+        },
+        302: {
+          type: 'null',
+          description: 'Redirect for non-bot user agents',
+        },
+        400: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+      },
+    },
+  };
+
   fastify.get<{Querystring: LinkPreviewQuery}>(
     '/',
+    getOptions,
     async (request: FastifyRequest<{Querystring: LinkPreviewQuery}>, reply: FastifyReply) => {
       request.log.debug({headers: request.headers, query: request.query}, 'got req');
 

@@ -5,6 +5,7 @@ import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
 
 import {createHttpError} from './errors.js';
+import {ListPuzzleStatsRequestSchema, ErrorResponseSchema} from './schemas.js';
 
 const groupBy = <T>(arr: T[], fn: (item: T) => string | number): Record<string, T[]> => {
   return arr.reduce(
@@ -68,8 +69,42 @@ export function computePuzzleStats(puzzle_solves: SolvedPuzzleType[]): PuzzleSum
 
 // eslint-disable-next-line require-await
 async function statsRouter(fastify: FastifyInstance): Promise<void> {
+  const postOptions = {
+    schema: {
+      operationId: 'submitStats',
+      tags: ['Stats'],
+      summary: 'Get puzzle statistics',
+      description: 'Retrieves aggregated statistics and history for given game IDs',
+      body: ListPuzzleStatsRequestSchema,
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            stats: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+            history: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+  };
+
   fastify.post<{Body: ListPuzzleStatsRequest; Reply: ListPuzzleStatsResponse}>(
-    '/',
+    '',
+    postOptions,
     async (request: FastifyRequest<{Body: ListPuzzleStatsRequest}>, _reply: FastifyReply) => {
       const {gids} = request.body;
       const startTime = Date.now();

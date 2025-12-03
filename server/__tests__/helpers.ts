@@ -9,6 +9,14 @@ import apiRouter from '../api/router.js';
 export async function buildTestApp(): Promise<FastifyInstance> {
   const app = fastify({
     logger: false, // Disable logging in tests
+    ajv: {
+      customOptions: {
+        strict: false,
+        removeAdditional: false,
+        allErrors: true,
+        coerceTypes: false,
+      },
+    },
   });
 
   // Register CORS plugin

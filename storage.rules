@@ -1,0 +1,104 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check file size (5MB limit)
+
+    function isValidSize() {
+      return request.resource.size <= 5 * 1024 * 1024; // 5MB
+    }
+
+    // Helper function to check if file is an image
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Helper function to check if file type is allowed
+    function isAllowedImageType() {
+      return request.resource.contentType in [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp'
+      ];
+    }
+
+    // Default: deny all access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // User avatars: users can only read/write their own avatar
+    match /avatars/{userId}/{fileName} {
+      // Allow read for all authenticated users
+      allow read: if isAuthenticated();
+
+      // Allow write only for the owner
+      allow write: if isAuthenticated() 
+                   && request.auth.uid == userId
+                   && isValidSize()
+                   && isAllowedImageType();
+
+      // Allow delete only for the owner
+      allow delete: if isAuthenticated() 
+                    && request.auth.uid == userId;
+    }
+
+    // Puzzle images: authenticated users can read all, only creators can write
+    match /puzzles/{puzzleId}/{fileName} {
+      // Allow read for all authenticated users (including anonymous)
+      allow read: if isAuthenticated();
+
+      // Allow write for authenticated users
+      // Per codeguard-0-file-handling-and-uploads: Validate file type and size
+      allow write: if isAuthenticated()
+                   && isValidSize()
+                   && isAllowedImageType();
+
+      // Allow delete for authenticated users (for now, can be restricted later)
+      allow delete: if isAuthenticated();
+    }
+
+    // User uploads: general purpose user file uploads
+    match /uploads/{userId}/{fileName} {
+      // Allow read for all authenticated users
+      allow read: if isAuthenticated();
+
+      // Allow write only for the owner
+      allow write: if isAuthenticated()
+                   && request.auth.uid == userId
+                   && isValidSize()
+                   && isImage();
+
+      // Allow delete only for the owner
+      allow delete: if isAuthenticated()
+                    && request.auth.uid == userId;
+    }
+
+    // Temporary uploads: short-lived files for processing
+    match /temp/{userId}/{fileName} {
+      // Allow read only for the owner
+      allow read: if isAuthenticated()
+                  && request.auth.uid == userId;
+
+      // Allow write only for the owner
+      allow write: if isAuthenticated()
+                   && request.auth.uid == userId
+                   && isValidSize()
+                   && isImage();
+
+      // Allow delete only for the owner
+      allow delete: if isAuthenticated()
+                    && request.auth.uid == userId;
+    }
+  }
+}
+

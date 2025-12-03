@@ -6,6 +6,12 @@ import {getPuzzleInfo} from '../model/puzzle.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
 
 import {createHttpError} from './errors.js';
+import {
+  CreateGameRequestSchema,
+  CreateGameResponseSchema,
+  GetGameResponseSchema,
+  ErrorResponseSchema,
+} from './schemas.js';
 
 interface CreateGameResponseWithGid {
   gid: string;
@@ -13,8 +19,23 @@ interface CreateGameResponseWithGid {
 
 // eslint-disable-next-line require-await
 async function gameRouter(fastify: FastifyInstance): Promise<void> {
+  const postOptions = {
+    schema: {
+      operationId: 'createGame',
+      tags: ['Games'],
+      summary: 'Create a new game',
+      description: 'Creates a new game session for a puzzle',
+      body: CreateGameRequestSchema,
+      response: {
+        200: CreateGameResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+  };
+
   fastify.post<{Body: CreateGameRequest; Reply: CreateGameResponseWithGid}>(
-    '/',
+    '',
+    postOptions,
     async (request: FastifyRequest<{Body: CreateGameRequest}>, _reply: FastifyReply) => {
       request.log.debug({headers: request.headers, body: request.body}, 'got req');
       const gid = await addInitialGameEvent(request.body.gid, request.body.pid);
@@ -22,8 +43,30 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
     }
   );
 
+  const getOptions = {
+    schema: {
+      operationId: 'getGameById',
+      tags: ['Games'],
+      summary: 'Get game by ID',
+      description: 'Retrieves game information including puzzle details and solve time',
+      params: {
+        type: 'object',
+        required: ['gid'],
+        properties: {
+          gid: {type: 'string', description: 'Game ID'},
+        },
+      },
+      response: {
+        200: GetGameResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+  };
+
   fastify.get<{Params: {gid: string}; Reply: GetGameResponse}>(
     '/:gid',
+    getOptions,
     async (request: FastifyRequest<{Params: {gid: string}}>, _reply: FastifyReply) => {
       request.log.debug({headers: request.headers, params: request.params}, 'got req');
       const {gid} = request.params;
