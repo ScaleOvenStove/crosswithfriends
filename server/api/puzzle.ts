@@ -2,7 +2,8 @@ import type {AddPuzzleRequest, AddPuzzleResponse, PuzzleJson} from '@crosswithfr
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
 import {addPuzzle, getPuzzle} from '../model/puzzle.js';
-import {createHttpError} from '../utils/errors.js';
+
+import {createHttpError} from './errors.js';
 
 // eslint-disable-next-line require-await
 async function puzzleRouter(fastify: FastifyInstance): Promise<void> {

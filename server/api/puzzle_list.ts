@@ -8,13 +8,9 @@ import {createHttpError} from './errors.js';
 interface PuzzleListQuery {
   page: string;
   pageSize: string;
-  filter?: {
-    sizeFilter?: {
-      Mini?: string;
-      Standard?: string;
-    };
-    nameOrTitleFilter?: string;
-  };
+  sizeMini?: string;
+  sizeStandard?: string;
+  nameOrTitle?: string;
 }
 
 // eslint-disable-next-line require-await
@@ -29,13 +25,12 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
         throw createHttpError('page and pageSize should be integers', 400);
       }
 
-      const rawFilters = request.query.filter;
       const filters: ListPuzzleRequestFilters = {
         sizeFilter: {
-          Mini: rawFilters?.sizeFilter?.Mini === 'true',
-          Standard: rawFilters?.sizeFilter?.Standard === 'true',
+          Mini: request.query.sizeMini === 'true',
+          Standard: request.query.sizeStandard === 'true',
         },
-        nameOrTitleFilter: (rawFilters?.nameOrTitleFilter ?? '') as string,
+        nameOrTitleFilter: (request.query.nameOrTitle ?? '') as string,
       };
 
       const rawPuzzleList = await listPuzzles(filters, pageSize, page * pageSize);
