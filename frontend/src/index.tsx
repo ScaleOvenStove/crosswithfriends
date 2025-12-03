@@ -12,6 +12,8 @@ import {AccountError} from './components/common/AccountError';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import {GameError} from './components/common/GameError';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import MaintenanceBanner from './components/common/MaintenanceBanner';
+import MaintenanceSplash from './components/common/MaintenanceSplash';
 import OfflineIndicator from './components/common/OfflineIndicator';
 import {RoomError} from './components/common/RoomError';
 import {createAppTheme} from './theme/theme';
@@ -101,11 +103,16 @@ const Root: React.FC = () => {
     }
   }, [darkMode]);
 
+  if (import.meta.env.VITE_SITE_DOWN === 'true') {
+    return <MaintenanceSplash />;
+  }
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
+          <MaintenanceBanner />
           <Router>
             <GlobalContext.Provider value={{toggleMolesterMoons, darkModePreference}}>
               <OfflineIndicator />
