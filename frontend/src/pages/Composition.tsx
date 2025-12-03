@@ -12,7 +12,6 @@ import redirect from '@crosswithfriends/shared/lib/redirect';
 import ComposeHistoryWrapper from '@crosswithfriends/shared/lib/wrappers/ComposeHistoryWrapper';
 import {Box, Stack} from '@mui/material';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
 
 type DebouncedFunc<T extends (...args: any[]) => any> = {
@@ -310,6 +309,10 @@ const Composition: React.FC = () => {
     return `Compose: ${info.title}`;
   }, [composition, compositionHook.ready]);
 
+  useEffect(() => {
+    document.title = title || 'Compose';
+  }, [title]);
+
   const otherCursors = useMemo(() => {
     if (!composition || !user.id) return [];
     return composition.cursors.filter(({id}: {id: string}) => id !== user.id);
@@ -326,9 +329,6 @@ const Composition: React.FC = () => {
           height: '100%',
         }}
       >
-        <Helmet>
-          <title>Compose</title>
-        </Helmet>
         <Nav v2 hidden={mobile} />
       </Stack>
     );
@@ -353,9 +353,6 @@ const Composition: React.FC = () => {
         height: '100%',
       }}
     >
-      <Helmet>
-        <title>{title}</title>
-      </Helmet>
       <Nav v2 hidden={mobile} />
       <Box sx={{...style, flex: 1, display: 'flex', minHeight: 0}}>
         <Stack direction="column" sx={{flex: 1, display: 'flex', minHeight: 0}}>

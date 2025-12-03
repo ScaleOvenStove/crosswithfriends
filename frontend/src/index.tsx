@@ -1,3 +1,6 @@
+// React 19 compatibility shim - must be imported first
+import './utils/react19-compat';
+
 import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
 import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
 import {useMediaQuery, ThemeProvider, CssBaseline} from '@mui/material';

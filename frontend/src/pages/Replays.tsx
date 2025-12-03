@@ -4,7 +4,6 @@ import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper
 import {Box, Stack} from '@mui/material';
 import {ref, get} from 'firebase/database';
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
 
 const keyBy = <T,>(arr: T[], key: keyof T): Record<string, T> => {
@@ -223,6 +222,11 @@ const Replays: React.FC = () => {
     return puzzle.data.info.title;
   }, [puzzle.data]);
 
+  useEffect(() => {
+    const title = pid ? `Replays ${pid}: ${puzzleTitle}` : `Last ${limit} games`;
+    document.title = title;
+  }, [pid, puzzleTitle, limit]);
+
   const list1Items = useMemo(() => {
     return Object.values(games).map(
       ({pid: gamePid, gid, solved, startTime, time, chatters, v2, active, title}) => (
@@ -274,9 +278,6 @@ const Replays: React.FC = () => {
   return (
     <Stack direction="column" className="replays">
       <Nav v2 />
-      <Helmet>
-        <title>{pid ? `Replays ${pid}: ${puzzleTitle}` : `Last ${limit} games`}</title>
-      </Helmet>
       <div
         style={{
           paddingLeft: 30,

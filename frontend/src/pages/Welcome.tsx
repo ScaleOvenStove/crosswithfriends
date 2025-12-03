@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import classnames from 'classnames';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
 import {MdSearch} from 'react-icons/md';
 
 type DebouncedFunc<T extends (...args: any[]) => any> = {
@@ -227,6 +226,10 @@ const Welcome: React.FC<Props> = (props) => {
     setError(null);
   }, []);
 
+  useEffect(() => {
+    document.title = 'Cross with Friends';
+  }, []);
+
   const searchStyle = useMemo((): React.CSSProperties => {
     if (!mobile) return {flexGrow: 1};
     const color = colorAverage(BLUE, WHITE, colorMotion);
@@ -316,9 +319,6 @@ const Welcome: React.FC<Props> = (props) => {
       aria-label="Puzzle list"
       sx={{flex: 1}}
     >
-      <Helmet>
-        <title>Cross with Friends</title>
-      </Helmet>
       <nav className="welcome--nav" style={navStyle} aria-label="Main navigation">
         <Nav v2 mobile={mobile} textStyle={navTextStyle} linkStyle={navLinkStyle} divRef={navRef} />
       </nav>

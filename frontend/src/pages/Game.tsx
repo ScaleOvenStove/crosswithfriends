@@ -3,7 +3,6 @@ import nameGenerator from '@crosswithfriends/shared/lib/nameGenerator';
 import * as powerupLib from '@crosswithfriends/shared/lib/powerups';
 import {Box, Stack, IconButton, Alert, Snackbar} from '@mui/material';
 import React, {useState, useRef, useEffect, useMemo, useCallback} from 'react';
-import {Helmet} from 'react-helmet';
 import {MdChevronLeft} from 'react-icons/md';
 import {useParams} from 'react-router-dom';
 
@@ -417,6 +416,10 @@ const Game: React.FC = () => {
     return game.info.title;
   }, [gameHook.ready, game]);
 
+  useEffect(() => {
+    document.title = puzzleTitle;
+  }, [puzzleTitle]);
+
   // Event handlers
   const handleToggleChat = useCallback((): void => {
     if (mobile) {
@@ -765,9 +768,6 @@ const Game: React.FC = () => {
         minHeight: 0,
       }}
     >
-      <Helmet>
-        <title>{puzzleTitle}</title>
-      </Helmet>
       {renderContent()}
       <Snackbar
         open={!!error}

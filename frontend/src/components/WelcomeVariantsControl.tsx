@@ -3,19 +3,16 @@ import classNames from 'classnames';
 import React from 'react';
 import {Link} from 'react-router-dom';
 import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
-
-const swal = withReactContent(Swal);
 
 export const WelcomeVariantsControl: React.FC<{
   fencing?: boolean;
 }> = (props) => {
   const showFencingInfo = () => {
-    swal.fire({
+    Swal.fire({
       title: 'crosswithfriends.com/fencing',
       icon: 'info',
-      html: (
-        <div className="swal-text swal-text--no-margin">
+      html: `
+        <div class="swal-text swal-text--no-margin">
           <p>
             Fencing is a variant of Cross with Friends where you can race to complete a crossword against
             friends in real time.
@@ -24,7 +21,7 @@ export const WelcomeVariantsControl: React.FC<{
             Quickly fill in cells correctly before the other team to unlock more clues and explore the grid.
             <br />
             <br />
-            <span style={{fontSize: '75%', color: 'gray'}}>
+            <span style="font-size: 75%; color: gray;">
               Join the&nbsp;
               <a href="https://discord.gg/RmjCV8EZ73" target="_blank" rel="noreferrer">
                 community Discord
@@ -33,7 +30,7 @@ export const WelcomeVariantsControl: React.FC<{
             </span>
           </p>
         </div>
-      ),
+      `,
     });
   };
   return (

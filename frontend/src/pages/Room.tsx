@@ -2,9 +2,8 @@ import {initialRoomState, roomReducer} from '@crosswithfriends/shared/lib/reduce
 import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 import {Box} from '@mui/material';
 import React, {useEffect, useMemo, useState} from 'react';
-import {Helmet} from 'react-helmet';
 import {useParams} from 'react-router-dom';
-import {useUpdateEffect} from 'react-use';
+import {useUpdateEffect} from '../hooks/useUpdateEffect';
 
 import {useRoom} from '../hooks/useRoom';
 
@@ -71,9 +70,13 @@ const Room: React.FC = () => {
   };
   const currentTime = useTimer();
   const currentGame = roomState.games[0];
+
+  useEffect(() => {
+    document.title = `Room ${rid}`;
+  }, [rid]);
+
   return (
     <Box sx={{display: 'flex', height: '100%', flexDirection: 'column'}}>
-      <Helmet title={`Room ${rid}`} />
       <Box
         sx={{
           flex: 1,

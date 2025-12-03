@@ -48,6 +48,12 @@ export default defineConfig({
         find: '@lib',
         replacement: path.resolve(__dirname, '../shared/src/lib'),
       },
+      // Replace hoist-non-react-statics with our patched version
+      // This intercepts ALL uses, including transitive dependencies
+      {
+        find: 'hoist-non-react-statics',
+        replacement: path.resolve(__dirname, 'src/utils/hoist-non-react-statics-patched.ts'),
+      },
     ],
   },
   server: {
@@ -83,11 +89,8 @@ export default defineConfig({
             return 'socket-vendor';
           }
           // Heavy UI components - split into separate chunks
-          if (id.includes('node_modules/react-color')) {
-            return 'react-color';
-          }
-          if (id.includes('node_modules/react-confetti')) {
-            return 'react-confetti';
+          if (id.includes('node_modules/canvas-confetti')) {
+            return 'canvas-confetti';
           }
           if (id.includes('node_modules/sweetalert2')) {
             return 'sweetalert2';
@@ -96,7 +99,7 @@ export default defineConfig({
             return 'react-keyboard';
           }
           // Other UI libraries
-          if (id.includes('node_modules/react-flexview') || id.includes('node_modules/react-icons')) {
+          if (id.includes('node_modules/react-icons')) {
             return 'ui-vendor';
           }
           // Shared library

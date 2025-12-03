@@ -1,5 +1,5 @@
 import React from 'react';
-import {usePrevious} from 'react-use';
+import {usePrevious} from '../hooks/usePrevious';
 
 import {logger} from '../utils/logger';
 
