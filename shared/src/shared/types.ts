@@ -175,6 +175,7 @@ export interface CreateGameRequest {
 
 export interface GetGameResponse {
   gid: string;
+  pid: string;
   title: string;
   author: string;
   duration: number;

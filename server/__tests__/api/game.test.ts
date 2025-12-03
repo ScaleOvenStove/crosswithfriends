@@ -185,12 +185,13 @@ describe('Game API', () => {
       const body = JSON.parse(response.body);
       // Verify all required fields are present
       expect(body).toHaveProperty('gid');
+      expect(body).toHaveProperty('pid');
       expect(body).toHaveProperty('title');
       expect(body).toHaveProperty('author');
       expect(body).toHaveProperty('duration');
       expect(body).toHaveProperty('size');
       // Verify no extra fields
-      expect(Object.keys(body).length).toBe(5);
+      expect(Object.keys(body).length).toBe(6);
     });
 
     it('should return 404 when game not found', async () => {

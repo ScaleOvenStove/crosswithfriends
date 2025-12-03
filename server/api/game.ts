@@ -43,6 +43,7 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
 
       return {
         gid,
+        pid: gameState.pid,
         title: gameState.title,
         author: puzzleInfo?.author || 'Unknown',
         duration: gameState.time_taken_to_solve,
