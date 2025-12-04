@@ -115,7 +115,11 @@ const Compose = () => {
                     label="Width"
                     type="number"
                     value={width}
-                    onChange={(e) => setDimensions(parseInt(e.target.value) || 15, height)}
+                    onChange={(e) => {
+                      const parsed = parseInt(e.target.value);
+                      const validValue = isNaN(parsed) ? 15 : Math.max(5, Math.min(25, parsed));
+                      setDimensions(validValue, height);
+                    }}
                     inputProps={{ min: 5, max: 25 }}
                     fullWidth
                   />
@@ -123,7 +127,11 @@ const Compose = () => {
                     label="Height"
                     type="number"
                     value={height}
-                    onChange={(e) => setDimensions(width, parseInt(e.target.value) || 15)}
+                    onChange={(e) => {
+                      const parsed = parseInt(e.target.value);
+                      const validValue = isNaN(parsed) ? 15 : Math.max(5, Math.min(25, parsed));
+                      setDimensions(width, validValue);
+                    }}
                     inputProps={{ min: 5, max: 25 }}
                     fullWidth
                   />

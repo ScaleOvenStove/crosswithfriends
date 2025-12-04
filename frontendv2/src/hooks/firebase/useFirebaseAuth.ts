@@ -119,8 +119,9 @@ export const useFirebaseAuth = () => {
     try {
       setError(null);
       await authMethods.updateUserProfile(user, updates);
-      // Trigger re-render by updating state
-      setUser({ ...user });
+      // Reload user to get updated profile and preserve prototype
+      await user.reload();
+      setUser(user);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Profile update failed';
       setError(errorMessage);

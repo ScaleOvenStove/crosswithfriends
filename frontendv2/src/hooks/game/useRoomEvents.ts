@@ -53,12 +53,19 @@ export const useRoomEvents = ({
             const chatMessages = events.filter((e) => e.type === 'chat_message');
             setMessages(chatMessages);
 
-            // Extract current users
-            const joinEvents = events.filter((e) => e.type === 'user_join');
-            const leaveEvents = events.filter((e) => e.type === 'user_leave');
-            const users = joinEvents
-              .filter((join) => !leaveEvents.some((leave) => leave.uid === join.uid))
-              .map((join) => join.uid);
+            // Compute latest event per uid (sort by timestamp, keep latest)
+            const eventsByUid = new Map<string, RoomEvent>();
+            events.forEach((event) => {
+              const existing = eventsByUid.get(event.uid);
+              if (!existing || (event.timestamp && existing.timestamp && event.timestamp > existing.timestamp)) {
+                eventsByUid.set(event.uid, event);
+              }
+            });
+
+            // Build users list from uids whose latest event is user_join
+            const users = Array.from(eventsByUid.entries())
+              .filter(([_, event]) => event.type === 'user_join')
+              .map(([uid]) => uid);
             setRoomUsers(users);
           }
         });

@@ -34,6 +34,7 @@ const TabPanel = styled(Box)({
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
+  minHeight: 0, // Critical for flex scrolling
 });
 
 interface TabPanelProps {

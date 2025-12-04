@@ -26,15 +26,50 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: (key: string) => null,
-  setItem: (key: string, value: string) => {},
-  removeItem: (key: string) => {},
-  clear: () => {},
-  length: 0,
-  key: (index: number) => null,
+// Mock localStorage with stateful implementation
+const createLocalStorageMock = () => {
+  const storage = new Map<string, string>();
+
+  return {
+    getItem: (key: string): string | null => {
+      return storage.get(key) || null;
+    },
+    setItem: (key: string, value: string): void => {
+      storage.set(key, String(value));
+      // Update length property
+      Object.defineProperty(localStorageMock, 'length', {
+        value: storage.size,
+        writable: false,
+        configurable: true,
+      });
+    },
+    removeItem: (key: string): void => {
+      storage.delete(key);
+      // Update length property
+      Object.defineProperty(localStorageMock, 'length', {
+        value: storage.size,
+        writable: false,
+        configurable: true,
+      });
+    },
+    clear: (): void => {
+      storage.clear();
+      // Update length property
+      Object.defineProperty(localStorageMock, 'length', {
+        value: 0,
+        writable: false,
+        configurable: true,
+      });
+    },
+    length: 0,
+    key: (index: number): string | null => {
+      const keys = Array.from(storage.keys());
+      return keys[index] || null;
+    },
+  };
 };
+
+const localStorageMock = createLocalStorageMock();
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,

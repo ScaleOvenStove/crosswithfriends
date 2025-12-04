@@ -53,6 +53,10 @@ export const useGameEvents = ({
             setEventQueue(events);
           }
         });
+      } else {
+        setIsJoined(false);
+        const errorMessage = response.error || 'Failed to join game';
+        console.error('[useGameEvents]', errorMessage);
       }
     });
 

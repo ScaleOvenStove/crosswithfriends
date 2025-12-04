@@ -3,7 +3,7 @@
  * Provides consistent error categorization, display, and retry logic
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export interface ErrorState {
   message: string;
@@ -122,7 +122,7 @@ function categorizeError(error: string | Error): ErrorState {
  */
 export function useErrorHandler(): UseErrorHandlerReturn {
   const [error, setErrorState] = useState<ErrorState | null>(null);
-  const [retryAction, setRetryAction] = useState<(() => void) | undefined>();
+  const retryActionRef = useRef<(() => void) | undefined>();
 
   const setError = useCallback((error: string | Error | null) => {
     if (error === null) {
@@ -135,7 +135,11 @@ export function useErrorHandler(): UseErrorHandlerReturn {
 
   const clearError = useCallback(() => {
     setErrorState(null);
-    setRetryAction(undefined);
+    retryActionRef.current = undefined;
+  }, []);
+
+  const setRetryAction = useCallback((action: (() => void) | undefined) => {
+    retryActionRef.current = action;
   }, []);
 
   const getErrorTitle = useCallback((): string => {
@@ -201,7 +205,7 @@ export function useErrorHandler(): UseErrorHandlerReturn {
     hasError: error !== null,
     setError,
     clearError,
-    retryAction,
+    retryAction: retryActionRef.current,
     setRetryAction,
 
     // Type checkers

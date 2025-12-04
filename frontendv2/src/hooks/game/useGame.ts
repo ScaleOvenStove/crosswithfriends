@@ -108,16 +108,21 @@ export const useGame = (gameId: string | undefined) => {
 
         console.log('[Game] Loaded puzzle successfully');
         console.log('[Game] Puzzle data keys:', Object.keys(puzzleData));
-        console.log('[Game] FULL PUZZLE DATA:', JSON.stringify(puzzleData, null, 2));
-        console.log('[Game] Puzzle data structure:', {
-          hasDimensions: !!puzzleData.dimensions,
-          hasSolution: !!puzzleData.solution,
-          hasPuzzle: !!puzzleData.puzzle,
-          hasClues: !!puzzleData.clues,
-          dimensions: puzzleData.dimensions,
-          solutionType: typeof puzzleData.solution,
-          puzzleType: typeof puzzleData.puzzle,
-        });
+        if (process.env.NODE_ENV === 'development') {
+          // Sanitize puzzle data for logging - omit solution
+          const sanitizedPuzzle = { ...puzzleData };
+          delete sanitizedPuzzle.solution;
+          console.log('[Game] Puzzle data structure:', {
+            hasDimensions: !!puzzleData.dimensions,
+            hasSolution: !!puzzleData.solution,
+            hasPuzzle: !!puzzleData.puzzle,
+            hasClues: !!puzzleData.clues,
+            dimensions: puzzleData.dimensions,
+            solutionType: typeof puzzleData.solution,
+            puzzleType: typeof puzzleData.puzzle,
+            sanitizedData: sanitizedPuzzle,
+          });
+        }
 
         // Transform the ipuz puzzle data into our Cell format
         // Cast to PuzzleJson as the generated type is compatible at runtime

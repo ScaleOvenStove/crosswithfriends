@@ -34,11 +34,13 @@ const GameContent = styled(Container)(({ theme }) => ({
   padding: theme.spacing(2),
   overflow: 'auto',
   maxWidth: '2000px !important',
+  minHeight: 0, // Critical for flex scrolling
   [theme.breakpoints.up('md')]: {
     flexDirection: 'row',
     gap: theme.spacing(3),
     padding: theme.spacing(3),
-    overflow: 'hidden',
+    overflow: 'hidden', // Individual sections scroll, not the container
+    minHeight: 0,
   },
 }));
 
@@ -48,7 +50,8 @@ const LeftSection = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   gap: theme.spacing(2),
   minWidth: 0, // Allow flexbox to shrink
-  overflow: 'hidden', // Prevent overflow
+  minHeight: 0, // Critical for flex scrolling
+  overflow: 'hidden', // Individual sections scroll, not this container
   [theme.breakpoints.up('md')]: {
     flexDirection: 'column',
   },
@@ -69,10 +72,11 @@ const GridSection = styled(Box)(({ theme }) => ({
 const ClueSection = styled(Box)(({ theme }) => ({
   flex: 1,
   minWidth: 0,
+  minHeight: 0, // Critical for flex scrolling
   maxWidth: '100%',
   display: 'flex',
   flexDirection: 'column',
-  overflow: 'hidden',
+  overflow: 'hidden', // CluePanel handles its own scrolling
   [theme.breakpoints.up('sm')]: {
     minWidth: 280,
     maxWidth: 400,
@@ -88,6 +92,7 @@ const GridAndCluesContainer = styled(Box)(({ theme }) => ({
   gap: theme.spacing(2),
   flex: 1,
   minWidth: 0,
+  minHeight: 0, // Critical for flex scrolling
   [theme.breakpoints.up('sm')]: {
     flexDirection: 'row',
     gap: theme.spacing(2),

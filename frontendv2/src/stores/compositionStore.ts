@@ -89,7 +89,7 @@ export const useCompositionStore = create<CompositionStore>()(
           isDirty: true,
         }),
 
-      setCells: (cells) => set({ cells }),
+      setCells: (cells) => set({ cells, isDirty: true }),
 
       updateCell: (row, col, updates) =>
         set((state) => {

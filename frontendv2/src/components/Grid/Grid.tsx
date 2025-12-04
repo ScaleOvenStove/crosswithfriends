@@ -78,13 +78,8 @@ const useHighlightedCells = (
     if (selectedDirection === 'across') {
       // Find start of word
       let startCol = col;
-      const prevCell = currentRow[startCol - 1];
-      while (startCol > 0 && prevCell && !prevCell.isBlack) {
+      while (startCol > 0 && currentRow[startCol - 1] && !currentRow[startCol - 1].isBlack) {
         startCol--;
-        if (startCol > 0) {
-          const nextPrevCell = currentRow[startCol - 1];
-          if (!nextPrevCell) break;
-        }
       }
 
       // Highlight entire word

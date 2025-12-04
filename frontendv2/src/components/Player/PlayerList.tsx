@@ -95,7 +95,7 @@ export const PlayerList = ({ users, currentUserId, compact = false }: PlayerList
             {activeUsers.length} {activeUsers.length === 1 ? 'player' : 'players'}
           </Typography>
           <Divider orientation="vertical" flexItem />
-          {sortedUsers.map((user) => (
+          {activeUsers.map((user) => (
             <PlayerAvatar key={user.id} user={user} size="small" />
           ))}
         </CompactPlayerList>

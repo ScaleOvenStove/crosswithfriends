@@ -9,7 +9,7 @@
  * - Auto-focus
  */
 
-import { useState, KeyboardEvent } from 'react';
+import { useState } from 'react';
 import { Box, TextField, IconButton, styled } from '@mui/material';
 import { Send as SendIcon } from '@mui/icons-material';
 
@@ -47,7 +47,7 @@ export const ChatInput = ({
     }
   };
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -62,7 +62,7 @@ export const ChatInput = ({
         placeholder={placeholder}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
         inputProps={{ maxLength }}
         variant="outlined"

@@ -57,7 +57,14 @@ const CluesEditor = ({ across, down, onUpdateClue }: CluesEditorProps) => {
                 <span className="clue-answer">{clue.answer || '(empty)'}</span>
               </div>
               <div className="clue-input-wrapper">
+                <label
+                  htmlFor={`clue-${activeDirection}-${clue.number}`}
+                  className="visually-hidden"
+                >
+                  Clue for {clue.number} {activeDirection}
+                </label>
                 <textarea
+                  id={`clue-${activeDirection}-${clue.number}`}
                   className="clue-input"
                   value={clue.clue}
                   onChange={(e) => handleClueChange(clue.number, e.target.value)}
@@ -181,6 +188,18 @@ const CluesEditor = ({ across, down, onUpdateClue }: CluesEditorProps) => {
         .text-muted {
           color: #999;
           font-size: 0.9rem;
+        }
+
+        .visually-hidden {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border-width: 0;
         }
       `}</style>
     </div>

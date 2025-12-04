@@ -71,8 +71,9 @@ export const FileUploader = ({
    */
   const validateFile = (file: File): string | null => {
     // Check file type
-    const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!acceptedTypes.includes(fileExt)) {
+    const lastDotIndex = file.name.lastIndexOf('.');
+    const fileExt = lastDotIndex > -1 ? '.' + file.name.substring(lastDotIndex + 1).toLowerCase() : '';
+    if (!fileExt || !acceptedTypes.includes(fileExt)) {
       return `Invalid file type. Accepted types: ${acceptedTypes.join(', ')}`;
     }
 

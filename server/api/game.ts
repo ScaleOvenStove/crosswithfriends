@@ -142,7 +142,7 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
       }
 
       const createEvent = res.rows[0].event_payload;
-      const pid = (createEvent.params as {pid?: string}).pid;
+      const pid = createEvent?.params?.pid;
 
       if (!pid) {
         throw createHttpError('Puzzle ID not found in game create event', 500);

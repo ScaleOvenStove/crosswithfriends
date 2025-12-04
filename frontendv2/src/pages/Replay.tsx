@@ -106,25 +106,6 @@ const Replay = () => {
     []
   );
 
-  // Reset grid when restarting replay
-  useEffect(() => {
-    if (currentIndex === 0) {
-      const emptyCells: Cell[][] = Array(gridSize.height)
-        .fill(null)
-        .map(() =>
-          Array(gridSize.width)
-            .fill(null)
-            .map(() => ({
-              value: '',
-              isPencil: false,
-              isBlack: false,
-              hasCircle: false,
-            }))
-        );
-      setCells(emptyCells);
-    }
-  }, [currentIndex, gridSize]);
-
   // Replay playback hook
   const {
     currentIndex,
@@ -144,6 +125,25 @@ const Replay = () => {
     autoPlay: false,
     initialSpeed: 1,
   });
+
+  // Reset grid when restarting replay
+  useEffect(() => {
+    if (currentIndex === 0) {
+      const emptyCells: Cell[][] = Array(gridSize.height)
+        .fill(null)
+        .map(() =>
+          Array(gridSize.width)
+            .fill(null)
+            .map(() => ({
+              value: '',
+              isPencil: false,
+              isBlack: false,
+              hasCircle: false,
+            }))
+        );
+      setCells(emptyCells);
+    }
+  }, [currentIndex, gridSize]);
 
   if (!gid) {
     return (

@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * Game Toolbar Component
  * Implements REQ-1.3: Game Tools

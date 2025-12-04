@@ -89,7 +89,7 @@ export const useStats = () => {
 
   // Group by puzzle size
   const statsBySize = useMemo(() => {
-    return stats.sort((a, b) => a.size.localeCompare(b.size));
+    return [...stats].sort((a, b) => a.size.localeCompare(b.size));
   }, [stats]);
 
   return {

@@ -158,6 +158,25 @@ export class PuzzleRepository implements IPuzzleRepository {
         ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
         : [limit, offset, ...parametersForTitleAuthorFilter];
 
+    // Execute count query with same filters to get total
+    const countQueryParams = sizeFilterArray.length > 0
+      ? [sizeFilterArray, ...parametersForTitleAuthorFilter]
+      : [...parametersForTitleAuthorFilter];
+    
+    const countResult = await this.pool.query(
+      `
+      SELECT COUNT(*) as total
+      FROM puzzles
+      WHERE is_public = true
+      ${sizeFilterCondition}
+      ${parameterizedTileAuthorFilter}
+    `,
+      countQueryParams
+    );
+
+    const total = parseInt(countResult.rows[0]?.total || '0', 10);
+
+    // Execute paginated query
     const {rows} = await this.pool.query(
       `
       SELECT pid, uploaded_at, content, times_solved
@@ -180,10 +199,9 @@ export class PuzzleRepository implements IPuzzleRepository {
     const ms = Date.now() - startTime;
     logger.debug(`listPuzzles (${JSON.stringify(filter)}, ${limit}, ${offset}) took ${ms}ms`);
 
-    // For now, return puzzles length as total (we don't have a separate count query)
     return {
       puzzles,
-      total: puzzles.length,
+      total,
     };
   }
 

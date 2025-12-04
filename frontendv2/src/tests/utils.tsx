@@ -19,12 +19,15 @@ const createTestQueryClient = () =>
     },
   });
 
+// Create a single QueryClient instance at module scope for reuse
+const defaultQueryClient = createTestQueryClient();
+
 interface AllTheProvidersProps {
   children: React.ReactNode;
+  queryClient?: QueryClient;
 }
 
-const AllTheProviders = ({ children }: AllTheProvidersProps) => {
-  const queryClient = createTestQueryClient();
+const AllTheProviders = ({ children, queryClient = defaultQueryClient }: AllTheProvidersProps) => {
 
   return (
     <QueryClientProvider client={queryClient}>

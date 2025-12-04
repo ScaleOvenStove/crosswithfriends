@@ -22,6 +22,7 @@ interface CellOwnership {
 interface BattleModeOptions {
   gameId: string;
   mode: 'battle' | 'fencing';
+  // eslint-disable-next-line no-unused-vars
   onGameComplete?: (winner: Player) => void;
 }
 
@@ -62,16 +63,18 @@ export const useBattleMode = ({ gameId, mode, onGameComplete }: BattleModeOption
       setPlayers((prev) => prev.filter((p) => p.id !== data.playerId));
     };
 
-    socket.on('game_event', (event) => {
+    const handlePlayerEvents = (event: { type: string; [key: string]: unknown }) => {
       if (event.type === 'player_join') {
         handlePlayerJoin(event as unknown as { player: Player });
       } else if (event.type === 'player_leave') {
         handlePlayerLeave(event as unknown as { playerId: string });
       }
-    });
+    };
+
+    socket.on('game_event', handlePlayerEvents);
 
     return () => {
-      socket.off('game_event');
+      socket.off('game_event', handlePlayerEvents);
     };
   }, [socket]);
 
@@ -119,20 +122,27 @@ export const useBattleMode = ({ gameId, mode, onGameComplete }: BattleModeOption
 
     const handleGameComplete = (event: { type: string; playerId: string; time: number }) => {
       if (event.type === 'puzzle_complete') {
-        setPlayers((prev) =>
-          prev.map((player) =>
-            player.id === event.playerId ? { ...player, isFinished: true } : player
-          )
-        );
-
         // In battle mode, first to complete wins
         if (mode === 'battle' && !winner) {
-          const completingPlayer = players.find((p) => p.id === event.playerId);
-          if (completingPlayer) {
-            setWinner(completingPlayer);
-            setIsGameActive(false);
-            onGameComplete?.(completingPlayer);
-          }
+          setPlayers((prev) => {
+            const completingPlayer = prev.find((p) => p.id === event.playerId);
+            if (completingPlayer) {
+              setWinner(completingPlayer);
+              setIsGameActive(false);
+              onGameComplete?.(completingPlayer);
+            }
+            
+            return prev.map((player) =>
+              player.id === event.playerId ? { ...player, isFinished: true } : player
+            );
+          });
+        } else {
+          // For non-battle mode or if winner already set, just update the state
+          setPlayers((prev) =>
+            prev.map((player) =>
+              player.id === event.playerId ? { ...player, isFinished: true } : player
+            )
+          );
         }
       }
     };
@@ -142,7 +152,7 @@ export const useBattleMode = ({ gameId, mode, onGameComplete }: BattleModeOption
     return () => {
       socket.off('game_event', handleGameComplete);
     };
-  }, [socket, mode, winner, players, onGameComplete]);
+  }, [socket, mode, winner, onGameComplete]);
 
   // Claim cell (for fencing mode)
   const claimCell = useCallback(

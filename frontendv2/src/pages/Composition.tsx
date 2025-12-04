@@ -3,6 +3,7 @@
  * Implements REQ-3.3: Puzzle Composition
  */
 
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Nav from '@components/common/Nav';
 import { useCompositionStore } from '@stores/compositionStore';
@@ -25,7 +26,16 @@ const Composition = () => {
     setMode,
     updateClue,
     regenerateClues,
+    setCompositionId,
   } = useCompositionStore();
+
+  // Load composition when cid changes
+  useEffect(() => {
+    if (cid) {
+      setCompositionId(cid);
+      // TODO: Add API call to load composition data if endpoint exists
+    }
+  }, [cid, setCompositionId]);
 
   const handleCellClick = (row: number, col: number) => {
     setSelectedCell(row, col);

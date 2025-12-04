@@ -35,6 +35,7 @@ export const useLatency = ({
     samples: [],
   });
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const isMonitoringRef = useRef(false);
   const intervalRef = useRef<number | null>(null);
   const lastPingTimeRef = useRef<number>(0);
 
@@ -102,8 +103,9 @@ export const useLatency = ({
 
   // Start monitoring
   const startMonitoring = useCallback(() => {
-    if (isMonitoring || !socket || !isConnected) return;
+    if (isMonitoringRef.current || !socket || !isConnected) return;
 
+    isMonitoringRef.current = true;
     setIsMonitoring(true);
 
     // Send initial ping immediately
@@ -113,19 +115,20 @@ export const useLatency = ({
     intervalRef.current = window.setInterval(() => {
       sendPing();
     }, interval);
-  }, [isMonitoring, socket, isConnected, sendPing, interval]);
+  }, [socket, isConnected, sendPing, interval]);
 
   // Stop monitoring
   const stopMonitoring = useCallback(() => {
-    if (!isMonitoring) return;
+    if (!isMonitoringRef.current) return;
 
+    isMonitoringRef.current = false;
     setIsMonitoring(false);
 
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  }, [isMonitoring]);
+  }, []);
 
   // Auto-start monitoring when enabled and connected
   useEffect(() => {

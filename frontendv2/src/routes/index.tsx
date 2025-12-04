@@ -5,7 +5,7 @@
  */
 
 import type { RouteObject } from 'react-router-dom';
-import { lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 
 // Lazy load error pages
 const NotFound404 = lazy(() => import('@pages/errors/NotFound404'));
@@ -16,7 +16,11 @@ const ServerError500 = lazy(() => import('@pages/errors/ServerError500'));
  */
 const RootErrorElement = () => {
   // For route-level errors, show the 500 error page
-  return <ServerError500 />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ServerError500 />
+    </Suspense>
+  );
 };
 
 /**
@@ -181,7 +185,11 @@ export function getRoutes(): RouteObject[] {
    */
   const notFoundRoute: RouteObject = {
     path: '*',
-    element: <NotFound404 />,
+    element: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <NotFound404 />
+      </Suspense>
+    ),
   };
 
   return [...publicRoutes, ...betaRoutes, notFoundRoute];
