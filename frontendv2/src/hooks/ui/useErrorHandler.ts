@@ -193,10 +193,7 @@ export function useErrorHandler(): UseErrorHandlerReturn {
           'Try a different value',
         ];
       default:
-        return [
-          'Try refreshing the page',
-          'Contact support if the problem persists',
-        ];
+        return ['Try refreshing the page', 'Contact support if the problem persists'];
     }
   }, [error]);
 

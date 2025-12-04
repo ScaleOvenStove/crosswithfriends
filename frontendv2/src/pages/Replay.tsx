@@ -32,7 +32,10 @@ const Replay = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gameInfo, setGameInfo] = useState<{ title?: string; author?: string } | null>(null);
-  const [gridSize, setGridSize] = useState<{ width: number; height: number }>({ width: 15, height: 15 });
+  const [gridSize, setGridSize] = useState<{ width: number; height: number }>({
+    width: 15,
+    height: 15,
+  });
   const [cells, setCells] = useState<Cell[][]>([]);
 
   // Fetch game events via socket
@@ -85,26 +88,27 @@ const Replay = () => {
   }, [gridSize]);
 
   // Event application callback - rebuilds grid state from events
-  const handleEventApply = useCallback(
-    (event: GameEvent, index: number) => {
-      if (event.type === 'updateCell' && typeof event.row === 'number' && typeof event.col === 'number') {
-        setCells((prevCells) => {
-          const newCells = prevCells.map((row) => row.map((cell) => ({ ...cell })));
+  const handleEventApply = useCallback((event: GameEvent, index: number) => {
+    if (
+      event.type === 'updateCell' &&
+      typeof event.row === 'number' &&
+      typeof event.col === 'number'
+    ) {
+      setCells((prevCells) => {
+        const newCells = prevCells.map((row) => row.map((cell) => ({ ...cell })));
 
-          if (newCells[event.row!] && newCells[event.row!][event.col!]) {
-            newCells[event.row!][event.col!] = {
-              ...newCells[event.row!][event.col!],
-              value: event.value || '',
-              isPencil: event.isPencil === true,
-            };
-          }
+        if (newCells[event.row!] && newCells[event.row!][event.col!]) {
+          newCells[event.row!][event.col!] = {
+            ...newCells[event.row!][event.col!],
+            value: event.value || '',
+            isPencil: event.isPencil === true,
+          };
+        }
 
-          return newCells;
-        });
-      }
-    },
-    []
-  );
+        return newCells;
+      });
+    }
+  }, []);
 
   // Replay playback hook
   const {
@@ -216,9 +220,7 @@ const Replay = () => {
                 <span>
                   Event {currentIndex + 1} of {totalEvents}
                 </span>
-                {currentEvent && (
-                  <span className="event-type-badge">{currentEvent.type}</span>
-                )}
+                {currentEvent && <span className="event-type-badge">{currentEvent.type}</span>}
               </div>
               {cells.length > 0 ? (
                 <Grid

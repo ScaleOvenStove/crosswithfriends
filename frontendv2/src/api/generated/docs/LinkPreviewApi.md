@@ -2,12 +2,10 @@
 
 All URIs are relative to *https://www.crosswithfriends.com/api*
 
-| Method | HTTP request | Description |
-|------------- | ------------- | -------------|
+| Method                                                 | HTTP request           | Description      |
+| ------------------------------------------------------ | ---------------------- | ---------------- |
 | [**getLinkPreview**](LinkPreviewApi.md#getlinkpreview) | **GET** /link_preview/ | Get link preview |
-| [**getOembed**](LinkPreviewApi.md#getoembed) | **GET** /oembed | Get oEmbed data |
-
-
+| [**getOembed**](LinkPreviewApi.md#getoembed)           | **GET** /oembed        | Get oEmbed data  |
 
 ## getLinkPreview
 
@@ -20,14 +18,11 @@ Generates Open Graph metadata for social media link previews
 ### Example
 
 ```ts
-import {
-  Configuration,
-  LinkPreviewApi,
-} from '';
+import { Configuration, LinkPreviewApi } from '';
 import type { GetLinkPreviewRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new LinkPreviewApi();
 
   const body = {
@@ -49,9 +44,8 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
+| Name    | Type     | Description                 | Notes                     |
+| ------- | -------- | --------------------------- | ------------------------- |
 | **url** | `string` | URL to generate preview for | [Defaults to `undefined`] |
 
 ### Return type
@@ -67,17 +61,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | HTML with Open Graph metadata |  -  |
-| **302** | Redirect for non-bot user agents |  -  |
-| **400** | Default Response |  -  |
-| **404** | Default Response |  -  |
+
+| Status code | Description                      | Response headers |
+| ----------- | -------------------------------- | ---------------- |
+| **200**     | HTML with Open Graph metadata    | -                |
+| **302**     | Redirect for non-bot user agents | -                |
+| **400**     | Default Response                 | -                |
+| **404**     | Default Response                 | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
 
 ## getOembed
 
@@ -90,14 +83,11 @@ Returns oEmbed format metadata for link previews
 ### Example
 
 ```ts
-import {
-  Configuration,
-  LinkPreviewApi,
-} from '';
+import { Configuration, LinkPreviewApi } from '';
 import type { GetOembedRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new LinkPreviewApi();
 
   const body = {
@@ -119,9 +109,8 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
+| Name       | Type     | Description | Notes                     |
+| ---------- | -------- | ----------- | ------------------------- |
 | **author** | `string` | Author name | [Defaults to `undefined`] |
 
 ### Return type
@@ -137,11 +126,10 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-

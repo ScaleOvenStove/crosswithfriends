@@ -142,7 +142,7 @@ export const Grid = ({
     const map = new Map<string, Cursor[]>();
     const now = Date.now();
     const CURSOR_TIMEOUT = 5000; // 5 seconds
-    
+
     cursors
       .filter((cursor) => {
         // Filter out current user's cursor and expired cursors

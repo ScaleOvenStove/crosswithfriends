@@ -2,12 +2,10 @@
 
 All URIs are relative to *https://www.crosswithfriends.com/api*
 
-| Method | HTTP request | Description |
-|------------- | ------------- | -------------|
-| [**getNewGameId**](CountersApi.md#getnewgameid) | **POST** /counters/gid | Increment and get a new game ID |
+| Method                                              | HTTP request           | Description                       |
+| --------------------------------------------------- | ---------------------- | --------------------------------- |
+| [**getNewGameId**](CountersApi.md#getnewgameid)     | **POST** /counters/gid | Increment and get a new game ID   |
 | [**getNewPuzzleId**](CountersApi.md#getnewpuzzleid) | **POST** /counters/pid | Increment and get a new puzzle ID |
-
-
 
 ## getNewGameId
 
@@ -20,14 +18,11 @@ Increments the game ID counter and returns the new game ID
 ### Example
 
 ```ts
-import {
-  Configuration,
-  CountersApi,
-} from '';
+import { Configuration, CountersApi } from '';
 import type { GetNewGameIdRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new CountersApi();
 
   try {
@@ -59,15 +54,14 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
+| **500**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
 
 ## getNewPuzzleId
 
@@ -80,14 +74,11 @@ Increments the puzzle ID counter and returns the new puzzle ID
 ### Example
 
 ```ts
-import {
-  Configuration,
-  CountersApi,
-} from '';
+import { Configuration, CountersApi } from '';
 import type { GetNewPuzzleIdRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new CountersApi();
 
   try {
@@ -119,12 +110,11 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
+| **500**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-

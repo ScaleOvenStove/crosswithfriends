@@ -2,11 +2,9 @@
 
 All URIs are relative to *https://www.crosswithfriends.com/api*
 
-| Method | HTTP request | Description |
-|------------- | ------------- | -------------|
+| Method                                  | HTTP request    | Description  |
+| --------------------------------------- | --------------- | ------------ |
 | [**getHealth**](HealthApi.md#gethealth) | **GET** /health | Health check |
-
-
 
 ## getHealth
 
@@ -19,14 +17,11 @@ Health check endpoint for Docker and monitoring
 ### Example
 
 ```ts
-import {
-  Configuration,
-  HealthApi,
-} from '';
+import { Configuration, HealthApi } from '';
 import type { GetHealthRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new HealthApi();
 
   try {
@@ -58,11 +53,10 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-

@@ -156,9 +156,10 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
                 const eventUserId = event.params.id || event.user || '';
                 // Look up user info from gameStore
                 const senderUser = users.find((u) => u.id === eventUserId);
-                const senderUserName = senderUser?.displayName || event.params.sender || event.user || 'Unknown';
+                const senderUserName =
+                  senderUser?.displayName || event.params.sender || event.user || 'Unknown';
                 const senderUserColor = senderUser?.color || '#999';
-                
+
                 const chatMessage: ChatMessageData = {
                   id: `${eventUserId}-${event.timestamp || Date.now()}`,
                   userId: eventUserId,
@@ -210,12 +211,13 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
         const eventTimestamp = event.timestamp || Date.now();
         const eventUserId = event.params.id || event.user || '';
         const messageId = `${eventUserId}-${eventTimestamp}`;
-        
+
         // Look up user info from gameStore
         const senderUser = users.find((u) => u.id === eventUserId);
-        const senderUserName = senderUser?.displayName || event.params.sender || event.user || 'Unknown';
+        const senderUserName =
+          senderUser?.displayName || event.params.sender || event.user || 'Unknown';
         const senderUserColor = senderUser?.color || '#999';
-        
+
         setMessages((prev) => {
           // Check for duplicates by ID
           if (prev.some((msg) => msg.id === messageId)) {
@@ -226,12 +228,14 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
           // Also check for duplicates by content and user (in case timestamps differ slightly)
           // This handles the case where optimistic update has slightly different timestamp
           // Only check for duplicates if this is from the current user (optimistic update)
-          const isDuplicate = eventUserId === userId && prev.some(
-            (msg) =>
-              msg.userId === eventUserId &&
-              msg.message === event.params.message &&
-              Math.abs(msg.timestamp - eventTimestamp) < 1000 // Within 1 second
-          );
+          const isDuplicate =
+            eventUserId === userId &&
+            prev.some(
+              (msg) =>
+                msg.userId === eventUserId &&
+                msg.message === event.params.message &&
+                Math.abs(msg.timestamp - eventTimestamp) < 1000 // Within 1 second
+            );
 
           if (isDuplicate) {
             console.log('[Chat] Duplicate message detected (by content), skipping');

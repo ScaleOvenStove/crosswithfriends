@@ -37,6 +37,7 @@ export const useGameEvents = ({
 }: UseGameEventsOptions) => {
   const { socket, isConnected } = useSocket();
   const [isJoined, setIsJoined] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [eventQueue, setEventQueue] = useState<GameEvent[]>([]);
 
   // Join game room
@@ -46,6 +47,7 @@ export const useGameEvents = ({
     socket.emit('join_game', gameId, (response: { success?: boolean; error?: string }) => {
       if (response.success) {
         setIsJoined(true);
+        setJoinError(null);
 
         // Sync all game events on join
         socket.emit('sync_all_game_events', gameId, (events: GameEvent[]) => {
@@ -56,6 +58,7 @@ export const useGameEvents = ({
       } else {
         setIsJoined(false);
         const errorMessage = response.error || 'Failed to join game';
+        setJoinError(errorMessage);
         console.error('[useGameEvents]', errorMessage);
       }
     });
@@ -63,6 +66,7 @@ export const useGameEvents = ({
     return () => {
       socket.emit('leave_game', gameId);
       setIsJoined(false);
+      setJoinError(null);
     };
   }, [socket, isConnected, gameId, enabled]);
 
@@ -184,6 +188,7 @@ export const useGameEvents = ({
 
   return {
     isJoined,
+    joinError,
     events: eventQueue,
     emitGameEvent,
     emitCellFill,

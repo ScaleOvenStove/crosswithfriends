@@ -35,7 +35,7 @@ interface ThemeProviderProps {
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   const { darkMode } = useUserStore();
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-  
+
   // Determine effective theme mode
   const effectiveMode = useMemo(() => {
     if (darkMode === 'system') {
@@ -79,4 +79,3 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
     </ThemeContext.Provider>
   );
 };
-

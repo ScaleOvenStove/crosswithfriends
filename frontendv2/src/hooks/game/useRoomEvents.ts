@@ -53,18 +53,44 @@ export const useRoomEvents = ({
             const chatMessages = events.filter((e) => e.type === 'chat_message');
             setMessages(chatMessages);
 
-            // Compute latest event per uid (sort by timestamp, keep latest)
-            const eventsByUid = new Map<string, RoomEvent>();
+            // Compute latest join and leave events per uid
+            const latestJoinByUid = new Map<string, RoomEvent>();
+            const latestLeaveByUid = new Map<string, RoomEvent>();
             events.forEach((event) => {
-              const existing = eventsByUid.get(event.uid);
-              if (!existing || (event.timestamp && existing.timestamp && event.timestamp > existing.timestamp)) {
-                eventsByUid.set(event.uid, event);
+              if (event.type === 'user_join') {
+                const existing = latestJoinByUid.get(event.uid);
+                if (
+                  !existing ||
+                  (Number.isFinite(event.timestamp) &&
+                    Number.isFinite(existing.timestamp) &&
+                    event.timestamp > existing.timestamp)
+                ) {
+                  latestJoinByUid.set(event.uid, event);
+                }
+              } else if (event.type === 'user_leave') {
+                const existing = latestLeaveByUid.get(event.uid);
+                if (
+                  !existing ||
+                  (Number.isFinite(event.timestamp) &&
+                    Number.isFinite(existing.timestamp) &&
+                    event.timestamp > existing.timestamp)
+                ) {
+                  latestLeaveByUid.set(event.uid, event);
+                }
               }
             });
 
-            // Build users list from uids whose latest event is user_join
-            const users = Array.from(eventsByUid.entries())
-              .filter(([_, event]) => event.type === 'user_join')
+            // Build users list from uids where latest join > latest leave (or no leave)
+            const users = Array.from(latestJoinByUid.entries())
+              .filter(([uid, joinEvent]) => {
+                const leaveEvent = latestLeaveByUid.get(uid);
+                return (
+                  !leaveEvent ||
+                  (Number.isFinite(joinEvent.timestamp) &&
+                    Number.isFinite(leaveEvent.timestamp) &&
+                    joinEvent.timestamp > leaveEvent.timestamp)
+                );
+              })
               .map(([uid]) => uid);
             setRoomUsers(users);
           }

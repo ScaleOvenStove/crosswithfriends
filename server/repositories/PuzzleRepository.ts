@@ -141,6 +141,18 @@ export class PuzzleRepository implements IPuzzleRepository {
       )
       .join('\n');
 
+    // Build count-specific title/author filter with correct parameter indices
+    const countParamOffset = sizeFilterArray.length > 0 ? 2 : 1;
+    const countTitleAuthorFilter = parametersForTitleAuthorFilter
+      .map(
+        (_s, idx) =>
+          `AND (
+          (COALESCE(content ->> 'title', content -> 'info' ->> 'title', '') || ' ' ||
+           COALESCE(content ->> 'author', content -> 'info' ->> 'author', '')) ILIKE $${idx + countParamOffset}
+        )`
+      )
+      .join('\n');
+
     const sizeFilterCondition =
       sizeFilterArray.length > 0
         ? `AND (
@@ -159,17 +171,18 @@ export class PuzzleRepository implements IPuzzleRepository {
         : [limit, offset, ...parametersForTitleAuthorFilter];
 
     // Execute count query with same filters to get total
-    const countQueryParams = sizeFilterArray.length > 0
-      ? [sizeFilterArray, ...parametersForTitleAuthorFilter]
-      : [...parametersForTitleAuthorFilter];
-    
+    const countQueryParams =
+      sizeFilterArray.length > 0
+        ? [sizeFilterArray, ...parametersForTitleAuthorFilter]
+        : [...parametersForTitleAuthorFilter];
+
     const countResult = await this.pool.query(
       `
       SELECT COUNT(*) as total
       FROM puzzles
       WHERE is_public = true
       ${sizeFilterCondition}
-      ${parameterizedTileAuthorFilter}
+      ${countTitleAuthorFilter}
     `,
       countQueryParams
     );

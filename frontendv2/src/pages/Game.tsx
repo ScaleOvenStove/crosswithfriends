@@ -222,15 +222,7 @@ const Game = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [
-    isNewGame,
-    gameId,
-    isConnected,
-    isLoading,
-    cells.length,
-    currentUser,
-    sendChatMessage,
-  ]);
+  }, [isNewGame, gameId, isConnected, isLoading, cells.length, currentUser, sendChatMessage]);
 
   // Handle clue click - navigate to clue in grid
   const handleClueClick = useCallback(

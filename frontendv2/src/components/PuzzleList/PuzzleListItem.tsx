@@ -34,7 +34,7 @@ const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
     try {
       // Get a new game ID using the generated SDK
       const gidResponse = await countersApi.getNewGameId();
-      
+
       // Create the game using the generated SDK
       const result = await gamesApi.createGame({
         gid: gidResponse.gid,

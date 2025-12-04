@@ -25,9 +25,7 @@ const ClueNumber = styled('span')<{ isSelected?: boolean }>(({ theme, isSelected
   marginRight: theme.spacing(1),
   minWidth: '2rem',
   display: 'inline-block',
-  color: isSelected && theme.palette.mode === 'dark' 
-    ? '#000000' 
-    : theme.palette.primary.main,
+  color: isSelected && theme.palette.mode === 'dark' ? '#000000' : theme.palette.primary.main,
 }));
 
 const CompletionChip = styled(Chip)(({ theme }) => ({
@@ -75,10 +73,7 @@ export const ClueItem = memo<ClueItemProps>(
         <ListItemText
           primary={
             <Box display="flex" alignItems="center" gap={1}>
-              <ClueNumber 
-                aria-label={`Clue number ${clue.number}`}
-                isSelected={isSelected}
-              >
+              <ClueNumber aria-label={`Clue number ${clue.number}`} isSelected={isSelected}>
                 {clue.number}
               </ClueNumber>
               <span>{clue.clue}</span>

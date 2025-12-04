@@ -199,20 +199,22 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | any): {
     // Handle both tuple and object formats
     let number: string;
     let text: string;
-    
+
     if (Array.isArray(clue)) {
       [number, text] = clue;
     } else {
       number = clue.number;
       text = clue.clue;
-      
+
       // Detect and fix swapped fields: number should be numeric, clue should not be
       const numberIsNumeric = /^\d+$/.test(String(number).trim());
       const clueIsNumeric = /^\d+$/.test(String(text).trim());
-      
+
       // If number is not numeric but clue is, they're swapped
       if (!numberIsNumeric && clueIsNumeric) {
-        console.warn('[puzzleUtils] Detected swapped clue fields, fixing:', {original: {number, clue: text}});
+        console.warn('[puzzleUtils] Detected swapped clue fields, fixing:', {
+          original: { number, clue: text },
+        });
         [number, text] = [text, number];
       }
     }
@@ -223,12 +225,7 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | any): {
     }
 
     // Extract answer from solution grid
-    const answer = extractAnswerFromSolution(
-      solutionGrid,
-      puzzleGridData,
-      clueNumber,
-      direction
-    );
+    const answer = extractAnswerFromSolution(solutionGrid, puzzleGridData, clueNumber, direction);
 
     return {
       number: clueNumber,
@@ -256,7 +253,7 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | any): {
       console.warn(`[puzzleUtils] No ${direction} clues found or clues is not an array`);
       return [];
     }
-    
+
     return clueArray.map((clue: ClueFormat, index: number) => {
       const parsed = parseClue(clue, direction);
       // If clue number is NaN, try to use index + 1 as fallback

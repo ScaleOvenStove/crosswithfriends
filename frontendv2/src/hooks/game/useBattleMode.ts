@@ -124,18 +124,21 @@ export const useBattleMode = ({ gameId, mode, onGameComplete }: BattleModeOption
       if (event.type === 'puzzle_complete') {
         // In battle mode, first to complete wins
         if (mode === 'battle' && !winner) {
+          // Find completing player before updating state
+          let completingPlayer: Player | undefined;
           setPlayers((prev) => {
-            const completingPlayer = prev.find((p) => p.id === event.playerId);
-            if (completingPlayer) {
-              setWinner(completingPlayer);
-              setIsGameActive(false);
-              onGameComplete?.(completingPlayer);
-            }
-            
+            completingPlayer = prev.find((p) => p.id === event.playerId);
             return prev.map((player) =>
               player.id === event.playerId ? { ...player, isFinished: true } : player
             );
           });
+
+          // Handle side effects outside setState callback
+          if (completingPlayer) {
+            setWinner(completingPlayer);
+            setIsGameActive(false);
+            onGameComplete?.(completingPlayer);
+          }
         } else {
           // For non-battle mode or if winner already set, just update the state
           setPlayers((prev) =>

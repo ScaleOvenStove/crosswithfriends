@@ -73,7 +73,7 @@ export const useKeyboardNavigation = ({
   const moveInDirection = useCallback(
     (forward: boolean = true) => {
       if (!selectedCell) return;
-      
+
       const delta = forward ? 1 : -1;
       const rowDelta = selectedDirection === 'down' ? delta : 0;
       const colDelta = selectedDirection === 'across' ? delta : 0;
@@ -138,7 +138,7 @@ export const useKeyboardNavigation = ({
       if (e.key === 'Backspace' || e.key === 'Delete') {
         e.preventDefault();
         if (!selectedCell) return;
-        
+
         const currentCell = cells[selectedCell.row]?.[selectedCell.col];
 
         // If cell has value, clear it but stay in place

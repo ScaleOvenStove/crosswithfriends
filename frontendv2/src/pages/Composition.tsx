@@ -109,11 +109,7 @@ const Composition = () => {
               onCellChange={handleCellChange}
             />
           ) : (
-            <CluesEditor
-              across={clues.across}
-              down={clues.down}
-              onUpdateClue={updateClue}
-            />
+            <CluesEditor across={clues.across} down={clues.down} onUpdateClue={updateClue} />
           )}
         </main>
 

@@ -76,7 +76,7 @@ export const useGame = (gameId: string | undefined) => {
           // 1. An active game ID (exists in game_events, not in puzzle_solves)
           // 2. A puzzle ID (for backward compatibility)
           console.log('[Game] Not a completed game, checking if it is an active game...');
-          
+
           // Try to get puzzle ID from active game (game_events table)
           try {
             const response = await fetch(`${API_BASE_URL}/game/${gameId}/pid`);
@@ -162,7 +162,7 @@ export const useGame = (gameId: string | undefined) => {
         if (error instanceof ResponseError) {
           const status = error.response.status;
           const statusText = error.response.statusText;
-          
+
           // Try to get error details from response body
           let bodyMessage = '';
           try {
@@ -188,12 +188,13 @@ export const useGame = (gameId: string | undefined) => {
                 hint: 'The puzzle data in the database may be in an older format that needs migration.',
               });
             } else {
-              errorMessage = bodyMessage || 'Server error while loading puzzle. Please try again later.';
+              errorMessage =
+                bodyMessage || 'Server error while loading puzzle. Please try again later.';
             }
           } else if (status >= 400) {
             errorMessage = bodyMessage || `Failed to load puzzle (HTTP ${status} ${statusText})`;
           }
-          
+
           console.error('[Game] API Error:', {
             status,
             statusText,
@@ -242,42 +243,46 @@ export const useGame = (gameId: string | undefined) => {
   useEffect(() => {
     if (isConnected && gameId && user && hasLoadedPuzzle && socket && !hasSyncedEvents) {
       console.log('[Game] Joining game:', gameId, 'as user:', user.displayName);
-      
+
       // Join the game room
       socket.emit('join_game', gameId, (response: { success?: boolean; error?: string }) => {
         if (response.error) {
           console.error('[Game] Failed to join game:', response.error);
           return;
         }
-        
+
         if (response.success) {
           console.log('[Game] Successfully joined game, syncing events...');
-          
+
           // Sync all game events to restore game state
           socket.emit('sync_all_game_events', gameId, (events: any[] | { error?: string }) => {
             if (Array.isArray(events)) {
               console.log('[Game] Synced', events.length, 'game events');
-              
+
               // Sort events by timestamp to apply in chronological order
               const sortedEvents = [...events].sort((a, b) => {
                 const timeA = a.timestamp || 0;
                 const timeB = b.timestamp || 0;
                 return timeA - timeB;
               });
-              
+
               // Filter and apply updateCell events to restore game state
               const updateCellEvents = sortedEvents.filter(
                 (event) => event.type === 'updateCell' && event.params
               );
-              
-              console.log('[Game] Applying', updateCellEvents.length, 'updateCell events to restore state');
-              
+
+              console.log(
+                '[Game] Applying',
+                updateCellEvents.length,
+                'updateCell events to restore state'
+              );
+
               // Apply events - retry if cells aren't ready yet
               const applyEvents = (retryCount = 0) => {
                 // Get current cells from store to avoid stale closure
                 const storeState = useGameStore.getState();
                 const currentCells = storeState.cells;
-                
+
                 if (currentCells.length === 0) {
                   if (retryCount < 20) {
                     // Retry up to 20 times (1 second total)
@@ -285,12 +290,14 @@ export const useGame = (gameId: string | undefined) => {
                     setTimeout(() => applyEvents(retryCount + 1), 50);
                     return;
                   } else {
-                    console.error('[Game] Cells still not initialized after retries, skipping state restoration');
+                    console.error(
+                      '[Game] Cells still not initialized after retries, skipping state restoration'
+                    );
                     setHasSyncedEvents(true);
                     return;
                   }
                 }
-                
+
                 // Apply events in order (cells are ready)
                 let appliedCount = 0;
                 updateCellEvents.forEach((event) => {
@@ -320,13 +327,19 @@ export const useGame = (gameId: string | undefined) => {
                     }
                   }
                 });
-                console.log('[Game] Game state restored -', appliedCount, 'of', updateCellEvents.length, 'cell updates applied');
+                console.log(
+                  '[Game] Game state restored -',
+                  appliedCount,
+                  'of',
+                  updateCellEvents.length,
+                  'cell updates applied'
+                );
                 setHasSyncedEvents(true);
               };
-              
+
               // Start applying events
               applyEvents();
-              
+
               // Handle game completion events
               const completeEvents = sortedEvents.filter(
                 (event) => event.type === 'puzzle_complete' || event.type === 'gameComplete'
@@ -336,15 +349,22 @@ export const useGame = (gameId: string | undefined) => {
                 setComplete(true);
                 pauseClock();
               }
-              
+
               // Handle clock events to restore clock state
               const clockEvents = sortedEvents.filter(
-                (event) => event.type === 'clockStart' || event.type === 'clockPause' || event.type === 'clockReset'
+                (event) =>
+                  event.type === 'clockStart' ||
+                  event.type === 'clockPause' ||
+                  event.type === 'clockReset'
               );
-              
+
               if (clockEvents.length > 0) {
-                console.log('[Game] Restoring clock state from', clockEvents.length, 'clock events');
-                
+                console.log(
+                  '[Game] Restoring clock state from',
+                  clockEvents.length,
+                  'clock events'
+                );
+
                 // Process clock events chronologically to determine final state
                 // elapsedTime accumulates time from completed sessions (start->pause cycles)
                 let clockState = {
@@ -352,10 +372,10 @@ export const useGame = (gameId: string | undefined) => {
                   elapsedTime: 0,
                   lastStartTime: null as number | null,
                 };
-                
+
                 clockEvents.forEach((event) => {
                   if (!event.timestamp) return;
-                  
+
                   if (event.type === 'clockReset') {
                     clockState = {
                       isRunning: false,
@@ -365,7 +385,9 @@ export const useGame = (gameId: string | undefined) => {
                   } else if (event.type === 'clockStart') {
                     // If we were already running, save the elapsed time from that session first
                     if (clockState.isRunning && clockState.lastStartTime) {
-                      const sessionSeconds = Math.floor((event.timestamp - clockState.lastStartTime) / 1000);
+                      const sessionSeconds = Math.floor(
+                        (event.timestamp - clockState.lastStartTime) / 1000
+                      );
                       clockState.elapsedTime += sessionSeconds;
                     }
                     // Start a new session
@@ -374,21 +396,24 @@ export const useGame = (gameId: string | undefined) => {
                   } else if (event.type === 'clockPause') {
                     if (clockState.isRunning && clockState.lastStartTime) {
                       // Calculate elapsed time for this session and add to total
-                      const sessionSeconds = Math.floor((event.timestamp - clockState.lastStartTime) / 1000);
+                      const sessionSeconds = Math.floor(
+                        (event.timestamp - clockState.lastStartTime) / 1000
+                      );
                       clockState.elapsedTime += sessionSeconds;
                     }
                     clockState.isRunning = false;
                     clockState.lastStartTime = null;
                   }
                 });
-                
+
                 // If clock is still running, set startTime to the last start event timestamp
                 // The interval will calculate: elapsedTime + (now - startTime) / 1000
                 // elapsedTime contains all completed sessions, startTime is when current session started
-                const startTime = clockState.isRunning && clockState.lastStartTime 
-                  ? clockState.lastStartTime 
-                  : null;
-                
+                const startTime =
+                  clockState.isRunning && clockState.lastStartTime
+                    ? clockState.lastStartTime
+                    : null;
+
                 console.log('[Game] Restored clock state:', {
                   isRunning: clockState.isRunning,
                   elapsedTime: clockState.elapsedTime,
@@ -399,8 +424,12 @@ export const useGame = (gameId: string | undefined) => {
                   startTime,
                 });
               }
-              
-              if (updateCellEvents.length === 0 && completeEvents.length === 0 && clockEvents.length === 0) {
+
+              if (
+                updateCellEvents.length === 0 &&
+                completeEvents.length === 0 &&
+                clockEvents.length === 0
+              ) {
                 console.log('[Game] No state-restoring events found');
                 setHasSyncedEvents(true);
               }
@@ -439,14 +468,18 @@ export const useGame = (gameId: string | undefined) => {
       params: event.params,
       fullEvent: event,
     });
-    
+
     if (event.type === 'updateCell' && event.params) {
       const { cell, value } = event.params;
       if (cell && typeof cell.r === 'number' && typeof cell.c === 'number') {
         console.log('[Game] Applying updateCell event:', { row: cell.r, col: cell.c, value });
         updateCell(cell.r, cell.c, value || '', false);
       } else {
-        console.warn('[Game] Invalid updateCell event params:', { cell, value, params: event.params });
+        console.warn('[Game] Invalid updateCell event params:', {
+          cell,
+          value,
+          params: event.params,
+        });
       }
     } else if (event.type === 'updateCursor' && event.params) {
       console.log('[Game] Received updateCursor event:', event.params);
@@ -461,7 +494,10 @@ export const useGame = (gameId: string | undefined) => {
     } else if (event.type === 'clockStart' && event.timestamp) {
       // Only apply if it's from another user (ignore our own events)
       if (event.user !== user?.id) {
-        console.log('[Game] Applying clockStart event:', { timestamp: event.timestamp, user: event.user });
+        console.log('[Game] Applying clockStart event:', {
+          timestamp: event.timestamp,
+          user: event.user,
+        });
         const state = useGameStore.getState();
         // If clock was running, we need to save the elapsed time first
         let baseElapsedTime = state.clock.elapsedTime;
@@ -486,7 +522,11 @@ export const useGame = (gameId: string | undefined) => {
           // Calculate elapsed time up to the pause event timestamp
           const currentSessionSeconds = Math.floor((event.timestamp - state.startTime) / 1000);
           const totalElapsedSeconds = state.clock.elapsedTime + currentSessionSeconds;
-          console.log('[Game] Applying clockPause event:', { timestamp: event.timestamp, user: event.user, elapsed: totalElapsedSeconds });
+          console.log('[Game] Applying clockPause event:', {
+            timestamp: event.timestamp,
+            user: event.user,
+            elapsed: totalElapsedSeconds,
+          });
           useGameStore.setState({
             clock: { ...state.clock, isRunning: false, elapsedTime: totalElapsedSeconds },
             startTime: null,
@@ -612,10 +652,10 @@ export const useGame = (gameId: string | undefined) => {
       startClock();
       return;
     }
-    
+
     const now = Date.now();
     const state = useGameStore.getState();
-    
+
     // If clock was running, save elapsed time first
     let baseElapsedTime = state.clock.elapsedTime;
     if (state.startTime) {
@@ -624,13 +664,13 @@ export const useGame = (gameId: string | undefined) => {
       baseElapsedTime = state.clock.elapsedTime + currentSessionSeconds;
     }
     // If clock was paused, baseElapsedTime already has the accumulated time
-    
+
     // Set startTime to now and preserve accumulated elapsedTime
     useGameStore.setState({
       clock: { isRunning: true, elapsedTime: baseElapsedTime },
       startTime: now,
     });
-    
+
     // Emit clock start event
     const eventData = {
       gid: gameId,
@@ -649,10 +689,10 @@ export const useGame = (gameId: string | undefined) => {
       pauseClock();
       return;
     }
-    
+
     const state = useGameStore.getState();
     const now = Date.now();
-    
+
     // Calculate elapsed time before pausing
     if (state.startTime) {
       const currentSessionSeconds = Math.floor((now - state.startTime) / 1000);
@@ -664,7 +704,7 @@ export const useGame = (gameId: string | undefined) => {
     } else {
       pauseClock();
     }
-    
+
     // Emit clock pause event
     const eventData = {
       gid: gameId,
@@ -683,9 +723,9 @@ export const useGame = (gameId: string | undefined) => {
       resetClock();
       return;
     }
-    
+
     resetClock();
-    
+
     // Emit clock reset event
     const eventData = {
       gid: gameId,

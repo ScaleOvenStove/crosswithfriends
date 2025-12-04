@@ -26,6 +26,7 @@ Firebase authentication, database, and storage hooks.
 - **`useFirebaseStorage`** - File upload/download from Firebase Storage
 
 **Example:**
+
 ```typescript
 import { useFirebaseAuth } from '@hooks';
 
@@ -44,15 +45,11 @@ Game state, events, and multiplayer functionality.
 - **`useBattleMode`** - Competitive battle mode state
 
 **Example:**
+
 ```typescript
 import { useGame } from '@hooks';
 
-const {
-  cells,
-  selectedCell,
-  handleCellUpdate,
-  checkPuzzle
-} = useGame(gameId);
+const { cells, selectedCell, handleCellUpdate, checkPuzzle } = useGame(gameId);
 ```
 
 ---
@@ -66,15 +63,11 @@ Puzzle data fetching, management, and clue handling.
 - **`useClues`** - Clue navigation and highlighting logic
 
 **Example:**
+
 ```typescript
 import { usePuzzleList } from '@hooks';
 
-const {
-  puzzles,
-  isLoading,
-  fetchNextPage,
-  hasNextPage
-} = usePuzzleList(filters);
+const { puzzles, isLoading, fetchNextPage, hasNextPage } = usePuzzleList(filters);
 ```
 
 ---
@@ -91,6 +84,7 @@ User interface interactions, keyboard navigation, and utilities.
 - **`useLatency`** - Network latency measurement
 
 **Example:**
+
 ```typescript
 import { useErrorHandler } from '@hooks';
 
@@ -121,6 +115,7 @@ User profile, authentication, and social features.
 - **`useStats`** - User statistics and solve history
 
 **Example:**
+
 ```typescript
 import { useUser } from '@hooks';
 
@@ -160,6 +155,7 @@ When creating a new hook:
 4. **Test it** - Create unit tests in `__tests__/`
 
 **Example structure:**
+
 ```typescript
 /**
  * Custom hook for managing feature X
@@ -180,6 +176,7 @@ export function useFeatureX() {
 Hook tests are located in `hooks/__tests__/`. We use Vitest + React Testing Library.
 
 **Example test:**
+
 ```typescript
 import { renderHook } from '@testing-library/react';
 import { useErrorHandler } from '../ui/useErrorHandler';
@@ -239,8 +236,7 @@ export function useDataFetch(id: string) {
   const { setError } = useErrorHandler();
 
   useEffect(() => {
-    fetchData(id)
-      .catch(err => setError(err));
+    fetchData(id).catch((err) => setError(err));
   }, [id]);
 }
 ```
@@ -252,6 +248,7 @@ export function useDataFetch(id: string) {
 If you have hooks in the old flat structure, here's how to migrate:
 
 ### Before (old structure):
+
 ```
 hooks/
 ├── useGame.ts
@@ -261,6 +258,7 @@ hooks/
 ```
 
 ### After (new structure):
+
 ```
 hooks/
 ├── game/

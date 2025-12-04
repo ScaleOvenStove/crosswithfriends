@@ -173,7 +173,10 @@ async function runServer(): Promise<void> {
           allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         }
       : {
-          origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
+          origin: (
+            origin: string | undefined,
+            callback: (err: Error | null, allow?: boolean) => void
+          ): void => {
             // In production, validate specific origins
             const allowedOrigins = [
               'https://www.crosswithfriends.com',

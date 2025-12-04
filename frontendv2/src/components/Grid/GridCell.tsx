@@ -78,10 +78,20 @@ const CellContainer = styled('div')<{
   isBad?: boolean;
   cursorColor?: string;
   otherCursorColors?: string[];
-}>(({ theme, isBlack, isSelected, isHighlighted, isInCurrentWord, isGood, isBad, cursorColor, otherCursorColors }) => {
+}>(({
+  theme,
+  isBlack,
+  isSelected,
+  isHighlighted,
+  isInCurrentWord,
+  isGood,
+  isBad,
+  cursorColor,
+  otherCursorColors,
+}) => {
   // Determine background color based on state priority
   let backgroundColor = theme.palette.background.paper;
-  
+
   if (isBlack) {
     backgroundColor = theme.palette.mode === 'dark' ? '#000000' : theme.palette.grey[900];
   } else if (isBad) {
@@ -163,7 +173,7 @@ const CellNumber = styled('span')(({ theme }) => ({
   },
 }));
 
-const CellInput = styled('input')<{ 
+const CellInput = styled('input')<{
   isPencil?: boolean;
   isSelected?: boolean;
   isHighlighted?: boolean;
@@ -172,8 +182,9 @@ const CellInput = styled('input')<{
   isBad?: boolean;
 }>(({ theme, isPencil, isSelected, isHighlighted, isInCurrentWord, isGood, isBad }) => {
   // Determine if we need dark text (for light backgrounds in dark mode)
-  const needsDarkText = theme.palette.mode === 'dark' && (isSelected || isHighlighted || isInCurrentWord);
-  
+  const needsDarkText =
+    theme.palette.mode === 'dark' && (isSelected || isHighlighted || isInCurrentWord);
+
   // Determine text color based on check state
   let textColor = theme.palette.text.primary;
   if (isBad) {
@@ -185,7 +196,7 @@ const CellInput = styled('input')<{
   } else if (needsDarkText) {
     textColor = '#000000';
   }
-  
+
   return {
     width: '100%',
     height: '100%',

@@ -27,7 +27,9 @@ const Nav = () => {
         borderBottom: `1px solid ${theme.palette.divider}`,
       }}
     >
-      <Toolbar sx={{ justifyContent: 'space-between', maxWidth: '2000px', width: '100%', mx: 'auto' }}>
+      <Toolbar
+        sx={{ justifyContent: 'space-between', maxWidth: '2000px', width: '100%', mx: 'auto' }}
+      >
         <MuiLink
           component={Link}
           to="/"

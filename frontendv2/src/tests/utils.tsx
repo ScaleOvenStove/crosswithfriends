@@ -28,7 +28,6 @@ interface AllTheProvidersProps {
 }
 
 const AllTheProviders = ({ children, queryClient = defaultQueryClient }: AllTheProvidersProps) => {
-
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>{children}</BrowserRouter>

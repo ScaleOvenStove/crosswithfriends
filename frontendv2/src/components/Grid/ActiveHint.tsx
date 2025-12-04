@@ -104,4 +104,3 @@ export const ActiveHint = ({ currentClue }: ActiveHintProps) => {
 };
 
 export default ActiveHint;
-

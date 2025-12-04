@@ -10,7 +10,19 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Paper, List, Box, Typography, IconButton, Divider, Badge, styled, Tooltip, Snackbar, Alert } from '@mui/material';
+import {
+  Paper,
+  List,
+  Box,
+  Typography,
+  IconButton,
+  Divider,
+  Badge,
+  styled,
+  Tooltip,
+  Snackbar,
+  Alert,
+} from '@mui/material';
 import { Close as CloseIcon, Chat as ChatIcon, Share as ShareIcon } from '@mui/icons-material';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
@@ -107,7 +119,7 @@ export const ChatPanel = ({
   // Copy game link to clipboard
   const handleShareClick = async () => {
     if (!gameId) return;
-    
+
     const gameUrl = `${window.location.origin}/game/${gameId}`;
     try {
       await navigator.clipboard.writeText(gameUrl);
@@ -190,7 +202,7 @@ export const ChatPanel = ({
       )}
 
       <ChatInput onSendMessage={sendMessage} />
-      
+
       <Snackbar
         open={copySuccess}
         autoHideDuration={3000}

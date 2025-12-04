@@ -54,7 +54,8 @@ export const usePuzzles = (page: number = 0, pageSize: number = 50) => {
 
   useEffect(() => {
     if (query.data) {
-      const puzzles = query.data.puzzles?.map((item: any) => convertPuzzle(item.pid, item.content)) || [];
+      const puzzles =
+        query.data.puzzles?.map((item: any) => convertPuzzle(item.pid, item.content)) || [];
       setPuzzles(puzzles);
     }
     setLoading(query.isLoading);

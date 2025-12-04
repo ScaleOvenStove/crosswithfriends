@@ -2,14 +2,12 @@
 
 All URIs are relative to *https://www.crosswithfriends.com/api*
 
-| Method | HTTP request | Description |
-|------------- | ------------- | -------------|
-| [**createPuzzle**](PuzzlesApi.md#createpuzzleoperation) | **POST** /puzzle | Add a new puzzle |
-| [**getPuzzleById**](PuzzlesApi.md#getpuzzlebyid) | **GET** /puzzle/{pid} | Get puzzle by ID |
-| [**listPuzzles**](PuzzlesApi.md#listpuzzles) | **GET** /puzzle_list | List puzzles |
+| Method                                                            | HTTP request                 | Description         |
+| ----------------------------------------------------------------- | ---------------------------- | ------------------- |
+| [**createPuzzle**](PuzzlesApi.md#createpuzzleoperation)           | **POST** /puzzle             | Add a new puzzle    |
+| [**getPuzzleById**](PuzzlesApi.md#getpuzzlebyid)                  | **GET** /puzzle/{pid}        | Get puzzle by ID    |
+| [**listPuzzles**](PuzzlesApi.md#listpuzzles)                      | **GET** /puzzle_list         | List puzzles        |
 | [**recordPuzzleSolve**](PuzzlesApi.md#recordpuzzlesolveoperation) | **POST** /record_solve/{pid} | Record puzzle solve |
-
-
 
 ## createPuzzle
 
@@ -51,10 +49,9 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **createPuzzleRequest** | [CreatePuzzleRequest](CreatePuzzleRequest.md) |  | |
+| Name                    | Type                                          | Description | Notes |
+| ----------------------- | --------------------------------------------- | ----------- | ----- |
+| **createPuzzleRequest** | [CreatePuzzleRequest](CreatePuzzleRequest.md) |             |       |
 
 ### Return type
 
@@ -69,16 +66,15 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
-| **400** | Default Response |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
+| **400**     | Default Response | -                |
+| **500**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
 
 ## getPuzzleById
 
@@ -91,14 +87,11 @@ Retrieves full puzzle data including grid, clues, and solution
 ### Example
 
 ```ts
-import {
-  Configuration,
-  PuzzlesApi,
-} from '';
+import { Configuration, PuzzlesApi } from '';
 import type { GetPuzzleByIdRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new PuzzlesApi();
 
   const body = {
@@ -120,10 +113,9 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **pid** | `string` | Puzzle ID | [Defaults to `undefined`] |
+| Name    | Type     | Description | Notes                     |
+| ------- | -------- | ----------- | ------------------------- |
+| **pid** | `string` | Puzzle ID   | [Defaults to `undefined`] |
 
 ### Return type
 
@@ -138,16 +130,15 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
-| **404** | Default Response |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
+| **404**     | Default Response | -                |
+| **500**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
 
 ## listPuzzles
 
@@ -160,14 +151,11 @@ Get a paginated list of puzzles with optional filters
 ### Example
 
 ```ts
-import {
-  Configuration,
-  PuzzlesApi,
-} from '';
+import { Configuration, PuzzlesApi } from '';
 import type { ListPuzzlesRequest } from '';
 
 async function example() {
-  console.log("🚀 Testing  SDK...");
+  console.log('🚀 Testing  SDK...');
   const api = new PuzzlesApi();
 
   const body = {
@@ -197,14 +185,13 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **page** | `string` | Page number | [Defaults to `undefined`] |
-| **pageSize** | `string` | Number of items per page | [Defaults to `undefined`] |
-| **sizeMini** | `string` | Filter for mini puzzles (true/false) | [Optional] [Defaults to `undefined`] |
+| Name             | Type     | Description                              | Notes                                |
+| ---------------- | -------- | ---------------------------------------- | ------------------------------------ |
+| **page**         | `string` | Page number                              | [Defaults to `undefined`]            |
+| **pageSize**     | `string` | Number of items per page                 | [Defaults to `undefined`]            |
+| **sizeMini**     | `string` | Filter for mini puzzles (true/false)     | [Optional] [Defaults to `undefined`] |
 | **sizeStandard** | `string` | Filter for standard puzzles (true/false) | [Optional] [Defaults to `undefined`] |
-| **nameOrTitle** | `string` | Filter by name or title | [Optional] [Defaults to `undefined`] |
+| **nameOrTitle**  | `string` | Filter by name or title                  | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -219,16 +206,15 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Default Response |  -  |
-| **400** | Default Response |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description      | Response headers |
+| ----------- | ---------------- | ---------------- |
+| **200**     | Default Response | -                |
+| **400**     | Default Response | -                |
+| **500**     | Default Response | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
 
 ## recordPuzzleSolve
 
@@ -272,11 +258,10 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **pid** | `string` | Puzzle ID | [Defaults to `undefined`] |
-| **recordPuzzleSolveRequest** | [RecordPuzzleSolveRequest](RecordPuzzleSolveRequest.md) |  | |
+| Name                         | Type                                                    | Description | Notes                     |
+| ---------------------------- | ------------------------------------------------------- | ----------- | ------------------------- |
+| **pid**                      | `string`                                                | Puzzle ID   | [Defaults to `undefined`] |
+| **recordPuzzleSolveRequest** | [RecordPuzzleSolveRequest](RecordPuzzleSolveRequest.md) |             |                           |
 
 ### Return type
 
@@ -291,12 +276,11 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
-
 ### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Empty response object |  -  |
-| **500** | Default Response |  -  |
+
+| Status code | Description           | Response headers |
+| ----------- | --------------------- | ---------------- |
+| **200**     | Empty response object | -                |
+| **500**     | Default Response      | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-

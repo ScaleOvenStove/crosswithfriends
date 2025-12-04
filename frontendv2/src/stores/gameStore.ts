@@ -108,9 +108,7 @@ export const useGameStore = create<GameStore>()(
           const newCells = state.cells.map((r, i) =>
             i === row
               ? r.map((cell, j) =>
-                  j === col
-                    ? { ...cell, value, isPencil, isGood: false, isBad: false }
-                    : cell
+                  j === col ? { ...cell, value, isPencil, isGood: false, isBad: false } : cell
                 )
               : r
           );
@@ -135,17 +133,14 @@ export const useGameStore = create<GameStore>()(
         set((state) => {
           const now = Date.now();
           const CURSOR_TIMEOUT = 5000; // 5 seconds
-          
+
           // Remove old cursors (older than timeout) and update/add this cursor
           const filteredCursors = state.cursors.filter(
             (c) => c.id !== userId && now - c.timestamp < CURSOR_TIMEOUT
           );
-          
+
           return {
-            cursors: [
-              ...filteredCursors,
-              { id: userId, row, col, timestamp: now },
-            ],
+            cursors: [...filteredCursors, { id: userId, row, col, timestamp: now }],
           };
         }),
 
@@ -222,7 +217,7 @@ export const useGameStore = create<GameStore>()(
           return false;
         }
         const correct = state.cells[row][col].value === state.solution[row][col];
-        
+
         // Update cell with check result
         set((state) => {
           const newCells = state.cells.map((r, i) =>
@@ -241,7 +236,7 @@ export const useGameStore = create<GameStore>()(
           );
           return { cells: newCells };
         });
-        
+
         return correct;
       },
 
@@ -280,7 +275,7 @@ export const useGameStore = create<GameStore>()(
         // Check all cells in the word and update their state
         set((state) => {
           const newCells = state.cells.map((r) => r.map((c) => ({ ...c })));
-          
+
           cellsToCheck.forEach(({ row: r, col: c }) => {
             if (state.solution && state.solution[r] && state.solution[r][c] !== undefined) {
               const correct = newCells[r][c].value === state.solution[r][c];
@@ -295,7 +290,7 @@ export const useGameStore = create<GameStore>()(
               }
             }
           });
-          
+
           return { cells: newCells };
         });
 
@@ -307,7 +302,7 @@ export const useGameStore = create<GameStore>()(
         if (!state.solution) return false;
 
         let allCorrect = true;
-        
+
         // Check all cells and update their state
         set((state) => {
           const newCells = state.cells.map((row, rowIdx) =>
@@ -315,12 +310,12 @@ export const useGameStore = create<GameStore>()(
               if (cell.isBlack) {
                 return cell;
               }
-              
+
               const correct = cell.value === state.solution![rowIdx][colIdx];
               if (!correct && cell.value !== '') {
                 allCorrect = false;
               }
-              
+
               return {
                 ...cell,
                 isGood: correct && cell.value !== '',
@@ -329,7 +324,7 @@ export const useGameStore = create<GameStore>()(
               };
             })
           );
-          
+
           return { cells: newCells };
         });
 
