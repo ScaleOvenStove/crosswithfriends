@@ -2,9 +2,11 @@
 
 All URIs are relative to *https://www.crosswithfriends.com/api*
 
-| Method                                              | HTTP request    | Description           |
-| --------------------------------------------------- | --------------- | --------------------- |
+| Method | HTTP request | Description |
+|------------- | ------------- | -------------|
 | [**submitStats**](StatsApi.md#submitstatsoperation) | **POST** /stats | Get puzzle statistics |
+
+
 
 ## submitStats
 
@@ -46,9 +48,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                   | Type                                        | Description | Notes |
-| ---------------------- | ------------------------------------------- | ----------- | ----- |
-| **submitStatsRequest** | [SubmitStatsRequest](SubmitStatsRequest.md) |             |       |
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **submitStatsRequest** | [SubmitStatsRequest](SubmitStatsRequest.md) |  | |
 
 ### Return type
 
@@ -63,12 +66,13 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
-### HTTP response details
 
-| Status code | Description      | Response headers |
-| ----------- | ---------------- | ---------------- |
-| **200**     | Default Response | -                |
-| **400**     | Default Response | -                |
-| **500**     | Default Response | -                |
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Default Response |  -  |
+| **400** | Default Response |  -  |
+| **500** | Default Response |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

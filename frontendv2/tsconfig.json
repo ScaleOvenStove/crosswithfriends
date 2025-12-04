@@ -11,6 +11,7 @@
       "@stores/*": ["./stores/*"],
       "@pages/*": ["./pages/*"],
       "@utils/*": ["./utils/*"],
+      "@services/*": ["./services/*"],
       "@api/*": ["./api/*"],
       "@config/*": ["./config/*"],
       "@types/*": ["./types/*"],

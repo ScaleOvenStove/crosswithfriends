@@ -16,6 +16,7 @@ import * as runtime from '../runtime';
 import type {
   CreateGame200Response,
   CreateGameRequest,
+  GetActiveGamePid200Response,
   GetGameById200Response,
   ListPuzzles400Response,
 } from '../models/index';
@@ -24,6 +25,8 @@ import {
   CreateGame200ResponseToJSON,
   CreateGameRequestFromJSON,
   CreateGameRequestToJSON,
+  GetActiveGamePid200ResponseFromJSON,
+  GetActiveGamePid200ResponseToJSON,
   GetGameById200ResponseFromJSON,
   GetGameById200ResponseToJSON,
   ListPuzzles400ResponseFromJSON,
@@ -32,6 +35,10 @@ import {
 
 export interface CreateGameOperationRequest {
   createGameRequest: CreateGameRequest;
+}
+
+export interface GetActiveGamePidRequest {
+  gid: string;
 }
 
 export interface GetGameByIdRequest {
@@ -66,6 +73,28 @@ export interface GamesApiInterface {
     createGameRequest: CreateGameRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction
   ): Promise<CreateGame200Response>;
+
+  /**
+   * Retrieves the puzzle ID from an active (in-progress) game in game_events table
+   * @summary Get puzzle ID from active game
+   * @param {string} gid Game ID
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof GamesApiInterface
+   */
+  getActiveGamePidRaw(
+    requestParameters: GetActiveGamePidRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction
+  ): Promise<runtime.ApiResponse<GetActiveGamePid200Response>>;
+
+  /**
+   * Retrieves the puzzle ID from an active (in-progress) game in game_events table
+   * Get puzzle ID from active game
+   */
+  getActiveGamePid(
+    gid: string,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction
+  ): Promise<GetActiveGamePid200Response>;
 
   /**
    * Retrieves game information including puzzle details and solve time
@@ -145,6 +174,55 @@ export class GamesApi extends runtime.BaseAPI implements GamesApiInterface {
       { createGameRequest: createGameRequest },
       initOverrides
     );
+    return await response.value();
+  }
+
+  /**
+   * Retrieves the puzzle ID from an active (in-progress) game in game_events table
+   * Get puzzle ID from active game
+   */
+  async getActiveGamePidRaw(
+    requestParameters: GetActiveGamePidRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction
+  ): Promise<runtime.ApiResponse<GetActiveGamePid200Response>> {
+    if (requestParameters['gid'] == null) {
+      throw new runtime.RequiredError(
+        'gid',
+        'Required parameter "gid" was null or undefined when calling getActiveGamePid().'
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    let urlPath = `/game/{gid}/pid`;
+    urlPath = urlPath.replace(`{${'gid'}}`, encodeURIComponent(String(requestParameters['gid'])));
+
+    const response = await this.request(
+      {
+        path: urlPath,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      GetActiveGamePid200ResponseFromJSON(jsonValue)
+    );
+  }
+
+  /**
+   * Retrieves the puzzle ID from an active (in-progress) game in game_events table
+   * Get puzzle ID from active game
+   */
+  async getActiveGamePid(
+    gid: string,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction
+  ): Promise<GetActiveGamePid200Response> {
+    const response = await this.getActiveGamePidRaw({ gid: gid }, initOverrides);
     return await response.value();
   }
 

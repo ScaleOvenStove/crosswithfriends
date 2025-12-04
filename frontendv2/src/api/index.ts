@@ -3,10 +3,8 @@
  */
 
 export * from './types';
-export * from './client';
-export { default as apiClient } from './client';
 
-// Export the new generated API clients
+// Export the generated API clients
 export {
   healthApi,
   puzzlesApi,

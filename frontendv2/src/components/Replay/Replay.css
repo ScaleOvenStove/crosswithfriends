@@ -1,0 +1,547 @@
+/**
+ * Replay Component Styles
+ * Comprehensive styling for replay page, timeline, and playback controls
+ */
+
+/* Main Replay Page Layout */
+.replay-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.replay-container {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  grid-template-rows: auto 1fr;
+  gap: 1.5rem;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Header Section */
+.replay-header {
+  grid-column: 1 / -1;
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.replay-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.replay-header p {
+  margin: 0.25rem 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.game-info {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.puzzle-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.puzzle-author {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Main Content Area */
+.replay-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.replay-grid-container {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.replay-grid-placeholder {
+  text-align: center;
+  color: #6b7280;
+}
+
+.current-event-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.current-event-info p {
+  margin: 0.25rem 0;
+}
+
+/* Controls Container */
+.replay-controls-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Playback Controls */
+.playback-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.playback-controls.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.control-btn {
+  background: transparent;
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.control-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.control-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.play-pause-btn {
+  width: 56px;
+  height: 56px;
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: white;
+}
+
+.play-pause-btn:hover:not(:disabled) {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+.restart-btn,
+.skip-btn {
+  width: 40px;
+  height: 40px;
+}
+
+/* Speed Control */
+.speed-control {
+  position: relative;
+}
+
+.speed-btn {
+  min-width: 60px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.speed-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  z-index: 10;
+}
+
+.speed-option {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  transition: background 0.15s ease;
+  text-align: center;
+  min-width: 60px;
+}
+
+.speed-option:hover {
+  background: #f3f4f6;
+}
+
+.speed-option.active {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+/* Timeline Component */
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.timeline-container.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.timeline-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.timeline-current {
+  font-weight: 600;
+  color: #111827;
+}
+
+.timeline {
+  position: relative;
+  cursor: pointer;
+  padding: 0.75rem 0;
+  outline: none;
+}
+
+.timeline:focus-visible .timeline-handle {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+}
+
+.timeline-track {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  border-radius: 4px;
+  transition: width 0.1s linear;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.timeline-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background: white;
+  border: 3px solid #4f46e5;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.1s linear;
+  cursor: grab;
+}
+
+.timeline-handle:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Sidebar - Event Log */
+.replay-sidebar {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.replay-sidebar h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.event-log {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+}
+
+.event-item:hover {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.event-item.current {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  font-weight: 500;
+}
+
+.event-index {
+  color: #9ca3af;
+  font-weight: 600;
+  min-width: 2rem;
+}
+
+.event-item.current .event-index {
+  color: #4f46e5;
+}
+
+.event-type {
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-time {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/* Error and Empty States */
+.error-message,
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  max-width: 500px;
+}
+
+.error-message p,
+.empty-state p {
+  margin: 0 0 1.5rem 0;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.error-message .btn-secondary {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.15s ease;
+}
+
+.error-message .btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .replay-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .replay-sidebar {
+    grid-column: 1;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 640px) {
+  .replay-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .playback-controls {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .control-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .play-pause-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  .restart-btn,
+  .skip-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .control-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .play-pause-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .replay-controls-container {
+    padding: 1rem;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .replay-page {
+    background-color: #111827;
+  }
+
+  .replay-header,
+  .replay-grid-container,
+  .replay-controls-container,
+  .replay-sidebar,
+  .error-message,
+  .empty-state {
+    background: #1f2937;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .replay-header h1,
+  .replay-sidebar h3,
+  .puzzle-title,
+  .timeline-current {
+    color: #f9fafb;
+  }
+
+  .replay-header p,
+  .puzzle-author,
+  .replay-grid-placeholder,
+  .timeline-info,
+  .event-type,
+  .error-message p,
+  .empty-state p {
+    color: #9ca3af;
+  }
+
+  .game-info {
+    border-top-color: #374151;
+  }
+
+  .current-event-info {
+    background: #111827;
+  }
+
+  .control-btn {
+    border-color: #374151;
+    color: #d1d5db;
+  }
+
+  .control-btn:hover:not(:disabled) {
+    background: #374151;
+    border-color: #4b5563;
+  }
+
+  .timeline-track {
+    background: #374151;
+  }
+
+  .event-item:hover {
+    background: #111827;
+    border-color: #374151;
+  }
+
+  .event-item.current {
+    background: #312e81;
+    border-color: #4338ca;
+  }
+
+  .speed-menu {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .speed-option:hover {
+    background: #374151;
+  }
+
+  .speed-option.active {
+    background: #312e81;
+    color: #818cf8;
+  }
+
+  .error-message .btn-secondary {
+    background: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
+  }
+
+  .error-message .btn-secondary:hover {
+    background: #4b5563;
+  }
+}

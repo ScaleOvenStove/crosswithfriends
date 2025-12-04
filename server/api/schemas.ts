@@ -83,7 +83,12 @@ export const PuzzleJsonSchema = {
       items: {
         type: 'array',
         items: {
-          oneOf: [{type: 'string'}, {type: 'object'}, {type: 'null'}],
+          anyOf: [
+            {type: 'number'},
+            {type: 'string'},
+            {type: 'object', additionalProperties: true},
+            {type: 'null'},
+          ],
         },
       },
       description: 'Puzzle grid (new format)',
@@ -95,16 +100,36 @@ export const PuzzleJsonSchema = {
         Across: {
           type: 'array',
           items: {
-            oneOf: [{type: 'string'}, {type: 'object'}, {type: 'null'}],
+            type: 'object',
+            required: ['number', 'clue'],
+            properties: {
+              number: {type: 'string', description: 'Clue number'},
+              clue: {type: 'string', description: 'Clue text'},
+              cells: {
+                type: 'array',
+                items: {type: 'number'},
+                description: 'Optional array of cell indices (v2 format)',
+              },
+            },
           },
-          description: 'Across clues',
+          description: 'Across clues in v2 object format {number, clue}',
         },
         Down: {
           type: 'array',
           items: {
-            oneOf: [{type: 'string'}, {type: 'object'}, {type: 'null'}],
+            type: 'object',
+            required: ['number', 'clue'],
+            properties: {
+              number: {type: 'string', description: 'Clue number'},
+              clue: {type: 'string', description: 'Clue text'},
+              cells: {
+                type: 'array',
+                items: {type: 'number'},
+                description: 'Optional array of cell indices (v2 format)',
+              },
+            },
           },
-          description: 'Down clues',
+          description: 'Down clues in v2 object format {number, clue}',
         },
       },
     },

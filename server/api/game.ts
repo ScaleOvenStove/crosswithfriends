@@ -94,6 +94,63 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
       };
     }
   );
+
+  // New endpoint to get puzzle ID from active game (game_events table)
+  const getActiveGameOptions = {
+    schema: {
+      operationId: 'getActiveGamePid',
+      tags: ['Games'],
+      summary: 'Get puzzle ID from active game',
+      description: 'Retrieves the puzzle ID from an active (in-progress) game in game_events table',
+      params: {
+        type: 'object',
+        required: ['gid'],
+        properties: {
+          gid: {type: 'string', description: 'Game ID'},
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            gid: {type: 'string'},
+            pid: {type: 'string'},
+          },
+        },
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+  };
+
+  fastify.get<{Params: {gid: string}; Reply: {gid: string; pid: string}}>(
+    '/:gid/pid',
+    getActiveGameOptions,
+    async (request: FastifyRequest<{Params: {gid: string}}>, _reply: FastifyReply) => {
+      request.log.debug({headers: request.headers, params: request.params}, 'got req');
+      const {gid} = request.params;
+
+      // Try to get the create event from game_events to extract pid
+      const {pool} = await import('../model/pool.js');
+      const res = await pool.query(
+        "SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create' LIMIT 1",
+        [gid]
+      );
+
+      if (res.rowCount === 0 || !res.rows[0]) {
+        throw createHttpError('Active game not found', 404);
+      }
+
+      const createEvent = res.rows[0].event_payload;
+      const pid = (createEvent.params as {pid?: string}).pid;
+
+      if (!pid) {
+        throw createHttpError('Puzzle ID not found in game create event', 500);
+      }
+
+      return {gid, pid};
+    }
+  );
 }
 
 export default gameRouter;

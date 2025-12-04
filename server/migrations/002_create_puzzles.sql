@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS puzzles
 );
 
 ALTER TABLE public.puzzles
-    OWNER to dfacadmin;
+    OWNER to CURRENT_USER;
 
-GRANT ALL ON TABLE public.puzzles TO dfacadmin;
+GRANT ALL ON TABLE public.puzzles TO CURRENT_USER;
 
 -- trigram index for ILIKE %foo% searches https://about.gitlab.com/blog/2016/03/18/fast-search-using-postgresql-trigram-indexes/
 CREATE INDEX IF NOT EXISTS puzzle_name_and_title_trigrams

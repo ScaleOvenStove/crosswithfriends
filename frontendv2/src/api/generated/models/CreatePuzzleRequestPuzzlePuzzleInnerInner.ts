@@ -12,12 +12,22 @@
  * Do not edit the class manually.
  */
 
+import { mapValues } from '../runtime';
 /**
- * @type CreatePuzzleRequestPuzzlePuzzleInnerInner
  *
  * @export
+ * @interface CreatePuzzleRequestPuzzlePuzzleInnerInner
  */
-export type CreatePuzzleRequestPuzzlePuzzleInnerInner = object | string;
+export interface CreatePuzzleRequestPuzzlePuzzleInnerInner {}
+
+/**
+ * Check if a given object implements the CreatePuzzleRequestPuzzlePuzzleInnerInner interface.
+ */
+export function instanceOfCreatePuzzleRequestPuzzlePuzzleInnerInner(
+  value: object
+): value is CreatePuzzleRequestPuzzlePuzzleInnerInner {
+  return true;
+}
 
 export function CreatePuzzleRequestPuzzlePuzzleInnerInnerFromJSON(
   json: any
@@ -29,16 +39,12 @@ export function CreatePuzzleRequestPuzzlePuzzleInnerInnerFromJSONTyped(
   json: any,
   ignoreDiscriminator: boolean
 ): CreatePuzzleRequestPuzzlePuzzleInnerInner {
-  if (json == null) {
-    return json;
-  }
-  if (typeof json === 'string') {
-    return json;
-  }
-  return {} as any;
+  return json;
 }
 
-export function CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSON(json: any): any {
+export function CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSON(
+  json: any
+): CreatePuzzleRequestPuzzlePuzzleInnerInner {
   return CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSONTyped(json, false);
 }
 
@@ -46,11 +52,5 @@ export function CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSONTyped(
   value?: CreatePuzzleRequestPuzzlePuzzleInnerInner | null,
   ignoreDiscriminator: boolean = false
 ): any {
-  if (value == null) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
-  return {};
+  return value;
 }

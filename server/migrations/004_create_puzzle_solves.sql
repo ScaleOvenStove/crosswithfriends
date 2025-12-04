@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS puzzle_solves
 );
 
 ALTER TABLE public.puzzle_solves
-    OWNER to dfacadmin;
+    OWNER to CURRENT_USER;
 
-GRANT ALL ON TABLE public.puzzle_solves TO dfacadmin;
+GRANT ALL ON TABLE public.puzzle_solves TO CURRENT_USER;
 

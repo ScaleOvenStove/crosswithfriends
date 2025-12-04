@@ -15,9 +15,9 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE public.room_events
-    OWNER to dfacadmin;
+    OWNER to CURRENT_USER;
 
-GRANT ALL ON TABLE public.room_events TO dfacadmin;
+GRANT ALL ON TABLE public.room_events TO CURRENT_USER;
 
 CREATE INDEX IF NOT EXISTS rame_events_rid_ts_idx
     ON public.room_events USING btree

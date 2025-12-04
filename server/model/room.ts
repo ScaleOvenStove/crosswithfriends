@@ -1,35 +1,9 @@
 import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 
 import {logger} from '../utils/logger.js';
+import {timestampToISOString} from '../utils/timestamp.js';
 
 import {pool} from './pool.js';
-
-/**
- * Safely converts a timestamp to an ISO string.
- * If the timestamp is invalid, falls back to the current time and logs a warning.
- */
-function timestampToISOString(timestamp: number | undefined | null): string {
-  // Check if timestamp is a valid number
-  if (timestamp == null || typeof timestamp !== 'number' || isNaN(timestamp)) {
-    logger.warn(
-      {timestamp, fallbackTo: Date.now()},
-      'Invalid timestamp provided, using current time as fallback'
-    );
-    return new Date().toISOString();
-  }
-
-  // Create Date object and check if it's valid
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) {
-    logger.warn(
-      {timestamp, fallbackTo: Date.now()},
-      'Invalid Date created from timestamp, using current time as fallback'
-    );
-    return new Date().toISOString();
-  }
-
-  return date.toISOString();
-}
 
 export async function getRoomEvents(rid: string): Promise<RoomEvent[]> {
   const startTime = Date.now();

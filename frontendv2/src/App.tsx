@@ -6,13 +6,12 @@
 
 import { Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SocketProvider } from '@sockets/index';
 import { routes } from '@routes/index';
 import ErrorBoundary from '@components/common/ErrorBoundary';
 import LoadingSpinner from '@components/common/LoadingSpinner';
-import { lightTheme } from '@theme/index';
+import { ThemeProvider } from '@contexts/ThemeContext';
 import './style.css';
 
 // Create React Query client
@@ -32,8 +31,7 @@ const router = createBrowserRouter(routes);
 const App = () => {
   return (
     <ErrorBoundary>
-      <ThemeProvider theme={lightTheme}>
-        <CssBaseline />
+      <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <SocketProvider>
             <Suspense fallback={<LoadingSpinner fullScreen text="Loading..." />}>

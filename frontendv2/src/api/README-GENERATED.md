@@ -116,13 +116,10 @@ If you need more control:
 # 1. Download the spec
 yarn api:download
 
-# 2. Fix validation errors
-python3 scripts/fix-openapi.py
-
-# 3. Generate client
+# 2. Generate client
 yarn api:generate
 
-# 4. Format
+# 3. Format (if needed)
 prettier --write "src/api/generated/**/*.ts"
 ```
 

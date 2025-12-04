@@ -21,10 +21,10 @@ import { mapValues } from '../runtime';
 export interface ListPuzzles200Response {
   /**
    *
-   * @type {Array<object>}
+   * @type {Array<{ [key: string]: any; }>}
    * @memberof ListPuzzles200Response
    */
-  puzzles?: Array<object>;
+  puzzles?: Array<{ [key: string]: any }>;
 }
 
 /**

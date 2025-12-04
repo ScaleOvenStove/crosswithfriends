@@ -99,8 +99,8 @@ export interface PuzzleJson {
   solution: (string | null)[][]; // null for black squares, "#" also valid
   puzzle: (number | string | IpuzCell | null)[][]; // clue numbers, "#" for black, objects with cell+style, or null
   clues: {
-    Across: Array<[string, string] | {number: string; clue: string}>;
-    Down: Array<[string, string] | {number: string; clue: string}>;
+    Across: Array<{number: string; clue: string}>;
+    Down: Array<{number: string; clue: string}>;
   };
 }
 

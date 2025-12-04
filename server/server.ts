@@ -1,12 +1,9 @@
 import {Server as HTTPServer} from 'http';
-import path from 'path';
-import {fileURLToPath} from 'url';
 
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import * as dotenv from 'dotenv';
 import {
   fastify,
   type FastifyError,
@@ -17,15 +14,9 @@ import {
 import {Server as SocketIOServer} from 'socket.io';
 
 import apiRouter from './api/router.js';
+import {config} from './config/index.js';
 import SocketManager from './SocketManager.js';
 import {logger} from './utils/logger.js';
-
-// Load environment variables
-dotenv.config(); // Try loading .env from current directory
-const currentFilename = fileURLToPath(import.meta.url);
-const currentDirname = path.dirname(currentFilename);
-dotenv.config({path: path.resolve(currentDirname, '../.env')});
-const port = process.env.PORT || 3000;
 
 // ================== Logging ================
 
@@ -47,9 +38,8 @@ async function runServer(): Promise<void> {
     // ======== Fastify Server Config ==========
     // In Fastify v5, fastify() returns PromiseLike<FastifyInstance>
     // The methods are available immediately, but TypeScript types need help
-    const isProduction = process.env.NODE_ENV === 'production';
     const app = fastify({
-      logger: isProduction
+      logger: config.server.isProduction
         ? {
             level: 'info',
           }
@@ -173,14 +163,42 @@ async function runServer(): Promise<void> {
     });
 
     // Register CORS plugin
-    await app.register(cors, {
-      origin: true,
-    });
+    // In development, allow all origins for easier local development
+    // In production, this should be restricted to specific domains
+    const corsOptions = config.server.isDevelopment
+      ? {
+          origin: true, // Allow all origins in development
+          credentials: true,
+          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+          allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        }
+      : {
+          origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
+            // In production, validate specific origins
+            const allowedOrigins = [
+              'https://www.crosswithfriends.com',
+              'https://crosswithfriends.com',
+              'https://crosswithfriendsbackend-staging.onrender.com',
+            ];
+            // Allow requests with no origin (like mobile apps or curl requests)
+            if (!origin || allowedOrigins.includes(origin)) {
+              callback(null, true);
+            } else {
+              logger.warn({origin}, 'CORS request blocked from origin');
+              callback(new Error('Not allowed by CORS'), false);
+            }
+          },
+          credentials: true,
+          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+          allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        };
+
+    await app.register(cors, corsOptions);
 
     // Register rate limiting plugin
     await app.register(rateLimit, {
-      max: 1000, // Maximum 500 requests
-      timeWindow: '15 minutes', // Per 15-minute window
+      max: config.rateLimit.max,
+      timeWindow: config.rateLimit.timeWindowMs,
       cache: 10000, // Cache up to 10000 different IPs
       allowList: (req) => {
         // Allow health check endpoint to bypass rate limiting
@@ -227,8 +245,8 @@ async function runServer(): Promise<void> {
       logAllEvents(io);
     });
 
-    await app.listen({port: Number(port), host: '0.0.0.0'});
-    app.log.info(`Listening on port ${port} `);
+    await app.listen({port: config.server.port, host: '0.0.0.0'});
+    app.log.info(`Listening on port ${config.server.port} `);
 
     process.once('SIGUSR2', (): void => {
       void (async (): Promise<void> => {

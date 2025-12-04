@@ -15,9 +15,9 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE public.game_events
-    OWNER to dfacadmin;
+    OWNER to CURRENT_USER;
 
-GRANT ALL ON TABLE public.game_events TO dfacadmin;
+GRANT ALL ON TABLE public.game_events TO CURRENT_USER;
 
 CREATE INDEX game_events_gid_ts_idx
     ON public.game_events USING btree

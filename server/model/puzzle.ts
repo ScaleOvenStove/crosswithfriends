@@ -2,153 +2,15 @@ import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/share
 import Joi from 'joi';
 import * as uuid from 'uuid';
 
+import {convertCluesToV2, convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import {logger} from '../utils/logger.js';
 
 import {pool} from './pool.js';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
-/**
- * Converts old puzzle format (with 'grid' and 'info') to ipuz format
- * This ensures all puzzles returned from the API are in the standard ipuz format
- */
-export function convertOldFormatToIpuz(puzzle: PuzzleJson): PuzzleJson {
-  // Check if this is old format
-  const isOldFormat = 'grid' in puzzle && Array.isArray((puzzle as {grid?: unknown}).grid);
-
-  // If already ipuz format, return as-is
-  if (!isOldFormat) {
-    return puzzle;
-  }
-
-  logger.debug('Converting old format puzzle to ipuz format');
-
-  const oldPuzzle = puzzle as {
-    grid?: string[][];
-    info?: {title?: string; author?: string; copyright?: string; description?: string; type?: string};
-    clues?: {down?: string[]; across?: string[]};
-    circles?: number[];
-    shades?: number[];
-  };
-
-  const grid = oldPuzzle.grid || [];
-  if (grid.length === 0 || !grid[0] || grid[0].length === 0) {
-    throw new Error('Old format puzzle has empty grid');
-  }
-
-  const height = grid.length;
-  const width = grid[0].length;
-  const info = oldPuzzle.info || {};
-
-  // Convert grid to solution format (same structure for old format)
-  const solution = grid.map((row) => row.map((cell) => cell));
-
-  // Generate puzzle grid with cell numbers
-  // We need to determine which cells are starts of words to assign numbers
-  let cellNumber = 1;
-  const puzzleGrid: (
-    | number
-    | string
-    | {cell: number; style: {shapebg?: string; fillbg?: string}}
-    | null
-  )[][] = [];
-  const circles = oldPuzzle.circles || [];
-  const shades = oldPuzzle.shades || [];
-
-  for (let r = 0; r < height; r++) {
-    const row: (number | string | {cell: number; style: {shapebg?: string; fillbg?: string}} | null)[] = [];
-    const solutionRow = solution[r];
-    if (!solutionRow) {
-      continue;
-    }
-    for (let c = 0; c < width; c++) {
-      const cell = solutionRow[c];
-      const isBlack = cell === '.' || cell === null || cell === '#';
-
-      if (isBlack) {
-        row.push('#');
-      } else {
-        // Determine if this cell starts a word
-        const prevRow = r > 0 ? solution[r - 1] : undefined;
-        const nextRow = r < height - 1 ? solution[r + 1] : undefined;
-        const startsAcross = c === 0 || solutionRow[c - 1] === '.' || solutionRow[c - 1] === '#';
-        const startsDown = r === 0 || prevRow?.[c] === '.' || prevRow?.[c] === '#';
-        const hasAcrossWord =
-          startsAcross && c < width - 1 && solutionRow[c + 1] !== '.' && solutionRow[c + 1] !== '#';
-        const hasDownWord = startsDown && r < height - 1 && nextRow?.[c] !== '.' && nextRow?.[c] !== '#';
-
-        const cellIdx = r * width + c;
-        const hasCircle = circles.includes(cellIdx);
-        const hasShade = shades.includes(cellIdx);
-
-        if (hasAcrossWord || hasDownWord) {
-          // Cell starts a word, gets a number
-          if (hasCircle || hasShade) {
-            const style: {shapebg?: string; fillbg?: string} = {};
-            if (hasCircle) style.shapebg = 'circle';
-            if (hasShade) style.fillbg = 'gray';
-            row.push({cell: cellNumber, style});
-          } else {
-            row.push(cellNumber);
-          }
-          cellNumber += 1;
-        } else {
-          // Cell doesn't start a word
-          if (hasCircle || hasShade) {
-            const style: {shapebg?: string; fillbg?: string} = {};
-            if (hasCircle) style.shapebg = 'circle';
-            if (hasShade) style.fillbg = 'gray';
-            row.push({cell: 0, style});
-          } else {
-            row.push('0');
-          }
-        }
-      }
-    }
-    puzzleGrid.push(row);
-  }
-
-  // Convert clues from sparse array format to ipuz format
-  const oldAcross = oldPuzzle.clues?.across || [];
-  const oldDown = oldPuzzle.clues?.down || [];
-
-  const acrossClues: [string, string][] = [];
-  for (let i = 1; i < oldAcross.length; i += 2) {
-    const number = oldAcross[i];
-    const clue = oldAcross[i + 1];
-    if (number && clue) {
-      acrossClues.push([number, clue]);
-    }
-  }
-
-  const downClues: [string, string][] = [];
-  for (let i = 1; i < oldDown.length; i += 2) {
-    const number = oldDown[i];
-    const clue = oldDown[i + 1];
-    if (number && clue) {
-      downClues.push([number, clue]);
-    }
-  }
-
-  // Create ipuz format puzzle
-  const ipuzPuzzle: PuzzleJson = {
-    version: 'http://ipuz.org/v2',
-    kind: ['http://ipuz.org/crossword#1'],
-    dimensions: {width, height},
-    title: info.title || '',
-    author: info.author || '',
-    copyright: info.copyright || '',
-    notes: info.description || '',
-    solution,
-    puzzle: puzzleGrid,
-    clues: {
-      Across: acrossClues,
-      Down: downClues,
-    },
-  };
-
-  return ipuzPuzzle;
-}
+// Re-export adapter functions for backward compatibility
+export {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 
 export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   const startTime = Date.now();
@@ -169,7 +31,84 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   }
 
   // Always return ipuz format to clients
-  return convertOldFormatToIpuz(firstRow.content);
+  const puzzle = convertOldFormatToIpuz(firstRow.content);
+
+  // Convert any v1 array format clues to v2 object format
+  if (puzzle.clues) {
+    const cluesInput = puzzle.clues as {
+      Across?: unknown[];
+      across?: unknown[];
+      Down?: unknown[];
+      down?: unknown[];
+    };
+
+    const hasClues =
+      (Array.isArray(cluesInput.Across) && cluesInput.Across.length > 0) ||
+      (Array.isArray(cluesInput.across) && cluesInput.across.length > 0) ||
+      (Array.isArray(cluesInput.Down) && cluesInput.Down.length > 0) ||
+      (Array.isArray(cluesInput.down) && cluesInput.down.length > 0);
+
+    if (hasClues) {
+      let acrossCount = 0;
+      if (Array.isArray(cluesInput.Across)) {
+        acrossCount = cluesInput.Across.length;
+      } else if (Array.isArray(cluesInput.across)) {
+        acrossCount = cluesInput.across.length;
+      }
+
+      let downCount = 0;
+      if (Array.isArray(cluesInput.Down)) {
+        downCount = cluesInput.Down.length;
+      } else if (Array.isArray(cluesInput.down)) {
+        downCount = cluesInput.down.length;
+      }
+
+      logger.debug(
+        {
+          hasAcross: !!cluesInput.Across,
+          hasacross: !!cluesInput.across,
+          hasDown: !!cluesInput.Down,
+          hasdown: !!cluesInput.down,
+          acrossCount,
+          downCount,
+        },
+        'Converting clues on retrieve'
+      );
+
+      puzzle.clues = convertCluesToV2(puzzle.clues);
+
+      const convertedClues = puzzle.clues as {Across?: unknown[]; Down?: unknown[]};
+      logger.debug(
+        {
+          acrossCount: convertedClues.Across?.length || 0,
+          downCount: convertedClues.Down?.length || 0,
+        },
+        'Converted clues on retrieve'
+      );
+
+      // Remove any lowercase arrays (legacy format artifacts)
+      // We only use capitalized Across/Down in ipuz v2 format
+      const cluesObj = puzzle.clues as {across?: unknown; down?: unknown};
+      if ('across' in cluesObj) {
+        delete cluesObj.across;
+      }
+      if ('down' in cluesObj) {
+        delete cluesObj.down;
+      }
+    } else {
+      logger.warn(
+        {
+          pid,
+          cluesKeys: Object.keys(puzzle.clues),
+        },
+        'Puzzle has clues object but all clue arrays are empty'
+      );
+    }
+  } else {
+    logger.warn({pid}, 'Puzzle has no clues object');
+  }
+
+  return puzzle;
 }
 
 const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string[] => {
@@ -296,6 +235,12 @@ const puzzleValidator = Joi.object({
   author: string().required(),
   copyright: string().optional(),
   notes: string().optional(),
+  // Additional ipuz fields that may be present
+  origin: string().optional(),
+  publisher: string().optional(),
+  intro: string().optional(),
+  difficulty: string().optional(),
+  empty: string().optional(),
   solution: Joi.array()
     .items(
       Joi.array()
@@ -334,7 +279,7 @@ const puzzleValidator = Joi.object({
           })
         )
       )
-      .required(),
+      .optional(),
     Down: Joi.array()
       .items(
         Joi.alternatives().try(
@@ -346,9 +291,35 @@ const puzzleValidator = Joi.object({
           })
         )
       )
-      .required(),
-  }).required(),
-});
+      .optional(),
+    across: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.array().items(string()), // v1 format: ["1", "clue text"]
+          Joi.object({
+            number: string(),
+            clue: string(),
+            cells: Joi.array().optional(), // v2 format with cells property
+          })
+        )
+      )
+      .optional(),
+    down: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.array().items(string()), // v1 format: ["1", "clue text"]
+          Joi.object({
+            number: string(),
+            clue: string(),
+            cells: Joi.array().optional(), // v2 format with cells property
+          })
+        )
+      )
+      .optional(),
+  })
+    .unknown(true) // Allow additional properties (e.g., other clue directions)
+    .required(),
+}).unknown(true); // Allow additional top-level properties (e.g., origin, publisher, intro, difficulty, empty)
 
 function validatePuzzle(puzzle: unknown): void {
   logger.debug({keys: puzzle && typeof puzzle === 'object' ? Object.keys(puzzle) : []}, 'Puzzle keys');
@@ -375,12 +346,82 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
     puzzleId = uuid.v4().substring(0, 8);
   }
   validatePuzzle(puzzle);
+
+  // Normalize clues to v2 format before saving
+  // This ensures consistent storage format regardless of input format
+  const normalizedPuzzle = {...puzzle};
+  if (normalizedPuzzle.clues) {
+    try {
+      const cluesInput = normalizedPuzzle.clues as {
+        Across?: unknown[];
+        across?: unknown[];
+        Down?: unknown[];
+        down?: unknown[];
+      };
+
+      let acrossCount = 0;
+      if (Array.isArray(cluesInput.Across)) {
+        acrossCount = cluesInput.Across.length;
+      } else if (Array.isArray(cluesInput.across)) {
+        acrossCount = cluesInput.across.length;
+      }
+
+      let downCount = 0;
+      if (Array.isArray(cluesInput.Down)) {
+        downCount = cluesInput.Down.length;
+      } else if (Array.isArray(cluesInput.down)) {
+        downCount = cluesInput.down.length;
+      }
+
+      logger.debug(
+        {
+          hasAcross: !!cluesInput.Across,
+          hasacross: !!cluesInput.across,
+          hasDown: !!cluesInput.Down,
+          hasdown: !!cluesInput.down,
+          acrossCount,
+          downCount,
+        },
+        'Converting clues before save'
+      );
+
+      normalizedPuzzle.clues = convertCluesToV2(normalizedPuzzle.clues);
+
+      const convertedClues = normalizedPuzzle.clues as {Across?: unknown[]; Down?: unknown[]};
+      logger.debug(
+        {
+          acrossCount: convertedClues.Across?.length || 0,
+          downCount: convertedClues.Down?.length || 0,
+        },
+        'Converted clues'
+      );
+
+      // Remove any lowercase arrays (legacy format artifacts)
+      // We only use capitalized Across/Down in ipuz v2 format
+      const cluesObj = normalizedPuzzle.clues as {across?: unknown; down?: unknown};
+      if ('across' in cluesObj) {
+        delete cluesObj.across;
+      }
+      if ('down' in cluesObj) {
+        delete cluesObj.down;
+      }
+    } catch (error) {
+      logger.error({error}, 'Failed to convert clues');
+      throw new Error(`Failed to convert clues: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   const uploaded_at = Date.now();
+
+  // Only set pid_numeric if pid is numeric, otherwise NULL
+  // Check if pid matches numeric pattern: digits optionally with decimal point
+  const pidNumeric = /^([0-9]+[.]?[0-9]*|[.][0-9]+)$/.test(puzzleId) ? puzzleId : null;
+
   await pool.query(
     `
       INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric)
       VALUES ($1, to_timestamp($2), $3, $4, $5)`,
-    [puzzleId, uploaded_at / 1000, isPublic, puzzle, puzzleId]
+    [puzzleId, uploaded_at / 1000, isPublic, normalizedPuzzle, pidNumeric]
   );
   return puzzleId;
 }

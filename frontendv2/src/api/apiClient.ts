@@ -18,12 +18,12 @@ import { API_BASE_URL } from '../config';
 
 /**
  * Base configuration for all API clients
+ * Note: Content-Type is not set globally - the SDK will add it automatically
+ * when there's a request body. This prevents issues with endpoints that don't
+ * require a body (like POST /counters/gid).
  */
 const configuration = new Configuration({
   basePath: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 /**

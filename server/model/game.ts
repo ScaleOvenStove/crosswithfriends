@@ -13,7 +13,20 @@ import type {CellIndex, GameJson} from '@crosswithfriends/shared/types';
 
 import {makeGrid} from '../gameUtils.js';
 import {logger} from '../utils/logger.js';
+import {timestampToISOString} from '../utils/timestamp.js';
 
+import type {
+  LegacyAddPingParams,
+  LegacyChatParams,
+  LegacyCheckParams,
+  LegacyResetParams,
+  LegacyRevealParams,
+  LegacySendChatMessageParams,
+  LegacyUpdateCellParams,
+  LegacyUpdateClockParams,
+  LegacyUpdateColorParams,
+  LegacyUpdateCursorParams,
+} from './legacyEventTypes.js';
 import {pool} from './pool.js';
 import {getPuzzle} from './puzzle.js';
 
@@ -66,63 +79,6 @@ export async function getGameInfo(gid: string): Promise<GameJson['info']> {
   const info = res.rows[0].event_payload.params.game.info;
   logger.debug(`${gid} game info: ${JSON.stringify(info)}`);
   return info;
-}
-
-// Legacy event parameter types (from gameStore.ts)
-interface LegacyUpdateCellParams {
-  cell: {r: number; c: number};
-  value: string;
-  color: string;
-  pencil: boolean;
-  id: string;
-  autocheck: boolean;
-}
-
-interface LegacyUpdateCursorParams {
-  timestamp: number;
-  cell: {r: number; c: number};
-  id: string;
-}
-
-interface LegacyAddPingParams {
-  timestamp: number;
-  cell: {r: number; c: number};
-  id: string;
-}
-
-interface LegacyUpdateColorParams {
-  id: string;
-  color: string;
-}
-
-interface LegacyUpdateClockParams {
-  action: string;
-  timestamp: number;
-}
-
-interface LegacyCheckParams {
-  scope: string | {r: number; c: number}[]; // Can be string or array
-}
-
-interface LegacyRevealParams {
-  scope: string | {r: number; c: number}[]; // Can be string or array
-}
-
-interface LegacyResetParams {
-  scope: string | {r: number; c: number}[]; // Can be string or array
-  force: boolean;
-}
-
-interface LegacyChatParams {
-  text: string;
-  senderId: string;
-  sender: string;
-}
-
-interface LegacySendChatMessageParams {
-  message: string;
-  id: string;
-  sender: string;
 }
 
 interface CreateEventParams {
@@ -184,33 +140,6 @@ export interface GameEvent {
 export interface InitialGameEvent extends GameEvent {
   type: 'create';
   params: CreateEventParams;
-}
-
-/**
- * Safely converts a timestamp to an ISO string.
- * If the timestamp is invalid, falls back to the current time and logs a warning.
- */
-function timestampToISOString(timestamp: number | undefined | null): string {
-  // Check if timestamp is a valid number
-  if (timestamp == null || typeof timestamp !== 'number' || isNaN(timestamp)) {
-    logger.warn(
-      {timestamp, fallbackTo: Date.now()},
-      'Invalid timestamp provided, using current time as fallback'
-    );
-    return new Date().toISOString();
-  }
-
-  // Create Date object and check if it's valid
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) {
-    logger.warn(
-      {timestamp, fallbackTo: Date.now()},
-      'Invalid Date created from timestamp, using current time as fallback'
-    );
-    return new Date().toISOString();
-  }
-
-  return date.toISOString();
 }
 
 export async function addGameEvent(gid: string, event: GameEvent): Promise<void> {

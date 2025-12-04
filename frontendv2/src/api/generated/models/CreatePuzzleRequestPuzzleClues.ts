@@ -13,13 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
-import type { CreatePuzzleRequestPuzzlePuzzleInnerInner } from './CreatePuzzleRequestPuzzlePuzzleInnerInner';
+import type { CreatePuzzleRequestPuzzleCluesAcrossInner } from './CreatePuzzleRequestPuzzleCluesAcrossInner';
 import {
-  CreatePuzzleRequestPuzzlePuzzleInnerInnerFromJSON,
-  CreatePuzzleRequestPuzzlePuzzleInnerInnerFromJSONTyped,
-  CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSON,
-  CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSONTyped,
-} from './CreatePuzzleRequestPuzzlePuzzleInnerInner';
+  CreatePuzzleRequestPuzzleCluesAcrossInnerFromJSON,
+  CreatePuzzleRequestPuzzleCluesAcrossInnerFromJSONTyped,
+  CreatePuzzleRequestPuzzleCluesAcrossInnerToJSON,
+  CreatePuzzleRequestPuzzleCluesAcrossInnerToJSONTyped,
+} from './CreatePuzzleRequestPuzzleCluesAcrossInner';
 
 /**
  *
@@ -29,17 +29,17 @@ import {
 export interface CreatePuzzleRequestPuzzleClues {
   [key: string]: any | any;
   /**
-   * Across clues
-   * @type {Array<CreatePuzzleRequestPuzzlePuzzleInnerInner>}
+   * Across clues in v2 object format {number, clue}
+   * @type {Array<CreatePuzzleRequestPuzzleCluesAcrossInner>}
    * @memberof CreatePuzzleRequestPuzzleClues
    */
-  across?: Array<CreatePuzzleRequestPuzzlePuzzleInnerInner>;
+  across?: Array<CreatePuzzleRequestPuzzleCluesAcrossInner>;
   /**
-   * Down clues
-   * @type {Array<CreatePuzzleRequestPuzzlePuzzleInnerInner>}
+   * Down clues in v2 object format {number, clue}
+   * @type {Array<CreatePuzzleRequestPuzzleCluesAcrossInner>}
    * @memberof CreatePuzzleRequestPuzzleClues
    */
-  down?: Array<CreatePuzzleRequestPuzzlePuzzleInnerInner>;
+  down?: Array<CreatePuzzleRequestPuzzleCluesAcrossInner>;
 }
 
 /**
@@ -62,21 +62,16 @@ export function CreatePuzzleRequestPuzzleCluesFromJSONTyped(
   if (json == null) {
     return json;
   }
-
-  // Handle both capitalized (Across/Down) and lowercase (across/down) keys for backward compatibility
-  const acrossData = json['Across'] || json['across'];
-  const downData = json['Down'] || json['down'];
-
   return {
     ...json,
     across:
-      acrossData == null
+      json['Across'] == null
         ? undefined
-        : (acrossData as Array<any>).map(CreatePuzzleRequestPuzzlePuzzleInnerInnerFromJSON),
+        : (json['Across'] as Array<any>).map(CreatePuzzleRequestPuzzleCluesAcrossInnerFromJSON),
     down:
-      downData == null
+      json['Down'] == null
         ? undefined
-        : (downData as Array<any>).map(CreatePuzzleRequestPuzzlePuzzleInnerInnerFromJSON),
+        : (json['Down'] as Array<any>).map(CreatePuzzleRequestPuzzleCluesAcrossInnerFromJSON),
   };
 }
 
@@ -97,10 +92,10 @@ export function CreatePuzzleRequestPuzzleCluesToJSONTyped(
     Across:
       value['across'] == null
         ? undefined
-        : (value['across'] as Array<any>).map(CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSON),
+        : (value['across'] as Array<any>).map(CreatePuzzleRequestPuzzleCluesAcrossInnerToJSON),
     Down:
       value['down'] == null
         ? undefined
-        : (value['down'] as Array<any>).map(CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSON),
+        : (value['down'] as Array<any>).map(CreatePuzzleRequestPuzzleCluesAcrossInnerToJSON),
   };
 }

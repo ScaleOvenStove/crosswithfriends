@@ -2,6 +2,22 @@
 -- Performance optimization indexes for puzzle list queries
 -- Run this migration to improve puzzle list loading performance
 
+-- Helper function to determine puzzle type from content
+CREATE OR REPLACE FUNCTION get_puzzle_type(content jsonb)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT COALESCE(
+        content->'info'->>'type',
+        CASE
+            WHEN jsonb_array_length(COALESCE(content->'solution', '[]'::jsonb)) <= 10 
+            THEN 'Mini Puzzle'
+            ELSE 'Daily Puzzle'
+        END
+    );
+$$;
+
 -- 1. Partial index on is_public = true (most queries filter by this)
 -- This significantly speeds up queries that filter by is_public
 CREATE INDEX IF NOT EXISTS puzzles_is_public_pid_numeric_idx
@@ -27,15 +43,9 @@ CREATE INDEX IF NOT EXISTS puzzle_combined_title_author_trigrams
 
 -- 4. Index for size filtering (solution array length)
 -- This helps when filtering by puzzle size (Mini vs Standard)
+-- Uses the helper function to determine puzzle type
 CREATE INDEX IF NOT EXISTS puzzles_solution_length_idx
-    ON public.puzzles (
-        CASE
-            WHEN content->'info'->>'type' IS NOT NULL THEN
-                (content->'info'->>'type')
-            WHEN jsonb_array_length(content->'solution') <= 10 THEN 'Mini Puzzle'
-            ELSE 'Daily Puzzle'
-        END
-    )
+    ON public.puzzles (get_puzzle_type(content))
     WHERE is_public = true;
 
 -- Note: The existing indexes are kept for backward compatibility

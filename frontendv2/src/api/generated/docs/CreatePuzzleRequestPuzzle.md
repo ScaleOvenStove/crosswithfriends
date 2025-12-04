@@ -1,21 +1,23 @@
+
 # CreatePuzzleRequestPuzzle
+
 
 ## Properties
 
-| Name         | Type                                                                          |
-| ------------ | ----------------------------------------------------------------------------- |
-| `version`    | string                                                                        |
-| `kind`       | Array&lt;string&gt;                                                           |
-| `dimensions` | [CreatePuzzleRequestPuzzleDimensions](CreatePuzzleRequestPuzzleDimensions.md) |
-| `title`      | string                                                                        |
-| `author`     | string                                                                        |
-| `copyright`  | string                                                                        |
-| `notes`      | string                                                                        |
-| `solution`   | Array&lt;Array&lt;CreatePuzzleRequestPuzzleSolutionInnerInner&gt;&gt;         |
-| `puzzle`     | Array&lt;Array&lt;CreatePuzzleRequestPuzzlePuzzleInnerInner&gt;&gt;           |
-| `clues`      | [CreatePuzzleRequestPuzzleClues](CreatePuzzleRequestPuzzleClues.md)           |
-| `grid`       | Array&lt;Array&lt;CreatePuzzleRequestPuzzleSolutionInnerInner&gt;&gt;         |
-| `info`       | [CreatePuzzleRequestPuzzleInfo](CreatePuzzleRequestPuzzleInfo.md)             |
+Name | Type
+------------ | -------------
+`version` | string
+`kind` | Array&lt;string&gt;
+`dimensions` | [CreatePuzzleRequestPuzzleDimensions](CreatePuzzleRequestPuzzleDimensions.md)
+`title` | string
+`author` | string
+`copyright` | string
+`notes` | string
+`solution` | Array&lt;Array&lt;CreatePuzzleRequestPuzzleSolutionInnerInner&gt;&gt;
+`puzzle` | Array&lt;Array&lt;CreatePuzzleRequestPuzzlePuzzleInnerInner&gt;&gt;
+`clues` | [CreatePuzzleRequestPuzzleClues](CreatePuzzleRequestPuzzleClues.md)
+`grid` | Array&lt;Array&lt;CreatePuzzleRequestPuzzleSolutionInnerInner&gt;&gt;
+`info` | [CreatePuzzleRequestPuzzleInfo](CreatePuzzleRequestPuzzleInfo.md)
 
 ## Example
 
@@ -24,8 +26,8 @@ import type { CreatePuzzleRequestPuzzle } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "version": http://ipuz.org/v1,
-  "kind": ["http://ipuz.org/crossword#1"],
+  "version": null,
+  "kind": null,
   "dimensions": null,
   "title": null,
   "author": null,
@@ -50,3 +52,5 @@ console.log(exampleParsed)
 ```
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+

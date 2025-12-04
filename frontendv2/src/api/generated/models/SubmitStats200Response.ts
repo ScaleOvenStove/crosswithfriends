@@ -21,16 +21,16 @@ import { mapValues } from '../runtime';
 export interface SubmitStats200Response {
   /**
    *
-   * @type {Array<object>}
+   * @type {Array<{ [key: string]: any; }>}
    * @memberof SubmitStats200Response
    */
-  stats?: Array<object>;
+  stats?: Array<{ [key: string]: any }>;
   /**
    *
-   * @type {Array<object>}
+   * @type {Array<{ [key: string]: any; }>}
    * @memberof SubmitStats200Response
    */
-  history?: Array<object>;
+  history?: Array<{ [key: string]: any }>;
 }
 
 /**

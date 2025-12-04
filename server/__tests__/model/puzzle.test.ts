@@ -77,13 +77,14 @@ describe('Puzzle Model', () => {
         ['.', 'C', 'A', 'T'],
         ['D', 'O', 'G', '.'],
       ]);
+      // Clues should be in v2 object format
       expect(puzzle.clues?.Across).toEqual([
-        ['1', 'Feline pet'],
-        ['4', 'Canine pet'],
+        {number: '1', clue: 'Feline pet'},
+        {number: '4', clue: 'Canine pet'},
       ]);
       expect(puzzle.clues?.Down).toEqual([
-        ['2', 'Letter A'],
-        ['3', 'Letter T'],
+        {number: '2', clue: 'Letter A'},
+        {number: '3', clue: 'Letter T'},
       ]);
       // Puzzle grid should have numbers assigned
       expect(puzzle.puzzle).toBeDefined();
@@ -149,13 +150,14 @@ describe('Puzzle Model', () => {
         ['.', '.', '.'],
         ['D', 'O', 'G'],
       ]);
+      // Clues should be in v2 object format
       expect(result.clues?.Across).toEqual([
-        ['1', 'Meow'],
-        ['3', 'Woof'],
+        {number: '1', clue: 'Meow'},
+        {number: '3', clue: 'Woof'},
       ]);
       expect(result.clues?.Down).toEqual([
-        ['1', 'Letter C'],
-        ['2', 'Letter A'],
+        {number: '1', clue: 'Letter C'},
+        {number: '2', clue: 'Letter A'},
       ]);
 
       // Check puzzle grid structure
