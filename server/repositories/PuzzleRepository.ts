@@ -4,12 +4,12 @@
  */
 
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
-import Joi from 'joi';
 import type {Pool} from 'pg';
 import * as uuid from 'uuid';
 
 import {convertCluesToV2, convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import {logger} from '../utils/logger.js';
+import {validatePuzzle} from '../validation/puzzleSchema.js';
 
 import type {IPuzzleRepository} from './interfaces/IPuzzleRepository.js';
 
@@ -320,80 +320,11 @@ export class PuzzleRepository implements IPuzzleRepository {
   }
 
   private static validatePuzzle(puzzle: unknown): void {
-    const string = (): Joi.StringSchema => Joi.string().allow('');
-
-    const puzzleValidator = Joi.object({
-      version: string().required(),
-      kind: Joi.array().items(string()).required(),
-      dimensions: Joi.object({
-        width: Joi.number().integer().required(),
-        height: Joi.number().integer().required(),
-      }).required(),
-      title: string().required(),
-      author: string().required(),
-      copyright: string().optional(),
-      notes: string().optional(),
-      solution: Joi.array()
-        .items(
-          Joi.array()
-            .items(Joi.alternatives().try(string(), Joi.valid(null, '#')))
-            .min(1)
-        )
-        .min(1)
-        .required(),
-      puzzle: Joi.array()
-        .items(
-          Joi.array().items(
-            Joi.alternatives().try(
-              Joi.number(),
-              Joi.string(),
-              Joi.object({
-                cell: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
-                style: Joi.object({
-                  shapebg: string().optional(),
-                  fillbg: string().optional(),
-                }).optional(),
-              }),
-              Joi.valid(null)
-            )
-          )
-        )
-        .required(),
-      clues: Joi.object({
-        Across: Joi.array()
-          .items(
-            Joi.alternatives().try(
-              Joi.array().items(string()),
-              Joi.object({
-                number: string(),
-                clue: string(),
-                cells: Joi.array().optional(),
-              })
-            )
-          )
-          .required(),
-        Down: Joi.array()
-          .items(
-            Joi.alternatives().try(
-              Joi.array().items(string()),
-              Joi.object({
-                number: string(),
-                clue: string(),
-                cells: Joi.array().optional(),
-              })
-            )
-          )
-          .required(),
-      }).required(),
-    });
-
     logger.debug({keys: puzzle && typeof puzzle === 'object' ? Object.keys(puzzle) : []}, 'Puzzle keys');
-    const {error} = puzzleValidator.validate(puzzle);
-    if (error) {
-      throw new Error(error.message);
-    }
+    // Use centralized Zod validation
+    validatePuzzle(puzzle);
 
-    // Ensure solution array is not empty
+    // Additional validation: Ensure solution array is not empty
     if (puzzle && typeof puzzle === 'object' && 'solution' in puzzle) {
       const solution = (puzzle as {solution?: unknown}).solution;
       if (!Array.isArray(solution) || solution.length === 0) {

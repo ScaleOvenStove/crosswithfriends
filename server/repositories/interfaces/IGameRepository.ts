@@ -33,5 +33,5 @@ export interface IGameRepository {
   /**
    * Create initial game event from a puzzle
    */
-  createInitialEvent(gid: string, pid: string): Promise<string>;
+  createInitialEvent(gid: string, pid: string, userId?: string | null): Promise<string>;
 }

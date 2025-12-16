@@ -1,8 +1,6 @@
 import type {IncrementGidResponse, IncrementPidResponse} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {incrementGid, incrementPid} from '../model/counters.js';
-
 import {IncrementGidResponseSchema, IncrementPidResponseSchema, ErrorResponseSchema} from './schemas.js';
 
 // eslint-disable-next-line require-await
@@ -25,7 +23,7 @@ async function countersRouter(fastify: FastifyInstance): Promise<void> {
     gidOptions,
     async (request: FastifyRequest, _reply: FastifyReply) => {
       request.log.debug('increment gid');
-      const gid = await incrementGid();
+      const gid = await fastify.repositories.counters.getNextGameId();
       return {gid};
     }
   );
@@ -48,7 +46,7 @@ async function countersRouter(fastify: FastifyInstance): Promise<void> {
     pidOptions,
     async (request: FastifyRequest, _reply: FastifyReply) => {
       request.log.debug('increment pid');
-      const pid = await incrementPid();
+      const pid = await fastify.repositories.counters.getNextPuzzleId();
       return {pid};
     }
   );

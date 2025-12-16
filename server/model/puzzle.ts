@@ -1,9 +1,9 @@
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
-import Joi from 'joi';
 import * as uuid from 'uuid';
 
 import {convertCluesToV2, convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import {logger} from '../utils/logger.js';
+import {validatePuzzle} from '../validation/puzzleSchema.js';
 
 import {pool} from './pool.js';
 
@@ -221,124 +221,8 @@ export async function listPuzzles(
   return puzzles;
 }
 
-const string = (): Joi.StringSchema => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
-
-// Validator for ipuz format per https://www.puzzazz.com/ipuz/v1 and v2
-const puzzleValidator = Joi.object({
-  version: string().required(), // Supports both v1 and v2
-  kind: Joi.array().items(string()).required(),
-  dimensions: Joi.object({
-    width: Joi.number().integer().required(),
-    height: Joi.number().integer().required(),
-  }).required(),
-  title: string().required(),
-  author: string().required(),
-  copyright: string().optional(),
-  notes: string().optional(),
-  // Additional ipuz fields that may be present
-  origin: string().optional(),
-  publisher: string().optional(),
-  intro: string().optional(),
-  difficulty: string().optional(),
-  empty: string().optional(),
-  solution: Joi.array()
-    .items(
-      Joi.array()
-        .items(Joi.alternatives().try(string(), Joi.valid(null, '#')))
-        .min(1)
-    )
-    .min(1)
-    .required(),
-  puzzle: Joi.array()
-    .items(
-      Joi.array().items(
-        Joi.alternatives().try(
-          Joi.number(),
-          Joi.string(), // Allow string clue numbers like "1", "2", "10", "0" for empty
-          Joi.object({
-            cell: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
-            style: Joi.object({
-              shapebg: string().optional(),
-              fillbg: string().optional(),
-            }).optional(),
-          }),
-          Joi.valid(null)
-        )
-      )
-    )
-    .required(),
-  clues: Joi.object({
-    Across: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.array().items(string()), // v1 format: ["1", "clue text"]
-          Joi.object({
-            number: string(),
-            clue: string(),
-            cells: Joi.array().optional(), // v2 format with cells property
-          })
-        )
-      )
-      .optional(),
-    Down: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.array().items(string()), // v1 format: ["1", "clue text"]
-          Joi.object({
-            number: string(),
-            clue: string(),
-            cells: Joi.array().optional(), // v2 format with cells property
-          })
-        )
-      )
-      .optional(),
-    across: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.array().items(string()), // v1 format: ["1", "clue text"]
-          Joi.object({
-            number: string(),
-            clue: string(),
-            cells: Joi.array().optional(), // v2 format with cells property
-          })
-        )
-      )
-      .optional(),
-    down: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.array().items(string()), // v1 format: ["1", "clue text"]
-          Joi.object({
-            number: string(),
-            clue: string(),
-            cells: Joi.array().optional(), // v2 format with cells property
-          })
-        )
-      )
-      .optional(),
-  })
-    .unknown(true) // Allow additional properties (e.g., other clue directions)
-    .required(),
-}).unknown(true); // Allow additional top-level properties (e.g., origin, publisher, intro, difficulty, empty)
-
-function validatePuzzle(puzzle: unknown): void {
-  logger.debug({keys: puzzle && typeof puzzle === 'object' ? Object.keys(puzzle) : []}, 'Puzzle keys');
-  const {error} = puzzleValidator.validate(puzzle);
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  // Ensure solution array is not empty
-  if (puzzle && typeof puzzle === 'object' && 'solution' in puzzle) {
-    const solution = (puzzle as {solution?: unknown}).solution;
-    if (!Array.isArray(solution) || solution.length === 0) {
-      throw new Error('Puzzle solution array must not be empty');
-    }
-    if (!Array.isArray(solution[0]) || solution[0].length === 0) {
-      throw new Error('Puzzle solution must have at least one non-empty row');
-    }
-  }
-}
+// Puzzle validation is now handled by validatePuzzle from validation/puzzleSchema.ts
+// Additional validation for solution array is done inline in addPuzzle function
 
 export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: string): Promise<string> {
   let puzzleId = pid;

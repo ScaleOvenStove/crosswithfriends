@@ -1,20 +1,30 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
 import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as gameModel from '../../model/game.js';
 import * as puzzleSolveModel from '../../model/puzzle_solve.js';
-import * as puzzleModel from '../../model/puzzle.js';
 
-// Mock the models
-vi.mock('../../model/game.js');
+// Mock the puzzle solve model (still used by some endpoints)
 vi.mock('../../model/puzzle_solve.js');
-vi.mock('../../model/puzzle');
 
 describe('Game API', () => {
-  let app: FastifyInstance;
+  let app: FastifyInstance & {
+    repositories: {
+      game: {
+        createInitialEvent: Mock;
+        getEvents: Mock;
+        getInfo: Mock;
+        addEvent: Mock;
+      };
+    };
+    services: {
+      puzzle: {
+        getPuzzleInfo: Mock;
+      };
+    };
+  };
 
   beforeAll(async () => {
-    app = await buildTestApp();
+    app = (await buildTestApp()) as typeof app;
     await waitForApp(app);
   });
 
@@ -32,9 +42,10 @@ describe('Game API', () => {
       const mockRequest = {
         gid: mockGid,
         pid: 'test-pid-456',
+        userId: 'test-user-123',
       };
 
-      (gameModel.addInitialGameEvent as Mock).mockResolvedValue(mockGid);
+      app.repositories.game.createInitialEvent.mockResolvedValue(mockGid);
 
       const response = await app.inject({
         method: 'POST',
@@ -44,12 +55,16 @@ describe('Game API', () => {
 
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.body)).toEqual({gid: mockGid});
-      expect(gameModel.addInitialGameEvent).toHaveBeenCalledWith(mockGid, 'test-pid-456');
+      expect(app.repositories.game.createInitialEvent).toHaveBeenCalledWith(
+        mockGid,
+        'test-pid-456',
+        'test-user-123'
+      );
     });
 
     it('should handle errors from model', async () => {
       const error = new Error('Failed to create game');
-      (gameModel.addInitialGameEvent as Mock).mockRejectedValue(error);
+      app.repositories.game.createInitialEvent.mockRejectedValue(error);
 
       const response = await app.inject({
         method: 'POST',
@@ -57,6 +72,7 @@ describe('Game API', () => {
         payload: {
           gid: 'test-gid',
           pid: 'test-pid',
+          userId: 'test-user-123',
         },
       });
 
@@ -85,7 +101,7 @@ describe('Game API', () => {
       };
 
       (puzzleSolveModel.getPuzzleSolves as Mock).mockResolvedValue(mockPuzzleSolves);
-      (puzzleModel.getPuzzleInfo as Mock).mockResolvedValue(mockPuzzleInfo);
+      app.services.puzzle.getPuzzleInfo.mockResolvedValue(mockPuzzleInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -119,7 +135,7 @@ describe('Game API', () => {
       };
 
       (puzzleSolveModel.getPuzzleSolves as Mock).mockResolvedValue(mockPuzzleSolves);
-      (puzzleModel.getPuzzleInfo as Mock).mockResolvedValue(mockPuzzleInfo);
+      app.services.puzzle.getPuzzleInfo.mockResolvedValue(mockPuzzleInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -144,7 +160,7 @@ describe('Game API', () => {
       ];
 
       (puzzleSolveModel.getPuzzleSolves as Mock).mockResolvedValue(mockPuzzleSolves);
-      (puzzleModel.getPuzzleInfo as Mock).mockResolvedValue(null);
+      app.services.puzzle.getPuzzleInfo.mockResolvedValue(null);
 
       const response = await app.inject({
         method: 'GET',
@@ -174,7 +190,7 @@ describe('Game API', () => {
       };
 
       (puzzleSolveModel.getPuzzleSolves as Mock).mockResolvedValue(mockPuzzleSolves);
-      (puzzleModel.getPuzzleInfo as Mock).mockResolvedValue(mockPuzzleInfo);
+      app.services.puzzle.getPuzzleInfo.mockResolvedValue(mockPuzzleInfo);
 
       const response = await app.inject({
         method: 'GET',

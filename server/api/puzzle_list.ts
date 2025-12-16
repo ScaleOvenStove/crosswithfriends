@@ -1,7 +1,7 @@
 import type {ListPuzzleRequestFilters, ListPuzzleResponse} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {listPuzzles, convertOldFormatToIpuz} from '../model/puzzle.js';
+import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 
 import {createHttpError} from './errors.js';
 import {ErrorResponseSchema} from './schemas.js';
@@ -71,16 +71,20 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
         nameOrTitleFilter: (request.query.nameOrTitle ?? '') as string,
       };
 
-      const rawPuzzleList = await listPuzzles(filters, pageSize, page * pageSize);
+      const {puzzles: rawPuzzleList} = await fastify.repositories.puzzle.list(
+        filters,
+        pageSize,
+        page * pageSize
+      );
       const puzzles = rawPuzzleList.map((puzzle) => {
         // Convert old format to ipuz format for consistency
         // All puzzles returned to clients are now in pure ipuz format
-        const content = convertOldFormatToIpuz(puzzle.content);
+        const content = convertOldFormatToIpuz(puzzle.puzzle);
 
         return {
           pid: puzzle.pid,
           content,
-          stats: {numSolves: puzzle.times_solved},
+          stats: {numSolves: 0}, // TODO: Add numSolves to repository response
         };
       });
 

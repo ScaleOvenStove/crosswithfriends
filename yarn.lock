@@ -429,7 +429,6 @@ __metadata:
     "@testing-library/jest-dom": "npm:^6.9.1"
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.6.1"
-    "@types/add": "npm:^2"
     "@types/canvas-confetti": "npm:^1.9.0"
     "@types/dompurify": "npm:^3.2.0"
     "@types/node": "npm:^20.19.25"
@@ -470,6 +469,7 @@ __metadata:
     vite: "npm:^7.2.2"
     vitest: "npm:^4.0.10"
     yarn: "npm:^1.22.22"
+    zod: "npm:^3.23.8"
     zustand: "npm:^5.0.8"
   languageName: unknown
   linkType: soft
@@ -485,6 +485,7 @@ __metadata:
     "@fastify/swagger": "npm:^9.6.1"
     "@fastify/swagger-ui": "npm:^5.2.3"
     "@tsconfig/node20": "npm:^20.1.8"
+    "@types/escape-html": "npm:^1"
     "@types/node": "npm:^24.10.1"
     "@types/pg": "npm:^8.15.6"
     "@typescript-eslint/eslint-plugin": "npm:^8.47.0"
@@ -492,6 +493,7 @@ __metadata:
     "@vitest/coverage-v8": "npm:^4.0.10"
     cross-env: "npm:^10.1.0"
     dotenv: "npm:^17.2.3"
+    escape-html: "npm:^1.0.3"
     eslint: "npm:^9.39.1"
     eslint-config-prettier: "npm:^10.1.8"
     eslint-import-resolver-typescript: "npm:^4.4.4"
@@ -3210,13 +3212,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/add@npm:^2":
-  version: 2.0.3
-  resolution: "@types/add@npm:2.0.3"
-  checksum: 10c0/d18841b43d3799f69db0bdae380d19d05f43b716315c5bfd4d6c1b3467bada2644eab8c04bb5afdb94bba87604da06d466f22fe30df6bcf0518c373593bb474a
-  languageName: node
-  linkType: hard
-
 "@types/aria-query@npm:^5.0.1":
   version: 5.0.4
   resolution: "@types/aria-query@npm:5.0.4"
@@ -3399,6 +3394,13 @@ __metadata:
   dependencies:
     dompurify: "npm:*"
   checksum: 10c0/e83fec586ffbb1b43f7c8479f2a99c223814d240db912d53fb126aaeea52a4091deceeb75632b5d76004d88ef0fbf444984887b121dece6fa69f4172ed4b2b07
+  languageName: node
+  linkType: hard
+
+"@types/escape-html@npm:^1":
+  version: 1.0.4
+  resolution: "@types/escape-html@npm:1.0.4"
+  checksum: 10c0/5cdae9d38e97b1ad61180528ef7ca66bf6be96e875cc560c3e064d6ca75ccf2adaf2fa3b7bdd4f7494013e4357a2fb0bb62f2e59ca53097d5c45c7519d0ce9c3
   languageName: node
   linkType: hard
 
@@ -6537,7 +6539,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"escape-html@npm:~1.0.3":
+"escape-html@npm:^1.0.3, escape-html@npm:~1.0.3":
   version: 1.0.3
   resolution: "escape-html@npm:1.0.3"
   checksum: 10c0/524c739d776b36c3d29fa08a22e03e8824e3b2fd57500e5e44ecf3cc4707c34c60f9ca0781c0e33d191f2991161504c295e98f68c78fe7baa6e57081ec6ac0a3
@@ -14915,6 +14917,13 @@ __metadata:
   peerDependencies:
     zod: ^3.25.0 || ^4.0.0
   checksum: 10c0/0ccfec48c46de1be440b719cd02044d4abb89ed0e14c13e637cd55bf29102f67ccdba373f25def0fc7130e5f15025be4d557a7edcc95d5a3811599aade689e1b
+  languageName: node
+  linkType: hard
+
+"zod@npm:^3.23.8":
+  version: 3.25.76
+  resolution: "zod@npm:3.25.76"
+  checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c
   languageName: node
   linkType: hard
 

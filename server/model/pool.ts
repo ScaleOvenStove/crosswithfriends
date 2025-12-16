@@ -38,19 +38,38 @@ if (config.database.useSSL) {
   };
 }
 
-export const pool = new pg.Pool(poolConfig);
+/**
+ * Creates a new database connection pool
+ * @returns A new PostgreSQL pool instance
+ */
+export function createPool(): pg.Pool {
+  const pool = new pg.Pool(poolConfig);
 
-// Add error handlers for better debugging
-pool.on('error', (err) => {
-  logger.error({err}, 'Unexpected database pool error');
-});
+  // Add error handlers for better debugging
+  pool.on('error', (err) => {
+    logger.error({err}, 'Unexpected database pool error');
+  });
 
-// Log pool events in development
-if (config.server.isDevelopment) {
-  pool.on('connect', () => {
-    logger.debug('New database client connected');
-  });
-  pool.on('remove', () => {
-    logger.debug('Database client removed from pool');
-  });
+  // Log pool events in development
+  if (config.server.isDevelopment) {
+    pool.on('connect', () => {
+      logger.debug('New database client connected');
+    });
+    pool.on('remove', () => {
+      logger.debug('Database client removed from pool');
+    });
+  }
+
+  return pool;
 }
+
+/**
+ * Closes a database pool gracefully
+ * @param pool - The pool to close
+ */
+export async function closePool(pool: pg.Pool): Promise<void> {
+  await pool.end();
+}
+
+// Export singleton for backward compatibility (deprecated - use createPool instead)
+export const pool = createPool();

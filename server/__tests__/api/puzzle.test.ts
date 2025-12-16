@@ -1,16 +1,19 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
 import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as puzzleModel from '../../model/puzzle.js';
-
-// Mock the model
-vi.mock('../../model/puzzle.js');
 
 describe('Puzzle API', () => {
-  let app: FastifyInstance;
+  let app: FastifyInstance & {
+    repositories: {
+      puzzle: {
+        create: Mock;
+        findById: Mock;
+      };
+    };
+  };
 
   beforeAll(async () => {
-    app = await buildTestApp();
+    app = (await buildTestApp()) as typeof app;
     await waitForApp(app);
   });
 
@@ -32,7 +35,7 @@ describe('Puzzle API', () => {
         pid: undefined,
       };
 
-      (puzzleModel.addPuzzle as Mock).mockResolvedValue(mockPid);
+      app.repositories.puzzle.create.mockResolvedValue(mockPid);
 
       const response = await app.inject({
         method: 'POST',
@@ -42,12 +45,12 @@ describe('Puzzle API', () => {
 
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.body)).toEqual({pid: mockPid});
-      expect(puzzleModel.addPuzzle).toHaveBeenCalledWith(mockPuzzle, true, undefined);
+      expect(app.repositories.puzzle.create).toHaveBeenCalledWith('', mockPuzzle, true);
     });
 
-    it('should handle errors from model', async () => {
+    it('should handle errors from repository', async () => {
       const error = new Error('Invalid puzzle data');
-      (puzzleModel.addPuzzle as Mock).mockRejectedValue(error);
+      app.repositories.puzzle.create.mockRejectedValue(error);
 
       const response = await app.inject({
         method: 'POST',
@@ -75,7 +78,7 @@ describe('Puzzle API', () => {
         grid: [],
       };
 
-      (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
+      app.repositories.puzzle.findById.mockResolvedValue(mockPuzzle);
 
       const response = await app.inject({
         method: 'GET',
@@ -85,13 +88,13 @@ describe('Puzzle API', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body).toEqual(mockPuzzle);
-      expect(puzzleModel.getPuzzle).toHaveBeenCalledWith(mockPid);
+      expect(app.repositories.puzzle.findById).toHaveBeenCalledWith(mockPid);
     });
 
     it('should return 404 when puzzle not found', async () => {
       const mockPid = 'nonexistent-pid';
       const error = new Error('Puzzle not found');
-      (puzzleModel.getPuzzle as Mock).mockRejectedValue(error);
+      app.repositories.puzzle.findById.mockRejectedValue(error);
 
       const response = await app.inject({
         method: 'GET',
@@ -104,10 +107,10 @@ describe('Puzzle API', () => {
       expect(body.message).toBe('Puzzle not found');
     });
 
-    it('should handle errors from model', async () => {
+    it('should handle errors from repository', async () => {
       const mockPid = 'test-pid';
       const error = new Error('Database error');
-      (puzzleModel.getPuzzle as Mock).mockRejectedValue(error);
+      app.repositories.puzzle.findById.mockRejectedValue(error);
 
       const response = await app.inject({
         method: 'GET',

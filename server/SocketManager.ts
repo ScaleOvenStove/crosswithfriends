@@ -1,12 +1,14 @@
 // ============= Server Values ===========
 
 import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
-import {Server as SocketIOServer} from 'socket.io';
+import {Server as SocketIOServer, type Socket} from 'socket.io';
 
 import type {GameEvent} from './model/game.js';
 import {addGameEvent, getGameEvents} from './model/game.js';
 import {addRoomEvent, getRoomEvents} from './model/room.js';
 import {logger} from './utils/logger.js';
+import {extractUserIdFromSocket, isValidUserId} from './utils/userAuth.js';
+import {checkRateLimit, cleanupRateLimitState} from './utils/websocketRateLimit.js';
 import {validateGameEvent} from './validation/gameEvents.js';
 import {validateRoomEvent} from './validation/roomEvents.js';
 
@@ -77,12 +79,19 @@ class SocketManager {
 
   listen(): void {
     this.io.on('connection', (socket) => {
-      // TODO: Add authentication middleware
-      // - Verify user token on connection
-      // - Attach authenticated user ID to socket instance
-      // - Reject unauthenticated connections
+      // Extract and validate user ID from connection
+      const userId = extractUserIdFromSocket(socket);
+      if (!isValidUserId(userId)) {
+        logger.warn({socketId: socket.id}, '[socket] Connection rejected: missing or invalid user ID');
+        socket.disconnect(true);
+        return;
+      }
 
-      logger.info({socketId: socket.id}, '[socket] Client connected');
+      // Store user ID on socket instance for later use
+      // Type assertion is safe here because isValidUserId ensures userId is a non-null string
+      (socket as Socket & {userId: string}).userId = userId as string;
+
+      logger.info({socketId: socket.id, userId}, '[socket] Client connected');
 
       // ======== Ping/Pong for Latency Measurement ========= //
       // Use 'latency_ping' to avoid conflict with Socket.IO's internal 'ping' event
@@ -202,6 +211,14 @@ class SocketManager {
 
       socket.on('game_event', async (message, ack) => {
         try {
+          // Check rate limit first
+          if (!checkRateLimit(socket)) {
+            logger.warn({socketId: socket.id}, '[socket] Rate limit exceeded for game_event');
+            if (ack) void ack({error: 'Rate limit exceeded. Please slow down.'});
+            socket.disconnect(true);
+            return;
+          }
+
           // Validate message structure
           if (!message || typeof message !== 'object') {
             logger.warn({message}, '[socket] Invalid message structure in game_event');
@@ -217,8 +234,13 @@ class SocketManager {
             return;
           }
 
-          // TODO: Verify user is authorized to emit events for this game
-          // TODO: Verify the event's 'id' field matches the authenticated user ID
+          // Get authenticated user ID from socket
+          const socketUserId = (socket as Socket & {userId?: string}).userId;
+          if (!socketUserId || !isValidUserId(socketUserId)) {
+            logger.warn({socketId: socket.id, gid}, '[socket] Unauthenticated game event attempt');
+            if (ack) void ack({error: 'Authentication required'});
+            return;
+          }
 
           // Validate event using Zod schema
           const validation = validateGameEvent(event);
@@ -228,8 +250,12 @@ class SocketManager {
             return;
           }
 
-          await this.addGameEvent(gid, validation.validatedEvent as GameEvent);
-          logger.debug({gid, eventType: event.type}, '[socket] Game event processed');
+          // Ensure event has the authenticated user ID
+          const validatedEvent = validation.validatedEvent as GameEvent;
+          validatedEvent.user = socketUserId;
+
+          await this.addGameEvent(gid, validatedEvent);
+          logger.debug({gid, eventType: event.type, userId: socketUserId}, '[socket] Game event processed');
           if (ack) void ack({success: true});
         } catch (error) {
           logger.error({err: error, message}, '[socket] Error handling game_event');
@@ -291,6 +317,14 @@ class SocketManager {
 
       socket.on('room_event', async (message, ack) => {
         try {
+          // Check rate limit first
+          if (!checkRateLimit(socket)) {
+            logger.warn({socketId: socket.id}, '[socket] Rate limit exceeded for room_event');
+            if (ack) void ack({error: 'Rate limit exceeded. Please slow down.'});
+            socket.disconnect(true);
+            return;
+          }
+
           // Validate message structure
           if (!message || typeof message !== 'object') {
             logger.warn({message}, '[socket] Invalid message structure in room_event');
@@ -306,8 +340,13 @@ class SocketManager {
             return;
           }
 
-          // TODO: Verify user is authorized to emit events for this room
-          // TODO: Verify the event's 'uid' field matches the authenticated user ID
+          // Get authenticated user ID from socket
+          const socketUserId = (socket as Socket & {userId?: string}).userId;
+          if (!socketUserId || !isValidUserId(socketUserId)) {
+            logger.warn({socketId: socket.id, rid}, '[socket] Unauthenticated room event attempt');
+            if (ack) void ack({error: 'Authentication required'});
+            return;
+          }
 
           // Validate event using Zod schema
           const validation = validateRoomEvent(event);
@@ -317,8 +356,14 @@ class SocketManager {
             return;
           }
 
-          await this.addRoomEvent(rid, validation.validatedEvent as RoomEvent);
-          logger.debug({rid, eventType: event.type}, '[socket] Room event processed');
+          // Ensure event has the authenticated user ID (if room events support uid field)
+          const validatedEvent = validation.validatedEvent as RoomEvent;
+          if ('uid' in validatedEvent && validatedEvent.uid === undefined) {
+            (validatedEvent as RoomEvent & {uid?: string}).uid = socketUserId;
+          }
+
+          await this.addRoomEvent(rid, validatedEvent);
+          logger.debug({rid, eventType: event.type, userId: socketUserId}, '[socket] Room event processed');
           if (ack) void ack({success: true});
         } catch (error) {
           logger.error({err: error, message}, '[socket] Error handling room_event');
@@ -328,6 +373,7 @@ class SocketManager {
 
       socket.on('disconnect', (reason) => {
         logger.info({socketId: socket.id, reason}, '[socket] Client disconnected');
+        cleanupRateLimitState(socket.id);
       });
 
       socket.on('error', (error) => {

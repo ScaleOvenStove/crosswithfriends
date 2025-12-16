@@ -27,30 +27,20 @@ describe('Game Model', () => {
         {type: 'updateCell', timestamp: 2000},
       ];
 
-      (pool.query as Mock)
-        .mockResolvedValueOnce({
-          rows: mockEvents.map((event) => ({event_payload: event})),
-        })
-        .mockResolvedValueOnce({
-          rows: [{count: '2'}],
-        });
+      (pool.query as Mock).mockResolvedValueOnce({
+        rows: mockEvents.map((event) => ({event_payload: event, total: '2'})),
+      });
 
       const result = await gameModel.getGameEvents(mockGid);
 
-      expect(pool.query).toHaveBeenCalledWith(
-        'SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC',
-        [mockGid]
-      );
-      expect(pool.query).toHaveBeenCalledWith('SELECT COUNT(*) FROM game_events WHERE gid=$1', [mockGid]);
+      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), [mockGid]);
       expect(result.events).toEqual(mockEvents);
       expect(result.total).toBe(2);
     });
 
     it('should return empty array when no events exist', async () => {
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValueOnce({rows: []}).mockResolvedValueOnce({
-        rows: [{count: '0'}],
-      });
+      (pool.query as Mock).mockResolvedValueOnce({rows: []});
 
       const result = await gameModel.getGameEvents(mockGid);
       expect(result.events).toEqual([]);
@@ -64,20 +54,13 @@ describe('Game Model', () => {
         {type: 'updateCell', timestamp: 2000},
       ];
 
-      (pool.query as Mock)
-        .mockResolvedValueOnce({
-          rows: mockEvents.map((event) => ({event_payload: event})),
-        })
-        .mockResolvedValueOnce({
-          rows: [{count: '5'}],
-        });
+      (pool.query as Mock).mockResolvedValueOnce({
+        rows: mockEvents.map((event) => ({event_payload: event, total: '5'})),
+      });
 
       const result = await gameModel.getGameEvents(mockGid, {limit: 2});
 
-      expect(pool.query).toHaveBeenCalledWith(
-        'SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC LIMIT $2',
-        [mockGid, 2]
-      );
+      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('LIMIT'), [mockGid, 2]);
       expect(result.events).toEqual(mockEvents);
       expect(result.total).toBe(5);
     });
@@ -86,20 +69,13 @@ describe('Game Model', () => {
       const mockGid = 'test-gid-123';
       const mockEvents = [{type: 'updateCell', timestamp: 2000}];
 
-      (pool.query as Mock)
-        .mockResolvedValueOnce({
-          rows: mockEvents.map((event) => ({event_payload: event})),
-        })
-        .mockResolvedValueOnce({
-          rows: [{count: '5'}],
-        });
+      (pool.query as Mock).mockResolvedValueOnce({
+        rows: mockEvents.map((event) => ({event_payload: event, total: '5'})),
+      });
 
       const result = await gameModel.getGameEvents(mockGid, {limit: 1, offset: 1});
 
-      expect(pool.query).toHaveBeenCalledWith(
-        'SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC LIMIT $2 OFFSET $3',
-        [mockGid, 1, 1]
-      );
+      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('OFFSET'), [mockGid, 1, 1]);
       expect(result.events).toEqual(mockEvents);
       expect(result.total).toBe(5);
     });
@@ -108,13 +84,9 @@ describe('Game Model', () => {
       const mockGid = 'test-gid-123';
       const mockEvents = [{type: 'create', timestamp: 1000}];
 
-      (pool.query as Mock)
-        .mockResolvedValueOnce({
-          rows: mockEvents.map((event) => ({event_payload: event})),
-        })
-        .mockResolvedValueOnce({
-          rows: [{count: '100'}],
-        });
+      (pool.query as Mock).mockResolvedValueOnce({
+        rows: mockEvents.map((event) => ({event_payload: event, total: '100'})),
+      });
 
       const result = await gameModel.getGameEvents(mockGid, {limit: 1});
       expect(result.total).toBe(100);

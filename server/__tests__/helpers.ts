@@ -1,7 +1,9 @@
 import fastify from 'fastify';
 import type {FastifyInstance} from 'fastify';
 import cors from '@fastify/cors';
+import {vi} from 'vitest';
 import apiRouter from '../api/router.js';
+import type {Repositories} from '../repositories/index.js';
 
 /**
  * Creates a test Fastify instance with API routes registered
@@ -23,6 +25,44 @@ export async function buildTestApp(): Promise<FastifyInstance> {
   await app.register(cors, {
     origin: true,
   });
+
+  // Create mock repositories
+  const mockRepositories: Repositories = {
+    counters: {
+      getNextGameId: vi.fn(),
+      getNextPuzzleId: vi.fn(),
+    },
+    puzzle: {
+      findById: vi.fn(),
+      findByIdOrNull: vi.fn(),
+      create: vi.fn(),
+      list: vi.fn(),
+      delete: vi.fn(),
+      recordSolve: vi.fn(),
+      getSolveStats: vi.fn(),
+    },
+    game: {
+      getEvents: vi.fn(),
+      getInfo: vi.fn(),
+      addEvent: vi.fn(),
+      createInitialEvent: vi.fn(),
+    },
+    room: {
+      addEvent: vi.fn(),
+      getEvents: vi.fn(),
+    },
+  };
+
+  // Create mock services
+  const mockServices = {
+    puzzle: {
+      getPuzzleInfo: vi.fn(),
+    },
+  };
+
+  // Decorate the app with mock repositories and services
+  app.decorate('repositories', mockRepositories);
+  app.decorate('services', mockServices);
 
   // Set custom error handler (same as production)
   app.setErrorHandler((error, request, reply) => {

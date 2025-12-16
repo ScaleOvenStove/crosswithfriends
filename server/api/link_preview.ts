@@ -1,8 +1,8 @@
 import type {InfoJson} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {getGameInfo} from '../model/game.js';
-import {getPuzzleInfo} from '../model/puzzle.js';
+import {escapeHtml, escapeHtmlAttribute} from '../utils/htmlEscape.js';
+import {logRequest} from '../utils/sanitizedLogger.js';
 import {isFBMessengerCrawler, isLinkExpanderBot} from '../utils/link_preview_util.js';
 
 import {createHttpError} from './errors.js';
@@ -46,7 +46,7 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
     '/',
     getOptions,
     async (request: FastifyRequest<{Querystring: LinkPreviewQuery}>, reply: FastifyReply) => {
-      request.log.debug({headers: request.headers, query: request.query}, 'got req');
+      logRequest(request);
 
       let url: URL;
       try {
@@ -62,13 +62,13 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
         if (!gid) {
           throw createHttpError('Invalid URL path: missing game ID', 400);
         }
-        info = (await getGameInfo(gid)) as InfoJson;
+        info = (await fastify.repositories.game.getInfo(gid)) as InfoJson;
       } else if (pathParts[1] === 'play') {
         const pid = pathParts[2];
         if (!pid) {
           throw createHttpError('Invalid URL path: missing puzzle ID', 400);
         }
-        info = (await getPuzzleInfo(pid)) as InfoJson;
+        info = (await fastify.services.puzzle.getPuzzleInfo(pid)) as InfoJson;
       } else {
         throw createHttpError('Invalid URL path', 400);
       }
@@ -97,10 +97,11 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
         ? [info.title, info.author, info.description].filter(Boolean).join(' | ')
         : info.title || '';
 
-      // Ensure all template variables are safe
-      const safeTitle = titlePropContent || '';
-      const safeDescription = info.description || '';
-      const safeUrl = url.href || '';
+      // Escape all user-controlled data to prevent XSS
+      const safeTitle = escapeHtml(titlePropContent || '');
+      const safeDescription = escapeHtml(info.description || '');
+      const safeUrl = escapeHtmlAttribute(url.href || '');
+      const safeOembedUrl = escapeHtmlAttribute(oembedEndpointUrl);
 
       // https://ogp.me
       return reply.type('text/html').send(String.raw`
@@ -112,7 +113,7 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
                 <meta property="og:url" content="${safeUrl}" />
                 <meta property="og:description" content="${safeDescription}" />
                 <meta property="og:site_name" content="downforacross.com" />
-                <link type="application/json+oembed" href=${oembedEndpointUrl} />
+                <link type="application/json+oembed" href="${safeOembedUrl}" />
                 <meta name="theme-color" content="#6aa9f4">
             </head>
         </html>

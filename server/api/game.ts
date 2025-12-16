@@ -1,9 +1,9 @@
 import type {CreateGameRequest, GetGameResponse, InfoJson} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {addInitialGameEvent} from '../model/game.js';
-import {getPuzzleInfo} from '../model/puzzle.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
+import {logRequest} from '../utils/sanitizedLogger.js';
+import {extractUserIdFromRequest, isValidUserId} from '../utils/userAuth.js';
 
 import {createHttpError} from './errors.js';
 import {
@@ -37,8 +37,19 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
     '',
     postOptions,
     async (request: FastifyRequest<{Body: CreateGameRequest}>, _reply: FastifyReply) => {
-      request.log.debug({headers: request.headers, body: request.body}, 'got req');
-      const gid = await addInitialGameEvent(request.body.gid, request.body.pid);
+      logRequest(request);
+
+      // Extract and validate user ID
+      const userId = extractUserIdFromRequest(request);
+      if (!isValidUserId(userId)) {
+        throw createHttpError('User ID required. Provide userId in query, header (X-User-Id), or body.', 401);
+      }
+
+      const gid = await fastify.repositories.game.createInitialEvent(
+        request.body.gid,
+        request.body.pid,
+        userId
+      );
       return {gid};
     }
   );
@@ -68,7 +79,7 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
     '/:gid',
     getOptions,
     async (request: FastifyRequest<{Params: {gid: string}}>, _reply: FastifyReply) => {
-      request.log.debug({headers: request.headers, params: request.params}, 'got req');
+      logRequest(request);
       const {gid} = request.params;
 
       const puzzleSolves = await getPuzzleSolves([gid]);
@@ -82,7 +93,7 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
       if (!gameState) {
         throw createHttpError('Game not found', 404);
       }
-      const puzzleInfo = (await getPuzzleInfo(gameState.pid)) as InfoJson;
+      const puzzleInfo = (await fastify.services.puzzle.getPuzzleInfo(gameState.pid)) as InfoJson;
 
       return {
         gid,
@@ -127,23 +138,20 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
     '/:gid/pid',
     getActiveGameOptions,
     async (request: FastifyRequest<{Params: {gid: string}}>, _reply: FastifyReply) => {
-      request.log.debug({headers: request.headers, params: request.params}, 'got req');
+      logRequest(request);
       const {gid} = request.params;
 
-      // Try to get the create event from game_events to extract pid
-      const {pool} = await import('../model/pool.js');
-      const res = await pool.query(
-        "SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create' LIMIT 1",
-        [gid]
-      );
-
-      if (res.rowCount === 0 || !res.rows[0]) {
+      // Get game info which contains the puzzle ID
+      const gameInfo = await fastify.repositories.game.getInfo(gid);
+      // The pid is stored in the create event params, but getInfo doesn't return it
+      // We need to get it from the events. For now, use the repository's getEvents method
+      const {events} = await fastify.repositories.game.getEvents(gid, {limit: 1});
+      const createEvent = events.find((e) => e.type === 'create');
+      if (!createEvent || createEvent.type !== 'create') {
         throw createHttpError('Active game not found', 404);
       }
 
-      const createEvent = res.rows[0].event_payload;
-      const pid = createEvent?.params?.pid;
-
+      const pid = createEvent.params.pid;
       if (!pid) {
         throw createHttpError('Puzzle ID not found in game create event', 500);
       }

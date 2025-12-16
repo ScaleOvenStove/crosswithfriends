@@ -17,6 +17,12 @@ describe('SocketManager', () => {
     emit: Mock;
     on: Mock;
     to: Mock;
+    disconnect: Mock;
+    id: string;
+    handshake: {
+      query: {userId?: string};
+      auth: {userId?: string};
+    };
   };
 
   beforeEach(() => {
@@ -28,6 +34,12 @@ describe('SocketManager', () => {
       emit: vi.fn(),
       on: vi.fn(),
       to: vi.fn().mockReturnThis(),
+      disconnect: vi.fn(),
+      id: 'mock-socket-id',
+      handshake: {
+        query: {userId: 'test-user-123'},
+        auth: {},
+      },
     };
 
     mockIo = {

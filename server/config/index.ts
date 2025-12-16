@@ -49,6 +49,22 @@ const configSchema = z.object({
     max: z.coerce.number().default(1000),
     timeWindowMs: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
   }),
+
+  // CORS configuration
+  cors: z.object({
+    origins: z
+      .string()
+      .transform((val) =>
+        val
+          ? val
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : []
+      )
+      .pipe(z.array(z.string()))
+      .default(''),
+  }),
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -91,6 +107,9 @@ function buildConfig(): Config {
     rateLimit: {
       max: process.env.RATE_LIMIT_MAX,
       timeWindowMs: process.env.RATE_LIMIT_WINDOW_MS,
+    },
+    cors: {
+      origins: process.env.CORS_ORIGINS,
     },
   };
 

@@ -1,8 +1,6 @@
 import type {RecordSolveRequest, RecordSolveResponse} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {recordSolve} from '../model/puzzle.js';
-
 import {RecordSolveRequestSchema, RecordSolveResponseSchema, ErrorResponseSchema} from './schemas.js';
 
 // eslint-disable-next-line require-await
@@ -35,7 +33,11 @@ async function recordSolveRouter(fastify: FastifyInstance): Promise<void> {
       request: FastifyRequest<{Params: {pid: string}; Body: RecordSolveRequest}>,
       _reply: FastifyReply
     ) => {
-      await recordSolve(request.params.pid, request.body.gid, request.body.time_to_solve);
+      await fastify.repositories.puzzle.recordSolve(
+        request.params.pid,
+        request.body.gid,
+        request.body.time_to_solve
+      );
       return {};
     }
   );
