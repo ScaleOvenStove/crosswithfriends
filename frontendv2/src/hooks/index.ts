@@ -10,7 +10,8 @@ export { default as useStats } from './user/useStats';
 // Puzzle hooks
 export { usePuzzles, usePuzzle } from './puzzle/usePuzzles';
 export { useClues } from './puzzle/useClues';
-export { default as usePuzzleList, useInfinitePuzzleList } from './puzzle/usePuzzleList';
+export { default as usePuzzleList } from './puzzle/usePuzzleList';
+export { useInfinitePuzzleList } from './puzzle/usePuzzleList';
 
 // Game hooks
 export { useGame } from './game/useGame';

@@ -6,8 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '@stores/gameStore';
-import { puzzlesApi, gamesApi } from '@api/apiClient';
-import { ResponseError } from '@api/generated';
+import { puzzlesApi, gamesApi, ResponseError } from '@api/apiClient';
 import { API_BASE_URL } from '../../config';
 import {
   transformPuzzleToGrid,
@@ -73,25 +72,29 @@ async function resolvePuzzleId(gameId: string): Promise<string> {
  * Fetches and validates puzzle data
  */
 async function fetchPuzzleData(puzzleId: string) {
-  const puzzleData = await puzzlesApi.getPuzzleById(puzzleId);
+  try {
+    const puzzleData = await puzzlesApi.getPuzzleById(puzzleId);
 
-  if (!puzzleData) {
-    throw new Error('Puzzle data is invalid');
+    if (!puzzleData) {
+      throw new Error('Puzzle data is invalid');
+    }
+
+    // Validate puzzle data with Zod
+    const validation = safeValidatePuzzleData(puzzleData);
+    if (!validation.success) {
+      console.error('[useGameData] Puzzle validation failed:', validation.error);
+      throw new Error(
+        `Puzzle data validation failed: ${validation.error.errors.map((e) => e.message).join(', ')}`
+      );
+    }
+
+    return validation.data!;
+  } catch (error) {
+    throw error;
   }
-
-  // Validate puzzle data with Zod
-  const validation = safeValidatePuzzleData(puzzleData);
-  if (!validation.success) {
-    console.error('[useGameData] Puzzle validation failed:', validation.error);
-    throw new Error(
-      `Puzzle data validation failed: ${validation.error.errors.map((e) => e.message).join(', ')}`
-    );
-  }
-
-  return validation.data!;
 }
 
-export function useGameData(gameId: string | undefined): UseGameDataReturn {
+export function useGameData(gameId: string | undefined, isPuzzleRoute: boolean = false, knownPuzzleId?: string): UseGameDataReturn {
   const { setPuzzleId, setCells, setSolution, setClues } = useGameStore();
   const [hasLoaded, setHasLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -103,12 +106,12 @@ export function useGameData(gameId: string | undefined): UseGameDataReturn {
     error: queryError,
     refetch,
   } = useQuery({
-    queryKey: ['puzzle', gameId],
+    queryKey: ['puzzle', gameId, isPuzzleRoute],
     queryFn: async () => {
       if (!gameId) throw new Error('Game ID is required');
 
-      // Resolve puzzle ID
-      const puzzleId = await resolvePuzzleId(gameId);
+      // Resolve puzzle ID - use known puzzle ID if available, skip game ID resolution if this is a puzzle route
+      const puzzleId = knownPuzzleId || (isPuzzleRoute ? gameId : await resolvePuzzleId(gameId));
 
       // Fetch puzzle data
       const data = await fetchPuzzleData(puzzleId);
@@ -169,7 +172,16 @@ export function useGameData(gameId: string | undefined): UseGameDataReturn {
         });
 
         if (details.status === 404) {
-          errorMessage = `Puzzle "${gameId}" not found. It may have been deleted or the ID is incorrect.`;
+          // Check if this looks like a game ID (starts with "100313" pattern) vs puzzle ID (starts with "10000" pattern)
+          // Game IDs are typically in the 100313xxx range, puzzle IDs are typically in the 10000xxxx range
+          const looksLikeGameId = /^100313\d+$/.test(gameId);
+          const looksLikePuzzleId = /^10000\d+$/.test(gameId);
+          
+          if (isPuzzleRoute && looksLikeGameId && !looksLikePuzzleId) {
+            errorMessage = `The ID "${gameId}" appears to be a game ID, not a puzzle ID. Puzzle IDs typically start with "10000". Please use the puzzle ID from the puzzle list, or navigate to /game/${gameId} instead.`;
+          } else {
+            errorMessage = `Puzzle "${gameId}" not found. It may have been deleted or the ID is incorrect.`;
+          }
         } else if (details.status === 500) {
           // Check for schema validation errors
           if (details.body && typeof details.body === 'object') {

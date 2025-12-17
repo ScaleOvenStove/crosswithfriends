@@ -124,10 +124,13 @@ const Game = () => {
   const isEmbedMode = location.pathname.startsWith('/embed/');
   const [searchParams] = useSearchParams();
   const isNewGame = searchParams.get('new') === 'true';
+  const puzzleIdFromQuery = searchParams.get('pid'); // Puzzle ID from query params (for newly created games)
   const hasSentInvite = useRef(false);
 
   // Use either gid (for existing games) or pid (for new puzzles)
   const gameId = gid || pid;
+  // Determine if this is a puzzle route (not a game route)
+  const isPuzzleRoute = !!pid && !gid;
 
   // Log for debugging
   if (!gameId) {
@@ -135,6 +138,7 @@ const Game = () => {
   }
 
   // Get game state and actions from hooks
+  // Pass puzzle ID from query params if available (for newly created games)
   const {
     cells,
     selectedCell,
@@ -152,7 +156,7 @@ const Game = () => {
     startClock,
     pauseClock,
     resetClock,
-  } = useGame(gameId);
+  } = useGame(gameId, isPuzzleRoute, puzzleIdFromQuery || undefined);
 
   // Get additional store state and actions
   const {

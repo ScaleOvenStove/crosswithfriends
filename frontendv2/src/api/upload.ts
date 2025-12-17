@@ -8,7 +8,7 @@
 import PUZtoIPUZ from '@crosswithfriends/shared/lib/converter/PUZtoIPUZ';
 import { puzzlesApi } from './apiClient';
 import type { AddPuzzleResponse, PuzzleJson } from './types';
-import type { CreatePuzzleRequestPuzzle } from './generated';
+import type { CreatePuzzleRequestPuzzle } from './apiClient';
 
 /**
  * Validates that a parsed object is a valid PuzzleJson

@@ -21,6 +21,9 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       retry: 1,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      onError: (error) => {
+        // Error handling can be added here if needed
+      },
     },
   },
 });

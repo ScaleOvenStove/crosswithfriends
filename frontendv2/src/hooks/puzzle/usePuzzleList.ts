@@ -4,8 +4,8 @@
  */
 
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { puzzlesApi } from '@api/apiClient';
 import type { PuzzleListFilters, PuzzleListItem } from '@api/types';
+import { puzzlesApi } from '@api/apiClient';
 
 interface UsePuzzleListOptions {
   pageSize?: number;
@@ -32,15 +32,16 @@ export const usePuzzleList = (page: number = 0, options: UsePuzzleListOptions = 
 
   return useQuery({
     queryKey: ['puzzles', 'list', page, pageSize, filters],
-    queryFn: () => {
+    queryFn: async () => {
       const params = convertFiltersToQueryParams(filters);
-      return puzzlesApi.listPuzzles(
+      const result = await puzzlesApi.listPuzzles(
         page.toString(),
         pageSize.toString(),
         params.sizeMini,
         params.sizeStandard,
         params.nameOrTitle
       );
+      return result;
     },
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -56,7 +57,7 @@ export const useInfinitePuzzleList = (options: UsePuzzleListOptions = {}) => {
 
   return useInfiniteQuery({
     queryKey: ['puzzles', 'infinite', pageSize, filters],
-    queryFn: ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam = 0 }) => {
       const params = convertFiltersToQueryParams(filters);
       return puzzlesApi.listPuzzles(
         (pageParam as number).toString(),
@@ -87,8 +88,9 @@ export const transformPuzzleForDisplay = (puzzle: PuzzleListItem) => {
   const { pid, content, stats } = puzzle;
 
   // Handle both formats: ipuz (title/author at root) and old format (info.title/info.author)
-  const title = content.title || (content.info as any)?.title || 'Untitled Puzzle';
-  const author = content.author || (content.info as any)?.author || 'Unknown';
+  const contentAny = content as any;
+  const title = content.title || contentAny?.info?.title || 'Untitled Puzzle';
+  const author = content.author || contentAny?.info?.author || 'Unknown';
 
   // Calculate dimensions - use content.dimensions if available, otherwise calculate from solution
   let dimensions = { width: 0, height: 0 };
@@ -104,7 +106,7 @@ export const transformPuzzleForDisplay = (puzzle: PuzzleListItem) => {
 
   // Determine size - check content.info.type first (API-provided), then calculate from dimensions/solution
   let size = 'Standard';
-  const infoType = (content.info as any)?.type;
+  const infoType = contentAny?.info?.type;
   if (infoType) {
     // API provides 'Daily Puzzle' or 'Mini Puzzle', map to 'Standard' or 'Mini'
     size = infoType === 'Mini Puzzle' ? 'Mini' : 'Standard';

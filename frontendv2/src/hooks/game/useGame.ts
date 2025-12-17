@@ -22,9 +22,9 @@ import { useGameUI } from './useGameUI';
 import { optimisticUpdateQueue } from '@services/optimisticUpdateQueue';
 import { safeValidateGameEvent, type GameEvent } from '@schemas/gameEventSchemas';
 
-export const useGame = (gameId: string | undefined) => {
+export const useGame = (gameId: string | undefined, isPuzzleRoute: boolean = false, knownPuzzleId?: string) => {
   // Compose all focused hooks
-  const gameData = useGameData(gameId);
+  const gameData = useGameData(gameId, isPuzzleRoute, knownPuzzleId);
   const gameSocket = useGameSocket(gameId);
   const gameClock = useGameClock();
   const gameUI = useGameUI();

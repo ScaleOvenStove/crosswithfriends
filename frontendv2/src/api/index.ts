@@ -1,10 +1,13 @@
 /**
  * API client exports
+ *
+ * IMPORTANT: Type re-exports are removed to avoid triggering discriminator errors
+ * during module evaluation. Import types directly from './apiClient' if needed.
  */
 
 export * from './types';
 
-// Export the generated API clients
+// Export the generated API clients (lazy-loaded)
 export {
   healthApi,
   puzzlesApi,
@@ -13,21 +16,6 @@ export {
   statsApi,
   linkPreviewApi,
 } from './apiClient';
-export type {
-  GetHealth200Response,
-  CreatePuzzleRequest,
-  CreatePuzzleRequestPuzzle,
-  CreatePuzzleRequestPuzzleClues,
-  CreatePuzzleRequestPuzzleDimensions,
-  CreatePuzzle200Response,
-  ListPuzzles400Response,
-  GetNewGameId200Response,
-  GetNewPuzzleId200Response,
-  CreateGame200Response,
-  CreateGameRequest,
-  GetGameById200Response,
-  SubmitStatsRequest,
-  SubmitStats200Response,
-  RecordPuzzleSolveRequest,
-  GetOembed200Response,
-} from './apiClient';
+
+// Types are available from './apiClient' but not re-exported here to avoid eager evaluation
+// Import types directly: import type { GetHealth200Response } from '@api/apiClient';

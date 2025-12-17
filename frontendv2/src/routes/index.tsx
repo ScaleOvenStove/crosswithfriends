@@ -5,7 +5,7 @@
  */
 
 import type { RouteObject } from 'react-router-dom';
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 
 // Lazy load error pages
 const NotFound404 = lazy(() => import('@pages/errors/NotFound404'));
@@ -207,6 +207,3 @@ export const routes: RouteObject[] = [
 ];
 
 export default routes;
-
-// Export error page components for direct use
-export { NotFound404, ServerError500 };

@@ -41,8 +41,9 @@ const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
         pid: puzzle.id,
       });
 
-      // Redirect to game variant with new game flag
-      navigate(`/game/${result.gid}?new=true`);
+      // Redirect to game variant with new game flag and puzzle ID
+      // Pass puzzle ID in URL so we can use it directly without needing to resolve it
+      navigate(`/game/${result.gid}?new=true&pid=${puzzle.id}`);
     } catch (err) {
       console.error('Failed to create game:', err);
       setIsCreating(false);

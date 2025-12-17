@@ -3,7 +3,7 @@
  * Provides consistent error handling across the application
  */
 
-import { ResponseError } from '@api/generated';
+import { ResponseError } from '@api/apiClient';
 
 export interface ErrorContext {
   component?: string;

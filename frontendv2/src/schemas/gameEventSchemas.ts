@@ -56,22 +56,28 @@ export const clockResetEventSchema = baseGameEventSchema.extend({
   params: z.object({}).passthrough(),
 });
 
-// Game completion event
+// Game completion event - split into two schemas for discriminated union
+export const puzzleCompleteEventSchema = baseGameEventSchema.extend({
+  type: z.literal('puzzle_complete'),
+  params: z.object({}).passthrough(),
+});
+
 export const gameCompleteEventSchema = baseGameEventSchema.extend({
-  type: z.union([z.literal('puzzle_complete'), z.literal('gameComplete')]),
+  type: z.literal('gameComplete'),
   params: z.object({}).passthrough(),
 });
 
 // Union of all game event types
+// Note: baseGameEventSchema is excluded because discriminatedUnion requires all schemas
+// to have literal types for the discriminator field, not z.string()
 export const gameEventSchema = z.discriminatedUnion('type', [
   updateCellEventSchema,
   updateCursorEventSchema,
   clockStartEventSchema,
   clockPauseEventSchema,
   clockResetEventSchema,
+  puzzleCompleteEventSchema,
   gameCompleteEventSchema,
-  // Fallback for unknown event types
-  baseGameEventSchema,
 ]);
 
 // Socket event wrapper (what we receive from socket)
@@ -87,6 +93,7 @@ export type UpdateCursorEvent = z.infer<typeof updateCursorEventSchema>;
 export type ClockStartEvent = z.infer<typeof clockStartEventSchema>;
 export type ClockPauseEvent = z.infer<typeof clockPauseEventSchema>;
 export type ClockResetEvent = z.infer<typeof clockResetEventSchema>;
+export type PuzzleCompleteEvent = z.infer<typeof puzzleCompleteEventSchema>;
 export type GameCompleteEvent = z.infer<typeof gameCompleteEventSchema>;
 export type SocketGameEvent = z.infer<typeof socketGameEventSchema>;
 
