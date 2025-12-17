@@ -72,29 +72,29 @@ async function resolvePuzzleId(gameId: string): Promise<string> {
  * Fetches and validates puzzle data
  */
 async function fetchPuzzleData(puzzleId: string) {
-  try {
-    const puzzleData = await puzzlesApi.getPuzzleById(puzzleId);
+  const puzzleData = await puzzlesApi.getPuzzleById(puzzleId);
 
-    if (!puzzleData) {
-      throw new Error('Puzzle data is invalid');
-    }
-
-    // Validate puzzle data with Zod
-    const validation = safeValidatePuzzleData(puzzleData);
-    if (!validation.success) {
-      console.error('[useGameData] Puzzle validation failed:', validation.error);
-      throw new Error(
-        `Puzzle data validation failed: ${validation.error.errors.map((e) => e.message).join(', ')}`
-      );
-    }
-
-    return validation.data!;
-  } catch (error) {
-    throw error;
+  if (!puzzleData) {
+    throw new Error('Puzzle data is invalid');
   }
+
+  // Validate puzzle data with Zod
+  const validation = safeValidatePuzzleData(puzzleData);
+  if (!validation.success) {
+    console.error('[useGameData] Puzzle validation failed:', validation.error);
+    throw new Error(
+      `Puzzle data validation failed: ${validation.error.errors.map((e) => e.message).join(', ')}`
+    );
+  }
+
+  return validation.data!;
 }
 
-export function useGameData(gameId: string | undefined, isPuzzleRoute: boolean = false, knownPuzzleId?: string): UseGameDataReturn {
+export function useGameData(
+  gameId: string | undefined,
+  isPuzzleRoute: boolean = false,
+  knownPuzzleId?: string
+): UseGameDataReturn {
   const { setPuzzleId, setCells, setSolution, setClues } = useGameStore();
   const [hasLoaded, setHasLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -106,7 +106,7 @@ export function useGameData(gameId: string | undefined, isPuzzleRoute: boolean =
     error: queryError,
     refetch,
   } = useQuery({
-    queryKey: ['puzzle', gameId, isPuzzleRoute],
+    queryKey: ['puzzle', gameId, isPuzzleRoute, knownPuzzleId],
     queryFn: async () => {
       if (!gameId) throw new Error('Game ID is required');
 
@@ -176,7 +176,7 @@ export function useGameData(gameId: string | undefined, isPuzzleRoute: boolean =
           // Game IDs are typically in the 100313xxx range, puzzle IDs are typically in the 10000xxxx range
           const looksLikeGameId = /^100313\d+$/.test(gameId);
           const looksLikePuzzleId = /^10000\d+$/.test(gameId);
-          
+
           if (isPuzzleRoute && looksLikeGameId && !looksLikePuzzleId) {
             errorMessage = `The ID "${gameId}" appears to be a game ID, not a puzzle ID. Puzzle IDs typically start with "10000". Please use the puzzle ID from the puzzle list, or navigate to /game/${gameId} instead.`;
           } else {

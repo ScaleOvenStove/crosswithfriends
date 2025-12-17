@@ -10,7 +10,7 @@
  * - useGameUI: UI state management
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useGameStore } from '@stores/gameStore';
 import { useSocketEvent } from '@sockets/index';
 import { useUser } from '@hooks/user/useUser';
@@ -20,9 +20,13 @@ import { useGameClock } from './useGameClock';
 import { useGameEventSync } from './useGameEventSync';
 import { useGameUI } from './useGameUI';
 import { optimisticUpdateQueue } from '@services/optimisticUpdateQueue';
-import { safeValidateGameEvent, type GameEvent } from '@schemas/gameEventSchemas';
+import { safeValidateGameEvent } from '@schemas/gameEventSchemas';
 
-export const useGame = (gameId: string | undefined, isPuzzleRoute: boolean = false, knownPuzzleId?: string) => {
+export const useGame = (
+  gameId: string | undefined,
+  isPuzzleRoute: boolean = false,
+  knownPuzzleId?: string
+) => {
   // Compose all focused hooks
   const gameData = useGameData(gameId, isPuzzleRoute, knownPuzzleId);
   const gameSocket = useGameSocket(gameId);
@@ -57,6 +61,7 @@ export const useGame = (gameId: string | undefined, isPuzzleRoute: boolean = fal
     ) {
       gameSocket.joinGame(gameId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     gameSocket.isConnected,
     gameId,
@@ -86,6 +91,9 @@ export const useGame = (gameId: string | undefined, isPuzzleRoute: boolean = fal
     }
   });
 
+  // Track pending optimistic updates by event signature
+  const pendingUpdatesRef = useRef<Map<string, string>>(new Map());
+
   // Listen for real-time game events
   useSocketEvent('game_event', (event: unknown) => {
     const validation = safeValidateGameEvent(event);
@@ -94,7 +102,30 @@ export const useGame = (gameId: string | undefined, isPuzzleRoute: boolean = fal
       return;
     }
 
-    const gameEvent = validation.data!;
+    const gameEvent = validation.data;
+    if (!gameEvent) {
+      return;
+    }
+
+    // Handle events from current user as server confirmation
+    if (gameEvent.user === user?.id && gameEvent.type === 'updateCell' && gameEvent.params) {
+      const { cell } = gameEvent.params as {
+        cell?: { r?: number; c?: number };
+        value?: string;
+      };
+      if (cell && typeof cell.r === 'number' && typeof cell.c === 'number') {
+        // Create event signature to match with pending update
+        const eventSignature = `cell-${cell.r}-${cell.c}`;
+        const updateId = pendingUpdatesRef.current.get(eventSignature);
+        if (updateId) {
+          // Server confirmed our update - confirm optimistic update
+          optimisticUpdateQueue.confirm(updateId);
+          pendingUpdatesRef.current.delete(eventSignature);
+        }
+      }
+      // Don't apply the update again - it was already applied optimistically
+      return;
+    }
 
     // Only process events from other users
     if (gameEvent.user === user?.id) {
@@ -187,6 +218,10 @@ export const useGame = (gameId: string | undefined, isPuzzleRoute: boolean = fal
 
       // Create update ID for tracking
       const updateId = `cell-${row}-${col}-${Date.now()}`;
+      const eventSignature = `cell-${row}-${col}`;
+
+      // Track pending update
+      pendingUpdatesRef.current.set(eventSignature, updateId);
 
       // Add to optimistic queue
       optimisticUpdateQueue.add({
@@ -199,33 +234,61 @@ export const useGame = (gameId: string | undefined, isPuzzleRoute: boolean = fal
         },
         rollback: () => {
           updateCell(row, col, originalValue, false);
+          // Remove from pending updates
+          pendingUpdatesRef.current.delete(eventSignature);
         },
         onSuccess: () => {
-          // Update confirmed
+          // Update confirmed - remove from pending
+          pendingUpdatesRef.current.delete(eventSignature);
         },
         onError: (error) => {
           console.error('[useGame] Cell update failed:', error);
+          // Remove from pending updates
+          pendingUpdatesRef.current.delete(eventSignature);
         },
       });
 
-      // Emit to server
-      gameSocket.emitGameEvent({
-        type: 'updateCell',
-        user: user.id,
-        timestamp: Date.now(),
-        params: {
-          cell: { r: row, c: col },
-          value: value,
-          autocheck: false,
-          id: user.id,
-        },
-      });
+      // Set up timeout as fallback (rollback if no confirmation received)
+      const CONFIRMATION_TIMEOUT_MS = 5000; // 5 seconds
+      const timeoutId = setTimeout(() => {
+        // Check if update is still pending
+        if (pendingUpdatesRef.current.has(eventSignature)) {
+          console.warn(
+            '[useGame] Cell update confirmation timeout - rolling back:',
+            eventSignature
+          );
+          optimisticUpdateQueue.rollback(updateId, new Error('Server confirmation timeout'));
+        }
+      }, CONFIRMATION_TIMEOUT_MS);
 
-      // Confirm update after a short delay (simulating server confirmation)
-      // In real implementation, this would be confirmed by the server response
-      setTimeout(() => {
-        optimisticUpdateQueue.confirm(updateId);
-      }, 100);
+      // Emit to server with acknowledgment callback
+      gameSocket.emitGameEvent(
+        {
+          type: 'updateCell',
+          user: user.id,
+          timestamp: Date.now(),
+          params: {
+            cell: { r: row, c: col },
+            value: value,
+            autocheck: false,
+            id: user.id,
+          },
+        },
+        (response: { success?: boolean; error?: string }) => {
+          // Clear timeout since we got a response
+          clearTimeout(timeoutId);
+
+          if (response.success) {
+            // Server acknowledged the update
+            optimisticUpdateQueue.confirm(updateId);
+          } else {
+            // Server rejected the update
+            const errorMessage = response.error || 'Server rejected update';
+            console.error('[useGame] Server rejected cell update:', errorMessage);
+            optimisticUpdateQueue.rollback(updateId, new Error(errorMessage));
+          }
+        }
+      );
     },
     [gameId, user, gameUI.isPencilMode, updateCell, cells, gameSocket]
   );

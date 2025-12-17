@@ -15,12 +15,15 @@ import type { Socket } from 'socket.io-client';
 interface UseGameSocketReturn {
   isConnected: boolean;
   socket: Socket | null;
-  emitGameEvent: (event: {
-    type: string;
-    user: string;
-    timestamp: number;
-    params: Record<string, unknown>;
-  }) => void;
+  emitGameEvent: (
+    event: {
+      type: string;
+      user: string;
+      timestamp: number;
+      params: Record<string, unknown>;
+    },
+    ack?: (response: { success?: boolean; error?: string }) => void
+  ) => void;
   joinGame: (gameId: string, onSuccess?: () => void, onError?: (error: string) => void) => void;
 }
 
@@ -128,9 +131,15 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
 
   // Emit game event with validation and optimistic update support
   const emitGameEvent = useCallback(
-    (event: { type: string; user: string; timestamp: number; params: Record<string, unknown> }) => {
+    (
+      event: { type: string; user: string; timestamp: number; params: Record<string, unknown> },
+      ack?: (response: { success?: boolean; error?: string }) => void
+    ) => {
       if (!gameId || !socket || !isConnected) {
         console.warn('[useGameSocket] Cannot emit event - not connected or no gameId');
+        if (ack) {
+          ack({ error: 'Socket not connected' });
+        }
         return;
       }
 
@@ -138,6 +147,9 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
       const validation = safeValidateGameEvent(event);
       if (!validation.success) {
         console.error('[useGameSocket] Invalid event:', validation.error);
+        if (ack) {
+          ack({ error: validation.error?.message || 'Invalid event' });
+        }
         return;
       }
 
@@ -149,10 +161,25 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
       try {
         // Validate socket event wrapper
         validateSocketGameEvent(eventData);
-        emit('game_event', eventData);
+
+        // Emit with acknowledgment callback if provided
+        if (ack) {
+          socket.emit(
+            'game_event',
+            eventData,
+            (response: { success?: boolean; error?: string }) => {
+              ack(response);
+            }
+          );
+        } else {
+          emit('game_event', eventData);
+        }
         console.log('[useGameSocket] Emitted event:', event.type);
       } catch (error) {
         console.error('[useGameSocket] Failed to emit event:', error);
+        if (ack) {
+          ack({ error: error instanceof Error ? error.message : 'Failed to emit event' });
+        }
         // Queue event for retry
         socketRecoveryService.queueEvent('game_event', eventData);
       }
