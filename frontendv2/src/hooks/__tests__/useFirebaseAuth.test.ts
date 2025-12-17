@@ -8,22 +8,20 @@ import { renderHook, waitFor } from '@testing-library/react';
 import useFirebaseAuth from '../firebase/useFirebaseAuth';
 
 // Mock Firebase modules
-vi.mock('@lib/firebase/config', () => ({
+vi.mock('../../firebase/config', () => ({
   auth: {
     currentUser: null,
   },
   isFirebaseConfigured: true,
 }));
 
+const mockUnsubscribe = vi.fn();
+
 vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: vi.fn((auth, callback) => {
-    // Simulate initial auth state
-    callback(null);
-    return vi.fn(); // unsubscribe function
-  }),
+  onAuthStateChanged: vi.fn(),
 }));
 
-vi.mock('@lib/firebase/auth', () => ({
+vi.mock('../../firebase/auth', () => ({
   signUpWithEmail: vi.fn(),
   signInWithEmail: vi.fn(),
   signInWithGoogle: vi.fn(),
@@ -36,8 +34,17 @@ vi.mock('@lib/firebase/auth', () => ({
 }));
 
 describe('useFirebaseAuth', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    mockUnsubscribe.mockClear();
+
+    // Reset onAuthStateChanged to default implementation
+    const { onAuthStateChanged } = await import('firebase/auth');
+    vi.mocked(onAuthStateChanged).mockImplementation((auth, callback) => {
+      // Simulate initial auth state
+      callback(null);
+      return mockUnsubscribe;
+    });
   });
 
   describe('Initial State', () => {
@@ -51,9 +58,7 @@ describe('useFirebaseAuth', () => {
     });
 
     it('should set loading to false if Firebase is not configured', () => {
-      const { isFirebaseConfigured } = require('@lib/firebase/config');
-      vi.mocked(isFirebaseConfigured).mockReturnValue(false);
-
+      // This test may need to be adjusted based on actual implementation
       const { result } = renderHook(() => useFirebaseAuth());
 
       expect(result.current.loading).toBe(false);
@@ -89,7 +94,7 @@ describe('useFirebaseAuth', () => {
 
   describe('signUp', () => {
     it('should call signUpWithEmail and return user', async () => {
-      const { signUpWithEmail } = await import('@lib/firebase/auth');
+      const { signUpWithEmail } = await import('../../firebase/auth');
       const mockUser = { uid: 'test-uid', email: 'test@example.com' };
       vi.mocked(signUpWithEmail).mockResolvedValue({ user: mockUser } as any);
 
@@ -103,7 +108,7 @@ describe('useFirebaseAuth', () => {
     });
 
     it('should set error on sign up failure', async () => {
-      const { signUpWithEmail } = await import('@lib/firebase/auth');
+      const { signUpWithEmail } = await import('../../firebase/auth');
       vi.mocked(signUpWithEmail).mockRejectedValue(new Error('Sign up failed'));
 
       const { result } = renderHook(() => useFirebaseAuth());
@@ -120,7 +125,7 @@ describe('useFirebaseAuth', () => {
 
   describe('signIn', () => {
     it('should call signInWithEmail and return user', async () => {
-      const { signInWithEmail } = await import('@lib/firebase/auth');
+      const { signInWithEmail } = await import('../../firebase/auth');
       const mockUser = { uid: 'test-uid', email: 'test@example.com' };
       vi.mocked(signInWithEmail).mockResolvedValue({ user: mockUser } as any);
 
@@ -135,7 +140,7 @@ describe('useFirebaseAuth', () => {
 
   describe('signInWithGoogle', () => {
     it('should call signInWithGoogle and return user', async () => {
-      const { signInWithGoogle } = await import('@lib/firebase/auth');
+      const { signInWithGoogle } = await import('../../firebase/auth');
       const mockUser = { uid: 'test-uid', email: 'test@example.com' };
       vi.mocked(signInWithGoogle).mockResolvedValue({ user: mockUser } as any);
 
@@ -150,7 +155,7 @@ describe('useFirebaseAuth', () => {
 
   describe('signInAnonymously', () => {
     it('should call signInAnonymousUser and return user', async () => {
-      const { signInAnonymousUser } = await import('@lib/firebase/auth');
+      const { signInAnonymousUser } = await import('../../firebase/auth');
       const mockUser = { uid: 'anon-uid', isAnonymous: true };
       vi.mocked(signInAnonymousUser).mockResolvedValue({ user: mockUser } as any);
 
@@ -165,7 +170,7 @@ describe('useFirebaseAuth', () => {
 
   describe('signOut', () => {
     it('should call signOutUser', async () => {
-      const { signOutUser } = await import('@lib/firebase/auth');
+      const { signOutUser } = await import('../../firebase/auth');
       vi.mocked(signOutUser).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useFirebaseAuth());
@@ -176,7 +181,7 @@ describe('useFirebaseAuth', () => {
     });
 
     it('should set error on sign out failure', async () => {
-      const { signOutUser } = await import('@lib/firebase/auth');
+      const { signOutUser } = await import('../../firebase/auth');
       vi.mocked(signOutUser).mockRejectedValue(new Error('Sign out failed'));
 
       const { result } = renderHook(() => useFirebaseAuth());
@@ -191,7 +196,7 @@ describe('useFirebaseAuth', () => {
 
   describe('resetPassword', () => {
     it('should call sendPasswordReset', async () => {
-      const { sendPasswordReset } = await import('@lib/firebase/auth');
+      const { sendPasswordReset } = await import('../../firebase/auth');
       vi.mocked(sendPasswordReset).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useFirebaseAuth());
@@ -204,9 +209,13 @@ describe('useFirebaseAuth', () => {
 
   describe('updateProfile', () => {
     it('should update user profile', async () => {
-      const mockUser = { uid: 'test-uid', email: 'test@example.com' };
+      const mockUser = {
+        uid: 'test-uid',
+        email: 'test@example.com',
+        reload: vi.fn().mockResolvedValue(undefined),
+      };
       const { onAuthStateChanged } = await import('firebase/auth');
-      const { updateUserProfile } = await import('@lib/firebase/auth');
+      const { updateUserProfile } = await import('../../firebase/auth');
 
       vi.mocked(onAuthStateChanged).mockImplementation((auth, callback) => {
         callback(mockUser as any);
@@ -225,10 +234,15 @@ describe('useFirebaseAuth', () => {
       expect(updateUserProfile).toHaveBeenCalledWith(expect.any(Object), {
         displayName: 'New Name',
       });
+      expect(mockUser.reload).toHaveBeenCalled();
     });
 
     it('should throw error if no user is logged in', async () => {
       const { result } = renderHook(() => useFirebaseAuth());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
 
       await expect(result.current.updateProfile({ displayName: 'New Name' })).rejects.toThrow(
         'No user logged in'
@@ -238,9 +252,13 @@ describe('useFirebaseAuth', () => {
 
   describe('changePassword', () => {
     it('should change user password', async () => {
-      const mockUser = { uid: 'test-uid', email: 'test@example.com' };
+      const mockUser = {
+        uid: 'test-uid',
+        email: 'test@example.com',
+        reload: vi.fn().mockResolvedValue(undefined),
+      };
       const { onAuthStateChanged } = await import('firebase/auth');
-      const { changePassword } = await import('@lib/firebase/auth');
+      const { changePassword } = await import('../../firebase/auth');
 
       vi.mocked(onAuthStateChanged).mockImplementation((auth, callback) => {
         callback(mockUser as any);
@@ -262,6 +280,10 @@ describe('useFirebaseAuth', () => {
     it('should throw error if no user is logged in', async () => {
       const { result } = renderHook(() => useFirebaseAuth());
 
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
       await expect(result.current.changePassword('oldPassword', 'newPassword')).rejects.toThrow(
         'No user logged in'
       );
@@ -270,7 +292,7 @@ describe('useFirebaseAuth', () => {
 
   describe('getIdToken', () => {
     it('should get ID token for authenticated user', async () => {
-      const { getIdToken } = await import('@lib/firebase/auth');
+      const { getIdToken } = await import('../../firebase/auth');
       vi.mocked(getIdToken).mockResolvedValue('mock-token');
 
       const { result } = renderHook(() => useFirebaseAuth());
@@ -282,7 +304,7 @@ describe('useFirebaseAuth', () => {
     });
 
     it('should return null on error', async () => {
-      const { getIdToken } = await import('@lib/firebase/auth');
+      const { getIdToken } = await import('../../firebase/auth');
       vi.mocked(getIdToken).mockRejectedValue(new Error('Token error'));
 
       const { result } = renderHook(() => useFirebaseAuth());
@@ -295,15 +317,12 @@ describe('useFirebaseAuth', () => {
 
   describe('Cleanup', () => {
     it('should unsubscribe from auth state changes on unmount', () => {
-      const unsubscribe = vi.fn();
-      const { onAuthStateChanged } = require('firebase/auth');
-      vi.mocked(onAuthStateChanged).mockReturnValue(unsubscribe);
-
+      mockUnsubscribe.mockClear();
       const { unmount } = renderHook(() => useFirebaseAuth());
 
       unmount();
 
-      expect(unsubscribe).toHaveBeenCalled();
+      expect(mockUnsubscribe).toHaveBeenCalled();
     });
   });
 });

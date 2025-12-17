@@ -30,10 +30,11 @@ import {
   Visibility as RevealIcon,
   RestartAlt as ResetIcon,
   Edit as PencilIcon,
-  Timer as TimerIcon,
-  PlayArrow as PlayIcon,
-  Pause as PauseIcon,
 } from '@mui/icons-material';
+import { ClockDisplay } from '@components/common/ClockDisplay';
+
+// eslint-disable-next-line no-unused-vars
+type GameActionHandler = (scope: 'cell' | 'word' | 'puzzle') => void;
 
 interface GameToolbarProps {
   isPencilMode: boolean;
@@ -46,9 +47,9 @@ interface GameToolbarProps {
   onStartClock: () => void;
   onPauseClock: () => void;
   onResetClock: () => void;
-  onCheck: (scope: 'cell' | 'word' | 'puzzle') => void;
-  onReveal: (scope: 'cell' | 'word' | 'puzzle') => void;
-  onReset: (scope: 'cell' | 'word' | 'puzzle') => void;
+  onCheck: GameActionHandler;
+  onReveal: GameActionHandler;
+  onReset: GameActionHandler;
 }
 
 const ToolbarContainer = styled(Box)(({ theme }) => ({
@@ -60,27 +61,6 @@ const ToolbarContainer = styled(Box)(({ theme }) => ({
   borderBottom: `1px solid ${theme.palette.divider}`,
   flexWrap: 'wrap',
 }));
-
-const TimerDisplay = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
-  padding: theme.spacing(1, 2),
-  backgroundColor: theme.palette.background.default,
-  borderRadius: theme.shape.borderRadius,
-  fontFamily: 'monospace',
-  fontSize: '1.25rem',
-  fontWeight: 700,
-}));
-
-/**
- * Format time in seconds to MM:SS format
- */
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
 
 /**
  * GameToolbar component
@@ -133,33 +113,14 @@ export const GameToolbar = ({
 
   return (
     <ToolbarContainer>
-      {/* Timer Section */}
-      <TimerDisplay>
-        <TimerIcon />
-        <Typography variant="h6" component="span">
-          {formatTime(clockTime)}
-        </Typography>
-        <ButtonGroup size="small" variant="outlined">
-          {isClockRunning ? (
-            <Tooltip title="Pause">
-              <Button onClick={onPauseClock}>
-                <PauseIcon fontSize="small" />
-              </Button>
-            </Tooltip>
-          ) : (
-            <Tooltip title="Start">
-              <Button onClick={onStartClock}>
-                <PlayIcon fontSize="small" />
-              </Button>
-            </Tooltip>
-          )}
-          <Tooltip title="Reset Timer">
-            <Button onClick={onResetClock}>
-              <ResetIcon fontSize="small" />
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
-      </TimerDisplay>
+      {/* Timer Section - Isolated component to prevent unnecessary re-renders */}
+      <ClockDisplay
+        elapsedTime={clockTime}
+        isRunning={isClockRunning}
+        onStart={onStartClock}
+        onPause={onPauseClock}
+        onReset={onResetClock}
+      />
 
       <Divider orientation="vertical" flexItem />
 

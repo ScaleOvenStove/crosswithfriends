@@ -5,6 +5,10 @@
 
 import type { Cell, Clue } from '../types';
 import type { PuzzleJson, ClueFormat } from '@api/types';
+import {
+  validatePuzzleData,
+  type PuzzleJson as ValidatedPuzzleJson,
+} from '../schemas/puzzleSchemas';
 
 /**
  * Transform ipuz puzzle data into Cell[][] format for the Grid component
@@ -12,34 +16,18 @@ import type { PuzzleJson, ClueFormat } from '@api/types';
  *
  * All puzzles from the server are now in ipuz format (v2)
  */
-export function transformPuzzleToGrid(puzzle: PuzzleJson | any): {
+export function transformPuzzleToGrid(puzzle: PuzzleJson | ValidatedPuzzleJson | unknown): {
   cells: Cell[][];
   solution: string[][];
   circles: Array<{ r: number; c: number }>;
   shades: Array<{ r: number; c: number }>;
 } {
-  // Safety checks for puzzle data structure
-  if (!puzzle) {
-    throw new Error('Puzzle data is missing');
-  }
+  // Validate puzzle data with Zod
+  const validatedPuzzle = validatePuzzleData(puzzle);
 
-  // Validate ipuz format fields
-  const missing: string[] = [];
-  if (!puzzle.solution) missing.push('solution');
-  if (!puzzle.puzzle) missing.push('puzzle grid');
-  if (!puzzle.dimensions) missing.push('dimensions');
-
-  if (missing.length > 0) {
-    console.error('[puzzleUtils] Incomplete puzzle data. Missing:', missing);
-    console.error('[puzzleUtils] Received puzzle keys:', Object.keys(puzzle));
-    throw new Error(
-      `Puzzle data is incomplete - missing: ${missing.join(', ')}. This puzzle may be corrupted or still being processed.`
-    );
-  }
-
-  const solution = puzzle.solution;
-  const puzzleGrid = puzzle.puzzle;
-  const dimensions = puzzle.dimensions;
+  const solution = validatedPuzzle.solution;
+  const puzzleGrid = validatedPuzzle.puzzle;
+  const dimensions = validatedPuzzle.dimensions;
   const height = dimensions.height;
   const width = dimensions.width;
 
@@ -152,7 +140,7 @@ export function assignCellNumbers(cells: Cell[][]): Cell[][] {
  *
  * NOTE: Handles both old format (lowercase 'across'/'down') and new format (capitalized 'Across'/'Down')
  */
-export function extractCluesFromPuzzle(puzzle: PuzzleJson | any): {
+export function extractCluesFromPuzzle(puzzle: PuzzleJson | ValidatedPuzzleJson | unknown): {
   across: Clue[];
   down: Clue[];
 } {
@@ -162,38 +150,29 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | any): {
     return { across: [], down: [] };
   }
 
+  // Validate puzzle data with Zod
+  const validatedPuzzle = validatePuzzleData(puzzle);
+  const puzzleAny = puzzle as Record<string, unknown>;
+
   // Old format: clues are nested inside info.clues
   // New format: clues are at the top level
   // Check if puzzle.clues has actual across/down data
   const hasTopLevelClues =
-    puzzle.clues &&
-    (puzzle.clues.across || puzzle.clues.down || puzzle.clues.Across || puzzle.clues.Down);
+    validatedPuzzle.clues && (validatedPuzzle.clues.Across || validatedPuzzle.clues.Down);
 
-  const cluesObj = hasTopLevelClues ? puzzle.clues : puzzle.info?.clues;
+  const cluesObj = hasTopLevelClues
+    ? validatedPuzzle.clues
+    : (puzzleAny['info'] as { clues?: unknown })?.clues;
 
   if (!cluesObj) {
     console.warn('[puzzleUtils] Clues are missing in both puzzle.clues and puzzle.info.clues');
-    console.warn('[puzzleUtils] puzzle.clues:', puzzle.clues);
-    console.warn('[puzzleUtils] puzzle.info:', puzzle.info);
     return { across: [], down: [] };
   }
 
-  // Log the clues object structure for debugging
-  console.log('[puzzleUtils] Clues object structure:', {
-    keys: Object.keys(cluesObj),
-    hasAcross: 'Across' in cluesObj,
-    hasacross: 'across' in cluesObj,
-    hasDown: 'Down' in cluesObj,
-    hasdown: 'down' in cluesObj,
-    AcrossType: Array.isArray(cluesObj.Across),
-    acrossType: Array.isArray(cluesObj.across),
-    DownType: Array.isArray(cluesObj.Down),
-    downType: Array.isArray(cluesObj.down),
-  });
-
   // Determine solution/puzzle grid for old vs new format
-  const solutionGrid = puzzle.solution || puzzle.grid;
-  const puzzleGridData = puzzle.puzzle || puzzle.grid;
+  const solutionGrid =
+    validatedPuzzle.solution || (puzzleAny['grid'] as (string | null)[][] | undefined);
+  const puzzleGridData = validatedPuzzle.puzzle || (puzzleAny['grid'] as unknown);
 
   const parseClue = (clue: ClueFormat, direction: 'across' | 'down'): Clue => {
     // Handle both tuple and object formats
@@ -236,16 +215,9 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | any): {
   };
 
   // Handle both capitalized (Across/Down) and lowercase (across/down) keys
-  const acrossClues = cluesObj.Across || cluesObj.across || [];
-  const downClues = cluesObj.Down || cluesObj.down || [];
-
-  console.log('[puzzleUtils] Extracting clues:', {
-    hasAcross: !!cluesObj.Across || !!cluesObj.across,
-    hasDown: !!cluesObj.Down || !!cluesObj.down,
-    acrossCount: acrossClues.length,
-    downCount: downClues.length,
-    cluesObjKeys: Object.keys(cluesObj),
-  });
+  const cluesObjAny = cluesObj as Record<string, unknown>;
+  const acrossClues = (cluesObjAny['Across'] || cluesObjAny['across'] || []) as ClueFormat[];
+  const downClues = (cluesObjAny['Down'] || cluesObjAny['down'] || []) as ClueFormat[];
 
   // Parse clues with index-based fallback for clue numbers
   const parseCluesWithIndex = (clueArray: ClueFormat[], direction: 'across' | 'down'): Clue[] => {
@@ -295,18 +267,21 @@ function calculateCellNumbers(grid: Array<Array<any>>): Map<string, number> {
   const width = grid[0]?.length || 0;
 
   for (let r = 0; r < height; r++) {
+    const row = grid[r];
+    if (!row) continue;
+
     for (let c = 0; c < width; c++) {
-      const cell = grid[r][c];
+      const cell = row[c];
       const isBlack = cell === '.' || cell === null || cell === '#';
 
       if (isBlack) continue;
 
       // Check if this cell starts an across word
       const startsAcross =
-        (c === 0 || grid[r][c - 1] === '.' || grid[r][c - 1] === null) &&
+        (c === 0 || row[c - 1] === '.' || row[c - 1] === null) &&
         c < width - 1 &&
-        grid[r][c + 1] !== '.' &&
-        grid[r][c + 1] !== null;
+        row[c + 1] !== '.' &&
+        row[c + 1] !== null;
 
       // Check if this cell starts a down word
       const startsDown =

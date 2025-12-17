@@ -5,8 +5,7 @@
 
 import { useParams } from 'react-router-dom';
 import { useState, useCallback } from 'react';
-import { useUser, useGame } from '@hooks/index';
-import { useBattleMode } from '@hooks/useBattleMode';
+import { useUser, useGame, useBattleMode } from '@hooks/index';
 import { useSocket } from '@sockets/index';
 import Nav from '@components/common/Nav';
 import BattleGrid from '@components/Battle/BattleGrid';

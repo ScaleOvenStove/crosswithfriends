@@ -8,7 +8,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import useFirebaseStorage from '../firebase/useFirebaseStorage';
 
 // Mock Firebase Storage
-vi.mock('@lib/firebase/storage', () => ({
+vi.mock('../../firebase/storage', () => ({
   uploadFile: vi.fn(),
   uploadFileWithProgress: vi.fn(),
   deleteFile: vi.fn(),
@@ -36,7 +36,7 @@ describe('useFirebaseStorage', () => {
 
   describe('upload', () => {
     it('should upload file and return URL', async () => {
-      const { uploadFile } = await import('@lib/firebase/storage');
+      const { uploadFile } = await import('../../firebase/storage');
       vi.mocked(uploadFile).mockResolvedValue('https://example.com/file.jpg');
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -55,7 +55,7 @@ describe('useFirebaseStorage', () => {
     });
 
     it('should call onComplete callback on success', async () => {
-      const { uploadFile } = await import('@lib/firebase/storage');
+      const { uploadFile } = await import('../../firebase/storage');
       vi.mocked(uploadFile).mockResolvedValue('https://example.com/file.jpg');
 
       const onComplete = vi.fn();
@@ -70,7 +70,7 @@ describe('useFirebaseStorage', () => {
     });
 
     it('should set error state on upload failure', async () => {
-      const { uploadFile } = await import('@lib/firebase/storage');
+      const { uploadFile } = await import('../../firebase/storage');
       vi.mocked(uploadFile).mockRejectedValue(new Error('Upload failed'));
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -87,7 +87,7 @@ describe('useFirebaseStorage', () => {
     });
 
     it('should call onError callback on failure', async () => {
-      const { uploadFile } = await import('@lib/firebase/storage');
+      const { uploadFile } = await import('../../firebase/storage');
       const error = new Error('Upload failed');
       vi.mocked(uploadFile).mockRejectedValue(error);
 
@@ -109,7 +109,7 @@ describe('useFirebaseStorage', () => {
 
   describe('uploadWithProgress', () => {
     it('should track upload progress', async () => {
-      const { uploadFileWithProgress } = await import('@lib/firebase/storage');
+      const { uploadFileWithProgress } = await import('../../firebase/storage');
 
       const mockUploadTask: any = {
         then: (onSuccess: any) => {
@@ -138,7 +138,7 @@ describe('useFirebaseStorage', () => {
 
   describe('uploadUserAvatar', () => {
     it('should upload user avatar', async () => {
-      const { uploadAvatar } = await import('@lib/firebase/storage');
+      const { uploadAvatar } = await import('../../firebase/storage');
       vi.mocked(uploadAvatar).mockResolvedValue('https://example.com/avatar.jpg');
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -156,7 +156,7 @@ describe('useFirebaseStorage', () => {
 
   describe('uploadPuzzle', () => {
     it('should upload puzzle image', async () => {
-      const { uploadPuzzleImage } = await import('@lib/firebase/storage');
+      const { uploadPuzzleImage } = await import('../../firebase/storage');
       vi.mocked(uploadPuzzleImage).mockResolvedValue('https://example.com/puzzle.jpg');
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -174,7 +174,7 @@ describe('useFirebaseStorage', () => {
 
   describe('remove', () => {
     it('should delete file', async () => {
-      const { deleteFile } = await import('@lib/firebase/storage');
+      const { deleteFile } = await import('../../firebase/storage');
       vi.mocked(deleteFile).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -188,7 +188,7 @@ describe('useFirebaseStorage', () => {
     });
 
     it('should set error on delete failure', async () => {
-      const { deleteFile } = await import('@lib/firebase/storage');
+      const { deleteFile } = await import('../../firebase/storage');
       vi.mocked(deleteFile).mockRejectedValue(new Error('Delete failed'));
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -205,7 +205,7 @@ describe('useFirebaseStorage', () => {
 
   describe('list', () => {
     it('should list files in directory', async () => {
-      const { listFiles } = await import('@lib/firebase/storage');
+      const { listFiles } = await import('../../firebase/storage');
       const mockUrls = ['https://example.com/file1.jpg', 'https://example.com/file2.jpg'];
       vi.mocked(listFiles).mockResolvedValue(mockUrls);
 
@@ -223,7 +223,7 @@ describe('useFirebaseStorage', () => {
 
   describe('getUrl', () => {
     it('should get download URL for file path', async () => {
-      const { getFileURL } = await import('@lib/firebase/storage');
+      const { getFileURL } = await import('../../firebase/storage');
       vi.mocked(getFileURL).mockResolvedValue('https://example.com/file.jpg');
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -240,7 +240,7 @@ describe('useFirebaseStorage', () => {
 
   describe('reset', () => {
     it('should reset state', async () => {
-      const { uploadFile } = await import('@lib/firebase/storage');
+      const { uploadFile } = await import('../../firebase/storage');
       vi.mocked(uploadFile).mockResolvedValue('https://example.com/file.jpg');
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -270,7 +270,7 @@ describe('useFirebaseStorage', () => {
     it('should validate file types (handled by storage module)', async () => {
       // File validation is performed by the storage module
       // Per codeguard-0-file-handling-and-uploads
-      const { uploadFile } = await import('@lib/firebase/storage');
+      const { uploadFile } = await import('../../firebase/storage');
       vi.mocked(uploadFile).mockRejectedValue(new Error('Invalid file type'));
 
       const { result } = renderHook(() => useFirebaseStorage());
@@ -286,7 +286,7 @@ describe('useFirebaseStorage', () => {
     it('should validate file sizes (handled by storage module)', async () => {
       // Size validation is performed by the storage module
       // Per codeguard-0-file-handling-and-uploads
-      const { uploadFile } = await import('@lib/firebase/storage');
+      const { uploadFile } = await import('../../firebase/storage');
       vi.mocked(uploadFile).mockRejectedValue(new Error('File size exceeds 5MB limit'));
 
       const { result } = renderHook(() => useFirebaseStorage());

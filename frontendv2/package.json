@@ -28,6 +28,7 @@
     "recharts": "^3.5.1",
     "socket.io-client": "^4.8.1",
     "yarn": "^1.22.22",
+    "zod": "^3.23.8",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -40,7 +41,6 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
-    "@types/add": "^2",
     "@types/canvas-confetti": "^1.9.0",
     "@types/dompurify": "^3.2.0",
     "@types/node": "^20.19.25",

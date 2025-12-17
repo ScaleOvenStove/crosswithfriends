@@ -11,35 +11,49 @@ import {
   signInAnonymousUser,
   signOutUser,
   sendPasswordReset,
-  updateUserProfile,
   changePassword,
-  getCurrentUser,
   getIdToken,
 } from '../auth';
 
 // Mock Firebase Auth
-vi.mock('../config', () => ({
-  auth: {
+vi.mock('../config', () => {
+  let isConfigured = true;
+  const mockAuth = {
     currentUser: null,
-  },
-  isFirebaseConfigured: true,
-}));
+  };
+  return {
+    auth: mockAuth,
+    get isFirebaseConfigured() {
+      return isConfigured;
+    },
+    __setIsFirebaseConfigured: (value: boolean) => {
+      isConfigured = value;
+    },
+  };
+});
 
-vi.mock('firebase/auth', () => ({
-  createUserWithEmailAndPassword: vi.fn(),
-  signInWithEmailAndPassword: vi.fn(),
-  signInWithPopup: vi.fn(),
-  signInAnonymously: vi.fn(),
-  signOut: vi.fn(),
-  GoogleAuthProvider: vi.fn(),
-  sendPasswordResetEmail: vi.fn(),
-  updateProfile: vi.fn(),
-  updatePassword: vi.fn(),
-  reauthenticateWithCredential: vi.fn(),
-  EmailAuthProvider: {
-    credential: vi.fn(),
-  },
-}));
+vi.mock('firebase/auth', () => {
+  const mockAddScope = vi.fn().mockReturnThis();
+  const MockGoogleAuthProvider = vi.fn(function (this: any) {
+    this.addScope = mockAddScope;
+  });
+
+  return {
+    createUserWithEmailAndPassword: vi.fn(),
+    signInWithEmailAndPassword: vi.fn(),
+    signInWithPopup: vi.fn(),
+    signInAnonymously: vi.fn(),
+    signOut: vi.fn(),
+    GoogleAuthProvider: MockGoogleAuthProvider,
+    sendPasswordResetEmail: vi.fn(),
+    updateProfile: vi.fn(),
+    updatePassword: vi.fn(),
+    reauthenticateWithCredential: vi.fn(),
+    EmailAuthProvider: {
+      credential: vi.fn(),
+    },
+  };
+});
 
 describe('Firebase Auth Module', () => {
   beforeEach(() => {
@@ -73,12 +87,19 @@ describe('Firebase Auth Module', () => {
     });
 
     it('should throw error if Firebase is not configured', async () => {
-      const { isFirebaseConfigured } = await import('../config');
-      vi.mocked(isFirebaseConfigured as any).mockReturnValue(false);
+      const configModule = await import('../config');
+      if ('__setIsFirebaseConfigured' in configModule) {
+        (configModule as any).__setIsFirebaseConfigured(false);
+      }
 
       await expect(signUpWithEmail('test@example.com', 'password123')).rejects.toThrow(
         'Firebase Auth is not configured'
       );
+
+      // Reset for other tests
+      if ('__setIsFirebaseConfigured' in configModule) {
+        (configModule as any).__setIsFirebaseConfigured(true);
+      }
     });
   });
 

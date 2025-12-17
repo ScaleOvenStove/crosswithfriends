@@ -12,6 +12,7 @@ import { GameToolbar } from '@components/Toolbar';
 import { ChatPanel } from '@components/Chat';
 import { GameSkeleton } from '@components/common/skeletons';
 import ErrorLayout from '@components/common/ErrorLayout';
+import { ComponentErrorBoundary } from '@components/common/ComponentErrorBoundary';
 import { useGame } from '@hooks/game/useGame';
 import { useClues } from '@hooks/puzzle/useClues';
 import { useGameStore } from '@stores/gameStore';
@@ -405,40 +406,46 @@ const Game = () => {
           <ActiveHint currentClue={currentClue} />
           <GridAndCluesContainer>
             <GridSection>
-              <Grid
-                cells={cells}
-                selectedCell={selectedCell}
-                selectedDirection={selectedDirection}
-                currentUser={currentUser}
-                users={users}
-                cursors={cursors}
-                onCellClick={handleCellSelect}
-                onCellChange={handleCellUpdate}
-                onDirectionToggle={toggleDirection}
-              />
+              <ComponentErrorBoundary componentName="Grid">
+                <Grid
+                  cells={cells}
+                  selectedCell={selectedCell}
+                  selectedDirection={selectedDirection}
+                  currentUser={currentUser}
+                  users={users}
+                  cursors={cursors}
+                  onCellClick={handleCellSelect}
+                  onCellChange={handleCellUpdate}
+                  onDirectionToggle={toggleDirection}
+                />
+              </ComponentErrorBoundary>
             </GridSection>
 
             <ClueSection>
-              <CluePanel
-                acrossClues={safeClues.across}
-                downClues={safeClues.down}
-                currentClue={currentClue}
-                completedClues={completedClues}
-                selectedDirection={selectedDirection}
-                onClueClick={handleClueClick}
-              />
+              <ComponentErrorBoundary componentName="CluePanel">
+                <CluePanel
+                  acrossClues={safeClues.across}
+                  downClues={safeClues.down}
+                  currentClue={currentClue}
+                  completedClues={completedClues}
+                  selectedDirection={selectedDirection}
+                  onClueClick={handleClueClick}
+                />
+              </ComponentErrorBoundary>
             </ClueSection>
           </GridAndCluesContainer>
         </LeftSection>
 
         <ChatSection>
-          <ChatPanel
-            gameId={gameId || null}
-            userId={currentUser?.id || 'guest'}
-            userName={savedUserName}
-            userColor={currentUser?.color || '#1976d2'}
-            isLoading={isLoading}
-          />
+          <ComponentErrorBoundary componentName="ChatPanel">
+            <ChatPanel
+              gameId={gameId || null}
+              userId={currentUser?.id || 'guest'}
+              userName={savedUserName}
+              userColor={currentUser?.color || '#1976d2'}
+              isLoading={isLoading}
+            />
+          </ComponentErrorBoundary>
         </ChatSection>
       </GameContent>
     </GamePageContainer>

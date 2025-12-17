@@ -19,6 +19,7 @@
       "@sockets/*": ["./sockets/*"],
       "@routes/*": ["./routes/*"],
       "@contexts/*": ["./contexts/*"],
+      "@schemas/*": ["./schemas/*"],
       "@lib/firebase/*": ["./firebase/*"],
       "@shared/*": ["../../shared/src/shared/*"],
       "@lib/*": ["../../shared/src/lib/*"],

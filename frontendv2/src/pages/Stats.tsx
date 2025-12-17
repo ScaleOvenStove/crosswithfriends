@@ -4,8 +4,7 @@
  */
 
 import Nav from '@components/common/Nav';
-import { useUser } from '@hooks/index';
-import { useStats } from '@hooks/useStats';
+import { useUser, useStats } from '@hooks/index';
 import StatCard from '@components/Stats/StatCard';
 import SolveHistory from '@components/Stats/SolveHistory';
 import { StatsSkeleton } from '@components/common/skeletons';

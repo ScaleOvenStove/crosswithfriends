@@ -20,10 +20,18 @@ import {
 } from '../database';
 
 // Mock Firebase Database
-vi.mock('../config', () => ({
-  database: {},
-  isFirebaseConfigured: true,
-}));
+vi.mock('../config', () => {
+  let isConfigured = true;
+  return {
+    database: {},
+    get isFirebaseConfigured() {
+      return isConfigured;
+    },
+    __setIsFirebaseConfigured: (value: boolean) => {
+      isConfigured = value;
+    },
+  };
+});
 
 vi.mock('firebase/database', () => ({
   ref: vi.fn(),
@@ -56,12 +64,19 @@ describe('Firebase Database Module', () => {
     });
 
     it('should throw error if database is not configured', async () => {
-      const { isFirebaseConfigured } = await import('../config');
-      vi.mocked(isFirebaseConfigured as any).mockReturnValue(false);
+      const configModule = await import('../config');
+      if ('__setIsFirebaseConfigured' in configModule) {
+        (configModule as any).__setIsFirebaseConfigured(false);
+      }
 
       await expect(writeData('test/path', { value: 'test' })).rejects.toThrow(
         'Firebase Database is not configured'
       );
+
+      // Reset for other tests
+      if ('__setIsFirebaseConfigured' in configModule) {
+        (configModule as any).__setIsFirebaseConfigured(true);
+      }
     });
   });
 
@@ -144,7 +159,7 @@ describe('Firebase Database Module', () => {
   });
 
   describe('subscribeToData', () => {
-    it('should listen for real-time changes', () => {
+    it('should listen for real-time changes', async () => {
       const { ref, onValue } = await import('firebase/database');
       const mockRef = { path: '/test/path' };
       const callback = vi.fn();
@@ -166,7 +181,7 @@ describe('Firebase Database Module', () => {
       expect(typeof unsubscribe).toBe('function');
     });
 
-    it('should call callback with null if data does not exist', () => {
+    it('should call callback with null if data does not exist', async () => {
       const { ref, onValue } = await import('firebase/database');
       const mockRef = { path: '/test/path' };
       const callback = vi.fn();

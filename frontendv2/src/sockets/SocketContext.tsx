@@ -3,10 +3,11 @@
  * Implements REQ-10.3: Real-Time Communication via Socket.io
  */
 
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { config } from '@config/index';
+import { socketRecoveryService } from '@services/socketRecoveryService';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -57,11 +58,15 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     socket.on('connect', () => {
       console.log('[Socket] ✅ Connected:', socket.id);
       setIsConnected(true);
+      // Notify recovery service
+      socketRecoveryService.handleReconnect(socket, null);
     });
 
     socket.on('disconnect', (reason) => {
       console.log('[Socket] ⚠️ Disconnected:', reason);
       setIsConnected(false);
+      // Notify recovery service
+      socketRecoveryService.handleDisconnect(reason);
     });
 
     socket.on('connect_error', (error) => {
@@ -70,14 +75,17 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
         '[Socket] Server may be sleeping or unreachable. Real-time features will be unavailable.'
       );
       setIsConnected(false);
+      socketRecoveryService.handleDisconnect(error.message);
     });
 
     socket.on('reconnect_attempt', (attempt) => {
       console.log(`[Socket] 🔄 Reconnection attempt ${attempt}...`);
+      socketRecoveryService.handleReconnectAttempt(attempt);
     });
 
     socket.on('reconnect_failed', () => {
       console.error('[Socket] ❌ Reconnection failed after all attempts');
+      socketRecoveryService.handleReconnectFailed();
     });
 
     socketRef.current = socket;

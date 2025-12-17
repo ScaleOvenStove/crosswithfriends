@@ -29,6 +29,7 @@ export default defineConfig({
       '@sockets': path.resolve(__dirname, './src/sockets'),
       '@routes': path.resolve(__dirname, './src/routes'),
       '@contexts': path.resolve(__dirname, './src/contexts'),
+      '@schemas': path.resolve(__dirname, './src/schemas'),
       '@lib/firebase': path.resolve(__dirname, './src/firebase'),
       '@crosswithfriends/shared/lib': path.resolve(__dirname, '../shared/src/lib'),
       '@crosswithfriends/shared/fencingGameEvents': path.resolve(
