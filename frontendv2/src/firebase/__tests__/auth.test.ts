@@ -3,7 +3,7 @@
  * Tests authentication methods and security compliance
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach as _afterEach } from 'vitest';
 import {
   signUpWithEmail,
   signInWithEmail,

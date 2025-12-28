@@ -5,7 +5,6 @@
 
 import { Box, Container, Typography, Button, Stack } from '@mui/material';
 import { Home as HomeIcon, Refresh as RefreshIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 interface ErrorLayoutProps {
@@ -19,7 +18,7 @@ interface ErrorLayoutProps {
   children?: ReactNode;
 }
 
-export default function ErrorLayout({
+const ErrorLayout = ({
   icon,
   errorCode,
   title,
@@ -28,11 +27,10 @@ export default function ErrorLayout({
   showRetry = false,
   onRetry,
   children,
-}: ErrorLayoutProps) {
-  const navigate = useNavigate();
-
+}: ErrorLayoutProps) => {
   const handleGoHome = () => {
-    navigate('/');
+    // Use window.location as fallback - works even outside router context
+    window.location.href = '/';
   };
 
   const handleRetry = () => {
@@ -179,4 +177,6 @@ export default function ErrorLayout({
       </Box>
     </Container>
   );
-}
+};
+
+export default ErrorLayout;

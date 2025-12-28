@@ -58,7 +58,11 @@ const Account = () => {
             <div className="section-header">
               <h2>Profile</h2>
               {!editingProfile && (
-                <button onClick={() => setEditingProfile(true)} className="btn-secondary">
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile(true)}
+                  className="btn-secondary"
+                >
                   Edit Profile
                 </button>
               )}
@@ -158,8 +162,12 @@ const Account = () => {
             <h2>Data Management</h2>
 
             <div className="data-actions">
-              <button className="btn-secondary">Export My Data</button>
-              <button className="btn-danger">Delete Account</button>
+              <button type="button" className="btn-secondary">
+                Export My Data
+              </button>
+              <button type="button" className="btn-danger">
+                Delete Account
+              </button>
             </div>
 
             <p className="data-notice">

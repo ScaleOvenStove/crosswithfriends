@@ -29,7 +29,7 @@ export function useGameClock(): UseGameClockReturn {
   } = useGameStore();
 
   // Local tick state for forcing re-renders when running
-  const [tick, setTick] = useState(0);
+  const [_tick, setTick] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate current elapsed time

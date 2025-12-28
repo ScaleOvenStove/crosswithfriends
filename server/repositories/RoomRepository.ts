@@ -36,4 +36,23 @@ export class RoomRepository implements IRoomRepository {
     const ms = Date.now() - startTime;
     logger.debug(`addRoomEvent(${rid}, ${event.type}) took ${ms}ms`);
   }
+
+  async getCreator(rid: string): Promise<string | null> {
+    // Get the uid from the first event in the room (room creator)
+    const res = await this.pool.query('SELECT uid FROM room_events WHERE rid=$1 ORDER BY ts ASC LIMIT 1', [
+      rid,
+    ]);
+
+    if (res.rowCount === 0 || !res.rows[0]) {
+      return null;
+    }
+
+    return res.rows[0].uid || null;
+  }
+
+  async exists(rid: string): Promise<boolean> {
+    const res = await this.pool.query('SELECT 1 FROM room_events WHERE rid=$1 LIMIT 1', [rid]);
+
+    return (res.rowCount ?? 0) > 0;
+  }
 }

@@ -1,9 +1,11 @@
 import type {CreateGameRequest, GetGameResponse, InfoJson} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
+import {config} from '../config/index.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
+import {validateGameId, validatePuzzleId} from '../utils/inputValidation.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
-import {extractUserIdFromRequest, isValidUserId} from '../utils/userAuth.js';
+import {authenticateRequest, isValidUserId} from '../utils/userAuth.js';
 
 import {createHttpError} from './errors.js';
 import {
@@ -39,15 +41,37 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest<{Body: CreateGameRequest}>, _reply: FastifyReply) => {
       logRequest(request);
 
-      // Extract and validate user ID
-      const userId = extractUserIdFromRequest(request);
-      if (!isValidUserId(userId)) {
-        throw createHttpError('User ID required. Provide userId in query, header (X-User-Id), or body.', 401);
+      // Validate game ID format
+      const gidValidation = validateGameId(request.body.gid);
+      if (!gidValidation.valid) {
+        throw createHttpError(gidValidation.error || 'Invalid game ID', 400);
       }
 
+      // Validate puzzle ID format
+      const pidValidation = validatePuzzleId(request.body.pid);
+      if (!pidValidation.valid) {
+        throw createHttpError(pidValidation.error || 'Invalid puzzle ID', 400);
+      }
+
+      // Extract and validate user ID (backend JWT token)
+      // In development mode (REQUIRE_AUTH=false), allow requests without authentication
+      let userId: string | null = null;
+      const authResult = authenticateRequest(request);
+
+      if (authResult.authenticated && isValidUserId(authResult.userId)) {
+        userId = authResult.userId;
+      } else if (config.auth.requireAuth) {
+        // In production, require authentication
+        const errorMessage =
+          authResult.error ||
+          'Authentication required. Provide a valid JWT token via Authorization header (Bearer <token>) or ?token= query parameter.';
+        throw createHttpError(errorMessage, 401);
+      }
+      // In development mode, userId will be null, which is allowed
+
       const gid = await fastify.repositories.game.createInitialEvent(
-        request.body.gid,
-        request.body.pid,
+        gidValidation.value!,
+        pidValidation.value!,
         userId
       );
       return {gid};
@@ -82,7 +106,13 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
       logRequest(request);
       const {gid} = request.params;
 
-      const puzzleSolves = await getPuzzleSolves([gid]);
+      // Validate game ID format
+      const gidValidation = validateGameId(gid);
+      if (!gidValidation.valid) {
+        throw createHttpError(gidValidation.error || 'Invalid game ID', 400);
+      }
+
+      const puzzleSolves = await getPuzzleSolves([gidValidation.value!]);
 
       if (puzzleSolves.length === 0) {
         throw createHttpError('Game not found', 404);
@@ -141,11 +171,17 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
       logRequest(request);
       const {gid} = request.params;
 
+      // Validate game ID format
+      const gidValidation = validateGameId(gid);
+      if (!gidValidation.valid) {
+        throw createHttpError(gidValidation.error || 'Invalid game ID', 400);
+      }
+
       // Get game info which contains the puzzle ID
-      const gameInfo = await fastify.repositories.game.getInfo(gid);
+      const gameInfo = await fastify.repositories.game.getInfo(gidValidation.value!);
       // The pid is stored in the create event params, but getInfo doesn't return it
       // We need to get it from the events. For now, use the repository's getEvents method
-      const {events} = await fastify.repositories.game.getEvents(gid, {limit: 1});
+      const {events} = await fastify.repositories.game.getEvents(gidValidation.value!, {limit: 1});
       const createEvent = events.find((e) => e.type === 'create');
       if (!createEvent || createEvent.type !== 'create') {
         throw createHttpError('Active game not found', 404);

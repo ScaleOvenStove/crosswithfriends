@@ -8,7 +8,6 @@ import type { ReactNode, ErrorInfo } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
-// eslint-disable-next-line no-unused-vars
 type ErrorHandler = (error: Error, errorInfo: ErrorInfo) => void;
 
 interface ComponentErrorBoundaryProps {

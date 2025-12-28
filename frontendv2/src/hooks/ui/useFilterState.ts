@@ -1,85 +1,114 @@
 /**
  * URL-persisted filter state hook
- * Syncs filter state with URL query parameters for shareable links
+ * Uses use-query-params for type-safe URL query parameter management
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useQueryParams, StringParam, BooleanParam } from 'use-query-params';
 import type { FilterState } from '@components/PuzzleList/FilterSidebar';
 
-const defaultFilterState: FilterState = {
-  size: { Mini: true, Standard: true },
-  status: { New: true, InProgress: true, Complete: true },
-  difficulty: { Easy: true, Medium: true, Hard: true },
-  author: '',
-  dateFrom: '',
-  dateTo: '',
-};
-
 /**
- * Parse boolean from string (handles '1', 'true', 'false', '0')
- */
-const parseBoolean = (value: string | null, defaultValue: boolean): boolean => {
-  if (value === null) return defaultValue;
-  return value === '1' || value === 'true';
-};
-
-/**
- * Hook to manage filter state with URL persistence
+ * Hook to manage filter state with URL persistence using use-query-params
  */
 export const useFilterState = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [queryParams, setQueryParams] = useQueryParams({
+    // Size filters
+    size_mini: BooleanParam,
+    size_standard: BooleanParam,
 
-  // Initialize state from URL or defaults
-  const [filterState, setFilterState] = useState<FilterState>(() => {
-    return {
-      size: {
-        Mini: parseBoolean(searchParams.get('size_mini'), true),
-        Standard: parseBoolean(searchParams.get('size_standard'), true),
-      },
-      status: {
-        New: parseBoolean(searchParams.get('status_new'), true),
-        InProgress: parseBoolean(searchParams.get('status_inprogress'), true),
-        Complete: parseBoolean(searchParams.get('status_complete'), true),
-      },
-      difficulty: {
-        Easy: parseBoolean(searchParams.get('difficulty_easy'), true),
-        Medium: parseBoolean(searchParams.get('difficulty_medium'), true),
-        Hard: parseBoolean(searchParams.get('difficulty_hard'), true),
-      },
-      author: searchParams.get('author') || '',
-      dateFrom: searchParams.get('date_from') || '',
-      dateTo: searchParams.get('date_to') || '',
-    };
+    // Status filters
+    status_new: BooleanParam,
+    status_inprogress: BooleanParam,
+    status_complete: BooleanParam,
+
+    // Difficulty filters
+    difficulty_easy: BooleanParam,
+    difficulty_medium: BooleanParam,
+    difficulty_hard: BooleanParam,
+
+    // Text filters
+    author: StringParam,
+    date_from: StringParam,
+    date_to: StringParam,
   });
 
-  // Update URL when filter state changes
-  useEffect(() => {
-    const params = new URLSearchParams();
+  // Convert query params to FilterState format
+  const filterState: FilterState = {
+    size: {
+      Mini: queryParams.size_mini ?? true,
+      Standard: queryParams.size_standard ?? true,
+    },
+    status: {
+      New: queryParams.status_new ?? true,
+      InProgress: queryParams.status_inprogress ?? true,
+      Complete: queryParams.status_complete ?? true,
+    },
+    difficulty: {
+      Easy: queryParams.difficulty_easy ?? true,
+      Medium: queryParams.difficulty_medium ?? true,
+      Hard: queryParams.difficulty_hard ?? true,
+    },
+    author: queryParams.author ?? '',
+    dateFrom: queryParams.date_from ?? '',
+    dateTo: queryParams.date_to ?? '',
+  };
 
-    // Only add params that differ from defaults
-    if (!filterState.size.Mini) params.set('size_mini', '0');
-    if (!filterState.size.Standard) params.set('size_standard', '0');
+  const updateFilters = (newFilters: FilterState) => {
+    // Only set params that differ from defaults
+    const updates: Record<string, boolean | string | null | undefined> = {};
 
-    if (!filterState.status.New) params.set('status_new', '0');
-    if (!filterState.status.InProgress) params.set('status_inprogress', '0');
-    if (!filterState.status.Complete) params.set('status_complete', '0');
+    // Size filters - only set if not default (true)
+    if (!newFilters.size.Mini) {
+      updates.size_mini = false;
+    } else {
+      updates.size_mini = undefined; // Remove from URL if default
+    }
+    if (!newFilters.size.Standard) {
+      updates.size_standard = false;
+    } else {
+      updates.size_standard = undefined;
+    }
 
-    if (!filterState.difficulty.Easy) params.set('difficulty_easy', '0');
-    if (!filterState.difficulty.Medium) params.set('difficulty_medium', '0');
-    if (!filterState.difficulty.Hard) params.set('difficulty_hard', '0');
+    // Status filters
+    if (!newFilters.status.New) {
+      updates.status_new = false;
+    } else {
+      updates.status_new = undefined;
+    }
+    if (!newFilters.status.InProgress) {
+      updates.status_inprogress = false;
+    } else {
+      updates.status_inprogress = undefined;
+    }
+    if (!newFilters.status.Complete) {
+      updates.status_complete = false;
+    } else {
+      updates.status_complete = undefined;
+    }
 
-    if (filterState.author) params.set('author', filterState.author);
-    if (filterState.dateFrom) params.set('date_from', filterState.dateFrom);
-    if (filterState.dateTo) params.set('date_to', filterState.dateTo);
+    // Difficulty filters
+    if (!newFilters.difficulty.Easy) {
+      updates.difficulty_easy = false;
+    } else {
+      updates.difficulty_easy = undefined;
+    }
+    if (!newFilters.difficulty.Medium) {
+      updates.difficulty_medium = false;
+    } else {
+      updates.difficulty_medium = undefined;
+    }
+    if (!newFilters.difficulty.Hard) {
+      updates.difficulty_hard = false;
+    } else {
+      updates.difficulty_hard = undefined;
+    }
 
-    // Update URL without triggering navigation
-    setSearchParams(params, { replace: true });
-  }, [filterState, setSearchParams]);
+    // Text filters
+    updates.author = newFilters.author || undefined;
+    updates.date_from = newFilters.dateFrom || undefined;
+    updates.date_to = newFilters.dateTo || undefined;
 
-  const updateFilters = useCallback((newFilters: FilterState) => {
-    setFilterState(newFilters);
-  }, []);
+    setQueryParams(updates, 'replace');
+  };
 
   return {
     filterState,

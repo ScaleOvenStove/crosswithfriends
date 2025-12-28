@@ -11,14 +11,14 @@ interface BattleGridProps {
   players: { id: string; color: string; displayName: string }[];
   currentPlayerId: string;
   mode: 'battle' | 'fencing';
-  onCellFill: (row: number, col: number, value: string) => void;
+  onCellFill: (_row: number, _col: number, _value: string) => void;
 }
 
 const BattleGrid = ({
   grid,
   cellOwnership,
   players,
-  currentPlayerId,
+  currentPlayerId: _currentPlayerId,
   mode,
   onCellFill,
 }: BattleGridProps) => {

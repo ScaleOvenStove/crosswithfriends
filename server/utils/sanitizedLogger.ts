@@ -1,12 +1,21 @@
 /**
  * Sanitized Logging Utility
- * Provides consistent header sanitization across all endpoints
+ *
+ * NOTE: Header sanitization is now primarily handled by Pino serializers
+ * configured in server.ts. These utilities are kept for:
+ * - Manual logging scenarios outside of Fastify's request lifecycle
+ * - Body summary creation
+ * - Backward compatibility
+ *
+ * For normal request logging, Fastify's built-in logger with custom
+ * serializers automatically redacts sensitive headers.
  */
 
 import type {FastifyRequest} from 'fastify';
 
 /**
  * Sensitive header keys that should be redacted in logs
+ * NOTE: Also configured in server.ts Pino serializers
  */
 const SENSITIVE_HEADER_KEYS = ['authorization', 'cookie', 'set-cookie', 'x-api-key', 'x-auth-token'];
 
@@ -14,6 +23,7 @@ const SENSITIVE_HEADER_KEYS = ['authorization', 'cookie', 'set-cookie', 'x-api-k
  * Sanitizes request headers by redacting sensitive fields
  * @param headers - Request headers object
  * @returns Sanitized headers object with sensitive fields redacted
+ * @deprecated Use Pino serializers for automatic redaction in request logs
  */
 export function sanitizeHeaders(
   headers: Record<string, string | string[] | undefined>
@@ -52,6 +62,7 @@ export function createBodySummary(body: unknown): {keys: string[]; size: number}
  * Logs a request with sanitized headers and safe body summary
  * @param request - Fastify request object
  * @param message - Optional log message
+ * @deprecated Use request.log directly - Fastify's serializers now handle header sanitization
  */
 export function logRequest(request: FastifyRequest, message = 'got req'): void {
   request.log.debug(

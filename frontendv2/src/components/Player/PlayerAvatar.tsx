@@ -10,7 +10,7 @@
 
 import { memo } from 'react';
 import { Avatar, Badge, Tooltip, styled } from '@mui/material';
-import { Circle as CircleIcon } from '@mui/icons-material';
+import { Circle as _CircleIcon } from '@mui/icons-material';
 import type { User } from '@types/index';
 
 interface PlayerAvatarProps {

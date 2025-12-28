@@ -82,7 +82,11 @@ const Battle = () => {
         <div className="container">
           <div className="error-message">
             <p>Failed to load battle: {gameError}</p>
-            <button onClick={() => window.location.reload()} className="btn-secondary">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn-secondary"
+            >
               Retry
             </button>
           </div>

@@ -6,6 +6,7 @@
  */
 
 import { API_BASE_URL } from '../config';
+import { getBackendToken } from '../services/authTokenService';
 import {
   Configuration,
   CountersApi,
@@ -14,11 +15,28 @@ import {
   LinkPreviewApi,
   PuzzlesApi,
   StatsApi,
+  type Middleware,
 } from './generated';
 
-// Create configuration
+// Middleware to automatically add backend JWT token to requests
+const authMiddleware: Middleware = {
+  pre: async (context) => {
+    const token = getBackendToken();
+    if (token) {
+      // Add Authorization header if token exists
+      context.init.headers = {
+        ...context.init.headers,
+        Authorization: `Bearer ${token}`,
+      };
+    }
+    return context;
+  },
+};
+
+// Create configuration with auth middleware
 const configuration = new Configuration({
   basePath: API_BASE_URL,
+  middleware: [authMiddleware],
 });
 
 // Export configured API instances
@@ -31,6 +49,3 @@ export const linkPreviewApi = new LinkPreviewApi(configuration);
 
 // Re-export ResponseError for convenience
 export { ResponseError } from './generated/runtime';
-
-// Type re-exports removed - import types directly from '@api/generated' when needed
-// This avoids any potential issues with type-only imports triggering module evaluation

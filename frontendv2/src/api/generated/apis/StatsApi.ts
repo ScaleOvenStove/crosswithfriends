@@ -14,13 +14,13 @@
 
 import * as runtime from '../runtime';
 import type {
-  ListPuzzles400Response,
+  CreateToken400Response,
   SubmitStats200Response,
   SubmitStatsRequest,
 } from '../models/index';
 import {
-  ListPuzzles400ResponseFromJSON,
-  ListPuzzles400ResponseToJSON,
+  CreateToken400ResponseFromJSON,
+  CreateToken400ResponseToJSON,
   SubmitStats200ResponseFromJSON,
   SubmitStats200ResponseToJSON,
   SubmitStatsRequestFromJSON,

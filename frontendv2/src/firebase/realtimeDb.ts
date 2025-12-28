@@ -2,6 +2,9 @@
  * Firebase Realtime Database Module
  * Implements real-time data synchronization for game state
  * Per codeguard-0-data-storage: Enforce encrypted connections (handled by Firebase)
+ *
+ * Note: This file is named 'realtimeDb.ts' instead of 'database.ts' to avoid
+ * path collision with 'firebase/database' during TypeScript module resolution
  */
 
 import {
@@ -14,9 +17,12 @@ import {
   off,
   push,
   serverTimestamp,
+  type DataSnapshot,
 } from 'firebase/database';
-import type { DatabaseReference, Unsubscribe } from 'firebase/database';
 import { database, isFirebaseConfigured } from './config';
+
+// Type alias for unsubscribe function
+type Unsubscribe = () => void;
 
 // Check if database is available
 const ensureDatabase = () => {
@@ -33,8 +39,8 @@ const ensureDatabase = () => {
  */
 export const writeData = async (path: string, data: unknown): Promise<void> => {
   const db = ensureDatabase();
-  const dbRef = ref(db, path);
-  await set(dbRef, data);
+  const pathRef = ref(db, path);
+  await set(pathRef, data);
 };
 
 /**
@@ -42,8 +48,8 @@ export const writeData = async (path: string, data: unknown): Promise<void> => {
  */
 export const readData = async <T = unknown>(path: string): Promise<T | null> => {
   const db = ensureDatabase();
-  const dbRef = ref(db, path);
-  const snapshot = await get(dbRef);
+  const pathRef = ref(db, path);
+  const snapshot = await get(pathRef);
 
   if (snapshot.exists()) {
     return snapshot.val() as T;
@@ -57,8 +63,8 @@ export const readData = async <T = unknown>(path: string): Promise<T | null> => 
  */
 export const updateData = async (path: string, updates: Record<string, unknown>): Promise<void> => {
   const db = ensureDatabase();
-  const dbRef = ref(db, path);
-  await update(dbRef, updates);
+  const pathRef = ref(db, path);
+  await update(pathRef, updates);
 };
 
 /**
@@ -66,8 +72,8 @@ export const updateData = async (path: string, updates: Record<string, unknown>)
  */
 export const deleteData = async (path: string): Promise<void> => {
   const db = ensureDatabase();
-  const dbRef = ref(db, path);
-  await remove(dbRef);
+  const pathRef = ref(db, path);
+  await remove(pathRef);
 };
 
 /**
@@ -75,10 +81,15 @@ export const deleteData = async (path: string): Promise<void> => {
  */
 export const pushData = async (path: string, data: unknown): Promise<string> => {
   const db = ensureDatabase();
-  const dbRef = ref(db, path);
-  const newRef = push(dbRef);
+  const pathRef = ref(db, path);
+  const newRef = push(pathRef);
   await set(newRef, data);
-  return newRef.key!;
+
+  if (!newRef.key) {
+    throw new Error('Failed to generate unique key for pushed data');
+  }
+
+  return newRef.key;
 };
 
 /**
@@ -90,9 +101,9 @@ export const subscribeToData = <T = unknown>(
   callback: (data: T | null) => void
 ): Unsubscribe => {
   const db = ensureDatabase();
-  const dbRef = ref(db, path);
+  const pathRef = ref(db, path);
 
-  const listener = onValue(dbRef, (snapshot) => {
+  const listener = onValue(pathRef, (snapshot: DataSnapshot) => {
     if (snapshot.exists()) {
       callback(snapshot.val() as T);
     } else {
@@ -101,7 +112,7 @@ export const subscribeToData = <T = unknown>(
   });
 
   // Return unsubscribe function
-  return () => off(dbRef, 'value', listener);
+  return () => off(pathRef, 'value', listener);
 };
 
 /**

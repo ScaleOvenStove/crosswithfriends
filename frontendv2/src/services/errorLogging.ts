@@ -1,8 +1,10 @@
 /**
  * Error Logging Service
- * Centralized error logging that can integrate with external services
- * (Sentry, LogRocket, etc.)
+ * Centralized error logging that integrates with Sentry
+ * Maintains backward compatibility with existing code
  */
+
+import * as Sentry from '@sentry/react';
 
 interface ErrorLogData {
   type: string;
@@ -81,11 +83,26 @@ class ErrorLoggingService {
   }
 
   /**
-   * Send error data to logging service
-   * This is where you'd integrate with Sentry, LogRocket, etc.
+   * Send error data to logging service (Sentry)
    */
   private async sendToService(errorData: ErrorLogData): Promise<void> {
-    // Example: Send to custom backend endpoint
+    // Send to Sentry
+    Sentry.captureMessage(errorData.message, {
+      level: 'error',
+      tags: {
+        type: errorData.type,
+        statusCode: errorData.statusCode?.toString(),
+      },
+      extra: {
+        ...errorData.context,
+        timestamp: errorData.timestamp,
+        userAgent: errorData.userAgent,
+        url: errorData.url,
+        userId: errorData.userId,
+      },
+    });
+
+    // Also send to custom backend endpoint if configured
     if (this.config.apiEndpoint) {
       try {
         await fetch(this.config.apiEndpoint, {
@@ -103,29 +120,7 @@ class ErrorLoggingService {
       }
     }
 
-    // Example: Integrate with Sentry
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(new Error(errorData.message), {
-    //     level: 'error',
-    //     extra: errorData.context,
-    //     tags: {
-    //       type: errorData.type,
-    //       statusCode: errorData.statusCode?.toString(),
-    //     },
-    //   });
-    // }
-
-    // Example: Integrate with LogRocket
-    // if (window.LogRocket) {
-    //   window.LogRocket.captureException(new Error(errorData.message), {
-    //     tags: {
-    //       type: errorData.type,
-    //     },
-    //     extra: errorData.context,
-    //   });
-    // }
-
-    // For now, log to console in production
+    // Log to console in production
     console.error('[ErrorLogging] Logged error:', {
       type: errorData.type,
       message: errorData.message,

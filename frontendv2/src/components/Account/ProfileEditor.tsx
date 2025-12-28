@@ -8,7 +8,7 @@ import { useState } from 'react';
 interface ProfileEditorProps {
   currentName: string;
   currentColor: string;
-  onSave: (name: string, color: string) => void;
+  onSave: (_name: string, _color: string) => void;
   onCancel: () => void;
 }
 

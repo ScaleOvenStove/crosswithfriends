@@ -1,6 +1,7 @@
 import type {InfoJson} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
+import {config} from '../config/index.js';
 import {escapeHtml, escapeHtmlAttribute} from '../utils/htmlEscape.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 import {isFBMessengerCrawler, isLinkExpanderBot} from '../utils/link_preview_util.js';
@@ -10,6 +11,94 @@ import {ErrorResponseSchema} from './schemas.js';
 
 interface LinkPreviewQuery {
   url: string;
+}
+
+// Allowed URL schemes - only http/https are allowed for preview URLs
+const ALLOWED_SCHEMES = ['http:', 'https:'];
+
+// Check if we're in a non-production environment (development or test)
+const isNonProduction = config.server.isDevelopment || config.server.isTest;
+
+// Allowed domains for link preview (configurable via environment)
+// In production, this should be restricted to your actual domains
+const ALLOWED_DOMAINS = [
+  'downforacross.com',
+  'www.downforacross.com',
+  'foracross.com',
+  'www.foracross.com',
+  'api.foracross.com',
+  'crosswithfriends.com',
+  'www.crosswithfriends.com',
+  // Allow localhost, local IPs, and example.com in non-production
+  ...(isNonProduction ? ['localhost', '127.0.0.1', '0.0.0.0', '[::1]', 'example.com'] : []),
+];
+
+/**
+ * Validates a URL for link preview to prevent SSRF attacks
+ * @param urlString - The URL string to validate
+ * @returns The validated URL object
+ * @throws HttpError if validation fails
+ */
+function validatePreviewUrl(urlString: string): URL {
+  let url: URL;
+  try {
+    url = new URL(urlString);
+  } catch {
+    throw createHttpError('Invalid URL format', 400);
+  }
+
+  // Validate URL scheme
+  if (!ALLOWED_SCHEMES.includes(url.protocol)) {
+    throw createHttpError(`Invalid URL scheme: ${url.protocol}. Only http and https are allowed.`, 400);
+  }
+
+  // Validate domain
+  const hostname = url.hostname.toLowerCase();
+
+  // Check for IP addresses that could be used for SSRF
+  // Block private/internal IP ranges in production
+  if (!isNonProduction) {
+    // Block IPv4 private ranges
+    if (
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+      /^127\./.test(hostname) ||
+      /^169\.254\./.test(hostname) ||
+      hostname === 'localhost' ||
+      hostname === '0.0.0.0'
+    ) {
+      throw createHttpError('URLs pointing to internal networks are not allowed', 400);
+    }
+
+    // Block IPv6 private/link-local addresses
+    if (
+      hostname.startsWith('[') ||
+      hostname.includes('::1') ||
+      /^fe80:/i.test(hostname) ||
+      /^fc00:/i.test(hostname) ||
+      /^fd/i.test(hostname)
+    ) {
+      throw createHttpError('URLs pointing to internal networks are not allowed', 400);
+    }
+  }
+
+  // Validate against allowed domains
+  const isAllowedDomain = ALLOWED_DOMAINS.some((domain) => {
+    // Allow exact match or subdomain match
+    return (
+      hostname === domain ||
+      hostname.endsWith('.' + domain) ||
+      // For localhost with port, strip the port
+      (isNonProduction && hostname.split(':')[0] === domain)
+    );
+  });
+
+  if (!isAllowedDomain) {
+    throw createHttpError(`Domain not allowed for link preview: ${hostname}`, 400);
+  }
+
+  return url;
 }
 
 // eslint-disable-next-line require-await
@@ -48,12 +137,8 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest<{Querystring: LinkPreviewQuery}>, reply: FastifyReply) => {
       logRequest(request);
 
-      let url: URL;
-      try {
-        url = new URL(request.query.url);
-      } catch {
-        throw createHttpError('Invalid URL', 400);
-      }
+      // Validate URL scheme and domain to prevent SSRF
+      const url = validatePreviewUrl(request.query.url);
 
       let info: InfoJson | null = null;
       const pathParts = url.pathname.split('/');
@@ -112,7 +197,7 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
                 <meta property="og:type" content="website" />
                 <meta property="og:url" content="${safeUrl}" />
                 <meta property="og:description" content="${safeDescription}" />
-                <meta property="og:site_name" content="downforacross.com" />
+                <meta property="og:site_name" content="${escapeHtmlAttribute(config.urls.siteName)}" />
                 <link type="application/json+oembed" href="${safeOembedUrl}" />
                 <meta name="theme-color" content="#6aa9f4">
             </head>

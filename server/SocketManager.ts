@@ -3,17 +3,32 @@
 import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 import {Server as SocketIOServer, type Socket} from 'socket.io';
 
+import {config} from './config/index.js';
 import type {GameEvent} from './model/game.js';
 import {addGameEvent, getGameEvents} from './model/game.js';
 import {addRoomEvent, getRoomEvents} from './model/room.js';
+import type {IGameRepository} from './repositories/interfaces/IGameRepository.js';
+import type {IRoomRepository} from './repositories/interfaces/IRoomRepository.js';
+import {getOrCreateCorrelationId} from './utils/correlationId.js';
 import {logger} from './utils/logger.js';
-import {extractUserIdFromSocket, isValidUserId} from './utils/userAuth.js';
+import {
+  authenticateSocket,
+  isUserAuthorizedForGame,
+  isUserAuthorizedForRoom,
+  isValidUserId,
+  type AuthorizationResult,
+} from './utils/userAuth.js';
 import {checkRateLimit, cleanupRateLimitState} from './utils/websocketRateLimit.js';
 import {validateGameEvent} from './validation/gameEvents.js';
 import {validateRoomEvent} from './validation/roomEvents.js';
 
 interface SocketEvent {
   [key: string]: unknown;
+}
+
+interface SocketManagerRepositories {
+  game: IGameRepository;
+  room: IRoomRepository;
 }
 
 // Look for { .sv: 'timestamp' } and replace with Date.now()
@@ -60,9 +75,21 @@ function assignTimestamp(event: unknown): unknown {
 
 class SocketManager {
   io: SocketIOServer;
+  private repositories: SocketManagerRepositories | null = null;
 
-  constructor(io: SocketIOServer) {
+  constructor(io: SocketIOServer, repositories?: SocketManagerRepositories) {
     this.io = io;
+    if (repositories) {
+      this.repositories = repositories;
+    }
+  }
+
+  /**
+   * Set repositories for authorization checks
+   * Can be called after construction if repositories aren't available at construct time
+   */
+  setRepositories(repositories: SocketManagerRepositories): void {
+    this.repositories = repositories;
   }
 
   async addGameEvent(gid: string, event: SocketEvent | GameEvent): Promise<void> {
@@ -77,21 +104,81 @@ class SocketManager {
     this.io.to(`room-${rid}`).emit('room_event', roomEvent);
   }
 
+  /**
+   * Check if user is authorized to access a game
+   * Returns AuthorizationResult with detailed reason
+   */
+  private async checkGameAuthorization(gid: string, userId: string): Promise<AuthorizationResult> {
+    if (!this.repositories) {
+      // If no repositories configured, allow access (backward compatibility)
+      logger.warn({gid, userId}, 'No repositories configured, skipping authorization check');
+      return {authorized: true, reason: 'participant'};
+    }
+
+    const repos = this.repositories;
+    return await isUserAuthorizedForGame(
+      userId,
+      gid,
+      (gameId) => repos.game.getCreator(gameId),
+      (gameId) => repos.game.exists(gameId)
+    );
+  }
+
+  /**
+   * Check if user is authorized to access a room
+   * Returns AuthorizationResult with detailed reason
+   */
+  private async checkRoomAuthorization(rid: string, userId: string): Promise<AuthorizationResult> {
+    if (!this.repositories) {
+      // If no repositories configured, allow access (backward compatibility)
+      logger.warn({rid, userId}, 'No repositories configured, skipping authorization check');
+      return {authorized: true, reason: 'participant'};
+    }
+
+    const repos = this.repositories;
+    return await isUserAuthorizedForRoom(
+      userId,
+      rid,
+      (roomId) => repos.room.getCreator(roomId),
+      (roomId) => repos.room.exists(roomId)
+    );
+  }
+
   listen(): void {
     this.io.on('connection', (socket) => {
-      // Extract and validate user ID from connection
-      const userId = extractUserIdFromSocket(socket);
-      if (!isValidUserId(userId)) {
-        logger.warn({socketId: socket.id}, '[socket] Connection rejected: missing or invalid user ID');
+      // Extract and validate user using token-based auth
+      // In development mode (REQUIRE_AUTH=false), allow connections without authentication
+      let userId: string | null = null;
+      const authResult = authenticateSocket(socket);
+
+      if (authResult.authenticated && authResult.userId) {
+        userId = authResult.userId;
+      } else if (config.auth.requireAuth) {
+        // In production, require authentication
+        logger.warn(
+          {socketId: socket.id, error: authResult.error},
+          '[socket] Connection rejected: authentication failed'
+        );
+        socket.emit('auth_error', {error: authResult.error || 'Authentication required'});
         socket.disconnect(true);
         return;
       }
+      // In development mode, userId will be null, which is allowed
 
-      // Store user ID on socket instance for later use
-      // Type assertion is safe here because isValidUserId ensures userId is a non-null string
-      (socket as Socket & {userId: string}).userId = userId as string;
+      // Extract or generate correlation ID for this connection
+      const correlationId = getOrCreateCorrelationId(
+        socket.handshake.headers as Record<string, string | string[] | undefined>
+      );
 
-      logger.info({socketId: socket.id, userId}, '[socket] Client connected');
+      // Store user ID and correlation ID on socket instance for later use
+      // userId may be null in development mode
+      (socket as Socket & {userId?: string | null; correlationId: string}).userId = userId;
+      (socket as Socket & {userId?: string | null; correlationId: string}).correlationId = correlationId;
+
+      logger.info(
+        {socketId: socket.id, userId: userId || 'anonymous', correlationId},
+        '[socket] Client connected'
+      );
 
       // ======== Ping/Pong for Latency Measurement ========= //
       // Use 'latency_ping' to avoid conflict with Socket.IO's internal 'ping' event
@@ -111,16 +198,47 @@ class SocketManager {
       });
 
       // ======== Game Events ========= //
-      socket.on('join_game', (gid, ack) => {
+      socket.on('join_game', async (gid, ack) => {
         try {
-          // TODO: Verify user is authorized to join this game
           if (typeof gid !== 'string' || !gid.trim()) {
             logger.warn({gid}, '[socket] Invalid gid in join_game');
             if (ack) void ack({error: 'Invalid game ID'});
             return;
           }
+
+          // Verify user is authorized to join this game
+          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
+
+          // In development mode, allow joining without authentication
+          if (!socketUserId || !isValidUserId(socketUserId)) {
+            if (config.auth.requireAuth) {
+              logger.warn({socketId: socket.id, gid}, '[socket] Unauthorized join_game attempt');
+              if (ack) void ack({error: 'Authentication required'});
+              return;
+            }
+            // In dev mode, allow joining with null userId
+            logger.debug(
+              {socketId: socket.id, gid},
+              '[socket] Joining game without authentication (dev mode)'
+            );
+            void socket.join(`game-${gid}`);
+            if (ack) void ack({success: true});
+            return;
+          }
+
+          const gameAuthResult = await this.checkGameAuthorization(gid, socketUserId);
+          if (!gameAuthResult.authorized) {
+            const errorMsg = gameAuthResult.reason === 'not_found' ? 'Game not found' : 'Access denied';
+            logger.warn(
+              {socketId: socket.id, gid, userId: socketUserId, reason: gameAuthResult.reason},
+              '[socket] Access denied for game'
+            );
+            if (ack) void ack({error: errorMsg});
+            return;
+          }
+
           void socket.join(`game-${gid}`);
-          logger.debug({gid, socketId: socket.id}, '[socket] Client joined game');
+          logger.debug({gid, socketId: socket.id, userId: socketUserId}, '[socket] Client joined game');
           if (ack) void ack({success: true});
         } catch (error) {
           logger.error({err: error, gid}, '[socket] Error handling join_game');
@@ -146,12 +264,39 @@ class SocketManager {
 
       socket.on('sync_all_game_events', async (gid, ack) => {
         try {
-          // TODO: Verify user is authorized to access this game
           if (typeof gid !== 'string' || !gid.trim()) {
             logger.warn({gid}, '[socket] Invalid gid in sync_all_game_events');
             if (ack) void ack({error: 'Invalid game ID'});
             return;
           }
+
+          // Verify user is authorized to access this game
+          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
+          if (!socketUserId || !isValidUserId(socketUserId)) {
+            if (config.auth.requireAuth) {
+              logger.warn({socketId: socket.id, gid}, '[socket] Unauthorized sync_all_game_events attempt');
+              if (ack) void ack({error: 'Authentication required'});
+              return;
+            }
+            // In dev mode, allow sync without authentication - skip authorization check
+            logger.debug(
+              {socketId: socket.id, gid},
+              '[socket] Syncing game events without authentication (dev mode)'
+            );
+          } else {
+            // Only check authorization if we have a userId
+            const gameAuthResult = await this.checkGameAuthorization(gid, socketUserId);
+            if (!gameAuthResult.authorized) {
+              const errorMsg = gameAuthResult.reason === 'not_found' ? 'Game not found' : 'Access denied';
+              logger.warn(
+                {socketId: socket.id, gid, userId: socketUserId, reason: gameAuthResult.reason},
+                '[socket] Access denied for game events'
+              );
+              if (ack) void ack({error: errorMsg});
+              return;
+            }
+          }
+
           const {events} = await getGameEvents(gid);
           logger.debug({gid, eventCount: events.length}, '[socket] Syncing game events');
           if (ack) void ack(events);
@@ -235,11 +380,18 @@ class SocketManager {
           }
 
           // Get authenticated user ID from socket
-          const socketUserId = (socket as Socket & {userId?: string}).userId;
+          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
           if (!socketUserId || !isValidUserId(socketUserId)) {
-            logger.warn({socketId: socket.id, gid}, '[socket] Unauthenticated game event attempt');
-            if (ack) void ack({error: 'Authentication required'});
-            return;
+            if (config.auth.requireAuth) {
+              logger.warn({socketId: socket.id, gid}, '[socket] Unauthenticated game event attempt');
+              if (ack) void ack({error: 'Authentication required'});
+              return;
+            }
+            // In dev mode, allow events with null userId
+            logger.debug(
+              {socketId: socket.id, gid},
+              '[socket] Processing game event without authentication (dev mode)'
+            );
           }
 
           // Validate event using Zod schema
@@ -265,16 +417,45 @@ class SocketManager {
 
       // ======== Room Events ========= //
 
-      socket.on('join_room', (rid, ack) => {
+      socket.on('join_room', async (rid, ack) => {
         try {
-          // TODO: Verify user is authorized to join this room
           if (typeof rid !== 'string' || !rid.trim()) {
             logger.warn({rid}, '[socket] Invalid rid in join_room');
             if (ack) void ack({error: 'Invalid room ID'});
             return;
           }
+
+          // Verify user is authorized to join this room
+          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
+          if (!socketUserId || !isValidUserId(socketUserId)) {
+            if (config.auth.requireAuth) {
+              logger.warn({socketId: socket.id, rid}, '[socket] Unauthorized join_room attempt');
+              if (ack) void ack({error: 'Authentication required'});
+              return;
+            }
+            // In dev mode, allow joining without authentication
+            logger.debug(
+              {socketId: socket.id, rid},
+              '[socket] Joining room without authentication (dev mode)'
+            );
+            void socket.join(`room-${rid}`);
+            if (ack) void ack({success: true});
+            return;
+          }
+
+          const roomAuthResult = await this.checkRoomAuthorization(rid, socketUserId);
+          if (!roomAuthResult.authorized) {
+            const errorMsg = roomAuthResult.reason === 'not_found' ? 'Room not found' : 'Access denied';
+            logger.warn(
+              {socketId: socket.id, rid, userId: socketUserId, reason: roomAuthResult.reason},
+              '[socket] Access denied for room'
+            );
+            if (ack) void ack({error: errorMsg});
+            return;
+          }
+
           void socket.join(`room-${rid}`);
-          logger.debug({rid, socketId: socket.id}, '[socket] Client joined room');
+          logger.debug({rid, socketId: socket.id, userId: socketUserId}, '[socket] Client joined room');
           if (ack) void ack({success: true});
         } catch (error) {
           logger.error({err: error, rid}, '[socket] Error handling join_room');
@@ -300,12 +481,31 @@ class SocketManager {
 
       socket.on('sync_all_room_events', async (rid, ack) => {
         try {
-          // TODO: Verify user is authorized to access this room
           if (typeof rid !== 'string' || !rid.trim()) {
             logger.warn({rid}, '[socket] Invalid rid in sync_all_room_events');
             if (ack) void ack({error: 'Invalid room ID'});
             return;
           }
+
+          // Verify user is authorized to access this room
+          const socketUserId = (socket as Socket & {userId?: string}).userId;
+          if (!socketUserId || !isValidUserId(socketUserId)) {
+            logger.warn({socketId: socket.id, rid}, '[socket] Unauthorized sync_all_room_events attempt');
+            if (ack) void ack({error: 'Authentication required'});
+            return;
+          }
+
+          const roomAuthResult = await this.checkRoomAuthorization(rid, socketUserId);
+          if (!roomAuthResult.authorized) {
+            const errorMsg = roomAuthResult.reason === 'not_found' ? 'Room not found' : 'Access denied';
+            logger.warn(
+              {socketId: socket.id, rid, userId: socketUserId, reason: roomAuthResult.reason},
+              '[socket] Access denied for room events'
+            );
+            if (ack) void ack({error: errorMsg});
+            return;
+          }
+
           const events = await getRoomEvents(rid);
           logger.debug({rid, eventCount: events.length}, '[socket] Syncing room events');
           if (ack) void ack(events);

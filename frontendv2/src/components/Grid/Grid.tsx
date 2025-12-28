@@ -162,7 +162,6 @@ export const Grid = ({
   const { handleKeyDown } = useKeyboardNavigation({
     cells,
     selectedCell,
-    selectedDirection,
     onCellSelect: onCellClick,
     onCellUpdate: onCellChange,
     onDirectionToggle,

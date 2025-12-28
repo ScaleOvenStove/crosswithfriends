@@ -6,6 +6,7 @@
 
 import type { RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
+import QueryParamWrapper from '@components/common/QueryParamWrapper';
 
 // Lazy load error pages
 const NotFound404 = lazy(() => import('@pages/errors/NotFound404'));
@@ -201,6 +202,7 @@ export function getRoutes(): RouteObject[] {
 export const routes: RouteObject[] = [
   {
     // Root route with error boundary for all child routes
+    element: <QueryParamWrapper />,
     errorElement: <RootErrorElement />,
     children: getRoutes(),
   },

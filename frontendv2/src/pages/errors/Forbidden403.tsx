@@ -6,7 +6,7 @@
 import { Block as BlockIcon } from '@mui/icons-material';
 import ErrorLayout from '@components/common/ErrorLayout';
 
-export default function Forbidden403() {
+const Forbidden403 = () => {
   const suggestions = [
     "Make sure you're logged in with the correct account",
     'Verify that you have permission to access this resource',
@@ -25,4 +25,6 @@ export default function Forbidden403() {
       showRetry={true}
     />
   );
-}
+};
+
+export default Forbidden403;

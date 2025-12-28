@@ -13,6 +13,22 @@ import { useSocket } from '@sockets/index';
 import { useGameStore } from '@stores/gameStore';
 import type { ChatMessageData } from '@components/Chat/ChatMessage';
 
+/**
+ * Type for game events synced from the server
+ */
+interface SyncedGameEvent {
+  type: string;
+  user?: string;
+  timestamp?: number;
+  params?: {
+    id?: string;
+    message?: string;
+    sender?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 interface UseChatProps {
   gameId: string | null;
   userId: string;
@@ -41,10 +57,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
   const sendMessage = useCallback(
     (message: string) => {
       if (!socket || !gameId) {
-        console.warn('[Chat] Cannot send message - socket or gameId missing:', {
-          hasSocket: !!socket,
-          gameId,
-        });
+        // Cannot send message - socket or gameId missing
         return;
       }
 
@@ -83,14 +96,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
         },
       };
 
-      console.log('[Chat] Emitting sendChatMessage event:', {
-        gameId,
-        userId,
-        userName,
-        message,
-        eventData,
-      });
-
+      // Emit chat message event
       socket.emit('game_event', eventData);
     },
     [socket, gameId, userId, userName, userColor]
@@ -99,7 +105,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
   /**
    * Add a system message
    */
-  const addSystemMessage = useCallback((message: string) => {
+  const _addSystemMessage = useCallback((message: string) => {
     const systemMessage: ChatMessageData = {
       id: `system-${Date.now()}`,
       userId: 'system',
@@ -134,7 +140,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
   useEffect(() => {
     if (!socket || !isConnected || !gameId || hasSynced) return;
 
-    console.log('[Chat] Syncing chat messages for game:', gameId);
+    // Syncing chat messages for game
 
     // Join the game room first
     socket.emit('join_game', gameId, (response: { success?: boolean; error?: string }) => {
@@ -145,40 +151,44 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
 
       if (response.success) {
         // Sync all game events to get chat history
-        socket.emit('sync_all_game_events', gameId, (events: any[] | { error?: string }) => {
-          if (Array.isArray(events)) {
-            console.log('[Chat] Synced', events.length, 'game events, extracting chat messages');
+        socket.emit(
+          'sync_all_game_events',
+          gameId,
+          (events: SyncedGameEvent[] | { error?: string }) => {
+            if (Array.isArray(events)) {
+              // Chat sync successful - extracting messages from game events
 
-            // Extract all sendChatMessage events and convert to chat messages
-            const chatMessages: ChatMessageData[] = events
-              .filter((event) => event.type === 'sendChatMessage' && event.params)
-              .map((event) => {
-                const eventUserId = event.params.id || event.user || '';
-                // Look up user info from gameStore
-                const senderUser = users.find((u) => u.id === eventUserId);
-                const senderUserName =
-                  senderUser?.displayName || event.params.sender || event.user || 'Unknown';
-                const senderUserColor = senderUser?.color || '#999';
+              // Extract all sendChatMessage events and convert to chat messages
+              const chatMessages: ChatMessageData[] = events
+                .filter((event) => event.type === 'sendChatMessage' && event.params)
+                .map((event) => {
+                  const eventUserId = event.params?.id || event.user || '';
+                  // Look up user info from gameStore
+                  const senderUser = users.find((u) => u.id === eventUserId);
+                  const senderUserName =
+                    senderUser?.displayName || event.params?.sender || event.user || 'Unknown';
+                  const senderUserColor = senderUser?.color || '#999';
 
-                const chatMessage: ChatMessageData = {
-                  id: `${eventUserId}-${event.timestamp || Date.now()}`,
-                  userId: eventUserId,
-                  userName: senderUserName,
-                  userColor: senderUserColor,
-                  message: event.params.message || '',
-                  timestamp: event.timestamp || Date.now(),
-                };
-                return chatMessage;
-              })
-              .sort((a, b) => a.timestamp - b.timestamp); // Sort by timestamp
+                  const chatMessage: ChatMessageData = {
+                    id: `${eventUserId}-${event.timestamp || Date.now()}`,
+                    userId: eventUserId,
+                    userName: senderUserName,
+                    userColor: senderUserColor,
+                    message: event.params?.message || '',
+                    timestamp: event.timestamp || Date.now(),
+                  };
+                  return chatMessage;
+                })
+                .sort((a, b) => a.timestamp - b.timestamp); // Sort by timestamp
 
-            console.log('[Chat] Loaded', chatMessages.length, 'chat messages from history');
-            setMessages(chatMessages);
-            setHasSynced(true);
-          } else if (events && typeof events === 'object' && 'error' in events) {
-            console.error('[Chat] Failed to sync game events:', events.error);
+              // Chat messages loaded from history
+              setMessages(chatMessages);
+              setHasSynced(true);
+            } else if (events && typeof events === 'object' && 'error' in events) {
+              console.error('[Chat] Failed to sync game events:', events.error);
+            }
           }
-        });
+        );
       }
     });
   }, [socket, isConnected, gameId, hasSynced, users]);
@@ -199,13 +209,6 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
       user?: string;
       timestamp?: number;
     }) => {
-      console.log('[Chat] Received game_event:', {
-        type: event.type,
-        user: event.user,
-        params: event.params,
-        fullEvent: event,
-      });
-
       // Handle chat messages from game events
       if (event.type === 'sendChatMessage' && event.params) {
         const eventTimestamp = event.timestamp || Date.now();
@@ -221,7 +224,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
         setMessages((prev) => {
           // Check for duplicates by ID
           if (prev.some((msg) => msg.id === messageId)) {
-            console.log('[Chat] Message already exists, skipping:', messageId);
+            // Message already exists, skipping
             return prev;
           }
 
@@ -233,12 +236,12 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
             prev.some(
               (msg) =>
                 msg.userId === eventUserId &&
-                msg.message === event.params.message &&
+                msg.message === event.params?.message &&
                 Math.abs(msg.timestamp - eventTimestamp) < 1000 // Within 1 second
             );
 
           if (isDuplicate) {
-            console.log('[Chat] Duplicate message detected (by content), skipping');
+            // Duplicate message detected (by content), skipping
             return prev;
           }
 
@@ -247,16 +250,15 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
             userId: eventUserId,
             userName: senderUserName,
             userColor: senderUserColor,
-            message: event.params.message || '',
+            message: event.params?.message || '',
             timestamp: eventTimestamp,
           };
 
-          console.log('[Chat] Adding chat message:', chatMessage);
+          // Add chat message
           return [...prev, chatMessage];
         });
-      } else {
-        console.log('[Chat] Unhandled event type:', event.type);
       }
+      // Non-chat events are handled elsewhere
     };
 
     socket.on('game_event', handleGameEvent);

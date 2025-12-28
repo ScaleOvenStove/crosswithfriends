@@ -10,7 +10,7 @@ import type { DarkMode as DarkModeType } from '@types/index';
 
 const DarkModeToggle = () => {
   const { darkMode, setDarkMode } = useUserStore();
-  const theme = useTheme();
+  const _theme = useTheme();
 
   const handleToggle = () => {
     const modes: DarkModeType[] = ['light', 'dark', 'system'];

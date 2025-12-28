@@ -63,24 +63,24 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
         throw createHttpError('page and pageSize should be integers', 400);
       }
 
+      // Handle undefined string values from frontend (should be treated as missing)
+      const sizeMini = request.query.sizeMini;
+      const sizeStandard = request.query.sizeStandard;
       const filters: ListPuzzleRequestFilters = {
         sizeFilter: {
-          Mini: request.query.sizeMini === 'true',
-          Standard: request.query.sizeStandard === 'true',
+          Mini: sizeMini === 'true' && sizeMini !== 'undefined',
+          Standard: sizeStandard === 'true' && sizeStandard !== 'undefined',
         },
         nameOrTitleFilter: (request.query.nameOrTitle ?? '') as string,
       };
 
-      const {puzzles: rawPuzzleList} = await fastify.repositories.puzzle.list(
-        filters,
-        pageSize,
-        page * pageSize
-      );
+      const result = await fastify.repositories.puzzle.list(filters, pageSize, page * pageSize);
+      const rawPuzzleList = result.puzzles;
+
       const puzzles = rawPuzzleList.map((puzzle) => {
         // Convert old format to ipuz format for consistency
         // All puzzles returned to clients are now in pure ipuz format
         const content = convertOldFormatToIpuz(puzzle.puzzle);
-
         return {
           pid: puzzle.pid,
           content,

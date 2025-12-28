@@ -98,7 +98,7 @@ describe('useFirebaseStorage', () => {
       await act(async () => {
         try {
           await result.current.upload('path/to/file', mockFile);
-        } catch (e) {
+        } catch (_e) {
           // Expected to throw
         }
       });

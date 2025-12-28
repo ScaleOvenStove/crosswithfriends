@@ -16,21 +16,21 @@ import * as runtime from '../runtime';
 import type {
   CreateGame200Response,
   CreateGameRequest,
+  CreateToken400Response,
   GetActiveGamePid200Response,
   GetGameById200Response,
-  ListPuzzles400Response,
 } from '../models/index';
 import {
   CreateGame200ResponseFromJSON,
   CreateGame200ResponseToJSON,
   CreateGameRequestFromJSON,
   CreateGameRequestToJSON,
+  CreateToken400ResponseFromJSON,
+  CreateToken400ResponseToJSON,
   GetActiveGamePid200ResponseFromJSON,
   GetActiveGamePid200ResponseToJSON,
   GetGameById200ResponseFromJSON,
   GetGameById200ResponseToJSON,
-  ListPuzzles400ResponseFromJSON,
-  ListPuzzles400ResponseToJSON,
 } from '../models/index';
 
 export interface CreateGameOperationRequest {

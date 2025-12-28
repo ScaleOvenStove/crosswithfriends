@@ -78,7 +78,7 @@ export const useLatency = ({
   useEffect(() => {
     if (!socket || !isConnected || !enabled) return;
 
-    const handlePong = (serverLatency: number) => {
+    const handlePong = (_serverLatency: number) => {
       const now = Date.now();
       const roundTripTime = now - lastPingTimeRef.current;
 

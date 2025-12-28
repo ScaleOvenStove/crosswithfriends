@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { isMobileOrTablet } from '@utils/deviceDetection';
+import { isMobile, isTablet } from 'react-device-detect';
 
 interface UseVirtualKeyboardOptions {
   autoShow?: boolean;
@@ -24,16 +24,16 @@ export const useVirtualKeyboard = ({
 
   // Detect if device is mobile/tablet
   useEffect(() => {
-    const isMobile = isMobileOrTablet();
-    setShouldShow(isMobile);
+    const isMobileDevice = isMobile || isTablet;
+    setShouldShow(isMobileDevice);
 
-    if (isMobile && autoShow) {
+    if (isMobileDevice && autoShow) {
       setIsVisible(true);
     }
 
     // Handle orientation change
     const handleOrientationChange = () => {
-      const stillMobile = isMobileOrTablet();
+      const stillMobile = isMobile || isTablet;
       setShouldShow(stillMobile);
     };
 

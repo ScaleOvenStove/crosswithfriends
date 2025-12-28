@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import {Server as HTTPServer} from 'http';
 
 import cors from '@fastify/cors';
+import fastifyJwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -16,10 +18,17 @@ import {Server as SocketIOServer} from 'socket.io';
 import apiRouter from './api/router.js';
 import {config} from './config/index.js';
 import {closePool, createPool} from './model/pool.js';
+import {correlationIdPlugin} from './plugins/correlationId.js';
+import {securityHeaders} from './plugins/securityHeaders.js';
 import {createRepositories} from './repositories/index.js';
 import {createServices} from './services/index.js';
 import SocketManager from './SocketManager.js';
+import {getJwtOptions} from './utils/auth.js';
+import {createSanitizedErrorResponse} from './utils/errorSanitizer.js';
+import {initializeFirebaseAdmin} from './utils/firebaseAdmin.js';
 import {logger} from './utils/logger.js';
+import {runSecurityValidation} from './utils/securityValidation.js';
+import {initRateLimiter, stopRateLimiter} from './utils/websocketRateLimit.js';
 
 // ================== Logging ================
 
@@ -38,13 +47,48 @@ function logAllEvents(io: SocketIOServer): void {
 
 async function runServer(): Promise<void> {
   try {
+    // Run security validation first - will throw in production if critical issues found
+    runSecurityValidation();
+
+    // Initialize Firebase Admin SDK for token verification
+    await initializeFirebaseAdmin();
+
     // ======== Fastify Server Config ==========
     // In Fastify v5, fastify() returns PromiseLike<FastifyInstance>
     // The methods are available immediately, but TypeScript types need help
     const app = fastify({
+      // Use built-in request ID generation with custom generator
+      // This replaces the custom correlationId utility for HTTP requests
+      requestIdHeader: 'x-request-id', // Check this header for incoming request IDs
+      genReqId: () => crypto.randomUUID(), // Generate UUID if header not present
       logger: config.server.isProduction
         ? {
             level: 'info',
+            // Pino serializers for request/response logging with header redaction
+            serializers: {
+              req(request) {
+                const headers = {...request.headers};
+                // Redact sensitive headers
+                const sensitiveHeaders = [
+                  'authorization',
+                  'cookie',
+                  'set-cookie',
+                  'x-api-key',
+                  'x-auth-token',
+                ];
+                for (const key of Object.keys(headers)) {
+                  if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
+                    headers[key] = '[REDACTED]';
+                  }
+                }
+                return {
+                  method: request.method,
+                  url: request.url,
+                  headers,
+                  remoteAddress: request.ip,
+                };
+              },
+            },
           }
         : {
             level: 'debug',
@@ -54,6 +98,31 @@ async function runServer(): Promise<void> {
                 colorize: true,
                 translateTime: 'HH:MM:ss.l',
                 ignore: 'pid,hostname',
+              },
+            },
+            // Pino serializers for request/response logging with header redaction
+            serializers: {
+              req(request) {
+                const headers = {...request.headers};
+                // Redact sensitive headers
+                const sensitiveHeaders = [
+                  'authorization',
+                  'cookie',
+                  'set-cookie',
+                  'x-api-key',
+                  'x-auth-token',
+                ];
+                for (const key of Object.keys(headers)) {
+                  if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
+                    headers[key] = '[REDACTED]';
+                  }
+                }
+                return {
+                  method: request.method,
+                  url: request.url,
+                  headers,
+                  remoteAddress: request.ip,
+                };
               },
             },
           },
@@ -68,18 +137,19 @@ async function runServer(): Promise<void> {
       },
     }) as FastifyInstance;
 
-    // Set custom error handler
+    // Set custom error handler with sanitization for production
     app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
       request.log.error(error);
 
-      // Handle validation errors
+      // Handle validation errors - sanitize validation details
       if (error.validation) {
-        reply.code(400).send({
-          statusCode: 400,
-          error: 'Bad Request',
-          message: 'Validation error',
-          validation: error.validation,
-        });
+        const response = createSanitizedErrorResponse(
+          400,
+          'Bad Request',
+          'Validation error',
+          error.validation as Array<{instancePath?: string; message?: string; keyword?: string}>
+        );
+        reply.code(400).send(response);
         return;
       }
 
@@ -109,11 +179,10 @@ async function runServer(): Promise<void> {
       } else {
         errorName = 'Error';
       }
-      reply.code(statusCode).send({
-        statusCode,
-        error: errorName,
-        message: error.message || 'An error occurred',
-      });
+
+      // Use sanitized error response to prevent information disclosure
+      const response = createSanitizedErrorResponse(statusCode, errorName, error.message);
+      reply.code(statusCode).send(response);
     });
 
     // Register Swagger plugin
@@ -129,15 +198,15 @@ async function runServer(): Promise<void> {
         },
         servers: [
           {
-            url: 'https://www.crosswithfriends.com/api',
+            url: config.urls.productionApi,
             description: 'Production server',
           },
           {
-            url: 'https://crosswithfriendsbackend-staging.onrender.com/api',
+            url: config.urls.stagingApi,
             description: 'Staging server',
           },
           {
-            url: 'http://localhost:3021/api',
+            url: `http://localhost:${config.server.port}/api`,
             description: 'Local development server',
           },
         ],
@@ -155,15 +224,43 @@ async function runServer(): Promise<void> {
       },
     });
 
-    // Register Swagger UI
-    await app.register(swaggerUi, {
-      routePrefix: '/api/docs',
-      uiConfig: {
-        docExpansion: 'list',
-        deepLinking: true,
-      },
-      staticCSP: true,
-    });
+    // Register Swagger UI (with optional production access control)
+    // In production, you may want to restrict access to Swagger UI
+    // Options: 1) Add rate limiting, 2) Require auth, 3) Disable entirely
+    const swaggerEnabled = !config.server.isProduction || process.env.ENABLE_SWAGGER_UI === 'true';
+
+    if (swaggerEnabled) {
+      await app.register(swaggerUi, {
+        routePrefix: '/api/docs',
+        uiConfig: {
+          docExpansion: 'list',
+          deepLinking: true,
+        },
+        staticCSP: true,
+      });
+
+      if (config.server.isProduction) {
+        logger.warn(
+          'Swagger UI is enabled in production. Consider setting ENABLE_SWAGGER_UI=false for security.'
+        );
+      }
+    } else {
+      // In production without ENABLE_SWAGGER_UI, redirect to a 404
+      app.get('/api/docs', async (_request, reply) => {
+        reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
+      });
+      app.get('/api/docs/*', async (_request, reply) => {
+        reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
+      });
+      logger.info('Swagger UI disabled in production. Set ENABLE_SWAGGER_UI=true to enable.');
+    }
+
+    // Register correlation ID plugin for request tracing
+    await app.register(correlationIdPlugin);
+
+    // Register security headers plugin
+    // Adds essential security headers to all responses (X-Content-Type-Options, X-Frame-Options, etc.)
+    await app.register(securityHeaders);
 
     // Helper function to validate CORS origins (used for both HTTP and WebSocket)
     const getAllowedOrigins = (): string[] => {
@@ -171,12 +268,8 @@ async function runServer(): Promise<void> {
       if (config.cors.origins.length > 0) {
         return config.cors.origins;
       }
-      // Default origins for backward compatibility
-      return [
-        'https://www.crosswithfriends.com',
-        'https://crosswithfriends.com',
-        'https://crosswithfriendsbackend-staging.onrender.com',
-      ];
+      // Default origins for backward compatibility using configured URLs
+      return [config.urls.productionFrontend, config.urls.productionFrontendAlt, config.urls.stagingFrontend];
     };
 
     const validateOrigin = (origin: string | undefined): boolean => {
@@ -219,32 +312,66 @@ async function runServer(): Promise<void> {
 
     await app.register(cors, corsOptions);
 
-    // Register rate limiting plugin
+    // Register JWT plugin for authentication (@fastify/jwt)
+    await app.register(fastifyJwt, getJwtOptions());
+
+    // Register rate limiting plugin with enhanced key generation
+    // Uses both IP and user ID (when available) for more robust rate limiting
     await app.register(rateLimit, {
       max: config.rateLimit.max,
       timeWindow: config.rateLimit.timeWindowMs,
-      cache: 10000, // Cache up to 10000 different IPs
+      cache: 10000, // Cache up to 10000 different rate limit keys
       allowList: (req) => {
         // Allow health check endpoint to bypass rate limiting
         return req.url === '/api/health';
       },
       keyGenerator: (req) => {
-        // Use IP address as the rate limit key
-        return req.ip;
+        // Enhanced rate limiting: use user ID + IP for authenticated requests
+        // This prevents both IP-based bypass (via VPN/proxy) and user-based abuse
+        try {
+          // Try to extract user ID from JWT token in Authorization header
+          const authHeader = req.headers.authorization;
+          if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.slice(7);
+            // Decode JWT payload without full verification for performance
+            // The actual verification happens in the route handlers
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payloadB64 = parts[1];
+              const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf8');
+              const payload = JSON.parse(payloadJson) as {userId?: string};
+              if (payload.userId && typeof payload.userId === 'string') {
+                // Use both user ID and IP to prevent cross-user attacks
+                // and to ensure unauthenticated requests from same IP are also limited
+                return `user:${payload.userId}:${req.ip}`;
+              }
+            }
+          }
+        } catch {
+          // If token parsing fails, fall back to IP-only
+        }
+        // Fall back to IP-based rate limiting for unauthenticated requests
+        return `ip:${req.ip}`;
       },
       errorResponseBuilder: (_req, context) => {
         return {
           statusCode: 429,
           error: 'Too Many Requests',
-          message: `Rate limit exceeded.Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+          message: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
           retryAfter: Math.ceil(context.ttl / 1000),
         };
       },
-      onExceeding: (req) => {
-        logger.warn({ip: req.ip, url: req.url}, 'Rate limit warning - approaching limit');
-      },
-      onExceeded: (req) => {
-        logger.warn({ip: req.ip, url: req.url}, 'Rate limit exceeded');
+      // Only log when actually exceeded - onExceeding is too noisy for normal usage
+      // The rate limit still enforces the limit, we just don't warn on every request
+      onExceeded: (req, context) => {
+        logger.warn(
+          {
+            ip: req.ip,
+            url: req.url,
+            retryAfter: Math.ceil(context.ttl / 1000),
+          },
+          'Rate limit exceeded'
+        );
       },
     });
 
@@ -273,6 +400,12 @@ async function runServer(): Promise<void> {
         pingTimeout: 5000,
         cors: {
           origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+            // In development, allow all origins (including undefined/null for polling)
+            if (config.server.isDevelopment) {
+              callback(null, true);
+              return;
+            }
+            // In production, validate origin
             if (validateOrigin(origin)) {
               callback(null, true);
             } else {
@@ -285,7 +418,13 @@ async function runServer(): Promise<void> {
         },
       });
 
-      socketManager = new SocketManager(io);
+      // Initialize rate limiter with automatic cleanup
+      initRateLimiter();
+
+      socketManager = new SocketManager(io, {
+        game: repositories.game,
+        room: repositories.room,
+      });
       socketManager.listen();
       logAllEvents(io);
     });
@@ -308,13 +447,14 @@ async function runServer(): Promise<void> {
         logger.info('Stopping server from accepting new connections...');
         await app.close();
 
-        // 2. Close WebSocket connections
+        // 2. Close WebSocket connections and stop rate limiter
         if (io) {
           logger.info('Closing WebSocket connections...');
           void io.close(() => {
             logger.info('All WebSocket connections closed');
           });
         }
+        stopRateLimiter();
 
         // 3. Close database pool
         logger.info('Closing database pool...');

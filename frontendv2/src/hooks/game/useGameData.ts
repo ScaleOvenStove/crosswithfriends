@@ -13,11 +13,14 @@ import {
   assignCellNumbers,
   extractCluesFromPuzzle,
 } from '@utils/puzzleUtils';
-import { validatePuzzleData, safeValidatePuzzleData } from '@schemas/puzzleSchemas';
+import {
+  validatePuzzleData as _validatePuzzleData,
+  safeValidatePuzzleData,
+} from '@schemas/puzzleSchemas';
 import {
   validateGameInfo,
   validateActiveGameInfo,
-  validateJoinGameResponse,
+  validateJoinGameResponse as _validateJoinGameResponse,
 } from '@schemas/apiSchemas';
 import {
   standardizeError,
@@ -81,13 +84,14 @@ async function fetchPuzzleData(puzzleId: string) {
   // Validate puzzle data with Zod
   const validation = safeValidatePuzzleData(puzzleData);
   if (!validation.success) {
+    const errorMessages =
+      validation.error?.errors?.map((e) => e.message).join(', ') || 'Unknown validation error';
     console.error('[useGameData] Puzzle validation failed:', validation.error);
-    throw new Error(
-      `Puzzle data validation failed: ${validation.error.errors.map((e) => e.message).join(', ')}`
-    );
+    throw new Error(`Puzzle data validation failed: ${errorMessages}`);
   }
 
-  return validation.data!;
+  // validation.success is true, so data is guaranteed to exist
+  return validation.data;
 }
 
 export function useGameData(
@@ -147,7 +151,7 @@ export function useGameData(
 
       setHasLoaded(true);
       setLoadError(null);
-      console.log('[useGameData] Puzzle loaded successfully');
+      // Puzzle loaded successfully - no logging needed in production
     } catch (error) {
       console.error('[useGameData] Failed to process puzzle data:', error);
       const standardized = standardizeError(error, { component: 'useGameData', action: 'process' });
@@ -174,8 +178,9 @@ export function useGameData(
         if (details.status === 404) {
           // Check if this looks like a game ID (starts with "100313" pattern) vs puzzle ID (starts with "10000" pattern)
           // Game IDs are typically in the 100313xxx range, puzzle IDs are typically in the 10000xxxx range
-          const looksLikeGameId = /^100313\d+$/.test(gameId);
-          const looksLikePuzzleId = /^10000\d+$/.test(gameId);
+          const idToCheck = gameId || '';
+          const looksLikeGameId = /^100313\d+$/.test(idToCheck);
+          const looksLikePuzzleId = /^10000\d+$/.test(idToCheck);
 
           if (isPuzzleRoute && looksLikeGameId && !looksLikePuzzleId) {
             errorMessage = `The ID "${gameId}" appears to be a game ID, not a puzzle ID. Puzzle IDs typically start with "10000". Please use the puzzle ID from the puzzle list, or navigate to /game/${gameId} instead.`;
@@ -211,7 +216,7 @@ export function useGameData(
       setLoadError(errorMessage);
       setHasLoaded(true);
     }
-  }, [queryError, hasLoaded, gameId]);
+  }, [queryError, hasLoaded, gameId, isPuzzleRoute]);
 
   // Reset when gameId changes
   useEffect(() => {

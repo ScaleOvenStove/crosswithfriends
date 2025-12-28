@@ -1,5 +1,6 @@
 import type {FastifyInstance} from 'fastify';
 
+import authRouter from './auth.js';
 import countersRouter from './counters.js';
 import gameRouter from './game.js';
 import healthRouter from './health.js';
@@ -12,6 +13,7 @@ import statsRouter from './stats.js';
 
 async function apiRouter(fastify: FastifyInstance): Promise<void> {
   await fastify.register(healthRouter, {prefix: '/health'});
+  await fastify.register(authRouter, {prefix: '/auth'});
   await fastify.register(puzzleListRouter, {prefix: '/puzzle_list'});
   await fastify.register(puzzleRouter, {prefix: '/puzzle'});
   await fastify.register(gameRouter, {prefix: '/game'});

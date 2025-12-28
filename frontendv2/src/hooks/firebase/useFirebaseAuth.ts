@@ -8,13 +8,19 @@ import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@lib/firebase/config';
 import * as authMethods from '@lib/firebase/auth';
+import {
+  exchangeFirebaseToken,
+  clearBackendToken,
+  setBackendToken,
+  isBackendTokenValid,
+} from '@services/authTokenService';
 
 export const useFirebaseAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Listen for auth state changes
+  // Listen for auth state changes and exchange tokens
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
       setLoading(false);
@@ -23,12 +29,30 @@ export const useFirebaseAuth = () => {
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
+      async (firebaseUser) => {
         setUser(firebaseUser);
+
+        if (firebaseUser) {
+          // User logged in - exchange Firebase token for backend JWT
+          try {
+            const firebaseToken = await firebaseUser.getIdToken();
+            const backendTokenData = await exchangeFirebaseToken(firebaseToken);
+            setBackendToken(backendTokenData.token, backendTokenData.expiresAt);
+          } catch (err) {
+            console.error('Failed to exchange Firebase token for backend JWT:', err);
+            // Don't set error state here - user is still authenticated with Firebase
+            // Just log the error and continue
+          }
+        } else {
+          // User logged out - clear backend token
+          clearBackendToken();
+        }
+
         setLoading(false);
       },
       (err) => {
         setError(err.message);
+        clearBackendToken();
         setLoading(false);
       }
     );
@@ -93,9 +117,12 @@ export const useFirebaseAuth = () => {
     try {
       setError(null);
       await authMethods.signOutUser();
+      // Backend token will be cleared by onAuthStateChanged
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sign out failed';
       setError(errorMessage);
+      // Clear backend token even if Firebase sign out fails
+      clearBackendToken();
       throw err;
     }
   };

@@ -108,7 +108,9 @@ export const useGame = (
     }
 
     // Handle events from current user as server confirmation
-    if (gameEvent.user === user?.id && gameEvent.type === 'updateCell' && gameEvent.params) {
+    // In dev mode, user may be null, so we need to check for that
+    const isCurrentUserEvent = gameEvent.user === user?.id || (gameEvent.user === null && !user);
+    if (isCurrentUserEvent && gameEvent.type === 'updateCell' && gameEvent.params) {
       const { cell } = gameEvent.params as {
         cell?: { r?: number; c?: number };
         value?: string;
@@ -128,7 +130,8 @@ export const useGame = (
     }
 
     // Only process events from other users
-    if (gameEvent.user === user?.id) {
+    // In dev mode, skip events with null user if we don't have a user
+    if (gameEvent.user === user?.id || (gameEvent.user === null && !user)) {
       return;
     }
 
@@ -205,10 +208,11 @@ export const useGame = (
   // Cell update handler with optimistic updates
   const handleCellUpdate = useCallback(
     (row: number, col: number, value: string) => {
-      if (!gameId || !user) {
-        console.warn('[useGame] Cannot update cell - missing gameId or user');
+      if (!gameId) {
+        console.warn('[useGame] Cannot update cell - missing gameId');
         return;
       }
+      // In dev mode, user may be null, which is allowed
 
       // Store original state for rollback
       const originalValue = cells[row]?.[col]?.value || '';
@@ -262,16 +266,17 @@ export const useGame = (
       }, CONFIRMATION_TIMEOUT_MS);
 
       // Emit to server with acknowledgment callback
+      // In dev mode, user may be null
       gameSocket.emitGameEvent(
         {
           type: 'updateCell',
-          user: user.id,
+          user: user?.id || null,
           timestamp: Date.now(),
           params: {
             cell: { r: row, c: col },
             value: value,
             autocheck: false,
-            id: user.id,
+            id: user?.id || null,
           },
         },
         (response: { success?: boolean; error?: string }) => {

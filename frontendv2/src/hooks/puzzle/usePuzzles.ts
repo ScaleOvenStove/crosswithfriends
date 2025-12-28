@@ -4,11 +4,19 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { puzzlesApi, gamesApi } from '@api/apiClient';
+import { puzzlesApi, gamesApi as _gamesApi } from '@api/apiClient';
 import { usePuzzleStore } from '@stores/puzzleStore';
 import { useEffect } from 'react';
 import type { Puzzle } from '@types/index';
 import type { PuzzleJson } from '@api/types';
+
+/**
+ * Type for puzzle list item returned from the API
+ */
+interface PuzzleListItem {
+  pid: string;
+  content: PuzzleJson;
+}
 
 /**
  * Convert API PuzzleJson to internal Puzzle type
@@ -54,8 +62,8 @@ export const usePuzzles = (page: number = 0, pageSize: number = 50) => {
 
   useEffect(() => {
     if (query.data) {
-      const puzzles =
-        query.data.puzzles?.map((item: any) => convertPuzzle(item.pid, item.content)) || [];
+      const puzzleItems = (query.data.puzzles || []) as PuzzleListItem[];
+      const puzzles = puzzleItems.map((item) => convertPuzzle(item.pid, item.content));
       setPuzzles(puzzles);
     }
     setLoading(query.isLoading);
@@ -63,7 +71,9 @@ export const usePuzzles = (page: number = 0, pageSize: number = 50) => {
   }, [query.data, query.isLoading, query.error, setPuzzles, setLoading, setError]);
 
   return {
-    puzzles: query.data?.puzzles?.map((item: any) => convertPuzzle(item.pid, item.content)) || [],
+    puzzles: ((query.data?.puzzles || []) as PuzzleListItem[]).map((item) =>
+      convertPuzzle(item.pid, item.content)
+    ),
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,

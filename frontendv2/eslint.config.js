@@ -189,13 +189,15 @@ export default [
       // TypeScript Best Practices
       // ==========================================
 
+      'no-unused-vars': 'off', // Disable base rule as it conflicts with TypeScript version
       '@typescript-eslint/no-unused-vars': [
-        'warn',
+        'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
         },
       ],
+      'no-undef': 'off', // Disable as TypeScript handles this
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',

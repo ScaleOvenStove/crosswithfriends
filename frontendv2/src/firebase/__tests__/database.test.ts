@@ -12,11 +12,11 @@ import {
   pushData,
   subscribeToData,
   setPresence,
-  subscribeToPresence,
+  subscribeToPresence as _subscribeToPresence,
   syncGameState,
-  subscribeToGameState,
+  subscribeToGameState as _subscribeToGameState,
   addChatMessage,
-  subscribeToRoomMessages,
+  subscribeToRoomMessages as _subscribeToRoomMessages,
 } from '../database';
 
 // Mock Firebase Database

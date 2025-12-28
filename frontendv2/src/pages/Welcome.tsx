@@ -11,7 +11,7 @@ import { useUser } from '@hooks/index';
 
 const Welcome = () => {
   const { user } = useUser();
-  const theme = useTheme();
+  const _theme = useTheme();
 
   return (
     <Box

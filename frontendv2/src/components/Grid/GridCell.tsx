@@ -294,11 +294,27 @@ export const GridCell = memo<GridCellProps>(
       // Only allow single letter
       if (value.length <= 1 && /^[A-Z]*$/.test(value)) {
         onCellChange(row, col, value);
+      } else if (value.length === 0) {
+        // Allow clearing the cell
+        onCellChange(row, col, '');
       }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      onKeyDown(e, row, col);
+      // Let the keyboard navigation hook handle navigation
+      // But we need to handle letter input here to prevent default behavior
+      if (e.key.length === 1 && /^[A-Za-z]$/.test(e.key)) {
+        // Prevent default to avoid the input showing the letter before we process it
+        e.preventDefault();
+        // Update the cell with the uppercase letter
+        const upperKey = e.key.toUpperCase();
+        onCellChange(row, col, upperKey);
+        // Let the navigation hook handle moving to next cell
+        onKeyDown(e, row, col);
+      } else {
+        // For other keys (arrows, backspace, etc.), just pass through
+        onKeyDown(e, row, col);
+      }
     };
 
     // Get cursor colors for other users on this cell

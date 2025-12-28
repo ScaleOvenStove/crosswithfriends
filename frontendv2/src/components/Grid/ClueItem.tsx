@@ -28,7 +28,7 @@ const ClueNumber = styled('span')<{ isSelected?: boolean }>(({ theme, isSelected
   color: isSelected && theme.palette.mode === 'dark' ? '#000000' : theme.palette.primary.main,
 }));
 
-const CompletionChip = styled(Chip)(({ theme }) => ({
+const CompletionChip = styled(Chip)(({ _theme }) => ({
   height: 20,
   '& .MuiChip-icon': {
     fontSize: '0.875rem',

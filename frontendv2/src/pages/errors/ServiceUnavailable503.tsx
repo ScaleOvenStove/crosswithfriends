@@ -7,7 +7,7 @@ import { Build as BuildIcon } from '@mui/icons-material';
 import { Typography } from '@mui/material';
 import ErrorLayout from '@components/common/ErrorLayout';
 
-export default function ServiceUnavailable503() {
+const ServiceUnavailable503 = () => {
   const suggestions = [
     'Check back in a few minutes - we should be back online soon',
     'Follow our status page or social media for updates',
@@ -39,4 +39,6 @@ export default function ServiceUnavailable503() {
       </Typography>
     </ErrorLayout>
   );
-}
+};
+
+export default ServiceUnavailable503;

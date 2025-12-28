@@ -27,7 +27,7 @@ interface PuzzleStore {
 
 export const usePuzzleStore = create<PuzzleStore>()(
   devtools(
-    (set, get) => ({
+    (set, _get) => ({
       puzzles: new Map(),
       currentPuzzle: null,
       isLoading: false,

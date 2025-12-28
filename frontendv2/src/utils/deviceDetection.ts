@@ -1,53 +1,35 @@
 /**
  * Device Detection Utilities
- * Detects mobile/tablet devices and provides device-specific features
+ * Wrapper around react-device-detect for backward compatibility
+ *
+ * @deprecated Use react-device-detect hooks directly in components
+ * This file is kept for backward compatibility during migration
  */
+
+import { isMobile, isTablet, isDesktop } from 'react-device-detect';
 
 /**
- * Check if device is mobile or tablet based on user agent and screen size
+ * Check if device is mobile or tablet
+ * @deprecated Use isMobile or isTablet from react-device-detect
  */
 export const isMobileOrTablet = (): boolean => {
-  // Check user agent
-  const userAgent =
-    navigator.userAgent ||
-    navigator.vendor ||
-    (window as unknown as { opera?: string }).opera ||
-    '';
-
-  const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
-  const isUserAgentMobile = mobileRegex.test(userAgent.toLowerCase());
-
-  // Check screen size (mobile/tablet typically < 1024px)
-  const isSmallScreen = window.innerWidth < 1024;
-
-  // Check touch capability
-  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-  return (isUserAgentMobile || isSmallScreen) && hasTouch;
+  return isMobile || isTablet;
 };
 
 /**
  * Check if device is specifically mobile (not tablet)
+ * @deprecated Use isMobile from react-device-detect
  */
-export const isMobile = (): boolean => {
-  const userAgent = navigator.userAgent || '';
-  const mobileRegex = /android|webos|iphone|ipod|blackberry|iemobile|opera mini/i;
-
-  return mobileRegex.test(userAgent.toLowerCase()) && window.innerWidth < 768;
+export const isMobileDevice = (): boolean => {
+  return isMobile;
 };
 
 /**
  * Check if device is tablet
+ * @deprecated Use isTablet from react-device-detect
  */
-export const isTablet = (): boolean => {
-  const userAgent = navigator.userAgent || '';
-  const tabletRegex = /ipad|android(?!.*mobile)|tablet/i;
-
-  return (
-    tabletRegex.test(userAgent.toLowerCase()) &&
-    window.innerWidth >= 768 &&
-    window.innerWidth < 1024
-  );
+export const isTabletDevice = (): boolean => {
+  return isTablet;
 };
 
 /**

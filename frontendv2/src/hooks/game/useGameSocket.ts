@@ -7,7 +7,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useSocket, useSocketEmit } from '@sockets/index';
 import { useGameStore } from '@stores/gameStore';
 import { socketRecoveryService } from '@services/socketRecoveryService';
-import { optimisticUpdateQueue } from '@services/optimisticUpdateQueue';
+import { optimisticUpdateQueue as _optimisticUpdateQueue } from '@services/optimisticUpdateQueue';
 import { validateSocketGameEvent, safeValidateGameEvent } from '@schemas/gameEventSchemas';
 import { validateJoinGameResponse } from '@schemas/apiSchemas';
 import type { Socket } from 'socket.io-client';
@@ -33,11 +33,38 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
   const { setGameId } = useGameStore();
   const hasJoinedRef = useRef(false);
 
+  // Join game room - defined before effects that use it
+  const joinGame = useCallback(
+    (gid: string, onSuccess?: () => void, onError?: (error: string) => void) => {
+      if (!socket || !isConnected) {
+        const error = 'Socket not connected';
+        console.error('[useGameSocket]', error);
+        onError?.(error);
+        return;
+      }
+
+      socket.emit('join_game', gid, (response: { success?: boolean; error?: string }) => {
+        const validated = validateJoinGameResponse(response);
+        if (validated.error) {
+          console.error('[useGameSocket] Failed to join game:', validated.error);
+          onError?.(validated.error);
+          return;
+        }
+
+        if (validated.success) {
+          // Successfully joined game
+          hasJoinedRef.current = true;
+          onSuccess?.();
+        }
+      });
+    },
+    [socket, isConnected]
+  );
+
   // Set up recovery service callbacks
   useEffect(() => {
-    socketRecoveryService.setConnectionChangeCallback((connected) => {
+    socketRecoveryService.setConnectionChangeCallback((_connected) => {
       // Connection status changes are handled by the service
-      console.log('[useGameSocket] Connection status:', connected);
     });
 
     return () => {
@@ -49,12 +76,12 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
   useEffect(() => {
     if (gameId) {
       setGameId(gameId);
-      console.log('[useGameSocket] Connecting socket for game:', gameId);
+      // Connect socket for game
       connect();
     }
 
     return () => {
-      console.log('[useGameSocket] Disconnecting socket');
+      // Disconnect socket on cleanup
       disconnect();
       hasJoinedRef.current = false;
     };
@@ -99,40 +126,17 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
       socket.off('reconnect_attempt', handleReconnectAttempt);
       socket.off('reconnect_failed', handleReconnectFailed);
     };
-  }, [socket, gameId]);
-
-  // Join game room
-  const joinGame = useCallback(
-    (gid: string, onSuccess?: () => void, onError?: (error: string) => void) => {
-      if (!socket || !isConnected) {
-        const error = 'Socket not connected';
-        console.error('[useGameSocket]', error);
-        onError?.(error);
-        return;
-      }
-
-      socket.emit('join_game', gid, (response: { success?: boolean; error?: string }) => {
-        const validated = validateJoinGameResponse(response);
-        if (validated.error) {
-          console.error('[useGameSocket] Failed to join game:', validated.error);
-          onError?.(validated.error);
-          return;
-        }
-
-        if (validated.success) {
-          console.log('[useGameSocket] Successfully joined game:', gid);
-          hasJoinedRef.current = true;
-          onSuccess?.();
-        }
-      });
-    },
-    [socket, isConnected]
-  );
+  }, [socket, gameId, joinGame]);
 
   // Emit game event with validation and optimistic update support
   const emitGameEvent = useCallback(
     (
-      event: { type: string; user: string; timestamp: number; params: Record<string, unknown> },
+      event: {
+        type: string;
+        user: string | null;
+        timestamp: number;
+        params: Record<string, unknown>;
+      },
       ack?: (response: { success?: boolean; error?: string }) => void
     ) => {
       if (!gameId || !socket || !isConnected) {
@@ -145,7 +149,7 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
 
       // Validate event
       const validation = safeValidateGameEvent(event);
-      if (!validation.success) {
+      if (!validation.success || !validation.data) {
         console.error('[useGameSocket] Invalid event:', validation.error);
         if (ack) {
           ack({ error: validation.error?.message || 'Invalid event' });
@@ -155,7 +159,7 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
 
       const eventData = {
         gid: gameId,
-        event: validation.data!,
+        event: validation.data,
       };
 
       try {
@@ -174,7 +178,7 @@ export function useGameSocket(gameId: string | undefined): UseGameSocketReturn {
         } else {
           emit('game_event', eventData);
         }
-        console.log('[useGameSocket] Emitted event:', event.type);
+        // Event emitted successfully
       } catch (error) {
         console.error('[useGameSocket] Failed to emit event:', error);
         if (ack) {

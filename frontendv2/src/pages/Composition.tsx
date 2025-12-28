@@ -68,12 +68,16 @@ const Composition = () => {
 
         <div className="composition-toolbar">
           <button
+            type="button"
+            type="button"
             onClick={() => setMode('grid')}
             className={`btn-mode ${mode === 'grid' ? 'active' : ''}`}
           >
             Grid
           </button>
           <button
+            type="button"
+            type="button"
             onClick={() => setMode('clues')}
             className={`btn-mode ${mode === 'clues' ? 'active' : ''}`}
           >
@@ -84,20 +88,22 @@ const Composition = () => {
 
           {mode === 'grid' ? (
             <>
-              <button onClick={handleToggleBlack} className="btn-tool">
+              <button type="button" onClick={handleToggleBlack} className="btn-tool">
                 Toggle Black
               </button>
-              <button onClick={handleToggleCircle} className="btn-tool">
+              <button type="button" onClick={handleToggleCircle} className="btn-tool">
                 Toggle Circle
               </button>
             </>
           ) : (
-            <button onClick={regenerateClues} className="btn-tool">
+            <button type="button" onClick={regenerateClues} className="btn-tool">
               🔄 Regenerate from Grid
             </button>
           )}
 
-          <button className="btn-primary">Publish</button>
+          <button type="button" className="btn-primary">
+            Publish
+          </button>
         </div>
 
         <main className="composition-main">

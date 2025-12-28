@@ -6,11 +6,9 @@
 import { useState } from 'react';
 import { Box, TextField, IconButton } from '@mui/material';
 import { ErrorOutline as ErrorOutlineIcon, Search as SearchIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import ErrorLayout from '@components/common/ErrorLayout';
 
-export default function NotFound404() {
-  const navigate = useNavigate();
+const NotFound404 = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const suggestions = [
@@ -23,9 +21,10 @@ export default function NotFound404() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Navigate to home with search query as state
-      // You can customize this to navigate to a search page if you have one
-      navigate('/', { state: { search: searchQuery } });
+      // Navigate to home with search query - use window.location as fallback
+      const url = new URL(window.location.origin);
+      url.searchParams.set('search', searchQuery.trim());
+      window.location.href = url.toString();
     }
   };
 
@@ -80,4 +79,6 @@ export default function NotFound404() {
       </Box>
     </ErrorLayout>
   );
-}
+};
+
+export default NotFound404;

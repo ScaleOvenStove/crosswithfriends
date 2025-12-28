@@ -1,6 +1,13 @@
 /**
  * LocalStorage utilities for user identification and preferences
+ * Wrapper around react-use hooks for backward compatibility
+ *
+ * @deprecated Use react-use hooks directly in components:
+ * - useLocalStorage for localStorage management
+ * This file is kept for backward compatibility during migration
  */
+
+import { useLocalStorage } from 'react-use';
 
 const STORAGE_KEYS = {
   USER_ID: 'cwf_user_id',
@@ -55,4 +62,28 @@ export const generateRandomColor = (): string => {
     '#ec4899', // pink
   ];
   return colors[Math.floor(Math.random() * colors.length)] as string;
+};
+
+/**
+ * Hook for managing user ID in localStorage
+ * @deprecated Use useLocalStorage directly from react-use
+ */
+export const useUserId = () => {
+  return useLocalStorage<string>(STORAGE_KEYS.USER_ID, generateUserId());
+};
+
+/**
+ * Hook for managing user name in localStorage
+ * @deprecated Use useLocalStorage directly from react-use
+ */
+export const useUserName = () => {
+  return useLocalStorage<string>(STORAGE_KEYS.USER_NAME, 'Guest');
+};
+
+/**
+ * Hook for managing user color in localStorage
+ * @deprecated Use useLocalStorage directly from react-use
+ */
+export const useUserColor = () => {
+  return useLocalStorage<string>(STORAGE_KEYS.USER_COLOR, generateRandomColor());
 };

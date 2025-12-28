@@ -51,7 +51,7 @@ export class SocketRecoveryService {
    * Handle socket reconnection
    */
   async handleReconnect(socket: Socket, gameId: string | null): Promise<void> {
-    console.log('[SocketRecovery] Reconnected, syncing state...');
+    // Reconnected, syncing state
     this.state.isReconnecting = false;
     this.state.reconnectAttempts = 0;
     this.onConnectionChange?.(true);
@@ -60,7 +60,7 @@ export class SocketRecoveryService {
       try {
         await this.syncCallback(gameId);
         this.state.lastSyncTime = Date.now();
-        console.log('[SocketRecovery] State synced successfully');
+        // State synced successfully
       } catch (error) {
         console.error('[SocketRecovery] Failed to sync state:', error);
       }
@@ -75,7 +75,7 @@ export class SocketRecoveryService {
    */
   handleReconnectAttempt(attempt: number): void {
     this.state.reconnectAttempts = attempt;
-    console.log(`[SocketRecovery] Reconnection attempt ${attempt}/${this.maxReconnectAttempts}`);
+    console.warn(`[SocketRecovery] Reconnection attempt ${attempt}/${this.maxReconnectAttempts}`);
   }
 
   /**
@@ -96,12 +96,7 @@ export class SocketRecoveryService {
       data,
       timestamp: Date.now(),
     });
-    console.log(
-      '[SocketRecovery] Queued event:',
-      event,
-      this.state.pendingEvents.length,
-      'pending'
-    );
+    // Event queued for retry
   }
 
   /**
@@ -110,7 +105,7 @@ export class SocketRecoveryService {
   private async replayPendingEvents(socket: Socket): Promise<void> {
     if (this.state.pendingEvents.length === 0) return;
 
-    console.log('[SocketRecovery] Replaying', this.state.pendingEvents.length, 'pending events');
+    // Replaying pending events
 
     // Sort by timestamp to maintain order
     const sortedEvents = [...this.state.pendingEvents].sort((a, b) => a.timestamp - b.timestamp);
@@ -119,7 +114,7 @@ export class SocketRecoveryService {
     for (const { event, data } of sortedEvents) {
       try {
         socket.emit(event, data);
-        console.log('[SocketRecovery] Replayed event:', event);
+        // Event replayed successfully
       } catch (error) {
         console.error('[SocketRecovery] Failed to replay event:', event, error);
       }

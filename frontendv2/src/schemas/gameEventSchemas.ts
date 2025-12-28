@@ -12,9 +12,10 @@ const cellSchema = z.object({
 });
 
 // Base game event schema
+// user can be null in development mode when authentication is not required
 const baseGameEventSchema = z.object({
   type: z.string(),
-  user: z.string(),
+  user: z.string().nullable(),
   timestamp: z.number().int().nonnegative(),
   params: z.record(z.unknown()),
 });
@@ -37,6 +38,26 @@ export const updateCursorEventSchema = baseGameEventSchema.extend({
     id: z.string(),
     cell: cellSchema,
     timestamp: z.number().int().nonnegative(),
+  }),
+});
+
+// Create event (sent when game is initialized)
+export const createEventSchema = baseGameEventSchema.extend({
+  type: z.literal('create'),
+  params: z.object({
+    pid: z.string(),
+    version: z.number().optional(),
+    game: z.object({
+      info: z.record(z.unknown()).optional(),
+      grid: z.array(z.array(z.unknown())),
+      solution: z.array(z.array(z.string())),
+      clues: z.object({
+        across: z.array(z.string().nullable()), // Clues can be null for empty entries
+        down: z.array(z.string().nullable()), // Clues can be null for empty entries
+      }),
+      circles: z.array(z.unknown()).optional(),
+      shades: z.array(z.unknown()).optional(),
+    }),
   }),
 });
 
@@ -71,6 +92,7 @@ export const gameCompleteEventSchema = baseGameEventSchema.extend({
 // Note: baseGameEventSchema is excluded because discriminatedUnion requires all schemas
 // to have literal types for the discriminator field, not z.string()
 export const gameEventSchema = z.discriminatedUnion('type', [
+  createEventSchema,
   updateCellEventSchema,
   updateCursorEventSchema,
   clockStartEventSchema,
@@ -88,6 +110,7 @@ export const socketGameEventSchema = z.object({
 
 // Type inference
 export type GameEvent = z.infer<typeof gameEventSchema>;
+export type CreateEvent = z.infer<typeof createEventSchema>;
 export type UpdateCellEvent = z.infer<typeof updateCellEventSchema>;
 export type UpdateCursorEvent = z.infer<typeof updateCursorEventSchema>;
 export type ClockStartEvent = z.infer<typeof clockStartEventSchema>;

@@ -52,13 +52,15 @@ const GameToolbar = ({
         <div className="clock-display">
           <span className="clock-time">{formatTime(clockTime)}</span>
           <button
+            type="button"
+            type="button"
             onClick={isClockRunning ? onPauseClock : onStartClock}
             className="btn-icon"
             title={isClockRunning ? 'Pause' : 'Start'}
           >
             {isClockRunning ? '⏸' : '▶️'}
           </button>
-          <button onClick={onResetClock} className="btn-icon" title="Reset">
+          <button type="button" onClick={onResetClock} className="btn-icon" title="Reset">
             ↻
           </button>
         </div>
@@ -66,6 +68,8 @@ const GameToolbar = ({
 
       <div className="toolbar-section">
         <button
+          type="button"
+          type="button"
           onClick={onTogglePencil}
           className={`btn-tool ${isPencilMode ? 'active' : ''}`}
           title="Pencil Mode"
@@ -74,19 +78,19 @@ const GameToolbar = ({
         </button>
 
         {onCheck && (
-          <button onClick={onCheck} className="btn-tool" title="Check">
+          <button type="button" onClick={onCheck} className="btn-tool" title="Check">
             ✓ Check
           </button>
         )}
 
         {onReveal && (
-          <button onClick={onReveal} className="btn-tool" title="Reveal">
+          <button type="button" onClick={onReveal} className="btn-tool" title="Reveal">
             💡 Reveal
           </button>
         )}
 
         {onReset && (
-          <button onClick={onReset} className="btn-tool" title="Reset">
+          <button type="button" onClick={onReset} className="btn-tool" title="Reset">
             🔄 Reset
           </button>
         )}

@@ -1,68 +1,47 @@
 /**
  * Error Boundary Component
+ * Uses react-error-boundary for better error handling
  * Implements REQ-7.5.2: Error boundaries for React errors
- * Enhanced with proper error pages and error handling
  */
 
-import { Component, ReactNode } from 'react';
+import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
 import ServerError500 from '@pages/errors/ServerError500';
-import { handleError, detectErrorType, ErrorType } from '@utils/errorHandler';
+import * as Sentry from '@sentry/react';
 
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
+interface ErrorFallbackProps {
+  error: Error;
+  resetErrorBoundary: () => void;
 }
 
-interface State {
-  hasError: boolean;
-  error?: Error;
+const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => {
+  // Log error to Sentry
+  Sentry.captureException(error);
+
+  return <ServerError500 error={error} resetError={resetErrorBoundary} />;
+};
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
+const ErrorBoundary = ({ children, fallback }: ErrorBoundaryProps) => {
+  if (fallback) {
+    return (
+      <ReactErrorBoundary fallback={fallback} onError={(error) => Sentry.captureException(error)}>
+        {children}
+      </ReactErrorBoundary>
+    );
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error with context
-    handleError(error, {
-      errorInfo: {
-        componentStack: errorInfo.componentStack,
-      },
-      boundary: 'ErrorBoundary',
-    });
-
-    // Check if this is an API error that we should handle differently
-    const errorType = detectErrorType(error);
-
-    // Log additional context for API errors
-    if (errorType !== ErrorType.UNKNOWN) {
-      console.error('[ErrorBoundary] Error type:', errorType);
-    }
-  }
-
-  resetError = () => {
-    this.setState({ hasError: false, error: undefined });
-  };
-
-  render() {
-    if (this.state.hasError) {
-      // Use custom fallback if provided
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
-      // Use the ServerError500 component with reset functionality
-      return <ServerError500 error={this.state.error} resetError={this.resetError} />;
-    }
-
-    return this.props.children;
-  }
-}
+  return (
+    <ReactErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={(error) => Sentry.captureException(error)}
+    >
+      {children}
+    </ReactErrorBoundary>
+  );
+};
 
 export default ErrorBoundary;

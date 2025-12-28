@@ -17,8 +17,8 @@ import type {
   CreatePuzzle200Response,
   CreatePuzzleRequest,
   CreatePuzzleRequestPuzzle,
+  CreateToken400Response,
   ListPuzzles200Response,
-  ListPuzzles400Response,
   RecordPuzzleSolveRequest,
 } from '../models/index';
 import {
@@ -28,10 +28,10 @@ import {
   CreatePuzzleRequestToJSON,
   CreatePuzzleRequestPuzzleFromJSON,
   CreatePuzzleRequestPuzzleToJSON,
+  CreateToken400ResponseFromJSON,
+  CreateToken400ResponseToJSON,
   ListPuzzles200ResponseFromJSON,
   ListPuzzles200ResponseToJSON,
-  ListPuzzles400ResponseFromJSON,
-  ListPuzzles400ResponseToJSON,
   RecordPuzzleSolveRequestFromJSON,
   RecordPuzzleSolveRequestToJSON,
 } from '../models/index';

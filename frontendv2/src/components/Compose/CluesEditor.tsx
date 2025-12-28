@@ -9,7 +9,7 @@ import type { Clue } from '@types/index';
 interface CluesEditorProps {
   across: Clue[];
   down: Clue[];
-  onUpdateClue: (direction: 'across' | 'down', number: number, clueText: string) => void;
+  onUpdateClue: (_direction: 'across' | 'down', _number: number, _clueText: string) => void;
 }
 
 const CluesEditor = ({ across, down, onUpdateClue }: CluesEditorProps) => {
@@ -27,12 +27,14 @@ const CluesEditor = ({ across, down, onUpdateClue }: CluesEditorProps) => {
         <h2>Clues Editor</h2>
         <div className="clues-direction-toggle">
           <button
+            type="button"
             onClick={() => setActiveDirection('across')}
             className={`btn-toggle ${activeDirection === 'across' ? 'active' : ''}`}
           >
             Across ({across.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveDirection('down')}
             className={`btn-toggle ${activeDirection === 'down' ? 'active' : ''}`}
           >

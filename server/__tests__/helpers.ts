@@ -1,9 +1,11 @@
 import fastify from 'fastify';
 import type {FastifyInstance} from 'fastify';
 import cors from '@fastify/cors';
+import fastifyJwt from '@fastify/jwt';
 import {vi} from 'vitest';
 import apiRouter from '../api/router.js';
 import type {Repositories} from '../repositories/index.js';
+import {getJwtOptions} from '../utils/auth.js';
 
 /**
  * Creates a test Fastify instance with API routes registered
@@ -25,6 +27,9 @@ export async function buildTestApp(): Promise<FastifyInstance> {
   await app.register(cors, {
     origin: true,
   });
+
+  // Register JWT plugin for authentication
+  await app.register(fastifyJwt, getJwtOptions());
 
   // Create mock repositories
   const mockRepositories: Repositories = {

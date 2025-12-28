@@ -15,4 +15,15 @@ export interface IRoomRepository {
    * Add a room event
    */
   addEvent(rid: string, event: RoomEvent): Promise<void>;
+
+  /**
+   * Get the creator (first user) of a room
+   * @returns User ID of the room creator, or null if not found
+   */
+  getCreator(rid: string): Promise<string | null>;
+
+  /**
+   * Check if a room exists
+   */
+  exists(rid: string): Promise<boolean>;
 }

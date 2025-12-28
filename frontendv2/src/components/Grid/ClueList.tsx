@@ -22,7 +22,7 @@ interface ClueListProps {
   onClueClick: (clue: Clue) => void;
 }
 
-const ClueListContainer = styled(Box)(({ theme }) => ({
+const ClueListContainer = styled(Box)(({ _theme }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',

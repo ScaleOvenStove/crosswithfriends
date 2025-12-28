@@ -34,4 +34,15 @@ export interface IGameRepository {
    * Create initial game event from a puzzle
    */
   createInitialEvent(gid: string, pid: string, userId?: string | null): Promise<string>;
+
+  /**
+   * Get the creator (first user) of a game
+   * @returns User ID of the game creator, or null if not found
+   */
+  getCreator(gid: string): Promise<string | null>;
+
+  /**
+   * Check if a game exists
+   */
+  exists(gid: string): Promise<boolean>;
 }

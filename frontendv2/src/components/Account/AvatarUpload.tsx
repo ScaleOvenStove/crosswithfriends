@@ -10,7 +10,7 @@ import { uploadAvatar } from '@lib/firebase/storage';
 interface AvatarUploadProps {
   userId: string;
   currentAvatarUrl?: string;
-  onUploadComplete: (url: string) => void;
+  onUploadComplete: (_url: string) => void;
 }
 
 // Per codeguard-0-file-handling-and-uploads: Validate file type and size

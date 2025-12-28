@@ -12,7 +12,11 @@ import {
   deleteObject,
   listAll,
 } from 'firebase/storage';
-import type { StorageReference, UploadTask, UploadResult } from 'firebase/storage';
+import type {
+  StorageReference as _StorageReference,
+  UploadTask,
+  UploadResult,
+} from 'firebase/storage';
 import { storage, isFirebaseConfigured } from './config';
 
 // Check if storage is available

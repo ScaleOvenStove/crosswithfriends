@@ -11,6 +11,12 @@ import {
 } from '../schemas/puzzleSchemas';
 
 /**
+ * Grid cell value type - can be a string, number, null, or special marker
+ * Used for puzzle grids which have various cell representations
+ */
+type GridCellValue = string | number | null | undefined | '.' | '#';
+
+/**
  * Transform ipuz puzzle data into Cell[][] format for the Grid component
  * Based on the ipuz format: https://www.puzzazz.com/ipuz/v1 and v2
  *
@@ -249,18 +255,14 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | ValidatedPuzzleJson 
     down: parseCluesWithIndex(downClues, 'down'),
   };
 
-  console.log('[puzzleUtils] Extracted clues result:', {
-    acrossCount: result.across.length,
-    downCount: result.down.length,
-  });
-
+  // Clues extracted successfully
   return result;
 }
 
 /**
  * Calculate cell numbers for a grid (used for old format puzzles)
  */
-function calculateCellNumbers(grid: Array<Array<any>>): Map<string, number> {
+function calculateCellNumbers(grid: Array<Array<GridCellValue>>): Map<string, number> {
   const cellNumbers = new Map<string, number>();
   let currentNumber = 1;
   const height = grid.length;
@@ -305,7 +307,7 @@ function calculateCellNumbers(grid: Array<Array<any>>): Map<string, number> {
  */
 function extractAnswerFromSolution(
   solution: Array<Array<string | null>>,
-  puzzleGrid: Array<Array<any>>,
+  puzzleGrid: Array<Array<GridCellValue>>,
   clueNumber: number,
   direction: 'across' | 'down'
 ): string {

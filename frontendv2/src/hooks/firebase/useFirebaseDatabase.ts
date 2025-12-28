@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import * as database from '@lib/firebase/database';
+import * as database from '@lib/firebase/realtimeDb';
 
 interface UseFirebaseDatabaseOptions<T> {
   path: string;

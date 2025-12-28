@@ -50,7 +50,7 @@ export const useClues = ({
     }
 
     const { row, col } = selectedCell;
-    const cell = cells[row][col];
+    const _cell = cells[row][col];
 
     // Find the clue number for this cell
     const clueNumber = findClueNumberForCell(cells, row, col, selectedDirection);

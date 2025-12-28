@@ -182,4 +182,26 @@ export class GameRepository implements IGameRepository {
 
     return gid;
   }
+
+  async getCreator(gid: string): Promise<string | null> {
+    const res = await this.pool.query(
+      "SELECT uid FROM game_events WHERE gid=$1 AND event_type='create' LIMIT 1",
+      [gid]
+    );
+
+    if (res.rowCount === 0 || !res.rows[0]) {
+      return null;
+    }
+
+    return res.rows[0].uid || null;
+  }
+
+  async exists(gid: string): Promise<boolean> {
+    const res = await this.pool.query(
+      "SELECT 1 FROM game_events WHERE gid=$1 AND event_type='create' LIMIT 1",
+      [gid]
+    );
+
+    return (res.rowCount ?? 0) > 0;
+  }
 }

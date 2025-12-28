@@ -14,17 +14,17 @@
 
 import * as runtime from '../runtime';
 import type {
+  CreateToken400Response,
   GetNewGameId200Response,
   GetNewPuzzleId200Response,
-  ListPuzzles400Response,
 } from '../models/index';
 import {
+  CreateToken400ResponseFromJSON,
+  CreateToken400ResponseToJSON,
   GetNewGameId200ResponseFromJSON,
   GetNewGameId200ResponseToJSON,
   GetNewPuzzleId200ResponseFromJSON,
   GetNewPuzzleId200ResponseToJSON,
-  ListPuzzles400ResponseFromJSON,
-  ListPuzzles400ResponseToJSON,
 } from '../models/index';
 
 /**

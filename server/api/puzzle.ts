@@ -1,6 +1,7 @@
 import type {AddPuzzleRequest, AddPuzzleResponse, PuzzleJson} from '@crosswithfriends/shared/types';
 import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
+import {validatePuzzleId} from '../utils/inputValidation.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 
 import {createHttpError} from './errors.js';
@@ -33,6 +34,15 @@ async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
     postOptions,
     async (request: FastifyRequest<{Body: AddPuzzleRequest}>, _reply: FastifyReply) => {
       logRequest(request);
+
+      // Validate puzzle ID format if provided
+      if (request.body.pid) {
+        const pidValidation = validatePuzzleId(request.body.pid);
+        if (!pidValidation.valid) {
+          throw createHttpError(pidValidation.error || 'Invalid puzzle ID', 400);
+        }
+      }
+
       const pid = await fastify.repositories.puzzle.create(
         request.body.pid || '',
         request.body.puzzle,
@@ -70,11 +80,17 @@ async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
       logRequest(request);
       const {pid} = request.params;
 
+      // Validate puzzle ID format
+      const pidValidation = validatePuzzleId(pid);
+      if (!pidValidation.valid) {
+        throw createHttpError(pidValidation.error || 'Invalid puzzle ID', 400);
+      }
+
       try {
-        const puzzle = await fastify.repositories.puzzle.findById(pid);
+        const puzzle = await fastify.repositories.puzzle.findById(pidValidation.value!);
         return puzzle;
       } catch (error) {
-        request.log.error(error, `Failed to get puzzle ${pid}`);
+        request.log.error(error, `Failed to get puzzle ${pidValidation.value}`);
         throw createHttpError('Puzzle not found', 404);
       }
     }

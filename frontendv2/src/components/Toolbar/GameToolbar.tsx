@@ -33,7 +33,6 @@ import {
 } from '@mui/icons-material';
 import { ClockDisplay } from '@components/common/ClockDisplay';
 
-// eslint-disable-next-line no-unused-vars
 type GameActionHandler = (scope: 'cell' | 'word' | 'puzzle') => void;
 
 interface GameToolbarProps {

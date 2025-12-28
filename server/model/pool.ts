@@ -34,8 +34,14 @@ if (config.database.password !== undefined && config.database.password !== '') {
 // Only include SSL config if needed
 if (config.database.useSSL) {
   poolConfig.ssl = {
-    rejectUnauthorized: false,
+    rejectUnauthorized: config.database.sslRejectUnauthorized,
   };
+
+  if (!config.database.sslRejectUnauthorized) {
+    logger.warn(
+      'SSL certificate validation is DISABLED. This should only be used in development with self-signed certificates.'
+    );
+  }
 }
 
 /**

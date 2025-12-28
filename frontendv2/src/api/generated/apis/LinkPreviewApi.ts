@@ -13,12 +13,12 @@
  */
 
 import * as runtime from '../runtime';
-import type { GetOembed200Response, ListPuzzles400Response } from '../models/index';
+import type { CreateToken400Response, GetOembed200Response } from '../models/index';
 import {
+  CreateToken400ResponseFromJSON,
+  CreateToken400ResponseToJSON,
   GetOembed200ResponseFromJSON,
   GetOembed200ResponseToJSON,
-  ListPuzzles400ResponseFromJSON,
-  ListPuzzles400ResponseToJSON,
 } from '../models/index';
 
 export interface GetLinkPreviewRequest {

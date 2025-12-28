@@ -1,8 +1,10 @@
 /**
  * Error Handler Utility
  * Provides consistent error handling and mapping across the application
+ * Now integrates with Sentry for error tracking
  */
 
+import * as Sentry from '@sentry/react';
 import { errorLoggingService } from '@services/errorLogging';
 
 export enum ErrorType {
@@ -179,7 +181,7 @@ export function shouldShowErrorPage(error: AppError): boolean {
 }
 
 /**
- * Log error to console and external logging service
+ * Log error to console and external logging service (Sentry)
  */
 export function logError(error: AppError, context?: Record<string, unknown>): void {
   const logData = {
@@ -198,7 +200,34 @@ export function logError(error: AppError, context?: Record<string, unknown>): vo
     console.error('[ErrorHandler]', logData);
   }
 
-  // Send to logging service (Sentry, LogRocket, custom backend, etc.)
+  // Send to Sentry
+  if (error.originalError instanceof Error) {
+    Sentry.captureException(error.originalError, {
+      level: 'error',
+      tags: {
+        errorType: error.type,
+        statusCode: error.statusCode?.toString(),
+      },
+      extra: {
+        ...logData,
+        context,
+      },
+    });
+  } else {
+    Sentry.captureMessage(error.message, {
+      level: 'error',
+      tags: {
+        errorType: error.type,
+        statusCode: error.statusCode?.toString(),
+      },
+      extra: {
+        ...logData,
+        context,
+      },
+    });
+  }
+
+  // Also send to legacy logging service (for backward compatibility)
   errorLoggingService.log(logData);
 }
 

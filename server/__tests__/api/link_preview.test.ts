@@ -51,7 +51,7 @@ describe('Link Preview API', () => {
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
       expect(body.statusCode).toBe(400);
-      expect(body.message).toBe('Invalid URL');
+      expect(body.message).toBe('Invalid URL format');
     });
 
     it('should return 400 for invalid URL path', async () => {

@@ -4,13 +4,24 @@
  */
 
 import { useParams, useLocation } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Nav from '@components/common/Nav';
 import UserList from '@components/Game/UserList';
 import { RoomSkeleton } from '@components/common/skeletons';
 import { useSocket } from '@sockets/index';
 import { useUser } from '@hooks/index';
 import { useRoomEvents } from '@hooks/game/useRoomEvents';
+
+// Room event type matching the one defined in useRoomEvents
+interface RoomEvent {
+  type: 'user_join' | 'user_leave' | 'chat_message' | 'presence_update';
+  timestamp: number;
+  uid: string;
+  displayName?: string;
+  message?: string;
+  status?: 'online' | 'offline' | 'away';
+  [key: string]: unknown;
+}
 
 const Room = () => {
   const { rid } = useParams<{ rid: string }>();
@@ -21,17 +32,17 @@ const Room = () => {
   const [gameUrl, setGameUrl] = useState('');
   const [currentGameUrl, setCurrentGameUrl] = useState('');
 
-  // Room events handlers
-  const handleUserJoin = useCallback((event: any) => {
-    console.log('User joined:', event.displayName || event.uid);
+  // Room events handlers - callbacks are intentionally empty as events are handled by useRoomEvents
+  const handleUserJoin = useCallback((_event: RoomEvent) => {
+    // User join event handled by useRoomEvents
   }, []);
 
-  const handleUserLeave = useCallback((event: any) => {
-    console.log('User left:', event.displayName || event.uid);
+  const handleUserLeave = useCallback((_event: RoomEvent) => {
+    // User leave event handled by useRoomEvents
   }, []);
 
-  const handleChatMessage = useCallback((event: any) => {
-    console.log('Chat message:', event.message);
+  const handleChatMessage = useCallback((_event: RoomEvent) => {
+    // Chat message event handled by useRoomEvents
   }, []);
 
   // Use room events hook
@@ -53,9 +64,10 @@ const Room = () => {
 
   const handleSetGame = () => {
     if (gameUrl && user) {
-      // Emit set game event
+      // Emit presence update with game URL information
+      // Note: Using presence_update as it allows additional properties via [key: string]: unknown
       emitRoomEvent({
-        type: 'user_join' as any, // Using a custom type
+        type: 'presence_update',
         uid: user.id,
         displayName: user.displayName,
         gameUrl: gameUrl,
@@ -102,7 +114,7 @@ const Room = () => {
               onChange={(e) => setGameUrl(e.target.value)}
               className="input-text"
             />
-            <button onClick={handleSetGame} className="btn-primary">
+            <button type="button" onClick={handleSetGame} className="btn-primary">
               Set Game
             </button>
           </div>

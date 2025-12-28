@@ -4,7 +4,7 @@
  */
 
 import { useParams } from 'react-router-dom';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo as _useMemo } from 'react';
 import { useSocket } from '@sockets/index';
 import Nav from '@components/common/Nav';
 import { ReplaySkeleton } from '@components/common/skeletons';
@@ -31,8 +31,8 @@ const Replay = () => {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gameInfo, setGameInfo] = useState<{ title?: string; author?: string } | null>(null);
-  const [gridSize, setGridSize] = useState<{ width: number; height: number }>({
+  const [gameInfo, _setGameInfo] = useState<{ title?: string; author?: string } | null>(null);
+  const [gridSize, _setGridSize] = useState<{ width: number; height: number }>({
     width: 15,
     height: 15,
   });
@@ -88,7 +88,7 @@ const Replay = () => {
   }, [gridSize]);
 
   // Event application callback - rebuilds grid state from events
-  const handleEventApply = useCallback((event: GameEvent, index: number) => {
+  const handleEventApply = useCallback((event: GameEvent, _index: number) => {
     if (
       event.type === 'updateCell' &&
       typeof event.row === 'number' &&
@@ -176,7 +176,11 @@ const Replay = () => {
         <div className="container">
           <div className="error-message">
             <p>Failed to load replay: {error}</p>
-            <button onClick={() => window.location.reload()} className="btn-secondary">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn-secondary"
+            >
               Retry
             </button>
           </div>

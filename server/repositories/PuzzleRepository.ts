@@ -190,7 +190,7 @@ export class PuzzleRepository implements IPuzzleRepository {
     const total = parseInt(countResult.rows[0]?.total || '0', 10);
 
     // Execute paginated query
-    const {rows} = await this.pool.query(
+    const result = await this.pool.query(
       `
       SELECT pid, uploaded_at, content, times_solved
       FROM puzzles
@@ -203,6 +203,7 @@ export class PuzzleRepository implements IPuzzleRepository {
     `,
       queryParams
     );
+    const rows = result.rows;
 
     const puzzles = rows.map((row: {pid: string; content: PuzzleJson; times_solved: string}) => ({
       pid: row.pid,

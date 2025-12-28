@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { GameState, User, Cell, Clue, Cursor } from '@types/index';
+import type { GameState as _GameState, User, Cell, Clue, Cursor } from '@types/index';
 
 interface GameStore {
   // State

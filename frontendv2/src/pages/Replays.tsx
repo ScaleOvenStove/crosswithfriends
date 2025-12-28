@@ -83,7 +83,9 @@ const Replays = () => {
                     )}
                   </div>
                 </div>
-                <button className="btn-secondary">Watch Replay →</button>
+                <button type="button" className="btn-secondary">
+                  Watch Replay →
+                </button>
               </Link>
             ))}
           </div>

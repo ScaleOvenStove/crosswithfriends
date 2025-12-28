@@ -22,7 +22,7 @@ interface CellOwnership {
 interface BattleModeOptions {
   gameId: string;
   mode: 'battle' | 'fencing';
-  // eslint-disable-next-line no-unused-vars
+
   onGameComplete?: (winner: Player) => void;
 }
 

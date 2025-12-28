@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { OptimisticUpdateQueue, optimisticUpdateQueue } from '../optimisticUpdateQueue';
+import {
+  OptimisticUpdateQueue,
+  optimisticUpdateQueue as _optimisticUpdateQueue,
+} from '../optimisticUpdateQueue';
 
 describe('OptimisticUpdateQueue', () => {
   let queue: OptimisticUpdateQueue;

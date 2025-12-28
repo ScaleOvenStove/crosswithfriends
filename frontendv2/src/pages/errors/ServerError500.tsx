@@ -11,7 +11,7 @@ interface ServerError500Props {
   resetError?: () => void;
 }
 
-export default function ServerError500({ error, resetError }: ServerError500Props = {}) {
+const ServerError500 = ({ error, resetError }: ServerError500Props = {}) => {
   const suggestions = [
     'Try refreshing the page to see if the issue resolves itself',
     'Wait a few minutes and try again - this might be a temporary issue',
@@ -22,7 +22,7 @@ export default function ServerError500({ error, resetError }: ServerError500Prop
 
   // In development, show more error details
   const isDevelopment = import.meta.env.DEV;
-  const errorMessage = isDevelopment && error ? `Technical details: ${error.message}` : undefined;
+  const _errorMessage = isDevelopment && error ? `Technical details: ${error.message}` : undefined;
 
   return (
     <ErrorLayout
@@ -62,4 +62,6 @@ export default function ServerError500({ error, resetError }: ServerError500Prop
       )}
     </ErrorLayout>
   );
-}
+};
+
+export default ServerError500;
