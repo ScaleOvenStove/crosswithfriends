@@ -1,88 +1,42 @@
 /**
- * Test utilities and helpers for component testing
+ * Testing utilities and helpers
  */
-import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
-import {ThemeProvider, CssBaseline} from '@mui/material';
-import React from 'react';
-import {BrowserRouter} from 'react-router-dom';
 
-import ErrorBoundary from '../components/common/ErrorBoundary';
-import {createAppTheme} from '../theme/theme';
+import { ReactElement } from 'react';
+import { render, RenderOptions } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-/**
- * Default test wrapper that provides all necessary context providers
- */
-export function TestWrapper({children}: {children: React.ReactNode}) {
-  const theme = createAppTheme(false);
-  const mockToggleDarkMode = () => {};
-  const mockDarkModePreference = '0';
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
 
-  return (
-    <ErrorBoundary>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <BrowserRouter>
-          <GlobalContext.Provider
-            value={{toggleMolesterMoons: mockToggleDarkMode, darkModePreference: mockDarkModePreference}}
-          >
-            {children}
-          </GlobalContext.Provider>
-        </BrowserRouter>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
-}
+// Create a single QueryClient instance at module scope for reuse
+const defaultQueryClient = createTestQueryClient();
 
-/**
- * Wrapper with custom router context
- */
-export function RouterWrapper({
-  children,
-  initialEntries: _initialEntries = ['/'],
-}: {
+interface AllTheProvidersProps {
   children: React.ReactNode;
-  initialEntries?: string[];
-}) {
-  return <BrowserRouter>{children}</BrowserRouter>;
+  queryClient?: QueryClient;
 }
 
-/**
- * Wrapper with MUI theme only
- */
-export function ThemeWrapper({children}: {children: React.ReactNode}) {
-  const theme = createAppTheme(false);
+const AllTheProviders = ({ children, queryClient = defaultQueryClient }: AllTheProvidersProps) => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{children}</BrowserRouter>
+    </QueryClientProvider>
   );
-}
+};
 
-/**
- * Wrapper with GlobalContext only
- */
-export function GlobalContextWrapper({children}: {children: React.ReactNode}) {
-  const mockToggleDarkMode = () => {};
-  const mockDarkModePreference = '0';
-  return (
-    <GlobalContext.Provider
-      value={{toggleMolesterMoons: mockToggleDarkMode, darkModePreference: mockDarkModePreference}}
-    >
-      {children}
-    </GlobalContext.Provider>
-  );
-}
+const customRender = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) =>
+  render(ui, { wrapper: AllTheProviders, ...options });
 
-/**
- * Wait for a condition to be true
- */
-export async function waitFor(condition: () => boolean, timeout = 5000): Promise<void> {
-  const start = Date.now();
-  while (!condition()) {
-    if (Date.now() - start > timeout) {
-      throw new Error(`Timeout waiting for condition after ${timeout}ms`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-}
+export * from '@testing-library/react';
+export { customRender as render };

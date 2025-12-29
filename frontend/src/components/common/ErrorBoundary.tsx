@@ -1,93 +1,47 @@
-import React, {Component, ErrorInfo, ReactNode} from 'react';
+/**
+ * Error Boundary Component
+ * Uses react-error-boundary for better error handling
+ * Implements REQ-7.5.2: Error boundaries for React errors
+ */
 
-import {IS_DEVELOPMENT} from '../../config';
-import {logger} from '../../utils/logger';
+import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
+import ServerError500 from '@pages/errors/ServerError500';
+import * as Sentry from '@sentry/react';
 
-import ErrorDisplay from './ErrorDisplay';
-
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+interface ErrorFallbackProps {
+  error: Error;
+  resetErrorBoundary: () => void;
 }
 
-interface State {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
+const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => {
+  // Log error to Sentry
+  Sentry.captureException(error);
+
+  return <ServerError500 error={error} resetError={resetErrorBoundary} />;
+};
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    };
+const ErrorBoundary = ({ children, fallback }: ErrorBoundaryProps) => {
+  if (fallback) {
+    return (
+      <ReactErrorBoundary fallback={fallback} onError={(error) => Sentry.captureException(error)}>
+        {children}
+      </ReactErrorBoundary>
+    );
   }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return {
-      hasError: true,
-      error,
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Store error info for display
-    this.setState({errorInfo});
-
-    // Log error with context
-    logger.errorWithException('ErrorBoundary caught an error', error, {
-      componentStack: errorInfo.componentStack,
-      errorBoundary: true,
-    });
-
-    // Call custom error handler if provided
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
-    }
-
-    // TODO: Integrate with error reporting service (e.g., Sentry)
-    // Example:
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(error, {
-    //     contexts: {
-    //       react: {
-    //         componentStack: errorInfo.componentStack,
-    //       },
-    //     },
-    //   });
-    // }
-  }
-
-  handleReset = (): void => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    });
-  };
-
-  render(): ReactNode {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
-      return (
-        <ErrorDisplay
-          error={this.state.error}
-          errorInfo={this.state.errorInfo}
-          onReset={this.handleReset}
-          showTechnicalDetails={IS_DEVELOPMENT}
-        />
-      );
-    }
-
-    return this.props.children;
-  }
-}
+  return (
+    <ReactErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={(error) => Sentry.captureException(error)}
+    >
+      {children}
+    </ReactErrorBoundary>
+  );
+};
 
 export default ErrorBoundary;

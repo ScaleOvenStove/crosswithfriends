@@ -1,36 +1,11 @@
-<!doctype html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb#" lang="en">
+<!DOCTYPE html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"
-    />
-    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable = no"
-    />
-    <script src="/wordlist.js"></script>
-
-    <!-- Polyfill for process (required by some libraries at runtime) -->
-    <script>
-      // Polyfill process for browser environment (must run before any modules)
-      // This ensures process is available for libraries that access it at runtime
-      (function (global) {
-        if (typeof global.process === 'undefined') {
-          global.process = {env: {}};
-        }
-        // Also ensure it's available as a bare identifier in non-strict contexts
-        if (typeof globalThis !== 'undefined') {
-          globalThis.process = global.process;
-        }
-      })(typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : this);
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/fullscreen-api-polyfill@1.1.2/fullscreen-api-polyfill.min.js"></script>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Cross with Friends - Real-time collaborative crossword puzzle platform" />
+    <title>Cross with Friends</title>
   </head>
   <body>
     <div id="root"></div>

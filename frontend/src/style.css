@@ -1,118 +1,61 @@
-html {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+/**
+ * Global Styles with Tailwind CSS v4
+ */
+
+@import 'tailwindcss';
+
+/* Custom theme extensions can be added here */
+@theme {
+  --color-primary: #4f46e5;
+  --color-primary-light: #6366f1;
+  --color-primary-dark: #4338ca;
+  --color-secondary: #10b981;
+  --color-secondary-light: #34d399;
+  --color-secondary-dark: #059669;
 }
 
-html,
-body,
-#root,
-.router-wrapper {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  margin: 0;
-  padding: 0;
-  height: 100vh;
-  max-height: 100vh;
-  overflow: hidden;
-  font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
-  /* Ensure proper text rendering */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+/* Dark mode support using Tailwind's dark: prefix */
+
+/* Custom Skeleton Animations */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-.router-wrapper {
-  position: relative;
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
 }
 
-/* Allow scrolling within main content areas, but not the page itself */
-.router-wrapper > * {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+.skeleton-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-button {
-  margin: 0;
-  font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
+.skeleton-shimmer {
+  background: linear-gradient(to right, #f0f0f0 0%, #f8f8f8 20%, #f0f0f0 40%, #f0f0f0 100%);
+  background-size: 800px 104px;
+  animation: skeleton-shimmer 1.2s linear infinite;
 }
 
-/* Accessibility: Focus indicators */
-*:focus-visible {
-  outline: 2px solid #6aa9f4;
-  outline-offset: 2px;
-  border-radius: 2px;
+/* Loading spinner utilities */
+.loading-fade-in {
+  animation: fadeIn 0.3s ease-in;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid #6aa9f4;
-  outline-offset: 2px;
-}
-
-/* Ensure interactive elements are keyboard accessible */
-button,
-a,
-input,
-select,
-textarea,
-[role='button'],
-[role='link'],
-[tabindex]:not([tabindex='-1']) {
-  cursor: pointer;
-}
-
-button:disabled,
-a:disabled,
-[aria-disabled='true'] {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* Prevent page scrolling on all devices - but allow internal scrolling */
-body {
-  overflow: hidden;
-  height: 100vh;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  position: relative;
-}
-
-:root {
-  --main-black: #151515;
-  --main-gray-1: #666;
-  --main-gray-2: #ccc;
-  --main-gray-3: #f0f0f0;
-  --main-blue: #6aa9f4;
-  --main-blue-2: rgba(110, 198, 255, 1);
-  --main-blue-3: #dcefff;
-  --main-green-1: rgba(31, 255, 61, 0.3);
-  --main-green-2: rgba(31, 255, 61, 1);
-  --pencil-color: #888888; /* must be 3 or 6 digit hex */
-}
-
-.swal-modal {
-  will-change: unset !important;
-}
-
-.swal-text--no-margin {
-  margin: 0 !important;
-}
-
-.swal-text--text-align-center {
-  text-align: center !important;
-}
-
-#unlistedRow {
-  margin-top: 10px;
-}
-
-#unlistedRow input {
-  display: inline-block;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

@@ -1,17 +1,23 @@
-import {Box, CircularProgress, Typography} from '@mui/material';
-import React from 'react';
+/**
+ * Loading Spinner Component
+ * Implements REQ-7.4.1: Loading spinners during data fetching
+ */
+
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 interface LoadingSpinnerProps {
-  message?: string;
-  size?: number;
+  size?: 'small' | 'medium' | 'large';
+  text?: string;
   fullScreen?: boolean;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  message = 'Loading...',
-  size = 40,
-  fullScreen = false,
-}) => {
+const LoadingSpinner = ({ size = 'medium', text, fullScreen = false }: LoadingSpinnerProps) => {
+  const sizeMap = {
+    small: 24,
+    medium: 40,
+    large: 56,
+  };
+
   const content = (
     <Box
       sx={{
@@ -20,22 +26,24 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 2,
+        padding: 3,
         ...(fullScreen && {
-          position: 'absolute',
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          height: '100%',
-          width: '100%',
-          zIndex: 1,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'background.default',
+          zIndex: 9999,
         }),
       }}
     >
-      <CircularProgress size={size} />
-      {message && (
-        <Typography variant="body2" color="text.secondary">
-          {message}
+      <CircularProgress size={sizeMap[size]} thickness={4} />
+      {text && (
+        <Typography variant="body2" color="text.secondary" className="mt-2">
+          {text}
         </Typography>
       )}
     </Box>

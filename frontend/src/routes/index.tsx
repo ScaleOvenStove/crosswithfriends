@@ -1,166 +1,211 @@
 /**
- * Route configuration
- * Centralized route definitions with metadata and guards
+ * Application routing configuration
+ * Implements route structure from REQ-14: Route Structure
+ * Enhanced with error handling and 404 pages
  */
 
-import React, {lazy, type ComponentType} from 'react';
+import type { RouteObject } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import QueryParamWrapper from '@components/common/QueryParamWrapper';
 
-// Lazy load page components
-const Account = lazy(() => import('../pages/Account').then((m) => ({default: m.Account})));
-const Battle = lazy(() => import('../pages/Battle').then((m) => ({default: m.Battle})));
-const Compose = lazy(() => import('../pages/Compose').then((m) => ({default: m.Compose})));
-const Composition = lazy(() => import('../pages/Composition').then((m) => ({default: m.Composition})));
-const Game = lazy(() => import('../pages/Game').then((m) => ({default: m.default})));
-const Play = lazy(() => import('../pages/Play').then((m) => ({default: m.Play})));
-const Replay = lazy(() => import('../pages/Replay').then((m) => ({default: m.default})));
-const Replays = lazy(() => import('../pages/Replays').then((m) => ({default: m.default})));
-const Room = lazy(() => import('../pages/Room').then((m) => ({default: m.default})));
-const Fencing = lazy(() => import('../pages/Fencing').then((m) => ({default: m.default})));
-const WrappedWelcome = lazy(() => import('../pages/WrappedWelcome').then((m) => ({default: m.default})));
+// Lazy load error pages
+const NotFound404 = lazy(() => import('@pages/errors/NotFound404'));
+const ServerError500 = lazy(() => import('@pages/errors/ServerError500'));
 
-export interface RouteConfig {
-  path: string;
-  component: ComponentType<any>;
-  requiresAuth?: boolean;
-  requiresBeta?: boolean;
-  errorBoundary?: ComponentType<any>;
-  metadata?: {
-    title?: string;
-    description?: string;
+/**
+ * Root error element for route-level errors
+ */
+const RootErrorElement = () => {
+  // For route-level errors, show the 500 error page
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ServerError500 />
+    </Suspense>
+  );
+};
+
+/**
+ * Get all routes - function to ensure lazy components are properly handled
+ * Using React Router's lazy loading in route config
+ */
+export function getRoutes(): RouteObject[] {
+  /**
+   * Public routes - accessible without authentication
+   */
+  const publicRoutes: RouteObject[] = [
+    {
+      path: '/',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Welcome');
+        return { Component };
+      },
+    },
+    {
+      path: '/fencing',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Welcome');
+        return { Component };
+      },
+    },
+    {
+      path: '/game/:gid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Game');
+        return { Component };
+      },
+    },
+    {
+      path: '/puzzle/:pid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Game');
+        return { Component };
+      },
+    },
+    {
+      path: '/embed/game/:gid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Game');
+        return { Component };
+      },
+    },
+    {
+      path: '/room/:rid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Room');
+        return { Component };
+      },
+    },
+    {
+      path: '/embed/room/:rid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Room');
+        return { Component };
+      },
+    },
+    {
+      path: '/replay/:gid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Replay');
+        return { Component };
+      },
+    },
+    {
+      path: '/replays',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Replays');
+        return { Component };
+      },
+    },
+    {
+      path: '/replays/:pid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Replays');
+        return { Component };
+      },
+    },
+    {
+      path: '/compose',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Compose');
+        return { Component };
+      },
+    },
+    {
+      path: '/composition/:cid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Composition');
+        return { Component };
+      },
+    },
+    {
+      path: '/account',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Account');
+        return { Component };
+      },
+    },
+    {
+      path: '/stats',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Stats');
+        return { Component };
+      },
+    },
+  ];
+
+  /**
+   * Beta routes - experimental features
+   */
+  const betaRoutes: RouteObject[] = [
+    {
+      path: '/beta',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Welcome');
+        return { Component };
+      },
+    },
+    {
+      path: '/beta/game/:gid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Game');
+        return { Component };
+      },
+    },
+    {
+      path: '/beta/battle/:bid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Battle');
+        return { Component };
+      },
+    },
+    {
+      path: '/beta/play/:pid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Play');
+        return { Component };
+      },
+    },
+    {
+      path: '/beta/replay/:gid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Replay');
+        return { Component };
+      },
+    },
+    {
+      path: '/beta/fencing/:gid',
+      lazy: async () => {
+        const { default: Component } = await import('@pages/Fencing');
+        return { Component };
+      },
+    },
+  ];
+
+  /**
+   * Catch-all route for 404 errors - must be last
+   */
+  const notFoundRoute: RouteObject = {
+    path: '*',
+    element: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <NotFound404 />
+      </Suspense>
+    ),
   };
+
+  return [...publicRoutes, ...betaRoutes, notFoundRoute];
 }
 
-export const routes: RouteConfig[] = [
+/**
+ * All routes combined with root-level error handling
+ */
+export const routes: RouteObject[] = [
   {
-    path: '/',
-    component: WrappedWelcome,
-    requiresAuth: false,
-  },
-  {
-    path: '/fencing',
-    component: WrappedWelcome,
-    requiresAuth: false,
-  },
-  {
-    path: '/game/:gid',
-    component: Game,
-    requiresAuth: false,
-    errorBoundary: lazy(() => import('../components/common/GameError').then((m) => ({default: m.GameError}))),
-  },
-  {
-    path: '/embed/game/:gid',
-    component: Game,
-    requiresAuth: false,
-    errorBoundary: lazy(() => import('../components/common/GameError').then((m) => ({default: m.GameError}))),
-  },
-  {
-    path: '/room/:rid',
-    component: Room,
-    requiresAuth: false,
-    errorBoundary: lazy(() => import('../components/common/RoomError').then((m) => ({default: m.RoomError}))),
-  },
-  {
-    path: '/embed/room/:rid',
-    component: Room,
-    requiresAuth: false,
-    errorBoundary: lazy(() => import('../components/common/RoomError').then((m) => ({default: m.RoomError}))),
-  },
-  {
-    path: '/replay/:gid',
-    component: Replay,
-    requiresAuth: false,
-  },
-  {
-    path: '/beta/replay/:gid',
-    component: Replay,
-    requiresAuth: false,
-    requiresBeta: true,
-  },
-  {
-    path: '/replays/:pid',
-    component: Replays,
-    requiresAuth: false,
-  },
-  {
-    path: '/replays',
-    component: Replays,
-    requiresAuth: false,
-  },
-  {
-    path: '/beta',
-    component: WrappedWelcome,
-    requiresAuth: false,
-    requiresBeta: true,
-  },
-  {
-    path: '/beta/game/:gid',
-    component: Game,
-    requiresAuth: false,
-    requiresBeta: true,
-    errorBoundary: lazy(() => import('../components/common/GameError').then((m) => ({default: m.GameError}))),
-  },
-  {
-    path: '/beta/battle/:bid',
-    component: Battle,
-    requiresAuth: false,
-    requiresBeta: true,
-  },
-  {
-    path: '/beta/play/:pid',
-    component: Play,
-    requiresAuth: false,
-    requiresBeta: true,
-  },
-  {
-    path: '/account',
-    component: Account,
-    requiresAuth: false, // TODO: Set to true when auth is implemented
-    errorBoundary: lazy(() =>
-      import('../components/common/AccountError').then((m) => ({default: m.AccountError}))
-    ),
-  },
-  {
-    path: '/compose',
-    component: Compose,
-    requiresAuth: false,
-  },
-  {
-    path: '/composition/:cid',
-    component: Composition,
-    requiresAuth: false,
-  },
-  {
-    path: '/fencing/:gid',
-    component: Fencing,
-    requiresAuth: false,
-    errorBoundary: lazy(() => import('../components/common/GameError').then((m) => ({default: m.GameError}))),
-  },
-  {
-    path: '/beta/fencing/:gid',
-    component: Fencing,
-    requiresAuth: false,
-    requiresBeta: true,
-    errorBoundary: lazy(() => import('../components/common/GameError').then((m) => ({default: m.GameError}))),
+    // Root route with error boundary for all child routes
+    element: <QueryParamWrapper />,
+    errorElement: <RootErrorElement />,
+    children: getRoutes(),
   },
 ];
 
-/**
- * Route guard component
- * Checks authentication and beta access before rendering route
- */
-export const RouteGuard: React.FC<{
-  route: RouteConfig;
-  children: React.ReactNode;
-}> = ({route: _route, children}) => {
-  // TODO: Implement authentication check when auth is ready
-  // if (route.requiresAuth && !isAuthenticated()) {
-  //   return <Navigate to="/login" replace />;
-  // }
-
-  // TODO: Implement beta access check if needed
-  // if (route.requiresBeta && !hasBetaAccess()) {
-  //   return <Navigate to="/" replace />;
-  // }
-
-  return children;
-};
+export default routes;

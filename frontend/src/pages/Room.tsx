@@ -1,143 +1,157 @@
-import {initialRoomState, roomReducer} from '@crosswithfriends/shared/lib/reducers/room';
-import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
-import {Box} from '@mui/material';
-import React, {useEffect, useMemo, useState} from 'react';
-import {useParams} from 'react-router-dom';
+/**
+ * Room Page - Multi-user rooms
+ * Implements REQ-2.3: Rooms
+ */
 
-import {useRoom} from '../hooks/useRoom';
-import {useUpdateEffect} from '../hooks/useUpdateEffect';
+import { useParams, useLocation } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import Nav from '@components/common/Nav';
+import UserList from '@components/Game/UserList';
+import { RoomSkeleton } from '@components/common/skeletons';
+import { useSocket } from '@sockets/index';
+import { useUser } from '@hooks/index';
+import { useRoomEvents } from '@hooks/game/useRoomEvents';
 
-const throttle = <T extends (...args: any[]) => any>(
-  fn: T,
-  limit: number
-): ((...args: Parameters<T>) => void) => {
-  let inThrottle: boolean;
-  return (...args: Parameters<T>) => {
-    if (!inThrottle) {
-      fn(...args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
-};
-
-const ACTIVE_SECONDS_TIMEOUT = 60;
-
-function useRoomState(events: RoomEvent[]) {
-  // TODO history manager for perf optimization
-  return useMemo(() => events.reduce(roomReducer, initialRoomState), [events]);
+// Room event type matching the one defined in useRoomEvents
+interface RoomEvent {
+  type: 'user_join' | 'user_leave' | 'chat_message' | 'presence_update';
+  timestamp: number;
+  uid: string;
+  displayName?: string;
+  message?: string;
+  status?: 'online' | 'offline' | 'away';
+  [key: string]: unknown;
 }
 
-const useTimer = (interval = 1000): number => {
-  const [time, setTime] = useState(() => Date.now());
-  useEffect(() => {
-    const itvl = setInterval(() => {
-      setTime(Date.now());
-    }, interval);
-    return () => {
-      clearInterval(itvl);
-    };
-  }, [interval]);
-  return time;
-};
+const Room = () => {
+  const { rid } = useParams<{ rid: string }>();
+  const location = useLocation();
+  const isEmbedMode = location.pathname.startsWith('/embed/');
+  const { user } = useUser();
+  const { isConnected } = useSocket();
+  const [gameUrl, setGameUrl] = useState('');
+  const [currentGameUrl, setCurrentGameUrl] = useState('');
 
-const Room: React.FC = () => {
-  const params = useParams<{rid: string}>();
-  const rid = params.rid || '';
-  const {events, sendUserPing, setGame} = useRoom({rid});
-  const roomState = useRoomState(events);
+  // Room events handlers - callbacks are intentionally empty as events are handled by useRoomEvents
+  const handleUserJoin = useCallback((_event: RoomEvent) => {
+    // User join event handled by useRoomEvents
+  }, []);
 
-  useUpdateEffect(() => {
-    sendUserPing();
-  }, [rid, sendUserPing]);
+  const handleUserLeave = useCallback((_event: RoomEvent) => {
+    // User leave event handled by useRoomEvents
+  }, []);
 
-  useUpdateEffect(() => {
-    const renewActivity = throttle(sendUserPing, 1000 * 10);
-    window.addEventListener('mousemove', renewActivity);
-    window.addEventListener('keydown', renewActivity);
-    return () => {
-      window.removeEventListener('mousemove', renewActivity);
-      window.removeEventListener('keydown', renewActivity);
-    };
-  }, [rid, sendUserPing]);
-  const handleAddGame = () => {
-    const gameLink = window.prompt('Enter new game link');
-    const parts = gameLink?.split('/');
-    const gid = parts?.[parts.length - 1];
-    if (gid && gid.match('[a-z0-9-]{1,15}')) {
-      setGame(gid);
+  const handleChatMessage = useCallback((_event: RoomEvent) => {
+    // Chat message event handled by useRoomEvents
+  }, []);
+
+  // Use room events hook
+  const { isJoined, roomUsers, emitRoomEvent } = useRoomEvents({
+    roomId: rid || '',
+    onUserJoin: handleUserJoin,
+    onUserLeave: handleUserLeave,
+    onChatMessage: handleChatMessage,
+    enabled: !!rid && isConnected,
+  });
+
+  // Convert roomUsers (string[]) to User objects
+  const activeUsers = roomUsers.map((uid, index) => ({
+    id: uid,
+    displayName: `User ${uid.slice(0, 6)}`,
+    color: `hsl(${index * 40}, 70%, 50%)`,
+    isActive: true,
+  }));
+
+  const handleSetGame = () => {
+    if (gameUrl && user) {
+      // Emit presence update with game URL information
+      // Note: Using presence_update as it allows additional properties via [key: string]: unknown
+      emitRoomEvent({
+        type: 'presence_update',
+        uid: user.id,
+        displayName: user.displayName,
+        gameUrl: gameUrl,
+      });
+
+      setCurrentGameUrl(gameUrl);
     }
   };
-  const currentTime = useTimer();
-  const currentGame = roomState.games[0];
 
-  useEffect(() => {
-    document.title = `Room ${rid}`;
-  }, [rid]);
+  if (!rid) {
+    return (
+      <div className="room-page">
+        {!isEmbedMode && <Nav />}
+        <div className="container">
+          <div className="error-message">Invalid room ID</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="room-page">
+        {!isEmbedMode && <Nav />}
+        <RoomSkeleton />
+      </div>
+    );
+  }
 
   return (
-    <Box sx={{display: 'flex', height: '100%', flexDirection: 'column'}}>
-      <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          '& iframe': {
-            border: 'none',
-            width: '100%',
-            height: '100%',
-          },
-        }}
-      >
-        {currentGame && <iframe title="game" src={`/game/${currentGame.gid}`} />}
-        {!currentGame && (
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div>No game selected!</div>
-            <div> Click the button on the bottom-right to enter a game link</div>
-          </Box>
-        )}
-      </Box>
-      <Box
-        sx={{
-          padding: 1.5,
-          display: 'flex',
-          justifyContent: 'space-between',
-          background: 'var(--main-blue)',
-          color: '#FBFBFB',
-          '& button': {
-            border: 'none',
-            background: 'none',
-            outline: '1px solid',
-            color: '#FBFBFB',
-            cursor: 'pointer',
-          },
-        }}
-      >
-        <div>
-          In this room:{' '}
-          {
-            roomState.users.filter((user) => user.lastPing > currentTime - ACTIVE_SECONDS_TIMEOUT * 1000)
-              .length
-          }{' '}
-          <Box component="span" sx={{color: '#DDDDDD'}}>
-            ({roomState.users.length} total)
-          </Box>
-        </div>
-        <div>
-          <button onClick={handleAddGame}>
-            Game:
-            {currentGame?.gid ?? 'N/A'}
-          </button>
-        </div>
-      </Box>
-    </Box>
+    <div className="room-page">
+      {!isEmbedMode && <Nav />}
+      <div className="room-container">
+        <aside className="room-sidebar">
+          <h2>Room: {rid}</h2>
+          <UserList users={activeUsers} />
+
+          <div className="room-controls">
+            <h3>Set Game</h3>
+            <input
+              type="text"
+              placeholder="Enter game link..."
+              value={gameUrl}
+              onChange={(e) => setGameUrl(e.target.value)}
+              className="input-text"
+            />
+            <button type="button" onClick={handleSetGame} className="btn-primary">
+              Set Game
+            </button>
+          </div>
+
+          <div className="room-info">
+            <p>Share this room:</p>
+            <input
+              type="text"
+              value={window.location.href}
+              readOnly
+              className="input-text"
+              onClick={(e) => e.currentTarget.select()}
+            />
+          </div>
+        </aside>
+
+        <main className="room-main">
+          <div className="room-content">
+            {currentGameUrl ? (
+              <iframe
+                src={currentGameUrl}
+                title="Game Frame"
+                className="room-game-frame"
+                allow="fullscreen"
+              />
+            ) : (
+              <div className="room-empty-state">
+                <p>No game selected</p>
+                <p>Enter a game link to get started</p>
+                {!isJoined && <p className="text-muted">Connecting to room...</p>}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    </div>
   );
 };
+
 export default Room;

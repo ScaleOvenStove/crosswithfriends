@@ -1,9 +1,7 @@
-import {defineConfig} from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {visualizer} from 'rollup-plugin-visualizer';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react({
@@ -11,62 +9,52 @@ export default defineConfig({
       jsxRuntime: 'automatic',
     }),
   ],
-  envDir: '..', // Load .env from workspace root
-
-  // Use import.meta.env instead of process.env (Vite best practice)
-  // Note: Some third-party libraries may still reference process, so we provide a polyfill
   define: {
     global: 'globalThis',
-    // Define process.env for libraries that expect it (replaced at build time)
     'process.env': '{}',
   },
   resolve: {
-    alias: [
-      {
-        find: '@crosswithfriends/shared/lib',
-        replacement: path.resolve(__dirname, '../shared/src/lib'),
-      },
-      {
-        find: '@crosswithfriends/shared/fencingGameEvents',
-        replacement: path.resolve(__dirname, '../shared/src/shared/fencingGameEvents'),
-      },
-      {
-        find: '@crosswithfriends/shared/roomEvents',
-        replacement: path.resolve(__dirname, '../shared/src/shared/roomEvents'),
-      },
-      {
-        find: '@crosswithfriends/shared/types',
-        replacement: path.resolve(__dirname, '../shared/src/shared/types'),
-      },
-      {
-        find: '@crosswithfriends/shared',
-        replacement: path.resolve(__dirname, '../shared/src/shared'),
-      },
-      {
-        find: '@shared',
-        replacement: path.resolve(__dirname, '../shared/src/shared'),
-      },
-      {
-        find: '@lib',
-        replacement: path.resolve(__dirname, '../shared/src/lib'),
-      },
-      // Replace hoist-non-react-statics with our patched version
-      // This intercepts ALL uses, including transitive dependencies
-      {
-        find: 'hoist-non-react-statics',
-        replacement: path.resolve(__dirname, 'src/utils/hoist-non-react-statics-patched.ts'),
-      },
-    ],
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@stores': path.resolve(__dirname, './src/stores'),
+      '@pages': path.resolve(__dirname, './src/pages'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@services': path.resolve(__dirname, './src/services'),
+      '@api': path.resolve(__dirname, './src/api'),
+      '@config': path.resolve(__dirname, './src/config'),
+      '@types': path.resolve(__dirname, './src/types'),
+      '@theme': path.resolve(__dirname, './src/theme'),
+      '@sockets': path.resolve(__dirname, './src/sockets'),
+      '@routes': path.resolve(__dirname, './src/routes'),
+      '@contexts': path.resolve(__dirname, './src/contexts'),
+      '@schemas': path.resolve(__dirname, './src/schemas'),
+      '@lib/firebase': path.resolve(__dirname, './src/firebase'),
+      '@crosswithfriends/shared/lib': path.resolve(__dirname, '../shared/src/lib'),
+      '@crosswithfriends/shared/fencingGameEvents': path.resolve(
+        __dirname,
+        '../shared/src/shared/fencingGameEvents'
+      ),
+      '@crosswithfriends/shared/roomEvents': path.resolve(
+        __dirname,
+        '../shared/src/shared/roomEvents'
+      ),
+      '@crosswithfriends/shared/types': path.resolve(__dirname, '../shared/src/shared/types'),
+      '@crosswithfriends/shared': path.resolve(__dirname, '../shared/src/shared'),
+      '@shared': path.resolve(__dirname, '../shared/src/shared'),
+      '@lib': path.resolve(__dirname, '../shared/src/lib'),
+    },
   },
   server: {
-    port: 3020,
-    // Enable HMR
     hmr: true,
+    open: true,
   },
   build: {
     outDir: 'build',
     sourcemap: true,
-    // Optimize chunk splitting
+    target: 'esnext',
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: (id) => {
@@ -90,15 +78,9 @@ export default defineConfig({
           if (id.includes('node_modules/socket.io')) {
             return 'socket-vendor';
           }
-          // Heavy UI components - split into separate chunks
+          // Heavy UI components
           if (id.includes('node_modules/canvas-confetti')) {
             return 'canvas-confetti';
-          }
-          if (id.includes('node_modules/sweetalert2')) {
-            return 'sweetalert2';
-          }
-          if (id.includes('node_modules/react-simple-keyboard')) {
-            return 'react-keyboard';
           }
           // Other UI libraries
           if (id.includes('node_modules/react-icons')) {
@@ -111,20 +93,19 @@ export default defineConfig({
         },
       },
     },
-    // Improve build performance
-    target: 'esnext',
-    minify: 'esbuild',
   },
-  // Optimize dependencies
   optimizeDeps: {
     include: [
       'react',
       'react-dom',
       'react-router-dom',
-      'firebase/compat/app',
-      'firebase/compat/database',
-      'firebase/compat/auth',
+      'firebase/app',
+      'firebase/auth',
+      'firebase/database',
+      'firebase/storage',
       '@mui/material',
+      'zustand',
+      '@tanstack/react-query',
     ],
   },
   publicDir: 'public',

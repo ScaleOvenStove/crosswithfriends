@@ -1,49 +1,56 @@
-import GlobalContext from '@crosswithfriends/shared/lib/GlobalContext';
-import {IconButton, Tooltip} from '@mui/material';
-import React, {useContext} from 'react';
-import {MdDarkMode, MdLightMode, MdSettingsBrightness} from 'react-icons/md';
+/**
+ * Dark Mode Toggle Component
+ * Implements REQ-7.2: Dark mode support
+ */
 
-import './css/darkModeToggle.css';
+import { IconButton, Tooltip, useTheme } from '@mui/material';
+import { LightMode, DarkMode, SettingsBrightness } from '@mui/icons-material';
+import { useUserStore } from '@stores/userStore';
+import type { DarkMode as DarkModeType } from '@types/index';
 
-export const DarkModeToggle: React.FC = () => {
-  const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
+const DarkModeToggle = () => {
+  const { darkMode, setDarkMode } = useUserStore();
+  const _theme = useTheme();
+
+  const handleToggle = () => {
+    const modes: DarkModeType[] = ['light', 'dark', 'system'];
+    const currentIndex = modes.indexOf(darkMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    setDarkMode(nextMode);
+  };
 
   const getIcon = () => {
-    switch (darkModePreference) {
-      case '1':
-        return <MdDarkMode />;
-      case '2':
-        return <MdSettingsBrightness />;
-      case '0':
-      default:
-        return <MdLightMode />;
+    switch (darkMode) {
+      case 'light':
+        return <LightMode />;
+      case 'dark':
+        return <DarkMode />;
+      case 'system':
+        return <SettingsBrightness />;
     }
   };
 
-  const getTooltipText = () => {
-    switch (darkModePreference) {
-      case '1':
-        return 'Dark mode: On (click to switch to System default)';
-      case '2':
-        return 'Dark mode: System default (click to switch to Off)';
-      case '0':
-      default:
-        return 'Dark mode: Off (click to switch to On)';
+  const getTooltipTitle = () => {
+    switch (darkMode) {
+      case 'light':
+        return 'Light mode (click for dark)';
+      case 'dark':
+        return 'Dark mode (click for system)';
+      case 'system':
+        return 'System preference (click for light)';
     }
   };
 
   return (
-    <Tooltip title={getTooltipText()} arrow placement="bottom">
+    <Tooltip title={getTooltipTitle()} arrow>
       <IconButton
-        className="dark-mode-toggle"
-        onClick={toggleMolesterMoons}
+        onClick={handleToggle}
         color="inherit"
         aria-label="Toggle dark mode"
-        size="small"
         sx={{
-          padding: '4px',
+          transition: 'transform 0.2s ease-in-out',
           '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            transform: 'scale(1.1)',
           },
         }}
       >
@@ -52,3 +59,5 @@ export const DarkModeToggle: React.FC = () => {
     </Tooltip>
   );
 };
+
+export default DarkModeToggle;

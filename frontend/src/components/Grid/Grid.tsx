@@ -1,282 +1,236 @@
-import './css/index.css';
+/**
+ * Grid Component - Main crossword grid container
+ * Implements REQ-1.2: Grid Interaction
+ *
+ * Responsibilities:
+ * - Renders the crossword grid
+ * - Manages cell selection and word highlighting
+ * - Coordinates keyboard navigation
+ * - Displays player cursors
+ */
 
-import GridWrapper from '@crosswithfriends/shared/lib/wrappers/GridWrapper';
-import {toCellIndex} from '@crosswithfriends/shared/types';
-import type {CellIndex, Cursor, GridData} from '@crosswithfriends/shared/types';
-import React, {useMemo, useCallback} from 'react';
+import { useMemo, useCallback } from 'react';
+import { styled } from '@mui/material/styles';
+import { Paper } from '@mui/material';
+import { GridCell } from './GridCell';
+import { useKeyboardNavigation } from '@hooks/ui/useKeyboardNavigation';
+import type { Cell, User, Cursor } from '../../types';
 
-import RerenderBoundary from '../RerenderBoundary';
-
-import Cell from './Cell';
-import {hashGridRow} from './hashGridRow';
-import type {GridDataWithColor, CellCoords, ClueCoords, BattlePickup, CellStyles, Ping} from './types';
-
-export interface GridProps {
-  // Grid data
-  solution: string[][];
-  grid: GridDataWithColor;
-  opponentGrid: GridData;
-
-  // Cursor state
-  selected: CellCoords;
-  direction: 'across' | 'down';
-
-  // Cell annotations
-  circles?: CellIndex[];
-  shades?: CellIndex[];
-  pings?: Ping[];
+interface GridProps {
+  cells: Cell[][];
+  selectedCell: { row: number; col: number } | null;
+  selectedDirection: 'across' | 'down';
+  currentUser: User | null;
+  users: User[];
   cursors: Cursor[];
-
-  // Styles & related
-  references: ClueCoords[];
-  pickups?: BattlePickup[];
-  cellStyle: CellStyles;
-  myColor: string;
-
-  // Edit modes
-  size: number;
-  editMode: boolean;
-  frozen: boolean;
-
-  // callbacks
-  onChangeDirection(): void;
-  onSetSelected(cellCoords: CellCoords): void;
-  onPing?(r: number, c: number): void;
-  canFlipColor?(r: number, c: number): boolean;
-  onFlipColor?(r: number, c: number): void;
+  onCellClick: (row: number, col: number) => void;
+  onCellChange: (row: number, col: number, value: string) => void;
+  onDirectionToggle: () => void;
 }
 
-const Grid: React.FC<GridProps> = (props) => {
-  // Destructure props to avoid dependency issues
-  const {
-    grid: gridData,
-    opponentGrid: opponentGridData,
-    solution,
-    selected,
-    direction,
-    circles,
-    shades,
-    pings,
-    cursors,
-    references,
-    pickups,
-    cellStyle,
-    myColor,
-    frozen,
-    canFlipColor,
-    size,
-    onChangeDirection,
-    onSetSelected,
-    onPing,
-    onFlipColor,
-    editMode,
-  } = props;
+const GridContainer = styled(Paper)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  padding: theme.spacing(1),
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.shadows[3],
+  width: '100%',
+  overflow: 'auto',
+  [theme.breakpoints.up('sm')]: {
+    padding: theme.spacing(1.5),
+    display: 'inline-block',
+    width: 'auto',
+  },
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(2),
+  },
+}));
 
-  const grid = useMemo(() => new GridWrapper(gridData), [gridData]);
+const GridTable = styled('div')(({ theme }) => ({
+  display: 'grid',
+  gap: 0,
+  border: `2px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.divider,
+  position: 'relative',
+  width: 'fit-content',
+  height: 'fit-content',
+}));
 
-  const opponentGrid = useMemo(() => {
-    return opponentGridData ? new GridWrapper(opponentGridData) : null;
-  }, [opponentGridData]);
+/**
+ * Calculate which cells should be highlighted based on current selection
+ */
+const useHighlightedCells = (
+  cells: Cell[][],
+  selectedCell: { row: number; col: number } | null,
+  selectedDirection: 'across' | 'down'
+): Set<string> => {
+  return useMemo(() => {
+    const highlighted = new Set<string>();
 
-  // Use Sets for O(1) lookups instead of O(n) indexOf
-  const circlesSet = useMemo(() => {
-    return new Set(circles || []);
-  }, [circles]);
+    if (!selectedCell || !cells[selectedCell.row] || !cells[selectedCell.row]?.[selectedCell.col]) {
+      return highlighted;
+    }
 
-  const shadesSet = useMemo(() => {
-    return new Set(shades || []);
-  }, [shades]);
+    const { row, col } = selectedCell;
+    const currentRow = cells[row];
+    if (!currentRow) return highlighted;
 
-  // Index cursors and pings by cell for faster lookup
+    if (selectedDirection === 'across') {
+      // Find start of word
+      let startCol = col;
+      while (startCol > 0 && currentRow[startCol - 1] && !currentRow[startCol - 1].isBlack) {
+        startCol--;
+      }
+
+      // Highlight entire word
+      let currentCol = startCol;
+      while (currentCol < currentRow.length) {
+        const cell = currentRow[currentCol];
+        if (!cell || cell.isBlack) break;
+        highlighted.add(`${row}-${currentCol}`);
+        currentCol++;
+      }
+    } else {
+      // Down direction
+      // Find start of word
+      let startRow = row;
+      while (startRow > 0) {
+        const prevRow = cells[startRow - 1];
+        const prevCell = prevRow?.[col];
+        if (!prevCell || prevCell.isBlack) break;
+        startRow--;
+      }
+
+      // Highlight entire word
+      let currentRowIdx = startRow;
+      while (currentRowIdx < cells.length) {
+        const rowData = cells[currentRowIdx];
+        const cell = rowData?.[col];
+        if (!cell || cell.isBlack) break;
+        highlighted.add(`${currentRowIdx}-${col}`);
+        currentRowIdx++;
+      }
+    }
+
+    return highlighted;
+  }, [cells, selectedCell, selectedDirection]);
+};
+
+/**
+ * Main Grid component
+ */
+export const Grid = ({
+  cells,
+  selectedCell,
+  selectedDirection,
+  currentUser,
+  users,
+  cursors,
+  onCellClick,
+  onCellChange,
+  onDirectionToggle,
+}: GridProps) => {
+  // Calculate grid dimensions
+  const rows = cells.length;
+  const cols = cells[0]?.length || 0;
+
+  // Get highlighted cells (current word)
+  const highlightedCells = useHighlightedCells(cells, selectedCell, selectedDirection);
+
+  // Index cursors by cell for faster lookup
   const cursorsByCell = useMemo(() => {
     const map = new Map<string, Cursor[]>();
-    (cursors || []).forEach((cursor) => {
-      const key = `${cursor.r},${cursor.c}`;
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)!.push(cursor);
-    });
-    return map;
-  }, [cursors]);
+    const now = Date.now();
+    const CURSOR_TIMEOUT = 5000; // 5 seconds
 
-  const pingsByCell = useMemo(() => {
-    const map = new Map<string, Ping[]>();
-    (pings || []).forEach((ping) => {
-      const key = `${ping.r},${ping.c}`;
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)!.push(ping);
-    });
-    return map;
-  }, [pings]);
-
-  // Index pickups by cell
-  const pickupsByCell = useMemo(() => {
-    const map = new Map<string, BattlePickup>();
-    (pickups || []).forEach((pickup) => {
-      if (!pickup.pickedUp) {
-        const key = `${pickup.i},${pickup.j}`;
-        map.set(key, pickup);
-      }
-    });
-    return map;
-  }, [pickups]);
-
-  const cols = gridData[0].length;
-
-  // Memoize selectedParent and selectedIsWhite to prevent infinite loops
-  const selectedParent = useMemo(() => {
-    return grid.getParent(selected.r, selected.c, direction);
-  }, [grid, selected.r, selected.c, direction]);
-
-  const selectedIsWhite = useMemo(() => {
-    return grid.isWhite(selected.r, selected.c);
-  }, [grid, selected.r, selected.c]);
-
-  // Simple size class function (no need for useCallback)
-  const getSizeClass = (s: number) => {
-    if (s < 20) return 'tiny';
-    if (s < 25) return 'small';
-    if (s < 40) return 'medium';
-    return 'big';
-  };
-  const sizeClass = getSizeClass(size);
-
-  const data = useMemo(() => {
-    return gridData.map((row, r) =>
-      row.map((cell, c) => {
-        const cellKey = `${r},${c}`;
-        const cellIdx = toCellIndex(r, c, cols);
-        const isCellSelected = r === selected.r && c === selected.c;
-        const isCellWhite = !cell.black;
-
-        // Check if done by opponent
-        const isDoneByOpp = opponentGrid
-          ? opponentGrid.isFilled(r, c) && solution[r]?.[c] === opponentGridData[r]?.[c]?.value
-          : false;
-
-        // Check if highlighted (same word as selected)
-        const isHighlighted =
-          selectedIsWhite &&
-          isCellWhite &&
-          !isCellSelected &&
-          grid.getParent(r, c, direction) === selectedParent;
-
-        // Check if referenced
-        const isReferenced = references.some(
-          (clue) => isCellWhite && grid.getParent(r, c, clue.ori) === clue.num
-        );
-
-        return {
-          ...cell,
-          r,
-          c,
-          solvedByIconSize: Math.round(size / 10),
-          selected: isCellSelected,
-          referenced: isReferenced,
-          circled: circlesSet.has(cellIdx),
-          shaded: shadesSet.has(cellIdx) || isDoneByOpp,
-          canFlipColor: !!canFlipColor?.(r, c),
-          cursors: cursorsByCell.get(cellKey) || [],
-          pings: pingsByCell.get(cellKey) || [],
-          highlighted: isHighlighted,
-          myColor,
-          frozen,
-          pickupType: pickupsByCell.get(cellKey)?.type,
-          cellStyle,
-          // Explicitly pass through good and bad flags for visual feedback
-          good: cell.good,
-          bad: cell.bad,
-        };
+    cursors
+      .filter((cursor) => {
+        // Filter out current user's cursor and expired cursors
+        return cursor.id !== currentUser?.id && now - cursor.timestamp < CURSOR_TIMEOUT;
       })
+      .forEach((cursor) => {
+        const key = `${cursor.row}-${cursor.col}`;
+        if (!map.has(key)) {
+          map.set(key, []);
+        }
+        map.get(key)!.push(cursor);
+      });
+    return map;
+  }, [cursors, currentUser?.id]);
+
+  // Setup keyboard navigation
+  const { handleKeyDown } = useKeyboardNavigation({
+    cells,
+    selectedCell,
+    onCellSelect: onCellClick,
+    onCellUpdate: onCellChange,
+    onDirectionToggle,
+  });
+
+  // Determine if a cell is selected, highlighted, or in current word
+  const getCellState = useCallback(
+    (rowIndex: number, colIndex: number) => {
+      const cellKey = `${rowIndex}-${colIndex}`;
+      const isSelected = selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
+      const isInCurrentWord = highlightedCells.has(cellKey);
+      const isHighlighted = isInCurrentWord && !isSelected;
+
+      return { isSelected, isHighlighted, isInCurrentWord };
+    },
+    [selectedCell, highlightedCells]
+  );
+
+  if (!cells || cells.length === 0 || !cells[0]) {
+    return (
+      <GridContainer>
+        <div>No puzzle loaded</div>
+      </GridContainer>
     );
-  }, [
-    gridData,
-    cols,
-    size,
-    selected.r,
-    selected.c,
-    direction,
-    selectedParent,
-    selectedIsWhite,
-    circlesSet,
-    shadesSet,
-    cursorsByCell,
-    pingsByCell,
-    pickupsByCell,
-    opponentGrid,
-    solution,
-    opponentGridData,
-    references,
-    myColor,
-    frozen,
-    canFlipColor,
-    cellStyle,
-    grid, // Needed because we use grid.getParent() inside the useMemo
-  ]);
-
-  const handleClick = useCallback(
-    (r: number, c: number) => {
-      if (!grid.isWhite(r, c) && !editMode) return;
-      if (r === selected.r && c === selected.c) {
-        onChangeDirection();
-      } else {
-        onSetSelected({r, c});
-      }
-    },
-    [grid, editMode, selected.r, selected.c, onChangeDirection, onSetSelected]
-  );
-
-  const handleRightClick = useCallback(
-    (r: number, c: number) => {
-      if (onPing) {
-        onPing(r, c);
-      }
-    },
-    [onPing]
-  );
+  }
 
   return (
-    <table
-      data-testid="crossword-grid"
-      style={{
-        width: cols * size,
-        height: gridData.length * size,
-      }}
-      className={`grid ${sizeClass}`}
-    >
-      <tbody>
-        {data.map((row, i) => (
-          <RerenderBoundary name={`grid row ${i}`} key={i} hash={hashGridRow(row, {...cellStyle, size})}>
-            <tr>
-              {row.map((cellProps) => (
-                <td
-                  key={`${cellProps.r}_${cellProps.c}`}
-                  className="grid--cell"
-                  data-testid={`cell-${cellProps.r}-${cellProps.c}`}
-                  data-rc={`${cellProps.r} ${cellProps.c}`}
-                  style={{
-                    width: size,
-                    height: size,
-                    fontSize: `${size * 0.15}px`,
-                  }}
-                >
-                  <Cell
-                    {...cellProps}
-                    onClick={handleClick}
-                    onContextMenu={handleRightClick}
-                    onFlipColor={onFlipColor}
-                  />
-                </td>
-              ))}
-            </tr>
-          </RerenderBoundary>
-        ))}
-      </tbody>
-    </table>
+    <GridContainer elevation={3}>
+      <GridTable
+        style={{
+          gridTemplateColumns: `repeat(${cols}, auto)`,
+          gridTemplateRows: `repeat(${rows}, auto)`,
+        }}
+        role="grid"
+        aria-label="Crossword puzzle grid"
+      >
+        {cells.flatMap((row, rowIndex) =>
+          row.map((cell, colIndex) => {
+            const { isSelected, isHighlighted, isInCurrentWord } = getCellState(rowIndex, colIndex);
+
+            // Get cursor color if cell is selected by current user
+            const cursorColor = isSelected ? currentUser?.color : undefined;
+
+            // Get other users' cursors on this cell
+            const cellKey = `${rowIndex}-${colIndex}`;
+            const otherCursors = cursorsByCell.get(cellKey) || [];
+
+            return (
+              <GridCell
+                key={`${rowIndex}-${colIndex}`}
+                cell={cell}
+                row={rowIndex}
+                col={colIndex}
+                isSelected={isSelected}
+                isHighlighted={isHighlighted}
+                isInCurrentWord={isInCurrentWord}
+                onCellClick={onCellClick}
+                onCellChange={onCellChange}
+                onKeyDown={handleKeyDown}
+                cursorColor={cursorColor}
+                otherCursors={otherCursors}
+                users={users}
+              />
+            );
+          })
+        )}
+      </GridTable>
+    </GridContainer>
   );
 };
 
-export default React.memo(Grid);
+export default Grid;
