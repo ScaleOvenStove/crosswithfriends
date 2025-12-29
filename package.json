@@ -5,7 +5,6 @@
   "workspaces": [
     "server",
     "frontend",
-    "frontendv2",
     "shared"
   ],
   "engines": {
