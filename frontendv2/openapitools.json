@@ -15,7 +15,9 @@
           "typescriptThreePlus": true,
           "useSingleRequestParameter": false,
           "withInterfaces": true,
-          "modelPropertyNaming": "camelCase"
+          "modelPropertyNaming": "camelCase",
+          "legacyDiscriminatorBehavior": false,
+          "disallowAdditionalPropertiesIfNotPresent": false
         }
       }
     }
