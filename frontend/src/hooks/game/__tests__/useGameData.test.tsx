@@ -10,27 +10,29 @@ import { useGameData } from '../useGameData';
 import { puzzlesApi, gamesApi } from '@api/apiClient';
 import type { PuzzleJson } from '@schemas/puzzleSchemas';
 
-// Mock ResponseError class
-class MockResponseError extends Error {
-  override name = 'ResponseError';
-  constructor(
-    public response: Response,
-    msg?: string
-  ) {
-    super(msg);
-  }
-}
-
 // Mock API clients
-vi.mock('@api/apiClient', () => ({
-  puzzlesApi: {
-    getPuzzleById: vi.fn(),
-  },
-  gamesApi: {
-    getGameById: vi.fn(),
-  },
-  ResponseError: MockResponseError,
-}));
+vi.mock('@api/apiClient', () => {
+  // Define MockResponseError inside the factory to avoid hoisting issues
+  class MockResponseError extends Error {
+    override name = 'ResponseError';
+    constructor(
+      public response: Response,
+      msg?: string
+    ) {
+      super(msg);
+    }
+  }
+
+  return {
+    puzzlesApi: {
+      getPuzzleById: vi.fn(),
+    },
+    gamesApi: {
+      getGameById: vi.fn(),
+    },
+    ResponseError: MockResponseError,
+  };
+});
 
 // Mock puzzle utils
 vi.mock('@utils/puzzleUtils', () => ({
