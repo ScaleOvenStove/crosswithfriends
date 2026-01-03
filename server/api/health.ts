@@ -1,4 +1,5 @@
 import type {AppInstance} from '../types/fastify.js';
+
 import {HealthResponseSchema} from './schemas.js';
 
 /**

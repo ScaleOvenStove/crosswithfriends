@@ -2,6 +2,7 @@ import type {RecordSolveRequest, RecordSolveResponse} from '@crosswithfriends/sh
 
 import '../types/fastify.js';
 import type {AppInstance} from '../types/fastify.js';
+
 import {RecordSolveRequestSchema, RecordSolveResponseSchema, ErrorResponseSchema} from './schemas.js';
 
 // eslint-disable-next-line require-await

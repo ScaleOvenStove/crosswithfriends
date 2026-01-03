@@ -1,8 +1,8 @@
 import type {ListPuzzleRequestFilters, ListPuzzleResponse, PuzzleJson} from '@crosswithfriends/shared/types';
 
 import '../types/fastify.js';
-import type {AppInstance} from '../types/fastify.js';
 import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
+import type {AppInstance} from '../types/fastify.js';
 
 import {createHttpError} from './errors.js';
 import {ErrorResponseSchema} from './schemas.js';

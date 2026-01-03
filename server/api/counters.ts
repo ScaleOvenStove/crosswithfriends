@@ -2,6 +2,7 @@ import type {IncrementGidResponse, IncrementPidResponse} from '@crosswithfriends
 
 import '../types/fastify.js';
 import type {AppInstance} from '../types/fastify.js';
+
 import {IncrementGidResponseSchema, IncrementPidResponseSchema, ErrorResponseSchema} from './schemas.js';
 
 // eslint-disable-next-line require-await

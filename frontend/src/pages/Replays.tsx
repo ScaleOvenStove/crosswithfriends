@@ -7,7 +7,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useMemo } from 'react';
 import Nav from '@components/common/Nav';
 import { ListSkeleton } from '@components/common/skeletons';
-import { useStats } from '@hooks';
+import { useStats } from '@hooks/index';
 import './Replays.css';
 
 /**

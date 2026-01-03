@@ -12,7 +12,6 @@ import {
   exchangeFirebaseToken,
   clearBackendToken,
   setBackendToken,
-  isBackendTokenValid,
 } from '@services/authTokenService';
 
 export const useFirebaseAuth = () => {

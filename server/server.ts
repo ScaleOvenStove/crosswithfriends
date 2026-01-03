@@ -241,10 +241,10 @@ async function runServer(): Promise<void> {
       }
     } else {
       // In production without ENABLE_SWAGGER_UI, redirect to a 404
-      app.get('/api/docs', async (_request: any, reply: any) => {
+      app.get('/api/docs', (_request: any, reply: any) => {
         reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
-      app.get('/api/docs/*', async (_request: any, reply: any) => {
+      app.get('/api/docs/*', (_request: any, reply: any) => {
         reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
       logger.info('Swagger UI disabled in production. Set ENABLE_SWAGGER_UI=true to enable.');
@@ -459,7 +459,7 @@ async function runServer(): Promise<void> {
         clearTimeout(forceShutdownTimeout);
 
         logger.info('Graceful shutdown completed');
-        process.kill(process.pid, signal as NodeJS.Signals);
+        process.kill(process.pid, signal as string);
       } catch (error) {
         logger.error({err: error}, 'Error during graceful shutdown');
         clearTimeout(forceShutdownTimeout);

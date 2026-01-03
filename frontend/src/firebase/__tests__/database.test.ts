@@ -17,7 +17,7 @@ import {
   subscribeToGameState as _subscribeToGameState,
   addChatMessage,
   subscribeToRoomMessages as _subscribeToRoomMessages,
-} from '../database';
+} from '../realtimeDb';
 
 // Mock Firebase Database
 vi.mock('../config', () => {

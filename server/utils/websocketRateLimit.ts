@@ -99,7 +99,7 @@ function cleanupStaleEntries(): void {
   for (const [socketId, state] of rateLimitState) {
     if (state.lastActivity < staleThreshold) {
       rateLimitState.delete(socketId);
-      removedSocketCount++;
+      removedSocketCount += 1;
     }
   }
 
@@ -107,7 +107,7 @@ function cleanupStaleEntries(): void {
   for (const [userId, state] of userRateLimitState) {
     if (state.lastActivity < staleThreshold) {
       userRateLimitState.delete(userId);
-      removedUserCount++;
+      removedUserCount += 1;
     }
   }
 
@@ -164,7 +164,7 @@ export function cleanupRateLimitState(socketId: string): void {
  */
 function checkUserRateLimit(userId: string): boolean {
   const now = Date.now();
-  let state = userRateLimitState.get(userId);
+  const state = userRateLimitState.get(userId);
 
   if (!state) {
     // First event for this user
@@ -328,7 +328,7 @@ export function withRateLimit<T extends unknown[]>(
     if (!checkRateLimit(socket, config)) {
       socket.emit('error', {message: 'Rate limit exceeded. Please slow down.'});
       socket.disconnect(true);
-      return;
+      return undefined;
     }
 
     return handler(socket, ...args);

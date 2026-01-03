@@ -79,18 +79,22 @@ const Account = () => {
               <div className="profile-display">
                 <div className="profile-info">
                   <div className="profile-field">
-                    <label>User ID</label>
-                    <p className="user-id">{user.id}</p>
+                    <label htmlFor="user-id-display">User ID</label>
+                    <p id="user-id-display" className="user-id">
+                      {user.id}
+                    </p>
                   </div>
 
                   <div className="profile-field">
-                    <label>Display Name</label>
-                    <p className="display-name">{user.displayName}</p>
+                    <label htmlFor="display-name-display">Display Name</label>
+                    <p id="display-name-display" className="display-name">
+                      {user.displayName}
+                    </p>
                   </div>
 
                   <div className="profile-field">
-                    <label>User Color</label>
-                    <div className="color-display">
+                    <label htmlFor="user-color-display">User Color</label>
+                    <div id="user-color-display" className="color-display">
                       <div className="color-preview" style={{ backgroundColor: user.color }} />
                       <span className="color-value">{user.color}</span>
                     </div>

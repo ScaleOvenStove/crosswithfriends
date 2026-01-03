@@ -4,6 +4,7 @@
  */
 
 import admin from 'firebase-admin';
+
 import {logger} from './logger.js';
 import {isInsecureModeAllowed} from './securityValidation.js';
 
@@ -77,7 +78,7 @@ export async function initializeFirebaseAdmin(): Promise<void> {
       logger.info('Firebase Admin initialized with application default credentials');
       firebaseAdminInitialized = true;
       return;
-    } catch (defaultCredsError) {
+    } catch {
       // Application default credentials not available
       logger.debug('Application default credentials not available');
     }

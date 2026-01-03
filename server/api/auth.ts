@@ -5,8 +5,8 @@
  * Uses @fastify/jwt for JWT token management.
  */
 
-import type {AppInstance} from '../types/fastify.js';
 import {config} from '../config/index.js';
+import type {AppInstance} from '../types/fastify.js';
 import {
   generateSecureUserId,
   isValidUserIdFormat,
@@ -76,6 +76,7 @@ async function authRouter(fastify: AppInstance): Promise<void> {
   fastify.post<{Body: CreateTokenRequest; Reply: CreateTokenResponse}>(
     '/token',
     createTokenOptions,
+    // eslint-disable-next-line require-await
     async (request: any, _reply: any) => {
       request.log.debug({body: request.body ? Object.keys(request.body) : []}, 'Creating auth token');
 
@@ -251,7 +252,7 @@ async function authRouter(fastify: AppInstance): Promise<void> {
   fastify.post<{Body: ValidateTokenRequest; Reply: ValidateTokenResponse}>(
     '/validate',
     validateTokenOptions,
-    async (request: any, _reply: any) => {
+    (request: any, _reply: any) => {
       request.log.debug('Validating auth token');
 
       const {token} = request.body;

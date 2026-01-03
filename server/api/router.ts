@@ -1,4 +1,5 @@
 import type {AppInstance} from '../types/fastify.js';
+
 import authRouter from './auth.js';
 import countersRouter from './counters.js';
 import gameRouter from './game.js';

@@ -6,7 +6,7 @@
  * This file is kept for backward compatibility during migration
  */
 
-import { isMobile, isTablet, isDesktop } from 'react-device-detect';
+import { isMobile, isTablet } from 'react-device-detect';
 
 /**
  * Check if device is mobile or tablet

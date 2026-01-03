@@ -1,11 +1,11 @@
 import type {InfoJson} from '@crosswithfriends/shared/types';
 
 import '../types/fastify.js';
-import type {AppInstance} from '../types/fastify.js';
 import {config} from '../config/index.js';
+import type {AppInstance} from '../types/fastify.js';
 import {escapeHtml, escapeHtmlAttribute} from '../utils/htmlEscape.js';
-import {logRequest} from '../utils/sanitizedLogger.js';
 import {isFBMessengerCrawler, isLinkExpanderBot} from '../utils/link_preview_util.js';
+import {logRequest} from '../utils/sanitizedLogger.js';
 
 import {createHttpError} from './errors.js';
 import {ErrorResponseSchema} from './schemas.js';

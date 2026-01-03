@@ -173,9 +173,8 @@ describe('Firebase Auth Module', () => {
 
   describe('changePassword', () => {
     it('should require re-authentication before password change', async () => {
-      const { reauthenticateWithCredential, updatePassword, EmailAuthProvider } = await import(
-        'firebase/auth'
-      );
+      const { reauthenticateWithCredential, updatePassword, EmailAuthProvider } =
+        await import('firebase/auth');
       const mockUser = {
         uid: 'test-uid',
         email: 'test@example.com',

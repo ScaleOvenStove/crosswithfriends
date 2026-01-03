@@ -264,14 +264,17 @@ const Game = () => {
     switch (scope) {
       case 'cell':
         isCorrect = checkCell(selectedCell.row, selectedCell.col);
+        // eslint-disable-next-line no-alert
         alert(isCorrect ? 'Cell is correct!' : 'Cell is incorrect');
         break;
       case 'word':
         isCorrect = checkWord(selectedCell.row, selectedCell.col, selectedDirection);
+        // eslint-disable-next-line no-alert
         alert(isCorrect ? 'Word is correct!' : 'Word has errors');
         break;
       case 'puzzle':
         isCorrect = checkPuzzle();
+        // eslint-disable-next-line no-alert
         alert(isCorrect ? 'Puzzle is complete and correct!' : 'Puzzle has errors');
         break;
     }
@@ -288,6 +291,7 @@ const Game = () => {
         revealWord(selectedCell!.row, selectedCell!.col, selectedDirection);
         break;
       case 'puzzle':
+        // eslint-disable-next-line no-alert
         if (confirm('Are you sure you want to reveal the entire puzzle?')) {
           revealPuzzle();
         }
@@ -306,6 +310,7 @@ const Game = () => {
         resetWord(selectedCell!.row, selectedCell!.col, selectedDirection);
         break;
       case 'puzzle':
+        // eslint-disable-next-line no-alert
         if (confirm('Are you sure you want to reset the entire puzzle?')) {
           resetPuzzle();
         }
