@@ -40,7 +40,6 @@ const FilterSection = ({ title, children, defaultExpanded = true }: FilterSectio
     <div className="border-b border-gray-200 pb-4 mb-4">
       <button
         type="button"
-        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center justify-between w-full text-left font-semibold text-gray-800 hover:text-primary transition-colors"
       >
@@ -141,7 +140,6 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
       {/* Mobile Filter Toggle */}
       <button
         type="button"
-        type="button"
         onClick={onToggle}
         className="lg:hidden fixed bottom-6 right-6 z-50 bg-primary text-white p-4 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
         aria-label="Toggle filters"
@@ -178,7 +176,6 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
             </div>
             <button
               type="button"
-              type="button"
               onClick={onToggle}
               className="lg:hidden text-gray-500 hover:text-gray-700 transition-colors"
               aria-label="Close filters"
@@ -190,7 +187,6 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
           {/* Clear Filters Button */}
           {hasActiveFilters && (
             <button
-              type="button"
               type="button"
               onClick={handleClearFilters}
               className="w-full mb-4 px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-all duration-200"

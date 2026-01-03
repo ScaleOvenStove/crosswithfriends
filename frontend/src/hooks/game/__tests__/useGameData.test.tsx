@@ -8,6 +8,18 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useGameData } from '../useGameData';
 import { puzzlesApi, gamesApi } from '@api/apiClient';
+import type { PuzzleJson } from '@schemas/puzzleSchemas';
+
+// Mock ResponseError class
+class MockResponseError extends Error {
+  override name = 'ResponseError';
+  constructor(
+    public response: Response,
+    msg?: string
+  ) {
+    super(msg);
+  }
+}
 
 // Mock API clients
 vi.mock('@api/apiClient', () => ({
@@ -17,6 +29,7 @@ vi.mock('@api/apiClient', () => ({
   gamesApi: {
     getGameById: vi.fn(),
   },
+  ResponseError: MockResponseError,
 }));
 
 // Mock puzzle utils
@@ -63,7 +76,7 @@ describe('useGameData', () => {
   );
 
   it('should load puzzle data successfully', async () => {
-    const mockPuzzleData = {
+    const mockPuzzleData: PuzzleJson = {
       version: 'http://ipuz.org/v2',
       kind: ['http://ipuz.org/crossword#1'],
       dimensions: { width: 15, height: 15 },
@@ -74,7 +87,13 @@ describe('useGameData', () => {
       clues: { Across: [], Down: [] },
     };
 
-    vi.mocked(puzzlesApi.getPuzzleById).mockResolvedValue(mockPuzzleData as any);
+    // Mock fetch for active game check (used in resolvePuzzleId)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    } as Response));
+
+    vi.mocked(puzzlesApi.getPuzzleById).mockResolvedValue(mockPuzzleData as unknown as Awaited<ReturnType<typeof puzzlesApi.getPuzzleById>>);
     vi.mocked(gamesApi.getGameById).mockRejectedValue(new Error('Not found'));
 
     const { result } = renderHook(() => useGameData('test-game-id'), { wrapper });
@@ -88,6 +107,12 @@ describe('useGameData', () => {
   });
 
   it('should handle errors gracefully', async () => {
+    // Mock fetch for active game check (used in resolvePuzzleId)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    } as Response));
+
     vi.mocked(puzzlesApi.getPuzzleById).mockRejectedValue(new Error('Failed to load'));
     vi.mocked(gamesApi.getGameById).mockRejectedValue(new Error('Not found'));
 

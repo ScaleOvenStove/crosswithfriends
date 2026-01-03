@@ -25,6 +25,12 @@ describeIf(isBrowser)('redirect', () => {
 
     // Mock window.alert for jsdom compatibility
     window.alert = vi.fn();
+
+    // Reset redirect state before each test
+    const redirectModule = await import('../redirect');
+    if (redirectModule.resetRedirectState) {
+      redirectModule.resetRedirectState();
+    }
   });
 
   afterEach(() => {
