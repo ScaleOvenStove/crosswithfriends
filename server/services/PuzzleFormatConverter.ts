@@ -5,7 +5,7 @@
  */
 
 import {convertIpuzClues} from '@crosswithfriends/shared/lib/puzzleUtils';
-import type {CellIndex, PuzzleJson} from '@crosswithfriends/shared/types';
+import type {PuzzleJson} from '@crosswithfriends/shared/types';
 
 import {makeGrid} from '../gameUtils.js';
 import {logger} from '../utils/logger.js';

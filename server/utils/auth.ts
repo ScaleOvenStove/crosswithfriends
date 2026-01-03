@@ -12,9 +12,9 @@
 
 import crypto from 'crypto';
 
-import type {FastifyInstance} from 'fastify';
-
 import {config} from '../config/index.js';
+import type {AppInstance} from '../types/fastify.js';
+
 import {logger} from './logger.js';
 
 // Token configuration
@@ -72,7 +72,7 @@ export interface TokenPayload {
  * Fastify JWT configuration options
  * Used when registering @fastify/jwt plugin
  */
-export function getJwtOptions() {
+export function getJwtOptions(): {secret: string; sign: {expiresIn: string}} {
   return {
     secret: getJwtSecret(),
     sign: {
@@ -87,7 +87,7 @@ export function getJwtOptions() {
  * @param userId - The user's unique identifier
  * @returns A signed JWT token string
  */
-export function createAuthToken(fastify: FastifyInstance, userId: string): string {
+export function createAuthToken(fastify: AppInstance, userId: string): string {
   if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
     throw new Error('userId must be a non-empty string');
   }
@@ -105,13 +105,13 @@ export function createAuthToken(fastify: FastifyInstance, userId: string): strin
  * @param token - The token string to verify
  * @returns The decoded payload if valid, null otherwise
  */
-export function verifyAuthToken(fastify: FastifyInstance, token: string): TokenPayload | null {
+export function verifyAuthToken(fastify: AppInstance, token: string): TokenPayload | null {
   if (!token || typeof token !== 'string') {
     return null;
   }
 
   try {
-    const decoded = fastify.jwt.verify<JwtPayload>(token);
+    const decoded = fastify.jwt.verify(token) as JwtPayload;
 
     if (!decoded.userId || typeof decoded.userId !== 'string') {
       logger.debug('Invalid token: missing userId');
@@ -152,6 +152,9 @@ export function verifyTokenStandalone(token: string): TokenPayload | null {
     }
 
     const [headerB64, payloadB64, signatureB64] = parts;
+    if (!headerB64 || !payloadB64 || !signatureB64) {
+      return null;
+    }
     const secret = getJwtSecret();
 
     // Verify signature (HS256)
@@ -163,8 +166,8 @@ export function verifyTokenStandalone(token: string): TokenPayload | null {
       return null;
     }
 
-    // Decode payload
-    const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf8');
+    // Decode payload - payloadB64 is guaranteed to be string here due to check above
+    const payloadJson = Buffer.from(payloadB64 as string, 'base64url').toString('utf8');
     const payload = JSON.parse(payloadJson) as JwtPayload;
 
     if (!payload.userId || typeof payload.userId !== 'string') {
@@ -206,8 +209,8 @@ export function extractTokenFromHeader(authHeader: string | undefined): string |
   }
 
   const parts = authHeader.split(' ');
-  if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') {
-    return parts[1];
+  if (parts.length === 2 && parts[0]?.toLowerCase() === 'bearer') {
+    return parts[1] || null;
   }
 
   return null;
@@ -235,15 +238,7 @@ export function isValidUserIdFormat(userId: string | null | undefined): boolean 
   return trimmed.length > 0 && trimmed.length <= 200 && /^[\w-]+$/.test(trimmed);
 }
 
-// Extend Fastify types for JWT
-declare module 'fastify' {
-  interface FastifyInstance {
-    jwt: {
-      sign: (payload: JwtPayload, options?: {expiresIn?: string}) => string;
-      verify: <T = JwtPayload>(token: string) => T;
-    };
-  }
-}
+// Fastify type augmentations handled by Fastify's built-in type system
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {

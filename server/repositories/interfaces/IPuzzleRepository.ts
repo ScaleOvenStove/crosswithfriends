@@ -21,7 +21,7 @@ export interface IPuzzleRepository {
    * Create a new puzzle
    * @returns The puzzle ID
    */
-  create(pid: string, puzzle: PuzzleJson): Promise<string>;
+  create(pid: string, puzzle: PuzzleJson, isPublic?: boolean): Promise<string>;
 
   /**
    * List puzzles with optional filters and pagination

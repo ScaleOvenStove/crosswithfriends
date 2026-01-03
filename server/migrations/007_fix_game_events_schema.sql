@@ -66,3 +66,6 @@ CREATE INDEX IF NOT EXISTS game_events_event_type_idx ON public.game_events (eve
 -- 1. The pid is stored inside event_payload, not as a direct column
 -- 2. Adding a foreign key would require extracting pid to a separate column
 -- 3. This can be done in a future migration if needed
+
+
+

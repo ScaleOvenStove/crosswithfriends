@@ -1,10 +1,11 @@
 import type {IncrementGidResponse, IncrementPidResponse} from '@crosswithfriends/shared/types';
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
+import '../types/fastify.js';
+import type {AppInstance} from '../types/fastify.js';
 import {IncrementGidResponseSchema, IncrementPidResponseSchema, ErrorResponseSchema} from './schemas.js';
 
 // eslint-disable-next-line require-await
-async function countersRouter(fastify: FastifyInstance): Promise<void> {
+async function countersRouter(fastify: AppInstance): Promise<void> {
   const gidOptions = {
     schema: {
       operationId: 'getNewGameId',
@@ -18,15 +19,11 @@ async function countersRouter(fastify: FastifyInstance): Promise<void> {
     },
   };
 
-  fastify.post<{Reply: IncrementGidResponse}>(
-    '/gid',
-    gidOptions,
-    async (request: FastifyRequest, _reply: FastifyReply) => {
-      request.log.debug('increment gid');
-      const gid = await fastify.repositories.counters.getNextGameId();
-      return {gid};
-    }
-  );
+  fastify.post<{Reply: IncrementGidResponse}>('/gid', gidOptions, async (request: any, _reply: any) => {
+    request.log.debug('increment gid');
+    const gid = await fastify.repositories.counters.getNextGameId();
+    return {gid};
+  });
 
   const pidOptions = {
     schema: {
@@ -41,15 +38,11 @@ async function countersRouter(fastify: FastifyInstance): Promise<void> {
     },
   };
 
-  fastify.post<{Reply: IncrementPidResponse}>(
-    '/pid',
-    pidOptions,
-    async (request: FastifyRequest, _reply: FastifyReply) => {
-      request.log.debug('increment pid');
-      const pid = await fastify.repositories.counters.getNextPuzzleId();
-      return {pid};
-    }
-  );
+  fastify.post<{Reply: IncrementPidResponse}>('/pid', pidOptions, async (request: any, _reply: any) => {
+    request.log.debug('increment pid');
+    const pid = await fastify.repositories.counters.getNextPuzzleId();
+    return {pid};
+  });
 }
 
 export default countersRouter;

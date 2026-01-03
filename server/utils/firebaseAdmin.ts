@@ -129,12 +129,13 @@ export async function verifyFirebaseToken(idToken: string): Promise<{uid: string
     try {
       // Decode JWT without verification (just extract the payload)
       const parts = idToken.split('.');
-      if (parts.length !== 3) {
+      if (parts.length !== 3 || !parts[1]) {
         return null;
       }
 
       const payloadB64 = parts[1];
-      const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf8');
+      // payloadB64 is guaranteed to be string here due to check above
+      const payloadJson = Buffer.from(payloadB64 as string, 'base64url').toString('utf8');
       const payload = JSON.parse(payloadJson) as {
         sub?: string;
         user_id?: string;

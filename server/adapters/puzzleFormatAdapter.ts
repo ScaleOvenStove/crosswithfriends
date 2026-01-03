@@ -194,7 +194,10 @@ export function convertCluesToV2(clues: {
       return [];
     }
     if (!Array.isArray(clueArray)) {
-      logger.warn('convertClueArray: clueArray is not an array', {type: typeof clueArray, value: clueArray});
+      logger.warn(
+        {type: typeof clueArray, value: clueArray as unknown},
+        'convertClueArray: clueArray is not an array'
+      );
       return [];
     }
     if (clueArray.length === 0) {
@@ -221,21 +224,24 @@ export function convertCluesToV2(clues: {
 
           // If number is not numeric but clue is, they're swapped
           if (!numberIsNumeric && clueIsNumeric) {
-            logger.warn('Detected swapped clue fields, fixing:', {original: clueObj});
+            logger.warn({original: clueObj}, 'Detected swapped clue fields, fixing:');
             result.push({number: clueObj.clue, clue: clueObj.number});
           } else if (!numberIsNumeric && !clueIsNumeric) {
             // If both are non-numeric, the data is corrupted
             // Use index + 1 as fallback (clues are typically ordered)
             logger.warn(
-              `Clue at index ${index} has non-numeric number field, using index-based fallback:`,
-              clueObj
+              {clueObj, index},
+              `Clue at index ${index} has non-numeric number field, using index-based fallback:`
             );
             result.push({number: String(index + 1), clue: clueObj.clue || clueObj.number});
           } else {
             result.push(clueObj);
           }
         } else {
-          logger.warn(`Invalid clue format at index ${index}:`, {clue, type: typeof clue});
+          logger.warn(
+            {clue: clue as unknown, type: typeof clue, index},
+            `Invalid clue format at index ${index}:`
+          );
           // Skip invalid clues instead of throwing
         }
       } catch (error) {

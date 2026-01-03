@@ -6,13 +6,7 @@ import fastifyJwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import {
-  fastify,
-  type FastifyError,
-  type FastifyInstance,
-  type FastifyReply,
-  type FastifyRequest,
-} from 'fastify';
+import fastify from 'fastify';
 import {Server as SocketIOServer} from 'socket.io';
 
 import apiRouter from './api/router.js';
@@ -54,9 +48,8 @@ async function runServer(): Promise<void> {
     await initializeFirebaseAdmin();
 
     // ======== Fastify Server Config ==========
-    // In Fastify v5, fastify() returns PromiseLike<FastifyInstance>
-    // The methods are available immediately, but TypeScript types need help
-    const app = fastify({
+    // In Fastify v5, fastify() returns a Promise
+    const app = await fastify({
       // Use built-in request ID generation with custom generator
       // This replaces the custom correlationId utility for HTTP requests
       requestIdHeader: 'x-request-id', // Check this header for incoming request IDs
@@ -66,7 +59,7 @@ async function runServer(): Promise<void> {
             level: 'info',
             // Pino serializers for request/response logging with header redaction
             serializers: {
-              req(request) {
+              req(request: any) {
                 const headers = {...request.headers};
                 // Redact sensitive headers
                 const sensitiveHeaders = [
@@ -102,7 +95,7 @@ async function runServer(): Promise<void> {
             },
             // Pino serializers for request/response logging with header redaction
             serializers: {
-              req(request) {
+              req(request: any) {
                 const headers = {...request.headers};
                 // Redact sensitive headers
                 const sensitiveHeaders = [
@@ -135,55 +128,57 @@ async function runServer(): Promise<void> {
           allErrors: true,
         },
       },
-    }) as FastifyInstance;
+    });
 
     // Set custom error handler with sanitization for production
-    app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
-      request.log.error(error);
+    app.setErrorHandler(
+      (error: Error & {statusCode?: number; validation?: unknown}, request: any, reply: any) => {
+        request.log.error(error);
 
-      // Handle validation errors - sanitize validation details
-      if (error.validation) {
-        const response = createSanitizedErrorResponse(
-          400,
-          'Bad Request',
-          'Validation error',
-          error.validation as Array<{instancePath?: string; message?: string; keyword?: string}>
-        );
-        reply.code(400).send(response);
-        return;
+        // Handle validation errors - sanitize validation details
+        if (error.validation) {
+          const response = createSanitizedErrorResponse(
+            400,
+            'Bad Request',
+            'Validation error',
+            error.validation as Array<{instancePath?: string; message?: string; keyword?: string}>
+          );
+          reply.code(400).send(response);
+          return;
+        }
+
+        // Handle errors with status codes
+        // FastifyError.statusCode is optional - default to 500 if not set
+        const statusCode = error.statusCode ?? 500;
+
+        // Determine error name based on test expectations
+        const nameValue = error.name;
+        const hasOwnName = Object.prototype.hasOwnProperty.call(error, 'name');
+
+        // Simplified error name logic:
+        // 1. 500 errors always use 'Error'
+        // 2. Custom names (not 'Error') are used as-is
+        // 3. If name is 'Error' and explicitly set, use 'Error'
+        // 4. If name is missing/inherited and status is 400, use 'Internal Server Error'
+        // 5. Otherwise use 'Error' as fallback
+        let errorName: string;
+        if (statusCode === 500) {
+          errorName = 'Error';
+        } else if (nameValue && nameValue !== 'Error') {
+          errorName = nameValue;
+        } else if (nameValue === 'Error' && hasOwnName) {
+          errorName = 'Error';
+        } else if (!nameValue || (nameValue === 'Error' && !hasOwnName && statusCode === 400)) {
+          errorName = 'Internal Server Error';
+        } else {
+          errorName = 'Error';
+        }
+
+        // Use sanitized error response to prevent information disclosure
+        const response = createSanitizedErrorResponse(statusCode, errorName, error.message);
+        reply.code(statusCode).send(response);
       }
-
-      // Handle errors with status codes
-      // FastifyError.statusCode is optional - default to 500 if not set
-      const statusCode = error.statusCode ?? 500;
-
-      // Determine error name based on test expectations
-      const nameValue = error.name;
-      const hasOwnName = Object.prototype.hasOwnProperty.call(error, 'name');
-
-      // Simplified error name logic:
-      // 1. 500 errors always use 'Error'
-      // 2. Custom names (not 'Error') are used as-is
-      // 3. If name is 'Error' and explicitly set, use 'Error'
-      // 4. If name is missing/inherited and status is 400, use 'Internal Server Error'
-      // 5. Otherwise use 'Error' as fallback
-      let errorName: string;
-      if (statusCode === 500) {
-        errorName = 'Error';
-      } else if (nameValue && nameValue !== 'Error') {
-        errorName = nameValue;
-      } else if (nameValue === 'Error' && hasOwnName) {
-        errorName = 'Error';
-      } else if (!nameValue || (nameValue === 'Error' && !hasOwnName && statusCode === 400)) {
-        errorName = 'Internal Server Error';
-      } else {
-        errorName = 'Error';
-      }
-
-      // Use sanitized error response to prevent information disclosure
-      const response = createSanitizedErrorResponse(statusCode, errorName, error.message);
-      reply.code(statusCode).send(response);
-    });
+    );
 
     // Register Swagger plugin
     await app.register(swagger, {
@@ -246,10 +241,10 @@ async function runServer(): Promise<void> {
       }
     } else {
       // In production without ENABLE_SWAGGER_UI, redirect to a 404
-      app.get('/api/docs', async (_request, reply) => {
+      app.get('/api/docs', async (_request: any, reply: any) => {
         reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
-      app.get('/api/docs/*', async (_request, reply) => {
+      app.get('/api/docs/*', async (_request: any, reply: any) => {
         reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
       logger.info('Swagger UI disabled in production. Set ENABLE_SWAGGER_UI=true to enable.');
@@ -286,31 +281,27 @@ async function runServer(): Promise<void> {
     // Register CORS plugin
     // In development, allow all origins for easier local development
     // In production, this should be restricted to specific domains
-    const corsOptions = config.server.isDevelopment
-      ? {
-          origin: true, // Allow all origins in development
-          credentials: true,
-          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-          allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-        }
-      : {
-          origin: (
-            origin: string | undefined,
-            callback: (err: Error | null, allow?: boolean) => void
-          ): void => {
-            if (validateOrigin(origin)) {
-              callback(null, true);
-            } else {
-              logger.warn({origin}, 'CORS request blocked from origin');
-              callback(new Error('Not allowed by CORS'), false);
-            }
-          },
-          credentials: true,
-          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-          allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-        };
-
-    await app.register(cors, corsOptions);
+    if (config.server.isDevelopment) {
+      await app.register(cors, {
+        origin: true, // Allow all origins in development
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      });
+    } else {
+      await app.register(cors, {
+        origin: (origin: string | undefined): boolean => {
+          const allowed = validateOrigin(origin);
+          if (!allowed) {
+            logger.warn({origin}, 'CORS request blocked from origin');
+          }
+          return allowed;
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      });
+    }
 
     // Register JWT plugin for authentication (@fastify/jwt)
     await app.register(fastifyJwt, getJwtOptions());
@@ -321,11 +312,11 @@ async function runServer(): Promise<void> {
       max: config.rateLimit.max,
       timeWindow: config.rateLimit.timeWindowMs,
       cache: 10000, // Cache up to 10000 different rate limit keys
-      allowList: (req) => {
+      allowList: (req: any) => {
         // Allow health check endpoint to bypass rate limiting
         return req.url === '/api/health';
       },
-      keyGenerator: (req) => {
+      keyGenerator: (req: any) => {
         // Enhanced rate limiting: use user ID + IP for authenticated requests
         // This prevents both IP-based bypass (via VPN/proxy) and user-based abuse
         try {
@@ -336,9 +327,10 @@ async function runServer(): Promise<void> {
             // Decode JWT payload without full verification for performance
             // The actual verification happens in the route handlers
             const parts = token.split('.');
-            if (parts.length === 3) {
+            if (parts.length === 3 && parts[1]) {
               const payloadB64 = parts[1];
-              const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf8');
+              // payloadB64 is guaranteed to be string here due to check above
+              const payloadJson = Buffer.from(payloadB64 as string, 'base64url').toString('utf8');
               const payload = JSON.parse(payloadJson) as {userId?: string};
               if (payload.userId && typeof payload.userId === 'string') {
                 // Use both user ID and IP to prevent cross-user attacks
@@ -353,7 +345,7 @@ async function runServer(): Promise<void> {
         // Fall back to IP-based rate limiting for unauthenticated requests
         return `ip:${req.ip}`;
       },
-      errorResponseBuilder: (_req, context) => {
+      errorResponseBuilder: (_req: any, context: {ttl: number}) => {
         return {
           statusCode: 429,
           error: 'Too Many Requests',
@@ -363,12 +355,14 @@ async function runServer(): Promise<void> {
       },
       // Only log when actually exceeded - onExceeding is too noisy for normal usage
       // The rate limit still enforces the limit, we just don't warn on every request
-      onExceeded: (req, context) => {
+      onExceeded: (req: any, key: string) => {
+        // Note: The actual context with ttl is not available in onExceeded
+        // We log the rate limit event without retryAfter
         logger.warn(
           {
             ip: req.ip,
             url: req.url,
-            retryAfter: Math.ceil(context.ttl / 1000),
+            key,
           },
           'Rate limit exceeded'
         );

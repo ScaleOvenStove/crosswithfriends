@@ -1,17 +1,17 @@
 import fastify from 'fastify';
-import type {FastifyInstance} from 'fastify';
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import {vi} from 'vitest';
 import apiRouter from '../api/router.js';
 import type {Repositories} from '../repositories/index.js';
 import {getJwtOptions} from '../utils/auth.js';
+import type {AppInstance} from '../types/fastify.js';
 
 /**
  * Creates a test Fastify instance with API routes registered
  */
-export async function buildTestApp(): Promise<FastifyInstance> {
-  const app = fastify({
+export async function buildTestApp(): Promise<AppInstance> {
+  const app = await fastify({
     logger: false, // Disable logging in tests
     ajv: {
       customOptions: {
@@ -51,18 +51,24 @@ export async function buildTestApp(): Promise<FastifyInstance> {
       getInfo: vi.fn(),
       addEvent: vi.fn(),
       createInitialEvent: vi.fn(),
-    },
+      getCreator: vi.fn(),
+      exists: vi.fn(),
+    } as import('../repositories/interfaces/IGameRepository.js').IGameRepository,
     room: {
       addEvent: vi.fn(),
       getEvents: vi.fn(),
-    },
+      getCreator: vi.fn(),
+      exists: vi.fn(),
+    } as import('../repositories/interfaces/IRoomRepository.js').IRoomRepository,
   };
 
-  // Create mock services
-  const mockServices = {
+  // Create mock services - need to match Services interface
+  // PuzzleService requires puzzleRepository, so we create a mock service instance
+  const mockServices: import('../services/index.js').Services = {
     puzzle: {
       getPuzzleInfo: vi.fn(),
-    },
+      puzzleRepository: mockRepositories.puzzle,
+    } as unknown as import('../services/PuzzleService.js').PuzzleService,
   };
 
   // Decorate the app with mock repositories and services
@@ -70,7 +76,7 @@ export async function buildTestApp(): Promise<FastifyInstance> {
   app.decorate('services', mockServices);
 
   // Set custom error handler (same as production)
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error: any, request: any, reply: any) => {
     request.log.error(error);
 
     // Handle validation errors
@@ -140,13 +146,13 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 /**
  * Helper to wait for app to be ready
  */
-export async function waitForApp(app: FastifyInstance): Promise<void> {
+export async function waitForApp(app: AppInstance): Promise<void> {
   await app.ready();
 }
 
 /**
  * Helper to close app after tests
  */
-export async function closeApp(app: FastifyInstance): Promise<void> {
+export async function closeApp(app: AppInstance): Promise<void> {
   await app.close();
 }

@@ -1,6 +1,7 @@
-import type {ListPuzzleRequestFilters, ListPuzzleResponse} from '@crosswithfriends/shared/types';
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+import type {ListPuzzleRequestFilters, ListPuzzleResponse, PuzzleJson} from '@crosswithfriends/shared/types';
 
+import '../types/fastify.js';
+import type {AppInstance} from '../types/fastify.js';
 import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 
 import {createHttpError} from './errors.js';
@@ -15,7 +16,7 @@ interface PuzzleListQuery {
 }
 
 // eslint-disable-next-line require-await
-async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
+async function puzzleListRouter(fastify: AppInstance): Promise<void> {
   const getOptions = {
     schema: {
       operationId: 'listPuzzles',
@@ -55,7 +56,7 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzleResponse}>(
     '',
     getOptions,
-    async (request: FastifyRequest<{Querystring: PuzzleListQuery}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       const page = Number.parseInt(request.query.page, 10);
       const pageSize = Number.parseInt(request.query.pageSize, 10);
 
@@ -68,8 +69,8 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
       const sizeStandard = request.query.sizeStandard;
       const filters: ListPuzzleRequestFilters = {
         sizeFilter: {
-          Mini: sizeMini === 'true' && sizeMini !== 'undefined',
-          Standard: sizeStandard === 'true' && sizeStandard !== 'undefined',
+          Mini: sizeMini === 'true' && typeof sizeMini === 'string',
+          Standard: sizeStandard === 'true' && typeof sizeStandard === 'string',
         },
         nameOrTitleFilter: (request.query.nameOrTitle ?? '') as string,
       };
@@ -77,16 +78,25 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
       const result = await fastify.repositories.puzzle.list(filters, pageSize, page * pageSize);
       const rawPuzzleList = result.puzzles;
 
-      const puzzles = rawPuzzleList.map((puzzle) => {
-        // Convert old format to ipuz format for consistency
-        // All puzzles returned to clients are now in pure ipuz format
-        const content = convertOldFormatToIpuz(puzzle.puzzle);
-        return {
-          pid: puzzle.pid,
-          content,
-          stats: {numSolves: 0}, // TODO: Add numSolves to repository response
-        };
-      });
+      const puzzles = rawPuzzleList.map(
+        (puzzle: {
+          pid: string;
+          puzzle: PuzzleJson;
+        }): {
+          pid: string;
+          content: PuzzleJson;
+          stats: {numSolves: number};
+        } => {
+          // Convert old format to ipuz format for consistency
+          // All puzzles returned to clients are now in pure ipuz format
+          const content = convertOldFormatToIpuz(puzzle.puzzle);
+          return {
+            pid: puzzle.pid,
+            content,
+            stats: {numSolves: 0}, // TODO: Add numSolves to repository response
+          };
+        }
+      );
 
       return {puzzles};
     }

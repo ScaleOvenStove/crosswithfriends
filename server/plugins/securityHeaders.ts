@@ -5,10 +5,8 @@
  * These headers help prevent various attacks like XSS, clickjacking, MIME sniffing, etc.
  */
 
-import type {FastifyInstance, FastifyPluginAsync} from 'fastify';
-import fp from 'fastify-plugin';
-
 import {config} from '../config/index.js';
+import type {AppInstance} from '../types/fastify.js';
 
 interface SecurityHeadersOptions {
   /** Enable Content-Security-Policy header */
@@ -57,13 +55,10 @@ function buildHstsHeader(options: {maxAge?: number; includeSubDomains?: boolean;
   return parts.join('; ');
 }
 
-const securityHeadersPlugin: FastifyPluginAsync<SecurityHeadersOptions> = async (
-  fastify: FastifyInstance,
-  opts: SecurityHeadersOptions
-) => {
+const securityHeadersPlugin = (fastify: AppInstance, opts: SecurityHeadersOptions): void => {
   const options = {...defaultOptions, ...opts};
 
-  fastify.addHook('onSend', async (request, reply) => {
+  fastify.addHook('onSend', (request: any, reply: any) => {
     // X-Content-Type-Options: Prevents MIME-type sniffing
     if (options.noSniff) {
       reply.header('X-Content-Type-Options', 'nosniff');

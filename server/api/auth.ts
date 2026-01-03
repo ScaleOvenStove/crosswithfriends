@@ -5,8 +5,7 @@
  * Uses @fastify/jwt for JWT token management.
  */
 
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-
+import type {AppInstance} from '../types/fastify.js';
 import {config} from '../config/index.js';
 import {
   generateSecureUserId,
@@ -40,7 +39,7 @@ interface ValidateTokenResponse {
 }
 
 // eslint-disable-next-line require-await
-async function authRouter(fastify: FastifyInstance): Promise<void> {
+async function authRouter(fastify: AppInstance): Promise<void> {
   // Create a new authentication token
   const createTokenOptions = {
     schema: {
@@ -77,7 +76,7 @@ async function authRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: CreateTokenRequest; Reply: CreateTokenResponse}>(
     '/token',
     createTokenOptions,
-    (request: FastifyRequest<{Body: CreateTokenRequest}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       request.log.debug({body: request.body ? Object.keys(request.body) : []}, 'Creating auth token');
 
       let userId = request.body?.userId;
@@ -152,7 +151,7 @@ async function authRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: {firebaseToken: string}; Reply: CreateTokenResponse}>(
     '/firebase-token',
     firebaseTokenOptions,
-    async (request: FastifyRequest<{Body: {firebaseToken: string}}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       request.log.debug('Exchanging Firebase token for backend JWT');
 
       const {firebaseToken} = request.body;
@@ -252,7 +251,7 @@ async function authRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: ValidateTokenRequest; Reply: ValidateTokenResponse}>(
     '/validate',
     validateTokenOptions,
-    (request: FastifyRequest<{Body: ValidateTokenRequest}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       request.log.debug('Validating auth token');
 
       const {token} = request.body;
@@ -309,7 +308,7 @@ async function authRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Reply: {userId: string; expiresAt: number}}>(
     '/me',
     meOptions,
-    async (request: FastifyRequest, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       request.log.debug('Getting current user');
 
       try {

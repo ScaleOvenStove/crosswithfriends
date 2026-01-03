@@ -1,6 +1,7 @@
 import type {AddPuzzleRequest, AddPuzzleResponse, PuzzleJson} from '@crosswithfriends/shared/types';
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
+import '../types/fastify.js';
+import type {AppInstance} from '../types/fastify.js';
 import {validatePuzzleId} from '../utils/inputValidation.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 
@@ -13,7 +14,7 @@ import {
 } from './schemas.js';
 
 // eslint-disable-next-line require-await
-async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
+async function puzzleRouter(fastify: AppInstance): Promise<void> {
   const postOptions = {
     schema: {
       operationId: 'createPuzzle',
@@ -32,7 +33,7 @@ async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: AddPuzzleRequest; Reply: AddPuzzleResponse}>(
     '',
     postOptions,
-    async (request: FastifyRequest<{Body: AddPuzzleRequest}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       logRequest(request);
 
       // Validate puzzle ID format if provided
@@ -46,7 +47,7 @@ async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
       const pid = await fastify.repositories.puzzle.create(
         request.body.pid || '',
         request.body.puzzle,
-        request.body.isPublic
+        request.body.isPublic ?? false
       );
       return {pid};
     }
@@ -76,7 +77,7 @@ async function puzzleRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Params: {pid: string}; Reply: PuzzleJson}>(
     '/:pid',
     getOptions,
-    async (request: FastifyRequest<{Params: {pid: string}}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       logRequest(request);
       const {pid} = request.params;
 

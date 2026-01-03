@@ -1,6 +1,7 @@
 import type {CreateGameRequest, GetGameResponse, InfoJson} from '@crosswithfriends/shared/types';
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
+import '../types/fastify.js';
+import type {AppInstance} from '../types/fastify.js';
 import {config} from '../config/index.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
 import {validateGameId, validatePuzzleId} from '../utils/inputValidation.js';
@@ -20,7 +21,7 @@ interface CreateGameResponseWithGid {
 }
 
 // eslint-disable-next-line require-await
-async function gameRouter(fastify: FastifyInstance): Promise<void> {
+async function gameRouter(fastify: AppInstance): Promise<void> {
   const postOptions = {
     schema: {
       operationId: 'createGame',
@@ -38,7 +39,7 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: CreateGameRequest; Reply: CreateGameResponseWithGid}>(
     '',
     postOptions,
-    async (request: FastifyRequest<{Body: CreateGameRequest}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       logRequest(request);
 
       // Validate game ID format
@@ -56,7 +57,11 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
       // Extract and validate user ID (backend JWT token)
       // In development mode (REQUIRE_AUTH=false), allow requests without authentication
       let userId: string | null = null;
-      const authResult = authenticateRequest(request);
+      const authResult = authenticateRequest({
+        query: request.query as {userId?: string; token?: string} | undefined,
+        headers: request.headers,
+        body: request.body,
+      });
 
       if (authResult.authenticated && isValidUserId(authResult.userId)) {
         userId = authResult.userId;
@@ -102,7 +107,7 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Params: {gid: string}; Reply: GetGameResponse}>(
     '/:gid',
     getOptions,
-    async (request: FastifyRequest<{Params: {gid: string}}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       logRequest(request);
       const {gid} = request.params;
 
@@ -167,7 +172,7 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
   fastify.get<{Params: {gid: string}; Reply: {gid: string; pid: string}}>(
     '/:gid/pid',
     getActiveGameOptions,
-    async (request: FastifyRequest<{Params: {gid: string}}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       logRequest(request);
       const {gid} = request.params;
 
@@ -177,17 +182,17 @@ async function gameRouter(fastify: FastifyInstance): Promise<void> {
         throw createHttpError(gidValidation.error || 'Invalid game ID', 400);
       }
 
-      // Get game info which contains the puzzle ID
-      const gameInfo = await fastify.repositories.game.getInfo(gidValidation.value!);
       // The pid is stored in the create event params, but getInfo doesn't return it
       // We need to get it from the events. For now, use the repository's getEvents method
       const {events} = await fastify.repositories.game.getEvents(gidValidation.value!, {limit: 1});
-      const createEvent = events.find((e) => e.type === 'create');
+      const createEvent = events.find((e: {type: string}) => e.type === 'create');
       if (!createEvent || createEvent.type !== 'create') {
         throw createHttpError('Active game not found', 404);
       }
 
-      const pid = createEvent.params.pid;
+      // TypeScript needs help narrowing the union type - we know it's a create event
+      const createParams = createEvent.params as {pid: string};
+      const pid = createParams.pid;
       if (!pid) {
         throw createHttpError('Puzzle ID not found in game create event', 500);
       }

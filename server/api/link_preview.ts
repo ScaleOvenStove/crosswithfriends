@@ -1,6 +1,7 @@
 import type {InfoJson} from '@crosswithfriends/shared/types';
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
+import '../types/fastify.js';
+import type {AppInstance} from '../types/fastify.js';
 import {config} from '../config/index.js';
 import {escapeHtml, escapeHtmlAttribute} from '../utils/htmlEscape.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
@@ -102,7 +103,7 @@ function validatePreviewUrl(urlString: string): URL {
 }
 
 // eslint-disable-next-line require-await
-async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
+async function linkPreviewRouter(fastify: AppInstance): Promise<void> {
   const getOptions = {
     schema: {
       operationId: 'getLinkPreview',
@@ -131,65 +132,62 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
     },
   };
 
-  fastify.get<{Querystring: LinkPreviewQuery}>(
-    '/',
-    getOptions,
-    async (request: FastifyRequest<{Querystring: LinkPreviewQuery}>, reply: FastifyReply) => {
-      logRequest(request);
+  fastify.get<{Querystring: LinkPreviewQuery}>('/', getOptions, async (request: any, reply: any) => {
+    logRequest(request);
 
-      // Validate URL scheme and domain to prevent SSRF
-      const url = validatePreviewUrl(request.query.url);
+    // Validate URL scheme and domain to prevent SSRF
+    const url = validatePreviewUrl(request.query.url);
 
-      let info: InfoJson | null = null;
-      const pathParts = url.pathname.split('/');
-      if (pathParts[1] === 'game') {
-        const gid = pathParts[2];
-        if (!gid) {
-          throw createHttpError('Invalid URL path: missing game ID', 400);
-        }
-        info = (await fastify.repositories.game.getInfo(gid)) as InfoJson;
-      } else if (pathParts[1] === 'play') {
-        const pid = pathParts[2];
-        if (!pid) {
-          throw createHttpError('Invalid URL path: missing puzzle ID', 400);
-        }
-        info = (await fastify.services.puzzle.getPuzzleInfo(pid)) as InfoJson;
-      } else {
-        throw createHttpError('Invalid URL path', 400);
+    let info: InfoJson | null = null;
+    const pathParts = url.pathname.split('/');
+    if (pathParts[1] === 'game') {
+      const gid = pathParts[2];
+      if (!gid) {
+        throw createHttpError('Invalid URL path: missing game ID', 400);
       }
-
-      if (!info || Object.keys(info).length === 0) {
-        throw createHttpError('Game or puzzle not found', 404);
+      info = (await fastify.repositories.game.getInfo(gid)) as InfoJson;
+    } else if (pathParts[1] === 'play') {
+      const pid = pathParts[2];
+      if (!pid) {
+        throw createHttpError('Invalid URL path: missing puzzle ID', 400);
       }
+      info = (await fastify.services.puzzle.getPuzzleInfo(pid)) as InfoJson;
+    } else {
+      throw createHttpError('Invalid URL path', 400);
+    }
 
-      const ua = request.headers['user-agent'] as string | undefined;
+    if (!info || Object.keys(info).length === 0) {
+      throw createHttpError('Game or puzzle not found', 404);
+    }
 
-      if (!isLinkExpanderBot(ua)) {
-        // In case a human accesses this endpoint
-        return reply.code(302).header('Location', url.href).send();
-      }
+    const ua = request.headers['user-agent'] as string | undefined;
 
-      // OGP doesn't support an author property, so we need to delegate to the oEmbed endpoint
-      // Construct oembed URL - default to https (protocol detection not critical for oembed link)
-      const host = request.headers.host || '';
-      const author = info.author || '';
-      // Use https as default - oembed links work with either protocol
-      const protocol = 'https';
-      const oembedEndpointUrl = `${protocol}://${host}/api/oembed?author=${encodeURIComponent(author)}`;
+    if (!isLinkExpanderBot(ua)) {
+      // In case a human accesses this endpoint
+      return reply.code(302).header('Location', url.href).send();
+    }
 
-      // Messenger only supports title + thumbnail, so cram everything into the title property if Messenger
-      const titlePropContent = isFBMessengerCrawler(ua)
-        ? [info.title, info.author, info.description].filter(Boolean).join(' | ')
-        : info.title || '';
+    // OGP doesn't support an author property, so we need to delegate to the oEmbed endpoint
+    // Construct oembed URL - default to https (protocol detection not critical for oembed link)
+    const host = request.headers.host || '';
+    const author = info.author || '';
+    // Use https as default - oembed links work with either protocol
+    const protocol = 'https';
+    const oembedEndpointUrl = `${protocol}://${host}/api/oembed?author=${encodeURIComponent(author)}`;
 
-      // Escape all user-controlled data to prevent XSS
-      const safeTitle = escapeHtml(titlePropContent || '');
-      const safeDescription = escapeHtml(info.description || '');
-      const safeUrl = escapeHtmlAttribute(url.href || '');
-      const safeOembedUrl = escapeHtmlAttribute(oembedEndpointUrl);
+    // Messenger only supports title + thumbnail, so cram everything into the title property if Messenger
+    const titlePropContent = isFBMessengerCrawler(ua)
+      ? [info.title, info.author, info.description].filter(Boolean).join(' | ')
+      : info.title || '';
 
-      // https://ogp.me
-      return reply.type('text/html').send(String.raw`
+    // Escape all user-controlled data to prevent XSS
+    const safeTitle = escapeHtml(titlePropContent || '');
+    const safeDescription = escapeHtml(info.description || '');
+    const safeUrl = escapeHtmlAttribute(url.href || '');
+    const safeOembedUrl = escapeHtmlAttribute(oembedEndpointUrl);
+
+    // https://ogp.me
+    return reply.type('text/html').send(String.raw`
         <html prefix="og: https://ogp.me/ns/website#">
             <head>
                 <title>${safeTitle}</title>
@@ -203,8 +201,7 @@ async function linkPreviewRouter(fastify: FastifyInstance): Promise<void> {
             </head>
         </html>
     `);
-    }
-  );
+  });
 }
 
 export default linkPreviewRouter;

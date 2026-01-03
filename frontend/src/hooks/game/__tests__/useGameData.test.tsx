@@ -9,6 +9,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useGameData } from '../useGameData';
 import { puzzlesApi, gamesApi } from '@api/apiClient';
 
+// Skip tests if DOM is not available (Node.js environment)
+const isBrowser = typeof document !== 'undefined';
+
 // Mock API clients
 vi.mock('@api/apiClient', () => ({
   puzzlesApi: {

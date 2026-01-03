@@ -101,7 +101,6 @@ const PuzzleListComponent = () => {
         <p className="mb-4">Failed to load puzzles. Please try again.</p>
         <button
           type="button"
-          type="button"
           onClick={() => window.location.reload()}
           className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-primary hover:text-white hover:border-primary transition-all"
         >
@@ -127,7 +126,6 @@ const PuzzleListComponent = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-3xl font-bold text-gray-800">Available Puzzles</h2>
             <button
-              type="button"
               type="button"
               onClick={toggleFilterSidebar}
               className="lg:hidden px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-all"
@@ -177,7 +175,6 @@ const PuzzleListComponent = () => {
             {hasNextPage && (
               <div className="flex justify-center mt-8">
                 <button
-                  type="button"
                   type="button"
                   onClick={handleLoadMore}
                   disabled={isFetchingNextPage}

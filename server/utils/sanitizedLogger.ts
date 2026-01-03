@@ -11,8 +11,6 @@
  * serializers automatically redacts sensitive headers.
  */
 
-import type {FastifyRequest} from 'fastify';
-
 /**
  * Sensitive header keys that should be redacted in logs
  * NOTE: Also configured in server.ts Pino serializers
@@ -64,7 +62,7 @@ export function createBodySummary(body: unknown): {keys: string[]; size: number}
  * @param message - Optional log message
  * @deprecated Use request.log directly - Fastify's serializers now handle header sanitization
  */
-export function logRequest(request: FastifyRequest, message = 'got req'): void {
+export function logRequest(request: any, message = 'got req'): void {
   request.log.debug(
     {
       method: request.method,

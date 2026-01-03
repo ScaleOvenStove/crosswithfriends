@@ -69,14 +69,12 @@ const Composition = () => {
         <div className="composition-toolbar">
           <button
             type="button"
-            type="button"
             onClick={() => setMode('grid')}
             className={`btn-mode ${mode === 'grid' ? 'active' : ''}`}
           >
             Grid
           </button>
           <button
-            type="button"
             type="button"
             onClick={() => setMode('clues')}
             className={`btn-mode ${mode === 'clues' ? 'active' : ''}`}

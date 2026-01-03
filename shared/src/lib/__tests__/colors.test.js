@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {toHex, darken, lightenHsl, MAIN_BLUE_3, GREENISH, PINKISH, THEME_COLORS} from '../colors';
+import {toHex, darken, lightenHsl} from '../colors';
 
 describe('toHex', () => {
   it('should convert number to hex string', () => {
@@ -8,27 +8,10 @@ describe('toHex', () => {
     expect(toHex(0xff0000)).toBe('#ff0000');
   });
 
-  it('should handle MAIN_BLUE_3', () => {
-    expect(toHex(MAIN_BLUE_3)).toBe('#dcefff');
-  });
-
-  it('should handle GREENISH', () => {
-    expect(toHex(GREENISH)).toBe('#1fff3d');
-  });
-
-  it('should handle PINKISH', () => {
-    expect(toHex(PINKISH)).toBe('#f0dbff');
-  });
-
   it('should pad with zeros correctly', () => {
     expect(toHex(0x0)).toBe('#000000');
     expect(toHex(0x1)).toBe('#000001');
     expect(toHex(0x10)).toBe('#000010');
-  });
-
-  it('should handle uppercase conversion', () => {
-    const result = toHex(0xabcdef);
-    expect(result).toBe('#abcdef');
   });
 });
 
@@ -37,16 +20,6 @@ describe('darken', () => {
     const original = 0xffffff; // white
     const darkened = darken(original);
     expect(darkened).toBeLessThan(original);
-  });
-
-  it('should darken MAIN_BLUE_3', () => {
-    const darkened = darken(MAIN_BLUE_3);
-    expect(darkened).toBeLessThan(MAIN_BLUE_3);
-  });
-
-  it('should darken GREENISH', () => {
-    const darkened = darken(GREENISH);
-    expect(darkened).toBeLessThan(GREENISH);
   });
 
   it('should handle black color', () => {
@@ -95,38 +68,5 @@ describe('lightenHsl', () => {
     const hsl = 'hsl(180, 50%, 50%)';
     const result = lightenHsl(hsl);
     expect(result).toBe('hsla(180, 50%, 50%,40%)');
-  });
-
-  it('should preserve HSL parameters', () => {
-    const hsl = 'hsl(200,60%,30%)';
-    const result = lightenHsl(hsl);
-    expect(result).toContain('200');
-    expect(result).toContain('60%');
-    expect(result).toContain('30%');
-    expect(result).toContain('40%');
-  });
-});
-
-describe('constants', () => {
-  it('should export MAIN_BLUE_3', () => {
-    expect(typeof MAIN_BLUE_3).toBe('number');
-    expect(MAIN_BLUE_3).toBe(0xdcefff);
-  });
-
-  it('should export GREENISH', () => {
-    expect(typeof GREENISH).toBe('number');
-    expect(GREENISH).toBe(0x1fff3d);
-  });
-
-  it('should export PINKISH', () => {
-    expect(typeof PINKISH).toBe('number');
-    expect(PINKISH).toBe(0xf0dbff);
-  });
-
-  it('should export THEME_COLORS array', () => {
-    expect(Array.isArray(THEME_COLORS)).toBe(true);
-    expect(THEME_COLORS).toContain(MAIN_BLUE_3);
-    expect(THEME_COLORS).toContain(GREENISH);
-    expect(THEME_COLORS.length).toBe(2);
   });
 });

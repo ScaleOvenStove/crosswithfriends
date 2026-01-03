@@ -44,7 +44,6 @@ const PlaybackControls = ({
       {/* Restart Button */}
       <button
         type="button"
-        type="button"
         onClick={onRestart}
         disabled={disabled}
         className="control-btn restart-btn"
@@ -59,7 +58,6 @@ const PlaybackControls = ({
       {/* Skip Backward */}
       <button
         type="button"
-        type="button"
         onClick={onSkipBackward}
         disabled={disabled}
         className="control-btn skip-btn"
@@ -73,7 +71,6 @@ const PlaybackControls = ({
 
       {/* Play/Pause Button */}
       <button
-        type="button"
         type="button"
         onClick={onPlayPause}
         disabled={disabled}
@@ -95,7 +92,6 @@ const PlaybackControls = ({
       {/* Skip Forward */}
       <button
         type="button"
-        type="button"
         onClick={onSkipForward}
         disabled={disabled}
         className="control-btn skip-btn"
@@ -111,7 +107,6 @@ const PlaybackControls = ({
       <div className="speed-control">
         <button
           type="button"
-          type="button"
           onClick={handleSpeedClick}
           disabled={disabled}
           className="control-btn speed-btn"
@@ -125,7 +120,6 @@ const PlaybackControls = ({
           <div className="speed-menu">
             {SPEED_OPTIONS.map((option) => (
               <button
-                type="button"
                 type="button"
                 key={option}
                 onClick={() => handleSpeedSelect(option)}

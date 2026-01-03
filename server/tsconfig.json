@@ -33,6 +33,7 @@
     "dist",
     "**/*.test.ts",
     "**/*.spec.ts",
+    "__tests__",
     "../shared/src/lib/adapters/xwordParserAdapter.ts",
     "../shared/src/lib/adapters/gameJsonToPuzzle.ts"
   ]
