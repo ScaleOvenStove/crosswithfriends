@@ -90,12 +90,17 @@ describe('useGameData', () => {
     };
 
     // Mock fetch for active game check (used in resolvePuzzleId)
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as Response));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response)
+    );
 
-    vi.mocked(puzzlesApi.getPuzzleById).mockResolvedValue(mockPuzzleData as unknown as Awaited<ReturnType<typeof puzzlesApi.getPuzzleById>>);
+    vi.mocked(puzzlesApi.getPuzzleById).mockResolvedValue(
+      mockPuzzleData as unknown as Awaited<ReturnType<typeof puzzlesApi.getPuzzleById>>
+    );
     vi.mocked(gamesApi.getGameById).mockRejectedValue(new Error('Not found'));
 
     const { result } = renderHook(() => useGameData('test-game-id'), { wrapper });
@@ -110,10 +115,13 @@ describe('useGameData', () => {
 
   it('should handle errors gracefully', async () => {
     // Mock fetch for active game check (used in resolvePuzzleId)
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as Response));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response)
+    );
 
     vi.mocked(puzzlesApi.getPuzzleById).mockRejectedValue(new Error('Failed to load'));
     vi.mocked(gamesApi.getGameById).mockRejectedValue(new Error('Not found'));
