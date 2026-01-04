@@ -284,7 +284,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/link_preview': {
+  '/link_preview/': {
     parameters: {
       query?: never;
       header?: never;
