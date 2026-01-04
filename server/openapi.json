@@ -1084,7 +1084,7 @@
         }
       }
     },
-    "/link_preview/": {
+    "/link_preview": {
       "get": {
         "operationId": "getLinkPreview",
         "summary": "Get link preview",
