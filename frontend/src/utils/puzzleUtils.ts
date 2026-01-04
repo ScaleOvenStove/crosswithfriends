@@ -150,7 +150,6 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | ValidatedPuzzleJson 
   across: Clue[];
   down: Clue[];
 } {
-  // Safety checks for puzzle data structure
   if (!puzzle) {
     console.warn('[puzzleUtils] Puzzle data is missing');
     return { across: [], down: [] };
@@ -160,103 +159,134 @@ export function extractCluesFromPuzzle(puzzle: PuzzleJson | ValidatedPuzzleJson 
   const validatedPuzzle = validatePuzzleData(puzzle);
   const puzzleAny = puzzle as Record<string, unknown>;
 
-  // Old format: clues are nested inside info.clues
-  // New format: clues are at the top level
-  // Check if puzzle.clues has actual across/down data
-  const hasTopLevelClues =
-    validatedPuzzle.clues && (validatedPuzzle.clues.Across || validatedPuzzle.clues.Down);
-
-  const cluesObj = hasTopLevelClues
-    ? validatedPuzzle.clues
-    : (puzzleAny['info'] as { clues?: unknown })?.clues;
-
+  // Get clues object - prefer validated top-level clues, fall back to info.clues for old format
+  const cluesObj = getCluesObject(validatedPuzzle, puzzleAny);
   if (!cluesObj) {
-    console.warn('[puzzleUtils] Clues are missing in both puzzle.clues and puzzle.info.clues');
+    console.warn('[puzzleUtils] Clues are missing');
     return { across: [], down: [] };
   }
 
-  // Determine solution/puzzle grid for old vs new format
+  // Get solution and puzzle grid for answer extraction
   const solutionGrid =
     validatedPuzzle.solution || (puzzleAny['grid'] as (string | null)[][] | undefined);
   const puzzleGridData = validatedPuzzle.puzzle || (puzzleAny['grid'] as unknown);
 
-  const parseClue = (clue: ClueFormat, direction: 'across' | 'down'): Clue => {
-    // Handle both tuple and object formats
-    let number: string;
-    let text: string;
-
-    if (Array.isArray(clue)) {
-      [number, text] = clue;
-    } else {
-      number = clue.number;
-      text = clue.clue;
-
-      // Detect and fix swapped fields: number should be numeric, clue should not be
-      const numberIsNumeric = /^\d+$/.test(String(number).trim());
-      const clueIsNumeric = /^\d+$/.test(String(text).trim());
-
-      // If number is not numeric but clue is, they're swapped
-      if (!numberIsNumeric && clueIsNumeric) {
-        console.warn('[puzzleUtils] Detected swapped clue fields, fixing:', {
-          original: { number, clue: text },
-        });
-        [number, text] = [text, number];
-      }
-    }
-
-    const clueNumber = parseInt(number, 10);
-    if (isNaN(clueNumber)) {
-      console.warn('[puzzleUtils] Invalid clue number:', number, 'for clue:', text);
-    }
-
-    // Extract answer from solution grid
-    const answer = extractAnswerFromSolution(solutionGrid, puzzleGridData, clueNumber, direction);
-
-    return {
-      number: clueNumber,
-      clue: text,
-      answer,
-      direction,
-    };
-  };
-
-  // Handle both capitalized (Across/Down) and lowercase (across/down) keys
+  // Extract clues arrays (handle both capitalized and lowercase keys)
   const cluesObjAny = cluesObj as Record<string, unknown>;
   const acrossClues = (cluesObjAny['Across'] || cluesObjAny['across'] || []) as ClueFormat[];
   const downClues = (cluesObjAny['Down'] || cluesObjAny['down'] || []) as ClueFormat[];
 
-  // Parse clues with index-based fallback for clue numbers
-  const parseCluesWithIndex = (clueArray: ClueFormat[], direction: 'across' | 'down'): Clue[] => {
-    if (!Array.isArray(clueArray) || clueArray.length === 0) {
-      console.warn(`[puzzleUtils] No ${direction} clues found or clues is not an array`);
-      return [];
+  return {
+    across: parseClueArray(acrossClues, 'across', solutionGrid, puzzleGridData),
+    down: parseClueArray(downClues, 'down', solutionGrid, puzzleGridData),
+  };
+}
+
+/**
+ * Gets the clues object from either top-level clues or info.clues (old format)
+ */
+function getCluesObject(
+  validatedPuzzle: ValidatedPuzzleJson,
+  puzzleAny: Record<string, unknown>
+): unknown {
+  const hasTopLevelClues =
+    validatedPuzzle.clues &&
+    ((Array.isArray(validatedPuzzle.clues.Across) && validatedPuzzle.clues.Across.length > 0) ||
+      (Array.isArray(validatedPuzzle.clues.Down) && validatedPuzzle.clues.Down.length > 0));
+
+  console.debug('[puzzleUtils] getCluesObject check:', {
+    hasClues: !!validatedPuzzle.clues,
+    hasAcross: !!validatedPuzzle.clues?.Across,
+    hasDown: !!validatedPuzzle.clues?.Down,
+    acrossLength: Array.isArray(validatedPuzzle.clues?.Across)
+      ? validatedPuzzle.clues.Across.length
+      : 'not array',
+    downLength: Array.isArray(validatedPuzzle.clues?.Down)
+      ? validatedPuzzle.clues.Down.length
+      : 'not array',
+    hasTopLevelClues,
+  });
+
+  if (hasTopLevelClues) {
+    return validatedPuzzle.clues;
+  }
+
+  // Fall back to info.clues for old format
+  const infoClues = (puzzleAny['info'] as { clues?: unknown })?.clues;
+  console.debug('[puzzleUtils] Falling back to info.clues:', { hasInfoClues: !!infoClues });
+  return infoClues;
+}
+
+/**
+ * Parses a clue array into Clue objects
+ */
+function parseClueArray(
+  clueArray: ClueFormat[],
+  direction: 'across' | 'down',
+  solutionGrid: (string | null)[][] | undefined,
+  puzzleGridData: unknown
+): Clue[] {
+  if (!Array.isArray(clueArray) || clueArray.length === 0) {
+    return [];
+  }
+
+  return clueArray.map((clue, index) => {
+    const parsed = parseClue(clue, direction, solutionGrid, puzzleGridData);
+    // Use index-based fallback if clue number is invalid
+    if (isNaN(parsed.number)) {
+      return { ...parsed, number: index + 1 };
     }
+    return parsed;
+  });
+}
 
-    return clueArray.map((clue: ClueFormat, index: number) => {
-      const parsed = parseClue(clue, direction);
-      // If clue number is NaN, try to use index + 1 as fallback
-      // (clues are typically ordered, so index 0 = clue 1, index 1 = clue 2, etc.)
-      if (isNaN(parsed.number)) {
-        console.warn(
-          `[puzzleUtils] Using index-based fallback for ${direction} clue ${index}:`,
-          clue
-        );
-        return {
-          ...parsed,
-          number: index + 1,
-        };
-      }
-      return parsed;
-    });
+/**
+ * Parses a single clue entry
+ */
+function parseClue(
+  clue: ClueFormat,
+  direction: 'across' | 'down',
+  solutionGrid: (string | null)[][] | undefined,
+  puzzleGridData: unknown
+): Clue {
+  let number: string;
+  let text: string;
+
+  if (Array.isArray(clue)) {
+    [number, text] = clue;
+  } else {
+    number = clue.number;
+    text = clue.clue;
+
+    // Detect and fix swapped fields: number should be numeric, clue should not be
+    if (!isNumeric(number) && isNumeric(text)) {
+      [number, text] = [text, number];
+    }
+  }
+
+  const clueNumber = parseInt(number, 10);
+  const answer = solutionGrid
+    ? extractAnswerFromSolution(
+        solutionGrid,
+        puzzleGridData as Array<Array<GridCellValue>>,
+        clueNumber,
+        direction
+      )
+    : '';
+
+  return {
+    number: clueNumber,
+    clue: text,
+    answer,
+    direction,
   };
+}
 
-  const result = {
-    across: parseCluesWithIndex(acrossClues, 'across'),
-    down: parseCluesWithIndex(downClues, 'down'),
-  };
-
-  // Clues extracted successfully
-  return result;
+/**
+ * Checks if a string is numeric
+ */
+function isNumeric(str: string): boolean {
+  return /^\d+$/.test(String(str).trim());
 }
 
 /**
@@ -311,9 +341,7 @@ function extractAnswerFromSolution(
   clueNumber: number,
   direction: 'across' | 'down'
 ): string {
-  // Safety checks
   if (!solution || !puzzleGrid || solution.length === 0 || puzzleGrid.length === 0) {
-    console.warn('[puzzleUtils] Solution or puzzle grid is missing or empty');
     return '';
   }
 
@@ -321,74 +349,79 @@ function extractAnswerFromSolution(
   const cellNumbers = calculateCellNumbers(solution);
 
   // Find the starting position for this clue number
-  let startRow = -1;
-  let startCol = -1;
-
-  // First try to find from calculated cell numbers
-  for (const [pos, num] of cellNumbers.entries()) {
-    if (num === clueNumber) {
-      const [r, c] = pos.split(',').map(Number);
-      startRow = r;
-      startCol = c;
-      break;
-    }
+  const startPos = findClueStartPosition(cellNumbers, puzzleGrid, clueNumber);
+  if (!startPos) {
+    return '';
   }
 
-  // Fallback: try to extract from puzzleGrid directly (new format)
-  if (startRow === -1) {
-    for (let r = 0; r < puzzleGrid.length; r++) {
-      for (let c = 0; c < puzzleGrid[r].length; c++) {
-        const cell = puzzleGrid[r][c];
-        let cellNumber: number | undefined;
-
-        if (typeof cell === 'number') {
-          cellNumber = cell;
-        } else if (cell && typeof cell === 'object' && 'cell' in cell) {
-          const cellNum = cell.cell;
-          if (typeof cellNum === 'number') {
-            cellNumber = cellNum;
-          }
-        }
-
-        if (cellNumber === clueNumber) {
-          startRow = r;
-          startCol = c;
-          break;
-        }
-      }
-      if (startRow !== -1) break;
-    }
-  }
-
-  if (startRow === -1 || startCol === -1) {
-    return ''; // Could not find the clue number
-  }
+  const { row: startRow, col: startCol } = startPos;
 
   // Extract the answer based on direction
   let answer = '';
   if (direction === 'across') {
     let col = startCol;
-    while (
-      col < solution[startRow]?.length &&
-      solution[startRow]?.[col] !== null &&
-      solution[startRow]?.[col] !== '.' &&
-      solution[startRow]?.[col] !== '#'
-    ) {
+    while (col < (solution[startRow]?.length || 0) && !isBlackCell(solution[startRow]?.[col])) {
       answer += solution[startRow][col];
       col++;
     }
   } else {
     let row = startRow;
-    while (
-      row < solution.length &&
-      solution[row]?.[startCol] !== null &&
-      solution[row]?.[startCol] !== '.' &&
-      solution[row]?.[startCol] !== '#'
-    ) {
+    while (row < solution.length && !isBlackCell(solution[row]?.[startCol])) {
       answer += solution[row][startCol];
       row++;
     }
   }
 
   return answer;
+}
+
+/**
+ * Finds the starting position for a clue number
+ */
+function findClueStartPosition(
+  cellNumbers: Map<string, number>,
+  puzzleGrid: Array<Array<GridCellValue>>,
+  clueNumber: number
+): { row: number; col: number } | null {
+  // First try calculated cell numbers
+  for (const [pos, num] of cellNumbers.entries()) {
+    if (num === clueNumber) {
+      const [r, c] = pos.split(',').map(Number);
+      return { row: r, col: c };
+    }
+  }
+
+  // Fallback: try puzzle grid (new format)
+  for (let r = 0; r < puzzleGrid.length; r++) {
+    for (let c = 0; c < puzzleGrid[r].length; c++) {
+      const cell = puzzleGrid[r][c];
+      const cellNumber = extractCellNumber(cell);
+      if (cellNumber === clueNumber) {
+        return { row: r, col: c };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extracts the cell number from a puzzle grid cell
+ */
+function extractCellNumber(cell: GridCellValue): number | undefined {
+  if (typeof cell === 'number') {
+    return cell;
+  }
+  if (cell && typeof cell === 'object' && 'cell' in cell) {
+    const cellNum = (cell as { cell: number | string }).cell;
+    return typeof cellNum === 'number' ? cellNum : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Checks if a cell value represents a black cell
+ */
+function isBlackCell(cell: string | null | undefined): boolean {
+  return cell === null || cell === '.' || cell === '#';
 }

@@ -1,4 +1,4 @@
-import type {AddPuzzleRequest, AddPuzzleResponse, PuzzleJson} from '@crosswithfriends/shared/types';
+import type {PuzzleJson} from '@crosswithfriends/shared/types';
 
 import '../types/fastify.js';
 import type {AppInstance} from '../types/fastify.js';
@@ -6,6 +6,7 @@ import {validatePuzzleId} from '../utils/inputValidation.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 
 import {createHttpError} from './errors.js';
+import type {CreatePuzzleRequest, CreatePuzzleResponse} from './generated/index.js';
 import {
   AddPuzzleRequestSchema,
   AddPuzzleResponseSchema,
@@ -30,7 +31,7 @@ async function puzzleRouter(fastify: AppInstance): Promise<void> {
     },
   };
 
-  fastify.post<{Body: AddPuzzleRequest; Reply: AddPuzzleResponse}>(
+  fastify.post<{Body: CreatePuzzleRequest; Reply: CreatePuzzleResponse}>(
     '',
     postOptions,
     async (request: any, _reply: any) => {

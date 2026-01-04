@@ -13,11 +13,11 @@ const stringSchema = (): z.ZodString => z.string();
 const clueEntrySchema = z.union([
   // v1 format: ["1", "clue text"]
   z.array(z.string()),
-  // v2 format: {number: "1", clue: "clue text", cells?: [...]}
+  // v2 format: {number: "1", clue: "clue text", cells?: [[column, row], ...]}
   z.object({
     number: z.string(),
     clue: z.string(),
-    cells: z.array(z.unknown()).optional(),
+    cells: z.array(z.array(z.number())).optional(), // Array of [column, row] pairs
   }),
 ]);
 

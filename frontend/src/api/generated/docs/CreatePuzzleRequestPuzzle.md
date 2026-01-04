@@ -3,7 +3,7 @@
 ## Properties
 
 | Name         | Type                                                                          |
-| ------------ | ----------------------------------------------------------------------------- |
+| ------------ | ----------------------------------------------------------------------------- | ------------ |
 | `version`    | string                                                                        |
 | `kind`       | Array&lt;string&gt;                                                           |
 | `dimensions` | [CreatePuzzleRequestPuzzleDimensions](CreatePuzzleRequestPuzzleDimensions.md) |
@@ -11,10 +11,10 @@
 | `author`     | string                                                                        |
 | `copyright`  | string                                                                        |
 | `notes`      | string                                                                        |
-| `solution`   | Array&lt;Array&lt;CreatePuzzleRequestPuzzleSolutionInnerInner&gt;&gt;         |
+| `solution`   | Array&lt;Array&lt;string                                                      | null&gt;&gt; |
 | `puzzle`     | Array&lt;Array&lt;CreatePuzzleRequestPuzzlePuzzleInnerInner&gt;&gt;           |
 | `clues`      | [CreatePuzzleRequestPuzzleClues](CreatePuzzleRequestPuzzleClues.md)           |
-| `grid`       | Array&lt;Array&lt;CreatePuzzleRequestPuzzleSolutionInnerInner&gt;&gt;         |
+| `grid`       | Array&lt;Array&lt;string                                                      | null&gt;&gt; |
 | `info`       | [CreatePuzzleRequestPuzzleInfo](CreatePuzzleRequestPuzzleInfo.md)             |
 
 ## Example

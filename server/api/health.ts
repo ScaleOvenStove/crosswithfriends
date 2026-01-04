@@ -1,5 +1,6 @@
 import type {AppInstance} from '../types/fastify.js';
 
+import type {HealthResponse} from './generated/index.js';
 import {HealthResponseSchema} from './schemas.js';
 
 /**
@@ -19,7 +20,7 @@ async function healthRouter(fastify: AppInstance): Promise<void> {
     },
   };
 
-  fastify.get('', options, (_request: any, _reply: any) => {
+  fastify.get<{Reply: HealthResponse}>('', options, (_request: any, _reply: any) => {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),

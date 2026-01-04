@@ -1,10 +1,9 @@
-import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
-
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
 import type {AppInstance} from '../types/fastify.js';
 
 import {createHttpError} from './errors.js';
+import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from './generated/index.js';
 import {ListPuzzleStatsRequestSchema, ErrorResponseSchema} from './schemas.js';
 
 const groupBy = <T>(arr: T[], fn: (item: T) => string | number): Record<string, T[]> => {

@@ -73,7 +73,7 @@ export const PuzzleJsonSchema = {
       items: {
         type: 'array',
         items: {
-          oneOf: [{type: 'string'}, {type: 'null'}],
+          anyOf: [{type: 'string'}, {type: 'null'}],
         },
       },
       description: 'Solution grid (new format)',
@@ -107,8 +107,11 @@ export const PuzzleJsonSchema = {
               clue: {type: 'string', description: 'Clue text'},
               cells: {
                 type: 'array',
-                items: {type: 'number'},
-                description: 'Optional array of cell indices (v2 format)',
+                items: {
+                  type: 'array',
+                  items: {type: 'number'},
+                },
+                description: 'Optional array of [column, row] pairs (v2 format)',
               },
             },
           },
@@ -124,8 +127,11 @@ export const PuzzleJsonSchema = {
               clue: {type: 'string', description: 'Clue text'},
               cells: {
                 type: 'array',
-                items: {type: 'number'},
-                description: 'Optional array of cell indices (v2 format)',
+                items: {
+                  type: 'array',
+                  items: {type: 'number'},
+                },
+                description: 'Optional array of [column, row] pairs (v2 format)',
               },
             },
           },
@@ -139,7 +145,7 @@ export const PuzzleJsonSchema = {
       items: {
         type: 'array',
         items: {
-          oneOf: [{type: 'string'}, {type: 'null'}],
+          anyOf: [{type: 'string'}, {type: 'null'}],
         },
       },
       description: 'Legacy format: Solution grid',

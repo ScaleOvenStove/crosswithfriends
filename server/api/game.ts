@@ -1,4 +1,4 @@
-import type {CreateGameRequest, GetGameResponse, InfoJson} from '@crosswithfriends/shared/types';
+import type {InfoJson} from '@crosswithfriends/shared/types';
 
 import '../types/fastify.js';
 import {config} from '../config/index.js';
@@ -9,16 +9,13 @@ import {logRequest} from '../utils/sanitizedLogger.js';
 import {authenticateRequest, isValidUserId} from '../utils/userAuth.js';
 
 import {createHttpError} from './errors.js';
+import type {CreateGameRequest, CreateGameResponse, GetGameResponse} from './generated/index.js';
 import {
   CreateGameRequestSchema,
   CreateGameResponseSchema,
   GetGameResponseSchema,
   ErrorResponseSchema,
 } from './schemas.js';
-
-interface CreateGameResponseWithGid {
-  gid: string;
-}
 
 // eslint-disable-next-line require-await
 async function gameRouter(fastify: AppInstance): Promise<void> {
@@ -36,7 +33,7 @@ async function gameRouter(fastify: AppInstance): Promise<void> {
     },
   };
 
-  fastify.post<{Body: CreateGameRequest; Reply: CreateGameResponseWithGid}>(
+  fastify.post<{Body: CreateGameRequest; Reply: CreateGameResponse}>(
     '',
     postOptions,
     async (request: any, _reply: any) => {

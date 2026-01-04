@@ -180,42 +180,13 @@ async function runServer(): Promise<void> {
       }
     );
 
-    // Register Swagger plugin
+    // Register Swagger plugin with static OpenAPI spec (spec-first approach)
+    // The OpenAPI spec in openapi.json is the source of truth
     await app.register(swagger, {
-      openapi: {
-        info: {
-          title: 'CrossWithFriends API',
-          description: 'API for the CrossWithFriends crossword puzzle platform',
-          version: '1.0.0',
-          contact: {
-            name: 'CrossWithFriends',
-          },
-        },
-        servers: [
-          {
-            url: config.urls.productionApi,
-            description: 'Production server',
-          },
-          {
-            url: config.urls.stagingApi,
-            description: 'Staging server',
-          },
-          {
-            url: `http://localhost:${config.server.port}/api`,
-            description: 'Local development server',
-          },
-        ],
-        tags: [
-          {name: 'Health', description: 'Health check endpoints'},
-          {name: 'Games', description: 'Game management endpoints'},
-          {name: 'Puzzles', description: 'Puzzle management endpoints'},
-          {name: 'Stats', description: 'Statistics endpoints'},
-          {name: 'Counters', description: 'ID counter endpoints'},
-          {name: 'Link Preview', description: 'Link preview and oEmbed endpoints'},
-        ],
-        components: {
-          schemas: {},
-        },
+      mode: 'static',
+      specification: {
+        path: './openapi.json',
+        baseDir: new URL('.', import.meta.url).pathname,
       },
     });
 

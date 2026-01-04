@@ -32,11 +32,11 @@ export interface CreatePuzzleRequestPuzzleCluesAcrossInner {
    */
   clue: string;
   /**
-   * Optional array of cell indices (v2 format)
-   * @type {Array<number>}
+   * Optional array of [column, row] pairs (v2 format)
+   * @type {Array<Array<number>>}
    * @memberof CreatePuzzleRequestPuzzleCluesAcrossInner
    */
-  cells?: Array<number>;
+  cells?: Array<Array<number>>;
 }
 
 /**

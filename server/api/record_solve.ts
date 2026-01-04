@@ -1,8 +1,7 @@
-import type {RecordSolveRequest, RecordSolveResponse} from '@crosswithfriends/shared/types';
-
 import '../types/fastify.js';
 import type {AppInstance} from '../types/fastify.js';
 
+import type {RecordSolveRequest, RecordSolveResponse} from './generated/index.js';
 import {RecordSolveRequestSchema, RecordSolveResponseSchema, ErrorResponseSchema} from './schemas.js';
 
 // eslint-disable-next-line require-await

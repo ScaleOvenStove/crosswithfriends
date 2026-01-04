@@ -16,27 +16,13 @@ import {
 import {isFirebaseAdminInitialized, verifyFirebaseToken} from '../utils/firebaseAdmin.js';
 
 import {createHttpError} from './errors.js';
+import type {
+  CreateTokenRequest,
+  CreateTokenResponse,
+  ValidateTokenRequest,
+  ValidateTokenResponse,
+} from './generated/index.js';
 import {ErrorResponseSchema} from './schemas.js';
-
-interface CreateTokenRequest {
-  userId?: string;
-}
-
-interface CreateTokenResponse {
-  token: string;
-  userId: string;
-  expiresAt: number;
-}
-
-interface ValidateTokenRequest {
-  token: string;
-}
-
-interface ValidateTokenResponse {
-  valid: boolean;
-  userId?: string;
-  expiresAt?: number;
-}
 
 // eslint-disable-next-line require-await
 async function authRouter(fastify: AppInstance): Promise<void> {

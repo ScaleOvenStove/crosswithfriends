@@ -2,11 +2,11 @@
 
 ## Properties
 
-| Name     | Type                |
-| -------- | ------------------- |
-| `number` | string              |
-| `clue`   | string              |
-| `cells`  | Array&lt;number&gt; |
+| Name     | Type                             |
+| -------- | -------------------------------- |
+| `number` | string                           |
+| `clue`   | string                           |
+| `cells`  | Array&lt;Array&lt;number&gt;&gt; |
 
 ## Example
 

@@ -20,6 +20,7 @@ export default [
       '**/*.test.ts',
       '**/*.spec.ts',
       '__tests__/**',
+      '**/*.d.ts',
     ],
   },
 

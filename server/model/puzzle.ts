@@ -1,8 +1,17 @@
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
 import * as uuid from 'uuid';
 
-import {convertCluesToV2, convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
+import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import {logger} from '../utils/logger.js';
+import {
+  hasClueArrays,
+  normalizeClues,
+  removeLowercaseClueKeys,
+  extractMetadata,
+  getPuzzleTypeFromDimensions,
+  type CluesObject,
+  type NormalizedClues,
+} from '../utils/puzzleFormatUtils.js';
 import {validatePuzzle} from '../validation/puzzleSchema.js';
 
 import {pool} from './pool.js';
@@ -33,82 +42,33 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   // Always return ipuz format to clients
   const puzzle = convertOldFormatToIpuz(firstRow.content);
 
-  // Convert any v1 array format clues to v2 object format
-  if (puzzle.clues) {
-    const cluesInput = puzzle.clues as {
-      Across?: unknown[];
-      across?: unknown[];
-      Down?: unknown[];
-      down?: unknown[];
-    };
-
-    const hasClues =
-      (Array.isArray(cluesInput.Across) && cluesInput.Across.length > 0) ||
-      (Array.isArray(cluesInput.across) && cluesInput.across.length > 0) ||
-      (Array.isArray(cluesInput.Down) && cluesInput.Down.length > 0) ||
-      (Array.isArray(cluesInput.down) && cluesInput.down.length > 0);
-
-    if (hasClues) {
-      let acrossCount = 0;
-      if (Array.isArray(cluesInput.Across)) {
-        acrossCount = cluesInput.Across.length;
-      } else if (Array.isArray(cluesInput.across)) {
-        acrossCount = cluesInput.across.length;
-      }
-
-      let downCount = 0;
-      if (Array.isArray(cluesInput.Down)) {
-        downCount = cluesInput.Down.length;
-      } else if (Array.isArray(cluesInput.down)) {
-        downCount = cluesInput.down.length;
-      }
-
-      logger.debug(
-        {
-          hasAcross: !!cluesInput.Across,
-          hasacross: !!cluesInput.across,
-          hasDown: !!cluesInput.Down,
-          hasdown: !!cluesInput.down,
-          acrossCount,
-          downCount,
-        },
-        'Converting clues on retrieve'
-      );
-
-      puzzle.clues = convertCluesToV2(puzzle.clues);
-
-      const convertedClues = puzzle.clues as {Across?: unknown[]; Down?: unknown[]};
-      logger.debug(
-        {
-          acrossCount: convertedClues.Across?.length || 0,
-          downCount: convertedClues.Down?.length || 0,
-        },
-        'Converted clues on retrieve'
-      );
-
-      // Remove any lowercase arrays (legacy format artifacts)
-      // We only use capitalized Across/Down in ipuz v2 format
-      const cluesObj = puzzle.clues as {across?: unknown; down?: unknown};
-      if ('across' in cluesObj) {
-        delete cluesObj.across;
-      }
-      if ('down' in cluesObj) {
-        delete cluesObj.down;
-      }
-    } else {
-      logger.warn(
-        {
-          pid,
-          cluesKeys: Object.keys(puzzle.clues),
-        },
-        'Puzzle has clues object but all clue arrays are empty'
-      );
-    }
-  } else {
-    logger.warn({pid}, 'Puzzle has no clues object');
-  }
+  // Normalize clues to v2 format
+  normalizePuzzleCluesWithLogging(puzzle, pid);
 
   return puzzle;
+}
+
+/**
+ * Normalizes puzzle clues to v2 format with appropriate logging
+ */
+function normalizePuzzleCluesWithLogging(puzzle: PuzzleJson, pid: string): void {
+  if (!puzzle.clues) {
+    logger.warn({pid}, 'Puzzle has no clues object');
+    return;
+  }
+
+  const cluesInput = puzzle.clues as CluesObject;
+  if (!hasClueArrays(cluesInput)) {
+    logger.warn(
+      {pid, cluesKeys: Object.keys(puzzle.clues)},
+      'Puzzle has clues object but all clue arrays are empty'
+    );
+    return;
+  }
+
+  // Normalize clues to v2 format
+  puzzle.clues = normalizeClues(cluesInput);
+  removeLowercaseClueKeys(puzzle.clues as CluesObject);
 }
 
 const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string[] => {
@@ -121,12 +81,6 @@ const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']):
   }
   return ret;
 };
-
-// Helper to determine puzzle type from ipuz solution array length
-function getPuzzleTypeFromIpuz(ipuz: {solution?: unknown}): string {
-  const solution = Array.isArray(ipuz.solution) ? ipuz.solution : [];
-  return solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
-}
 
 export async function listPuzzles(
   filter: ListPuzzleRequestFilters,
@@ -236,63 +190,43 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
   const normalizedPuzzle = {...puzzle};
   if (normalizedPuzzle.clues) {
     try {
-      const cluesInput = normalizedPuzzle.clues as {
-        Across?: unknown[];
-        across?: unknown[];
-        Down?: unknown[];
-        down?: unknown[];
-      };
-
-      let acrossCount = 0;
-      if (Array.isArray(cluesInput.Across)) {
-        acrossCount = cluesInput.Across.length;
-      } else if (Array.isArray(cluesInput.across)) {
-        acrossCount = cluesInput.across.length;
-      }
-
-      let downCount = 0;
-      if (Array.isArray(cluesInput.Down)) {
-        downCount = cluesInput.Down.length;
-      } else if (Array.isArray(cluesInput.down)) {
-        downCount = cluesInput.down.length;
-      }
+      const cluesInput = normalizedPuzzle.clues as CluesObject;
+      const acrossCount =
+        (Array.isArray(cluesInput.Across) ? cluesInput.Across.length : 0) ||
+        (Array.isArray(cluesInput.across) ? cluesInput.across.length : 0);
+      const downCount =
+        (Array.isArray(cluesInput.Down) ? cluesInput.Down.length : 0) ||
+        (Array.isArray(cluesInput.down) ? cluesInput.down.length : 0);
 
       logger.debug(
         {
-          hasAcross: !!cluesInput.Across,
-          hasacross: !!cluesInput.across,
-          hasDown: !!cluesInput.Down,
-          hasdown: !!cluesInput.down,
+          pid: puzzleId,
+          hasAcross: !!cluesInput.Across || !!cluesInput.across,
+          hasDown: !!cluesInput.Down || !!cluesInput.down,
           acrossCount,
           downCount,
         },
         'Converting clues before save'
       );
 
-      normalizedPuzzle.clues = convertCluesToV2(normalizedPuzzle.clues);
+      normalizedPuzzle.clues = normalizeClues(cluesInput);
+      removeLowercaseClueKeys(normalizedPuzzle.clues as CluesObject);
 
-      const convertedClues = normalizedPuzzle.clues as {Across?: unknown[]; Down?: unknown[]};
+      const normalizedClues = normalizedPuzzle.clues as NormalizedClues;
       logger.debug(
         {
-          acrossCount: convertedClues.Across?.length || 0,
-          downCount: convertedClues.Down?.length || 0,
+          pid: puzzleId,
+          acrossCount: normalizedClues.Across?.length || 0,
+          downCount: normalizedClues.Down?.length || 0,
         },
-        'Converted clues'
+        'Converted clues after save'
       );
-
-      // Remove any lowercase arrays (legacy format artifacts)
-      // We only use capitalized Across/Down in ipuz v2 format
-      const cluesObj = normalizedPuzzle.clues as {across?: unknown; down?: unknown};
-      if ('across' in cluesObj) {
-        delete cluesObj.across;
-      }
-      if ('down' in cluesObj) {
-        delete cluesObj.down;
-      }
     } catch (error) {
       logger.error({error}, 'Failed to convert clues');
       throw new Error(`Failed to convert clues: ${error instanceof Error ? error.message : String(error)}`);
     }
+  } else {
+    logger.warn({pid: puzzleId}, 'Puzzle has no clues object during save');
   }
 
   const uploaded_at = Date.now();
@@ -370,32 +304,17 @@ export async function getPuzzleInfo(
 ): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
   const puzzle = await getPuzzle(pid);
 
-  // IMPORTANT: Production and staging share the same database, so we must support both formats
-  // Handle old format (with info object) and ipuz format (title/author at root)
-  if ('info' in puzzle && puzzle.info && typeof puzzle.info === 'object') {
-    // Old format: extract from info object
-    const info = puzzle.info as {
-      title?: string;
-      author?: string;
-      copyright?: string;
-      description?: string;
-      type?: string;
-    };
-    return {
-      title: info.title || '',
-      author: info.author || '',
-      copyright: info.copyright || '',
-      description: info.description || '',
-      type: info.type,
-    };
-  }
+  // Use shared utility for metadata extraction
+  const metadata = extractMetadata(puzzle);
 
-  // New format (ipuz): extract from root level
+  // Calculate type from solution dimensions if not present
+  const type = metadata.type || getPuzzleTypeFromDimensions(puzzle.solution?.length || 0);
+
   return {
-    title: puzzle.title || '',
-    author: puzzle.author || '',
-    copyright: puzzle.copyright || '',
-    description: puzzle.notes || '',
-    type: getPuzzleTypeFromIpuz(puzzle),
+    title: metadata.title,
+    author: metadata.author,
+    copyright: metadata.copyright,
+    description: metadata.description,
+    type,
   };
 }

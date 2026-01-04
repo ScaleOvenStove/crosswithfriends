@@ -1,16 +1,11 @@
 import type {AppInstance} from '../types/fastify.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 
+import type {OEmbedResponse} from './generated/index.js';
 import {OEmbedResponseSchema} from './schemas.js';
 
 interface OEmbedQuery {
   author: string;
-}
-
-interface OEmbedResponse {
-  type: string;
-  version: string;
-  author_name: string;
 }
 
 // eslint-disable-next-line require-await

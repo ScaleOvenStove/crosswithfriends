@@ -10,7 +10,6 @@ export * from './CreatePuzzleRequestPuzzleCluesAcrossInner';
 export * from './CreatePuzzleRequestPuzzleDimensions';
 export * from './CreatePuzzleRequestPuzzleInfo';
 export * from './CreatePuzzleRequestPuzzlePuzzleInnerInner';
-export * from './CreatePuzzleRequestPuzzleSolutionInnerInner';
 export * from './CreateToken200Response';
 export * from './CreateToken400Response';
 export * from './CreateTokenRequest';

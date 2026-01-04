@@ -21,12 +21,13 @@ const ipuzCellSchema = z.union([
   z.null(),
 ]);
 
-// Clue format can be [number, clue] tuple or object
+// Clue format can be [number, clue] tuple or object with optional cells
 const clueFormatSchema = z.union([
   z.tuple([z.string(), z.string()]),
   z.object({
     number: z.string(),
     clue: z.string(),
+    cells: z.array(z.array(z.number())).optional(), // Support cells property for v2 format
   }),
 ]);
 

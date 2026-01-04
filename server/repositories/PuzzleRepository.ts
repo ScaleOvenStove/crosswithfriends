@@ -37,9 +37,39 @@ export class PuzzleRepository implements IPuzzleRepository {
     // Always return ipuz format to clients
     const puzzle = convertOldFormatToIpuz(firstRow.content);
 
+    // Debug: Log clues before conversion
+    logger.debug(
+      {
+        pid,
+        hasClues: !!puzzle.clues,
+        cluesKeys: puzzle.clues ? Object.keys(puzzle.clues) : [],
+        acrossCount:
+          puzzle.clues && 'Across' in puzzle.clues && Array.isArray(puzzle.clues.Across)
+            ? puzzle.clues.Across.length
+            : 0,
+        downCount:
+          puzzle.clues && 'Down' in puzzle.clues && Array.isArray(puzzle.clues.Down)
+            ? puzzle.clues.Down.length
+            : 0,
+      },
+      'Puzzle clues before conversion'
+    );
+
     // Convert any v1 array format clues to v2 object format
     if (puzzle.clues) {
       puzzle.clues = convertCluesToV2(puzzle.clues);
+
+      // Debug: Log clues after conversion
+      const convertedClues = puzzle.clues as {Across?: unknown[]; Down?: unknown[]};
+      logger.debug(
+        {
+          pid,
+          acrossCount: convertedClues.Across?.length || 0,
+          downCount: convertedClues.Down?.length || 0,
+        },
+        'Puzzle clues after conversion'
+      );
+
       // Remove any lowercase arrays (legacy format artifacts)
       // We only use capitalized Across/Down in ipuz v2 format
       if ('across' in puzzle.clues) {
@@ -48,6 +78,8 @@ export class PuzzleRepository implements IPuzzleRepository {
       if ('down' in puzzle.clues) {
         delete (puzzle.clues as {down?: unknown}).down;
       }
+    } else {
+      logger.warn({pid}, 'Puzzle has no clues object after convertOldFormatToIpuz');
     }
 
     return puzzle;

@@ -27,13 +27,6 @@ import {
   CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSON,
   CreatePuzzleRequestPuzzlePuzzleInnerInnerToJSONTyped,
 } from './CreatePuzzleRequestPuzzlePuzzleInnerInner';
-import type { CreatePuzzleRequestPuzzleSolutionInnerInner } from './CreatePuzzleRequestPuzzleSolutionInnerInner';
-import {
-  CreatePuzzleRequestPuzzleSolutionInnerInnerFromJSON,
-  CreatePuzzleRequestPuzzleSolutionInnerInnerFromJSONTyped,
-  CreatePuzzleRequestPuzzleSolutionInnerInnerToJSON,
-  CreatePuzzleRequestPuzzleSolutionInnerInnerToJSONTyped,
-} from './CreatePuzzleRequestPuzzleSolutionInnerInner';
 import type { CreatePuzzleRequestPuzzleDimensions } from './CreatePuzzleRequestPuzzleDimensions';
 import {
   CreatePuzzleRequestPuzzleDimensionsFromJSON,
@@ -100,10 +93,10 @@ export interface CreatePuzzleRequestPuzzle {
   notes?: string;
   /**
    * Solution grid (new format)
-   * @type {Array<Array<CreatePuzzleRequestPuzzleSolutionInnerInner>>}
+   * @type {Array<Array<string | null>>}
    * @memberof CreatePuzzleRequestPuzzle
    */
-  solution?: Array<Array<CreatePuzzleRequestPuzzleSolutionInnerInner>>;
+  solution?: Array<Array<string | null>>;
   /**
    * Puzzle grid (new format)
    * @type {Array<Array<CreatePuzzleRequestPuzzlePuzzleInnerInner>>}
@@ -118,10 +111,10 @@ export interface CreatePuzzleRequestPuzzle {
   clues: CreatePuzzleRequestPuzzleClues;
   /**
    * Legacy format: Solution grid
-   * @type {Array<Array<CreatePuzzleRequestPuzzleSolutionInnerInner>>}
+   * @type {Array<Array<string | null>>}
    * @memberof CreatePuzzleRequestPuzzle
    */
-  grid?: Array<Array<CreatePuzzleRequestPuzzleSolutionInnerInner>>;
+  grid?: Array<Array<string | null>>;
   /**
    *
    * @type {CreatePuzzleRequestPuzzleInfo}

@@ -90,9 +90,7 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "type-check": "tsc --noEmit",
-    "api:download": "curl -s http://localhost:3021/api/docs/json -o openapi.json",
-    "api:generate": "yarn openapi-generator-cli generate -i openapi.json -g typescript-fetch -o src/api/generated --additional-properties=supportsES6=true,typescriptThreePlus=true,useSingleRequestParameter=false,withInterfaces=true,modelPropertyNaming=camelCase --enable-post-process-file",
-    "api:regenerate": "yarn api:download && TS_POST_PROCESS_FILE='yarn prettier --write' yarn api:generate"
+    "api:generate": "yarn openapi-generator-cli generate -i ../server/openapi.json -g typescript-fetch -o src/api/generated --additional-properties=supportsES6=true,typescriptThreePlus=true,useSingleRequestParameter=false,withInterfaces=true,modelPropertyNaming=camelCase --enable-post-process-file && yarn prettier --write src/api/generated"
   },
   "browserslist": {
     "production": [

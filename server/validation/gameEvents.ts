@@ -95,6 +95,10 @@ const revealAllCluesEventParamsSchema = z.object({});
 
 const startGameEventParamsSchema = z.object({});
 
+const clockStartEventParamsSchema = z.object({});
+const clockPauseEventParamsSchema = z.object({});
+const clockResetEventParamsSchema = z.object({});
+
 const sendChatMessageEventParamsSchema = z.object({
   id: z.string().min(1),
   message: z.string().min(1).max(1000), // Reasonable message length limit
@@ -137,6 +141,9 @@ const eventParamsSchemas: Record<string, z.ZodSchema> = {
   reveal: revealEventParamsSchema,
   revealAllClues: revealAllCluesEventParamsSchema,
   startGame: startGameEventParamsSchema,
+  clockStart: clockStartEventParamsSchema,
+  clockPause: clockPauseEventParamsSchema,
+  clockReset: clockResetEventParamsSchema,
   sendChatMessage: sendChatMessageEventParamsSchema,
   updateDisplayName: updateDisplayNameEventParamsSchema,
   updateTeamName: updateTeamNameEventParamsSchema,

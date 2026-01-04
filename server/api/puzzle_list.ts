@@ -1,10 +1,11 @@
-import type {ListPuzzleRequestFilters, ListPuzzleResponse, PuzzleJson} from '@crosswithfriends/shared/types';
+import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
 
 import '../types/fastify.js';
 import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import type {AppInstance} from '../types/fastify.js';
 
 import {createHttpError} from './errors.js';
+import type {ListPuzzlesResponse} from './generated/index.js';
 import {ErrorResponseSchema} from './schemas.js';
 
 interface PuzzleListQuery {
@@ -53,7 +54,7 @@ async function puzzleListRouter(fastify: AppInstance): Promise<void> {
     },
   };
 
-  fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzleResponse}>(
+  fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzlesResponse}>(
     '',
     getOptions,
     async (request: any, _reply: any) => {
