@@ -26,7 +26,7 @@ async function apiRouter(fastify: AppInstance): Promise<void> {
   // 4. Validates requests/responses against the spec
   await fastify.register(openapiGlue, {
     specification,
-    serviceHandlers: handlers,
+    service: handlers,
     // Don't prefix since paths in spec already include full path
     prefix: '',
   });
