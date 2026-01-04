@@ -6,18 +6,55 @@ const cellCoordsSchema = z.object({
   c: z.number().int().nonnegative(),
 });
 
+// Schema for grid cell data
+const cellDataSchema = z
+  .object({
+    value: z.string().optional(),
+    black: z.boolean().optional(),
+    number: z.number().optional(),
+    revealed: z.boolean().optional(),
+    bad: z.boolean().optional(),
+    good: z.boolean().optional(),
+    pencil: z.boolean().optional(),
+    isHidden: z.boolean().optional(),
+    solvedBy: z
+      .object({
+        id: z.string(),
+        teamId: z.number(),
+      })
+      .optional(),
+    parents: z
+      .object({
+        across: z.number(),
+        down: z.number(),
+      })
+      .optional(),
+  })
+  .passthrough(); // Allow additional properties
+
+// Schema for chat message
+const chatMessageSchema = z
+  .object({
+    id: z.string().optional(),
+    userId: z.string().optional(),
+    userName: z.string().optional(),
+    message: z.string(),
+    timestamp: z.number().optional(),
+  })
+  .passthrough(); // Allow additional properties
+
 // Game event parameter schemas
 const createEventParamsSchema = z.object({
   pid: z.string().min(1),
-  version: z.number().positive(),
+  version: z.number().positive().optional(), // Optional for backward compatibility
   game: z.object({
     info: z.record(z.string(), z.unknown()).optional(),
-    grid: z.array(z.array(z.any())),
+    grid: z.array(z.array(cellDataSchema)),
     solution: z.array(z.array(z.string())),
     circles: z.array(z.string()).optional(),
     chat: z
       .object({
-        messages: z.array(z.any()),
+        messages: z.array(chatMessageSchema),
       })
       .optional(),
     cursor: z.record(z.string(), z.unknown()).optional(),
@@ -57,6 +94,10 @@ const revealEventParamsSchema = z.object({
 const revealAllCluesEventParamsSchema = z.object({});
 
 const startGameEventParamsSchema = z.object({});
+
+const clockStartEventParamsSchema = z.object({});
+const clockPauseEventParamsSchema = z.object({});
+const clockResetEventParamsSchema = z.object({});
 
 const sendChatMessageEventParamsSchema = z.object({
   id: z.string().min(1),
@@ -100,6 +141,9 @@ const eventParamsSchemas: Record<string, z.ZodSchema> = {
   reveal: revealEventParamsSchema,
   revealAllClues: revealAllCluesEventParamsSchema,
   startGame: startGameEventParamsSchema,
+  clockStart: clockStartEventParamsSchema,
+  clockPause: clockPauseEventParamsSchema,
+  clockReset: clockResetEventParamsSchema,
   sendChatMessage: sendChatMessageEventParamsSchema,
   updateDisplayName: updateDisplayNameEventParamsSchema,
   updateTeamName: updateTeamNameEventParamsSchema,

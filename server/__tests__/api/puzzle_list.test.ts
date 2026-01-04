@@ -1,23 +1,18 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
 import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as puzzleModel from '../../model/puzzle.js';
-
-// Mock the model - use importActual to keep real implementations
-vi.mock('../../model/puzzle.js', async () => {
-  const actual = await vi.importActual<typeof import('../../model/puzzle.js')>('../../model/puzzle.js');
-  return {
-    ...actual,
-    convertOldFormatToIpuz: vi.fn((content: any) => content),
-    listPuzzles: vi.fn(),
-  };
-});
 
 describe('Puzzle List API', () => {
-  let app: FastifyInstance;
+  let app: FastifyInstance & {
+    repositories: {
+      puzzle: {
+        list: Mock;
+      };
+    };
+  };
 
   beforeAll(async () => {
-    app = await buildTestApp();
+    app = (await buildTestApp()) as typeof app;
     await waitForApp(app);
   });
 
@@ -27,9 +22,6 @@ describe('Puzzle List API', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // convertOldFormatToIpuz is already mocked in vi.mock above
-    // Reset it to return content as-is for each test
-    (puzzleModel.convertOldFormatToIpuz as Mock).mockImplementation((content: any) => content);
   });
 
   describe('GET /api/puzzle_list', () => {
@@ -37,17 +29,15 @@ describe('Puzzle List API', () => {
       const mockPuzzles = [
         {
           pid: 'pid1',
-          content: {title: 'Puzzle 1'},
-          times_solved: 10,
+          puzzle: {title: 'Puzzle 1'},
         },
         {
           pid: 'pid2',
-          content: {title: 'Puzzle 2'},
-          times_solved: 5,
+          puzzle: {title: 'Puzzle 2'},
         },
       ];
 
-      (puzzleModel.listPuzzles as Mock).mockResolvedValue(mockPuzzles);
+      app.repositories.puzzle.list.mockResolvedValue({puzzles: mockPuzzles, total: 2});
 
       const response = await app.inject({
         method: 'GET',
@@ -58,20 +48,12 @@ describe('Puzzle List API', () => {
       const body = JSON.parse(response.body);
       expect(body).toHaveProperty('puzzles');
       expect(body.puzzles).toHaveLength(2);
-      // Verify the structure - the mock should ensure convertOldFormatToIpuz returns content as-is
-      expect(body.puzzles[0]).toBeDefined();
-      expect(typeof body.puzzles[0]).toBe('object');
-      // Check if the mock is working - if not, the object might be empty
-      if (Object.keys(body.puzzles[0]).length === 0) {
-        // Mock might not be working - check if convertOldFormatToIpuz was called
-        expect(puzzleModel.convertOldFormatToIpuz).toHaveBeenCalled();
-      }
       expect(body.puzzles[0]).toHaveProperty('pid');
       expect(body.puzzles[0]).toHaveProperty('content');
       expect(body.puzzles[0]).toHaveProperty('stats');
       expect(body.puzzles[0].pid).toBe('pid1');
       expect(body.puzzles[0].content).toEqual({title: 'Puzzle 1'});
-      expect(body.puzzles[0].stats).toEqual({numSolves: 10});
+      expect(body.puzzles[0].stats).toEqual({numSolves: 0});
     });
 
     it('should return 400 for invalid page parameter', async () => {
@@ -101,12 +83,11 @@ describe('Puzzle List API', () => {
       const mockPuzzles = [
         {
           pid: 'pid1',
-          content: {title: 'Puzzle 1'},
-          times_solved: 10,
+          puzzle: {title: 'Puzzle 1'},
         },
       ];
 
-      (puzzleModel.listPuzzles as Mock).mockResolvedValue(mockPuzzles);
+      app.repositories.puzzle.list.mockResolvedValue({puzzles: mockPuzzles, total: 1});
 
       const response = await app.inject({
         method: 'GET',
@@ -116,12 +97,11 @@ describe('Puzzle List API', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.puzzles).toHaveLength(1);
-      // Verify listPuzzles was called with default filters
-      expect(puzzleModel.listPuzzles).toHaveBeenCalled();
+      expect(app.repositories.puzzle.list).toHaveBeenCalled();
     });
 
     it('should return empty puzzle list response', async () => {
-      (puzzleModel.listPuzzles as Mock).mockResolvedValue([]);
+      app.repositories.puzzle.list.mockResolvedValue({puzzles: [], total: 0});
 
       const response = await app.inject({
         method: 'GET',
@@ -137,12 +117,11 @@ describe('Puzzle List API', () => {
       const mockPuzzles = [
         {
           pid: 'pid1',
-          content: {title: 'Test Puzzle'},
-          times_solved: 5,
+          puzzle: {title: 'Test Puzzle'},
         },
       ];
 
-      (puzzleModel.listPuzzles as Mock).mockResolvedValue(mockPuzzles);
+      app.repositories.puzzle.list.mockResolvedValue({puzzles: mockPuzzles, total: 1});
 
       const response = await app.inject({
         method: 'GET',
@@ -152,19 +131,18 @@ describe('Puzzle List API', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.puzzles).toHaveLength(1);
-      expect(puzzleModel.listPuzzles).toHaveBeenCalled();
+      expect(app.repositories.puzzle.list).toHaveBeenCalled();
     });
 
     it('should handle page=0 correctly', async () => {
       const mockPuzzles = [
         {
           pid: 'pid1',
-          content: {title: 'Puzzle 1'},
-          times_solved: 10,
+          puzzle: {title: 'Puzzle 1'},
         },
       ];
 
-      (puzzleModel.listPuzzles as Mock).mockResolvedValue(mockPuzzles);
+      app.repositories.puzzle.list.mockResolvedValue({puzzles: mockPuzzles, total: 1});
 
       const response = await app.inject({
         method: 'GET',
@@ -175,7 +153,7 @@ describe('Puzzle List API', () => {
       const body = JSON.parse(response.body);
       expect(body.puzzles).toHaveLength(1);
       // Verify offset calculation: page * pageSize = 0 * 10 = 0
-      expect(puzzleModel.listPuzzles).toHaveBeenCalledWith(
+      expect(app.repositories.puzzle.list).toHaveBeenCalledWith(
         expect.any(Object),
         10, // limit
         0 // offset
@@ -185,11 +163,10 @@ describe('Puzzle List API', () => {
     it('should handle very large pageSize', async () => {
       const mockPuzzles = Array.from({length: 100}, (_, i) => ({
         pid: `pid${i}`,
-        content: {title: `Puzzle ${i}`},
-        times_solved: i,
+        puzzle: {title: `Puzzle ${i}`},
       }));
 
-      (puzzleModel.listPuzzles as Mock).mockResolvedValue(mockPuzzles);
+      app.repositories.puzzle.list.mockResolvedValue({puzzles: mockPuzzles, total: 100});
 
       const response = await app.inject({
         method: 'GET',
@@ -199,7 +176,7 @@ describe('Puzzle List API', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.puzzles).toHaveLength(100);
-      expect(puzzleModel.listPuzzles).toHaveBeenCalledWith(
+      expect(app.repositories.puzzle.list).toHaveBeenCalledWith(
         expect.any(Object),
         1000, // limit
         0 // offset
@@ -239,9 +216,9 @@ describe('Puzzle List API', () => {
       expect(body.statusCode).toBe(400);
     });
 
-    it('should handle errors from model', async () => {
+    it('should handle errors from repository', async () => {
       const error = new Error('Database error');
-      (puzzleModel.listPuzzles as Mock).mockRejectedValue(error);
+      app.repositories.puzzle.list.mockRejectedValue(error);
 
       const response = await app.inject({
         method: 'GET',

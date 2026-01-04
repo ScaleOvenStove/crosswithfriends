@@ -6,3 +6,8 @@ export default (url, message) => {
   if (message) alert(message);
   window.location.replace(url);
 };
+
+// Export a function to reset the redirected state (for testing)
+export function resetRedirectState() {
+  redirected = false;
+}

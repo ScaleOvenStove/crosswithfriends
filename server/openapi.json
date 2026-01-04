@@ -1,0 +1,1241 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CrossWithFriends API",
+    "description": "API for the CrossWithFriends crossword puzzle platform",
+    "version": "1.0.0",
+    "contact": {"name": "CrossWithFriends"}
+  },
+  "components": {"schemas": {}},
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Health check",
+        "tags": ["Health"],
+        "description": "Health check endpoint for Docker and monitoring",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "timestamp", "uptime"],
+                  "properties": {
+                    "status": {"type": "string"},
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO 8601 format timestamp"
+                    },
+                    "uptime": {"type": "number", "description": "Process uptime in seconds"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/token": {
+      "post": {
+        "operationId": "createToken",
+        "summary": "Create authentication token",
+        "tags": ["Authentication"],
+        "description": "Creates a new JWT authentication token for a user. If userId is not provided, a new secure user ID is generated.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "Optional user ID. If not provided, a new one is generated."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["token", "userId", "expiresAt"],
+                  "properties": {
+                    "token": {"type": "string", "description": "JWT authentication token"},
+                    "userId": {"type": "string", "description": "The user ID associated with this token"},
+                    "expiresAt": {"type": "number", "description": "Token expiration timestamp (ms)"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/firebase-token": {
+      "post": {
+        "operationId": "exchangeFirebaseToken",
+        "summary": "Exchange Firebase ID token for backend JWT",
+        "tags": ["Authentication"],
+        "description": "Verifies a Firebase ID token and returns a backend JWT token. The Firebase UID is used as the userId in the backend JWT.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["firebaseToken"],
+                "properties": {
+                  "firebaseToken": {"type": "string", "description": "Firebase ID token from the frontend"}
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["token", "userId", "expiresAt"],
+                  "properties": {
+                    "token": {"type": "string", "description": "Backend JWT authentication token"},
+                    "userId": {"type": "string", "description": "The Firebase UID used as userId"},
+                    "expiresAt": {"type": "number", "description": "Token expiration timestamp (ms)"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/validate": {
+      "post": {
+        "operationId": "validateToken",
+        "summary": "Validate authentication token",
+        "tags": ["Authentication"],
+        "description": "Validates a JWT token and returns its payload if valid.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token"],
+                "properties": {"token": {"type": "string", "description": "The token to validate"}}
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["valid"],
+                  "properties": {
+                    "valid": {"type": "boolean", "description": "Whether the token is valid"},
+                    "userId": {"type": "string", "description": "User ID from token (if valid)"},
+                    "expiresAt": {"type": "number", "description": "Token expiration (if valid)"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "summary": "Get current user",
+        "tags": ["Authentication"],
+        "description": "Returns information about the currently authenticated user based on the Authorization header.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["userId", "expiresAt"],
+                  "properties": {
+                    "userId": {"type": "string", "description": "Current user ID"},
+                    "expiresAt": {"type": "number", "description": "Token expiration timestamp"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/puzzle_list": {
+      "get": {
+        "operationId": "listPuzzles",
+        "summary": "List puzzles",
+        "tags": ["Puzzles"],
+        "description": "Get a paginated list of puzzles with optional filters",
+        "parameters": [
+          {
+            "schema": {"type": "string"},
+            "in": "query",
+            "name": "page",
+            "required": true,
+            "description": "Page number"
+          },
+          {
+            "schema": {"type": "string"},
+            "in": "query",
+            "name": "pageSize",
+            "required": true,
+            "description": "Number of items per page"
+          },
+          {
+            "schema": {"type": "string"},
+            "in": "query",
+            "name": "sizeMini",
+            "required": false,
+            "description": "Filter for mini puzzles (true/false)"
+          },
+          {
+            "schema": {"type": "string"},
+            "in": "query",
+            "name": "sizeStandard",
+            "required": false,
+            "description": "Filter for standard puzzles (true/false)"
+          },
+          {
+            "schema": {"type": "string"},
+            "in": "query",
+            "name": "nameOrTitle",
+            "required": false,
+            "description": "Filter by name or title"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "puzzles": {"type": "array", "items": {"type": "object", "additionalProperties": true}}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/puzzle": {
+      "post": {
+        "operationId": "createPuzzle",
+        "summary": "Add a new puzzle",
+        "tags": ["Puzzles"],
+        "description": "Adds a new puzzle to the system. If pid is not provided, the backend generates one.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["puzzle", "isPublic"],
+                "properties": {
+                  "puzzle": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "required": ["clues"],
+                    "properties": {
+                      "version": {"type": "string", "description": "IPuz version"},
+                      "kind": {"type": "array", "items": {"type": "string"}, "description": "IPuz kind"},
+                      "dimensions": {
+                        "type": "object",
+                        "properties": {
+                          "width": {"type": "number", "description": "Puzzle width"},
+                          "height": {"type": "number", "description": "Puzzle height"}
+                        }
+                      },
+                      "title": {"type": "string", "description": "Puzzle title"},
+                      "author": {"type": "string", "description": "Puzzle author"},
+                      "copyright": {"type": "string", "description": "Copyright information"},
+                      "notes": {"type": "string", "description": "Puzzle description/notes"},
+                      "solution": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {"type": "string", "nullable": true}
+                        },
+                        "description": "Solution grid (new format)"
+                      },
+                      "puzzle": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {"type": "number"},
+                              {"type": "string"},
+                              {"type": "object", "additionalProperties": true},
+                              {"type": "string", "nullable": true}
+                            ]
+                          }
+                        },
+                        "description": "Puzzle grid (new format)"
+                      },
+                      "clues": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "properties": {
+                          "Across": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["number", "clue"],
+                              "properties": {
+                                "number": {"type": "string", "description": "Clue number"},
+                                "clue": {"type": "string", "description": "Clue text"},
+                                "cells": {
+                                  "type": "array",
+                                  "items": {"type": "array", "items": {"type": "number"}},
+                                  "description": "Optional array of [column, row] pairs (v2 format)"
+                                }
+                              }
+                            },
+                            "description": "Across clues in v2 object format {number, clue}"
+                          },
+                          "Down": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["number", "clue"],
+                              "properties": {
+                                "number": {"type": "string", "description": "Clue number"},
+                                "clue": {"type": "string", "description": "Clue text"},
+                                "cells": {
+                                  "type": "array",
+                                  "items": {"type": "array", "items": {"type": "number"}},
+                                  "description": "Optional array of [column, row] pairs (v2 format)"
+                                }
+                              }
+                            },
+                            "description": "Down clues in v2 object format {number, clue}"
+                          }
+                        }
+                      },
+                      "grid": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {"type": "string", "nullable": true}
+                        },
+                        "description": "Legacy format: Solution grid"
+                      },
+                      "info": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "properties": {
+                          "type": {"type": "string", "description": "Puzzle type"},
+                          "title": {"type": "string", "description": "Puzzle title"},
+                          "author": {"type": "string", "description": "Puzzle author"},
+                          "description": {"type": "string", "description": "Puzzle description"}
+                        },
+                        "description": "Legacy format: Puzzle metadata"
+                      }
+                    }
+                  },
+                  "pid": {"type": "string", "description": "Optional puzzle ID"},
+                  "isPublic": {"type": "boolean", "description": "Whether the puzzle is public"}
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["pid"],
+                  "properties": {"pid": {"type": "string", "description": "Puzzle ID"}}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/puzzle/{pid}": {
+      "get": {
+        "operationId": "getPuzzleById",
+        "summary": "Get puzzle by ID",
+        "tags": ["Puzzles"],
+        "description": "Retrieves full puzzle data including grid, clues, and solution",
+        "parameters": [
+          {
+            "schema": {"type": "string"},
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "description": "Puzzle ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": ["clues"],
+                  "properties": {
+                    "version": {"type": "string", "description": "IPuz version"},
+                    "kind": {"type": "array", "items": {"type": "string"}, "description": "IPuz kind"},
+                    "dimensions": {
+                      "type": "object",
+                      "properties": {
+                        "width": {"type": "number", "description": "Puzzle width"},
+                        "height": {"type": "number", "description": "Puzzle height"}
+                      }
+                    },
+                    "title": {"type": "string", "description": "Puzzle title"},
+                    "author": {"type": "string", "description": "Puzzle author"},
+                    "copyright": {"type": "string", "description": "Copyright information"},
+                    "notes": {"type": "string", "description": "Puzzle description/notes"},
+                    "solution": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {"type": "string", "nullable": true}
+                      },
+                      "description": "Solution grid (new format)"
+                    },
+                    "puzzle": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {"type": "number"},
+                            {"type": "string"},
+                            {"type": "object", "additionalProperties": true},
+                            {"type": "string", "nullable": true}
+                          ]
+                        }
+                      },
+                      "description": "Puzzle grid (new format)"
+                    },
+                    "clues": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "Across": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["number", "clue"],
+                            "properties": {
+                              "number": {"type": "string", "description": "Clue number"},
+                              "clue": {"type": "string", "description": "Clue text"},
+                              "cells": {
+                                "type": "array",
+                                "items": {"type": "array", "items": {"type": "number"}},
+                                "description": "Optional array of [column, row] pairs (v2 format)"
+                              }
+                            }
+                          },
+                          "description": "Across clues in v2 object format {number, clue}"
+                        },
+                        "Down": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["number", "clue"],
+                            "properties": {
+                              "number": {"type": "string", "description": "Clue number"},
+                              "clue": {"type": "string", "description": "Clue text"},
+                              "cells": {
+                                "type": "array",
+                                "items": {"type": "array", "items": {"type": "number"}},
+                                "description": "Optional array of [column, row] pairs (v2 format)"
+                              }
+                            }
+                          },
+                          "description": "Down clues in v2 object format {number, clue}"
+                        }
+                      }
+                    },
+                    "grid": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {"type": "string", "nullable": true}
+                      },
+                      "description": "Legacy format: Solution grid"
+                    },
+                    "info": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "type": {"type": "string", "description": "Puzzle type"},
+                        "title": {"type": "string", "description": "Puzzle title"},
+                        "author": {"type": "string", "description": "Puzzle author"},
+                        "description": {"type": "string", "description": "Puzzle description"}
+                      },
+                      "description": "Legacy format: Puzzle metadata"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game": {
+      "post": {
+        "operationId": "createGame",
+        "summary": "Create a new game",
+        "tags": ["Games"],
+        "description": "Creates a new game session for a puzzle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["gid", "pid"],
+                "properties": {
+                  "gid": {"type": "string", "description": "Game ID"},
+                  "pid": {"type": "string", "description": "Puzzle ID"}
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["gid"],
+                  "properties": {"gid": {"type": "string", "description": "Game ID"}}
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game/{gid}": {
+      "get": {
+        "operationId": "getGameById",
+        "summary": "Get game by ID",
+        "tags": ["Games"],
+        "description": "Retrieves game information including puzzle details and solve time",
+        "parameters": [
+          {
+            "schema": {"type": "string"},
+            "in": "path",
+            "name": "gid",
+            "required": true,
+            "description": "Game ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["gid", "pid", "title", "author", "duration", "size"],
+                  "properties": {
+                    "gid": {"type": "string", "description": "Game ID"},
+                    "pid": {"type": "string", "description": "Puzzle ID"},
+                    "title": {"type": "string", "description": "Puzzle title"},
+                    "author": {"type": "string", "description": "Puzzle author"},
+                    "duration": {"type": "number", "description": "Time taken to solve in seconds"},
+                    "size": {"type": "string", "description": "Puzzle size"}
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game/{gid}/pid": {
+      "get": {
+        "operationId": "getActiveGamePid",
+        "summary": "Get puzzle ID from active game",
+        "tags": ["Games"],
+        "description": "Retrieves the puzzle ID from an active (in-progress) game in game_events table",
+        "parameters": [
+          {
+            "schema": {"type": "string"},
+            "in": "path",
+            "name": "gid",
+            "required": true,
+            "description": "Game ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {"gid": {"type": "string"}, "pid": {"type": "string"}}
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/record_solve/{pid}": {
+      "post": {
+        "operationId": "recordPuzzleSolve",
+        "summary": "Record puzzle solve",
+        "tags": ["Puzzles"],
+        "description": "Records a completed puzzle solve with timing information",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["gid", "time_to_solve"],
+                "properties": {
+                  "gid": {"type": "string", "description": "Game ID"},
+                  "time_to_solve": {"type": "number", "description": "Time taken to solve in seconds"}
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {"type": "string"},
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "description": "Puzzle ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empty response object",
+            "content": {
+              "application/json": {"schema": {"type": "object", "description": "Empty response object"}}
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stats": {
+      "post": {
+        "operationId": "submitStats",
+        "summary": "Get puzzle statistics",
+        "tags": ["Stats"],
+        "description": "Retrieves aggregated statistics and history for given game IDs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["gids"],
+                "properties": {
+                  "gids": {"type": "array", "items": {"type": "string"}, "description": "Array of game IDs"}
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stats": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+                    "history": {"type": "array", "items": {"type": "object", "additionalProperties": true}}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oembed": {
+      "get": {
+        "operationId": "getOembed",
+        "summary": "Get oEmbed data",
+        "tags": ["Link Preview"],
+        "description": "Returns oEmbed format metadata for link previews",
+        "parameters": [
+          {
+            "schema": {"type": "string"},
+            "in": "query",
+            "name": "author",
+            "required": true,
+            "description": "Author name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["type", "version", "author_name"],
+                  "properties": {
+                    "type": {"type": "string"},
+                    "version": {"type": "string"},
+                    "author_name": {"type": "string", "description": "Author name"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/link_preview/": {
+      "get": {
+        "operationId": "getLinkPreview",
+        "summary": "Get link preview",
+        "tags": ["Link Preview"],
+        "description": "Generates Open Graph metadata for social media link previews",
+        "parameters": [
+          {
+            "schema": {"type": "string"},
+            "in": "query",
+            "name": "url",
+            "required": true,
+            "description": "URL to generate preview for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML with Open Graph metadata",
+            "content": {
+              "application/json": {
+                "schema": {"type": "string", "description": "HTML with Open Graph metadata"}
+              }
+            }
+          },
+          "302": {"description": "Redirect for non-bot user agents"},
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/counters/gid": {
+      "post": {
+        "operationId": "getNewGameId",
+        "summary": "Increment and get a new game ID",
+        "tags": ["Counters"],
+        "description": "Increments the game ID counter and returns the new game ID",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["gid"],
+                  "properties": {"gid": {"type": "string", "description": "New game ID"}}
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/counters/pid": {
+      "post": {
+        "operationId": "getNewPuzzleId",
+        "summary": "Increment and get a new puzzle ID",
+        "tags": ["Counters"],
+        "description": "Increments the puzzle ID counter and returns the new puzzle ID",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["pid"],
+                  "properties": {"pid": {"type": "string", "description": "New puzzle ID"}}
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["error", "message"],
+                  "properties": {
+                    "error": {"type": "string", "description": "Error type"},
+                    "message": {"type": "string", "description": "Error message"},
+                    "statusCode": {"type": "number", "description": "HTTP status code"},
+                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {"url": "https://www.crosswithfriends.com/api", "description": "Production server"},
+    {"url": "https://crosswithfriendsbackend-staging.onrender.com/api", "description": "Staging server"},
+    {"url": "http://localhost:3021/api", "description": "Local development server"}
+  ],
+  "tags": [
+    {"name": "Health", "description": "Health check endpoints"},
+    {"name": "Games", "description": "Game management endpoints"},
+    {"name": "Puzzles", "description": "Puzzle management endpoints"},
+    {"name": "Stats", "description": "Statistics endpoints"},
+    {"name": "Counters", "description": "ID counter endpoints"},
+    {"name": "Link Preview", "description": "Link preview and oEmbed endpoints"}
+  ]
+}

@@ -1,10 +1,9 @@
-import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from '@crosswithfriends/shared/types';
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
-
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
+import type {AppInstance} from '../types/fastify.js';
 
 import {createHttpError} from './errors.js';
+import type {ListPuzzleStatsRequest, ListPuzzleStatsResponse} from './generated/index.js';
 import {ListPuzzleStatsRequestSchema, ErrorResponseSchema} from './schemas.js';
 
 const groupBy = <T>(arr: T[], fn: (item: T) => string | number): Record<string, T[]> => {
@@ -68,7 +67,7 @@ export function computePuzzleStats(puzzle_solves: SolvedPuzzleType[]): PuzzleSum
 }
 
 // eslint-disable-next-line require-await
-async function statsRouter(fastify: FastifyInstance): Promise<void> {
+async function statsRouter(fastify: AppInstance): Promise<void> {
   const postOptions = {
     schema: {
       operationId: 'submitStats',
@@ -105,7 +104,7 @@ async function statsRouter(fastify: FastifyInstance): Promise<void> {
   fastify.post<{Body: ListPuzzleStatsRequest; Reply: ListPuzzleStatsResponse}>(
     '',
     postOptions,
-    async (request: FastifyRequest<{Body: ListPuzzleStatsRequest}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       const {gids} = request.body;
       const startTime = Date.now();
 

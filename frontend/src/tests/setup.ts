@@ -1,9 +1,17 @@
 /**
- * Test setup file for Playwright Component Testing
- * This file is automatically imported before all component tests
+ * Vitest Test Setup
  */
 
-// Mock window.matchMedia for MUI components
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+// Cleanup after each test
+afterEach(() => {
+  cleanup();
+});
+
+// Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({
@@ -14,32 +22,55 @@ Object.defineProperty(window, 'matchMedia', {
     removeListener: () => {},
     addEventListener: () => {},
     removeEventListener: () => {},
-    dispatchEvent: () => true,
+    dispatchEvent: () => {},
   }),
 });
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
+// Mock localStorage with stateful implementation
+const createLocalStorageMock = () => {
+  const storage = new Map<string, string>();
+
   return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value.toString();
+    getItem: (key: string): string | null => {
+      return storage.get(key) || null;
     },
-    removeItem: (key: string) => {
-      delete store[key];
+    setItem: (key: string, value: string): void => {
+      storage.set(key, String(value));
+      // Update length property
+      Object.defineProperty(localStorageMock, 'length', {
+        value: storage.size,
+        writable: false,
+        configurable: true,
+      });
     },
-    clear: () => {
-      store = {};
+    removeItem: (key: string): void => {
+      storage.delete(key);
+      // Update length property
+      Object.defineProperty(localStorageMock, 'length', {
+        value: storage.size,
+        writable: false,
+        configurable: true,
+      });
+    },
+    clear: (): void => {
+      storage.clear();
+      // Update length property
+      Object.defineProperty(localStorageMock, 'length', {
+        value: 0,
+        writable: false,
+        configurable: true,
+      });
+    },
+    length: 0,
+    key: (index: number): string | null => {
+      const keys = Array.from(storage.keys());
+      return keys[index] || null;
     },
   };
-})();
+};
+
+const localStorageMock = createLocalStorageMock();
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
-
-// Mock process.env for libraries that expect it
-if (typeof globalThis.process === 'undefined') {
-  (globalThis as any).process = {env: {}};
-}

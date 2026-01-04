@@ -1,12 +1,6 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
 import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as gameModel from '../../model/game.js';
-import * as puzzleModel from '../../model/puzzle.js';
-
-// Mock the models
-vi.mock('../../model/game.js');
-vi.mock('../../model/puzzle.js');
 
 // Mock the utility functions
 const mockIsLinkExpanderBot = vi.fn((ua: string) => ua === 'bot' || ua === 'messenger');
@@ -18,10 +12,21 @@ vi.mock('../../utils/link_preview_util.js', () => ({
 }));
 
 describe('Link Preview API', () => {
-  let app: FastifyInstance;
+  let app: FastifyInstance & {
+    repositories: {
+      game: {
+        getInfo: Mock;
+      };
+    };
+    services: {
+      puzzle: {
+        getPuzzleInfo: Mock;
+      };
+    };
+  };
 
   beforeAll(async () => {
-    app = await buildTestApp();
+    app = (await buildTestApp()) as typeof app;
     await waitForApp(app);
   });
 
@@ -46,7 +51,7 @@ describe('Link Preview API', () => {
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
       expect(body.statusCode).toBe(400);
-      expect(body.message).toBe('Invalid URL');
+      expect(body.message).toBe('Invalid URL format');
     });
 
     it('should return 400 for invalid URL path', async () => {
@@ -69,7 +74,7 @@ describe('Link Preview API', () => {
         description: 'Test Description',
       };
 
-      (gameModel.getGameInfo as Mock).mockResolvedValue(mockGameInfo);
+      app.repositories.game.getInfo.mockResolvedValue(mockGameInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -91,7 +96,7 @@ describe('Link Preview API', () => {
         description: 'Test Description',
       };
 
-      (gameModel.getGameInfo as Mock).mockResolvedValue(mockGameInfo);
+      app.repositories.game.getInfo.mockResolvedValue(mockGameInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -117,7 +122,7 @@ describe('Link Preview API', () => {
         description: 'Puzzle Description',
       };
 
-      (puzzleModel.getPuzzleInfo as Mock).mockResolvedValue(mockPuzzleInfo);
+      app.services.puzzle.getPuzzleInfo.mockResolvedValue(mockPuzzleInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -135,7 +140,7 @@ describe('Link Preview API', () => {
     it('should return 404 when game/puzzle not found', async () => {
       const mockUrl = 'https://example.com/game/nonexistent';
 
-      (gameModel.getGameInfo as Mock).mockResolvedValue(null);
+      app.repositories.game.getInfo.mockResolvedValue(null);
 
       const response = await app.inject({
         method: 'GET',
@@ -161,7 +166,7 @@ describe('Link Preview API', () => {
 
       mockIsLinkExpanderBot.mockReturnValue(true);
       mockIsFBMessengerCrawler.mockReturnValue(true);
-      (gameModel.getGameInfo as Mock).mockResolvedValue(mockGameInfo);
+      app.repositories.game.getInfo.mockResolvedValue(mockGameInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -186,7 +191,7 @@ describe('Link Preview API', () => {
       };
 
       mockIsLinkExpanderBot.mockReturnValue(false);
-      (gameModel.getGameInfo as Mock).mockResolvedValue(mockGameInfo);
+      app.repositories.game.getInfo.mockResolvedValue(mockGameInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -203,7 +208,7 @@ describe('Link Preview API', () => {
       const mockUrl = 'https://example.com/game/test-gid';
 
       mockIsLinkExpanderBot.mockReturnValue(true);
-      (gameModel.getGameInfo as Mock).mockResolvedValue({});
+      app.repositories.game.getInfo.mockResolvedValue({});
 
       const response = await app.inject({
         method: 'GET',
@@ -228,7 +233,7 @@ describe('Link Preview API', () => {
       };
 
       mockIsLinkExpanderBot.mockReturnValue(true);
-      (gameModel.getGameInfo as Mock).mockResolvedValue(mockGameInfo);
+      app.repositories.game.getInfo.mockResolvedValue(mockGameInfo);
 
       const response = await app.inject({
         method: 'GET',
@@ -255,7 +260,7 @@ describe('Link Preview API', () => {
       };
 
       mockIsLinkExpanderBot.mockReturnValue(true);
-      (puzzleModel.getPuzzleInfo as Mock).mockResolvedValue(mockPuzzleInfo);
+      app.services.puzzle.getPuzzleInfo.mockResolvedValue(mockPuzzleInfo);
 
       const response = await app.inject({
         method: 'GET',

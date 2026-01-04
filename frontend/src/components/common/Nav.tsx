@@ -1,146 +1,104 @@
-import './css/nav.css';
+/**
+ * Navigation Component
+ * Implements REQ-7.3: Navigation bar
+ */
 
-import classnames from 'classnames';
-import React from 'react';
-import {Link} from 'react-router-dom';
-import Swal from 'sweetalert2';
+import { Link, useLocation } from 'react-router-dom';
+import { AppBar, Toolbar, Box, Link as MuiLink, useTheme } from '@mui/material';
+import DarkModeToggle from './DarkModeToggle';
+import ConnectionStatus from './ConnectionStatus';
 
-import {useUser} from '../../hooks/useUser';
+const Nav = () => {
+  const location = useLocation();
+  const isEmbedMode = location.pathname.startsWith('/embed/');
+  const theme = useTheme();
 
-import {DarkModeToggle} from './DarkModeToggle';
-
-interface LogInProps {
-  style?: React.CSSProperties;
-}
-
-function LogIn({style}: LogInProps): JSX.Element | null {
-  const user = useUser();
-  if (!user.attached) {
+  // Hide navigation in embed mode (REQ-7.3.3)
+  if (isEmbedMode) {
     return null;
   }
-  if (user.fb) {
-    // for now return a simple "logged in"
-    return (
-      <div className="nav--right" style={style}>
-        Logged in
-      </div>
-    );
-    /*
-    return (
-      <div className='nav--right'>
-        <Link to='/account'
-          className='nav--right'>
-          Account
-        </Link>
-      </div>
-    );
-    */
-  }
-  const handleLogin = () => {
-    user.logIn();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleLogin();
-    }
-  };
 
   return (
-    <div className="nav--right" style={style}>
-      <div
-        className="nav--login"
-        onClick={handleLogin}
-        onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
-        aria-label="Log in"
+    <AppBar
+      position="static"
+      elevation={1}
+      sx={{
+        backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : 'background.default',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+      }}
+    >
+      <Toolbar
+        sx={{ justifyContent: 'space-between', maxWidth: '2000px', width: '100%', mx: 'auto' }}
       >
-        Log in
-      </div>
-    </div>
-  );
-}
-
-function showInfo(): void {
-  Swal.fire({
-    title: 'crosswithfriends.com',
-    icon: 'info',
-    html: `
-      <div class="swal-text swal-text--no-margin">
-        <p>
-          Cross with Friends is an online website for sharing crosswords and playing collaboratively with
-          friends in real time. Join the&nbsp;
-          <a href="https://discord.gg/RmjCV8EZ73" target="_blank" rel="noreferrer">
-            community Discord
-          </a>
-          &nbsp;for more discussion.
-        </p>
-        <hr class="info--hr" />
-        <p>
-          Cross with Friends is open to contributions from developers of any level or experience. For more
-          information or to report any issues, check out the project on&nbsp;
-          <a href="https://github.com/ScaleOvenStove/crosswithfriends" target="_blank" rel="noreferrer">
-            GitHub
-          </a>
-          .
-        </p>
-      </div>
-    `,
-  });
-}
-
-interface NavProps {
-  hidden?: boolean;
-  v2?: boolean;
-  canLogin?: boolean;
-  mobile?: boolean;
-  linkStyle?: React.CSSProperties;
-  divRef?: React.RefObject<HTMLDivElement>;
-  composeEnabled?: boolean;
-  textStyle?: React.CSSProperties;
-}
-
-export default function Nav({
-  hidden,
-  v2: _v2,
-  canLogin,
-  mobile,
-  linkStyle,
-  divRef,
-  composeEnabled: _composeEnabled,
-  textStyle,
-}: NavProps): JSX.Element | null {
-  if (hidden) return null; // no nav for mobile
-  const fencing = window.location.href.includes('fencing');
-  return (
-    <div className={classnames('nav', {mobile})} ref={divRef}>
-      <div className="nav--left" style={linkStyle || textStyle}>
-        <Link to={fencing ? '/fencing' : '/'}>Cross with Friends</Link>
-      </div>
-      <div className="nav--right">
-        <DarkModeToggle />
-        {/* <div className="nav--right stats">
-          <a href="/stats">Your stats</a>
-        </div> */}
-        <div
-          className="nav--info"
-          onClick={showInfo}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              showInfo();
-            }
+        <MuiLink
+          component={Link}
+          to="/"
+          sx={{
+            textDecoration: 'none',
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: 'primary.main',
+            '&:hover': {
+              color: 'primary.dark',
+            },
+            transition: 'color 0.2s ease-in-out',
           }}
-          role="button"
-          tabIndex={0}
-          aria-label="Show information"
         >
-          <i className="fa fa-info-circle" />
-        </div>
-        {canLogin && <LogIn />}
-      </div>
-    </div>
+          Cross with Friends
+        </MuiLink>
+
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <MuiLink
+            component={Link}
+            to="/"
+            sx={{
+              textDecoration: 'none',
+              color: 'text.secondary',
+              fontWeight: 500,
+              '&:hover': {
+                color: 'primary.main',
+              },
+              transition: 'color 0.2s ease-in-out',
+            }}
+          >
+            Home
+          </MuiLink>
+          <MuiLink
+            component={Link}
+            to="/compose"
+            sx={{
+              textDecoration: 'none',
+              color: 'text.secondary',
+              fontWeight: 500,
+              '&:hover': {
+                color: 'primary.main',
+              },
+              transition: 'color 0.2s ease-in-out',
+            }}
+          >
+            Compose
+          </MuiLink>
+          <MuiLink
+            component={Link}
+            to="/account"
+            sx={{
+              textDecoration: 'none',
+              color: 'text.secondary',
+              fontWeight: 500,
+              '&:hover': {
+                color: 'primary.main',
+              },
+              transition: 'color 0.2s ease-in-out',
+            }}
+          >
+            Account
+          </MuiLink>
+          <ConnectionStatus />
+          <DarkModeToggle />
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
-}
+};
+
+export default Nav;

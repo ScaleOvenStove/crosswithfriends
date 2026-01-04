@@ -1,77 +1,185 @@
-import './css/account.css';
+/**
+ * Account Page - Enhanced user profile with avatar upload and profile editor
+ * Implements REQ-6.2: User Profile with Firebase Storage integration
+ */
 
-import React, {useState} from 'react';
+import './Account.css';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import Nav from '@components/common/Nav';
+import { useUser } from '@hooks/index';
+import { useUserStore } from '@stores/userStore';
+import ProfileEditor from '@components/Account/ProfileEditor';
+import AvatarUpload from '@components/Account/AvatarUpload';
 
-import Nav from '../components/common/Nav';
+const Account = () => {
+  const { user, changeName, changeColor } = useUser();
+  const { history } = useUserStore();
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
 
-function AccountHistory() {
-  return <div className="account-history">Account History</div>;
-}
-
-interface Panel {
-  name: string;
-  component: () => JSX.Element;
-}
-
-const Account: React.FC = () => {
-  const [panel, setPanel] = useState<string | null>(null);
-
-  const panels: Record<string, Panel> = {
-    history: {
-      name: 'History',
-      component: AccountHistory,
-    },
+  const handleProfileSave = (name: string, color: string) => {
+    changeName(name);
+    changeColor(color);
+    setEditingProfile(false);
   };
 
-  const selectPanel = (panelKey: string): void => {
-    setPanel(panelKey);
+  const handleAvatarUpload = (url: string) => {
+    setAvatarUrl(url);
+    // Here you would also update the user's avatar URL in your backend/Firebase
+    console.log('Avatar uploaded:', url);
   };
 
-  const renderSidebar = (): JSX.Element => {
+  if (!user) {
     return (
-      <div className="account--sidebar">
-        {' '}
-        {Object.keys(panels).map((panelKey) => {
-          const selected = panelKey === panel;
-          const {name} = panels[panelKey];
-          return (
-            <div
-              key={panelKey}
-              className={`account--sidebar--entry ${selected ? ' selected' : ''}`}
-              onClick={() => selectPanel(panelKey)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  selectPanel(panelKey);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={`Select ${name} panel`}
-            >
-              {name}
-            </div>
-          );
-        })}
+      <div className="account-page">
+        <Nav />
+        <div className="container">
+          <div className="error-message">
+            <p>Please log in to view your account</p>
+          </div>
+        </div>
       </div>
     );
-  };
-
-  const renderPanel = (): JSX.Element | undefined => {
-    if (panel) {
-      const {component} = panels[panel];
-      if (component) return component();
-    }
-    return undefined;
-  };
+  }
 
   return (
-    <div className="account">
+    <div className="account-page">
       <Nav />
-      <div className="account--title">Your Account</div>
-      <div className="account--main">
-        <div className="account--left">{renderSidebar()}</div>
-        <div className="account--right">{renderPanel()}</div>
+      <div className="container">
+        <header className="account-header">
+          <h1>Account</h1>
+          <p className="account-subtitle">Manage your profile and preferences</p>
+        </header>
+
+        <div className="account-sections">
+          {/* Profile Section */}
+          <section className="account-card profile-section">
+            <div className="section-header">
+              <h2>Profile</h2>
+              {!editingProfile && (
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile(true)}
+                  className="btn-secondary"
+                >
+                  Edit Profile
+                </button>
+              )}
+            </div>
+
+            {editingProfile ? (
+              <ProfileEditor
+                currentName={user.displayName}
+                currentColor={user.color}
+                onSave={handleProfileSave}
+                onCancel={() => setEditingProfile(false)}
+              />
+            ) : (
+              <div className="profile-display">
+                <div className="profile-info">
+                  <div className="profile-field">
+                    <label htmlFor="user-id-display">User ID</label>
+                    <p id="user-id-display" className="user-id">
+                      {user.id}
+                    </p>
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="display-name-display">Display Name</label>
+                    <p id="display-name-display" className="display-name">
+                      {user.displayName}
+                    </p>
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="user-color-display">User Color</label>
+                    <div id="user-color-display" className="color-display">
+                      <div className="color-preview" style={{ backgroundColor: user.color }} />
+                      <span className="color-value">{user.color}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Avatar Section */}
+          <section className="account-card avatar-section">
+            <h2>Avatar</h2>
+            <AvatarUpload
+              userId={user.id}
+              currentAvatarUrl={avatarUrl}
+              onUploadComplete={handleAvatarUpload}
+            />
+          </section>
+
+          {/* Statistics Summary */}
+          <section className="account-card stats-summary">
+            <div className="section-header">
+              <h2>Statistics</h2>
+              <Link to="/stats" className="btn-secondary">
+                View Full Stats
+              </Link>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat-item">
+                <span className="stat-value">{history.solvedPuzzles.length}</span>
+                <span className="stat-label">Puzzles Solved</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-value">{history.compositions.length}</span>
+                <span className="stat-label">Puzzles Created</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Preferences Section */}
+          <section className="account-card preferences-section">
+            <h2>Preferences</h2>
+
+            <div className="preference-group">
+              <label className="preference-label">
+                <input type="checkbox" />
+                <span>Enable sound effects</span>
+              </label>
+            </div>
+
+            <div className="preference-group">
+              <label className="preference-label">
+                <input type="checkbox" defaultChecked />
+                <span>Show cell numbers</span>
+              </label>
+            </div>
+
+            <div className="preference-group">
+              <label className="preference-label">
+                <input type="checkbox" defaultChecked />
+                <span>Highlight current word</span>
+              </label>
+            </div>
+          </section>
+
+          {/* Data Management */}
+          <section className="account-card data-section">
+            <h2>Data Management</h2>
+
+            <div className="data-actions">
+              <button type="button" className="btn-secondary">
+                Export My Data
+              </button>
+              <button type="button" className="btn-danger">
+                Delete Account
+              </button>
+            </div>
+
+            <p className="data-notice">
+              Export includes all your puzzles, games, and statistics. Account deletion is permanent
+              and cannot be undone.
+            </p>
+          </section>
+        </div>
       </div>
     </div>
   );

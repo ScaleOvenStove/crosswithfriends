@@ -13,7 +13,12 @@ describe('Game Events Validation', () => {
             pid: 'puzzle-123',
             version: 1.0,
             game: {
-              grid: [['.', 'A']],
+              grid: [
+                [
+                  {value: '.', black: false},
+                  {value: 'A', black: false},
+                ],
+              ],
               solution: [['.', 'A']],
               clues: {
                 across: ['1', 'Test clue'],
@@ -38,7 +43,12 @@ describe('Game Events Validation', () => {
             version: 1.0,
             game: {
               info: {title: 'Test'},
-              grid: [['.', 'A']],
+              grid: [
+                [
+                  {value: '.', black: false},
+                  {value: 'A', black: false},
+                ],
+              ],
               solution: [['.', 'A']],
               circles: ['0'],
               chat: {messages: []},
@@ -69,7 +79,12 @@ describe('Game Events Validation', () => {
           params: {
             version: 1.0,
             game: {
-              grid: [['.', 'A']],
+              grid: [
+                [
+                  {value: '.', black: false},
+                  {value: 'A', black: false},
+                ],
+              ],
               solution: [['.', 'A']],
               clues: {across: [], down: []},
             },
@@ -89,7 +104,12 @@ describe('Game Events Validation', () => {
             pid: 'puzzle-123',
             version: -1,
             game: {
-              grid: [['.', 'A']],
+              grid: [
+                [
+                  {value: '.', black: false},
+                  {value: 'A', black: false},
+                ],
+              ],
               solution: [['.', 'A']],
               clues: {across: [], down: []},
             },
@@ -540,7 +560,12 @@ describe('Game Events Validation', () => {
           pid: 'puzzle-123',
           version: 1.0,
           game: {
-            grid: [['.', 'A']],
+            grid: [
+              [
+                {value: '.', black: false},
+                {value: 'A', black: false},
+              ],
+            ],
             solution: [['.', 'A']],
             clues: {across: [], down: []},
           },

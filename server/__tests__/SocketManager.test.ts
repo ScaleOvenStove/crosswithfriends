@@ -3,10 +3,12 @@ import {Server as SocketIOServer} from 'socket.io';
 import SocketManager from '../SocketManager.js';
 import * as gameModel from '../model/game.js';
 import * as roomModel from '../model/room.js';
+import * as userAuth from '../utils/userAuth.js';
 
 // Mock the models
 vi.mock('../model/game.js');
 vi.mock('../model/room.js');
+vi.mock('../utils/userAuth.js');
 
 describe('SocketManager', () => {
   let socketManager: SocketManager;
@@ -17,10 +19,27 @@ describe('SocketManager', () => {
     emit: Mock;
     on: Mock;
     to: Mock;
+    disconnect: Mock;
+    id: string;
+    userId?: string;
+    handshake: {
+      query: {userId?: string};
+      auth: {userId?: string};
+      headers: Record<string, string>;
+    };
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Set up userAuth mocks
+    (userAuth.authenticateSocket as Mock).mockReturnValue({
+      authenticated: true,
+      userId: 'test-user-123',
+    });
+    (userAuth.isValidUserId as Mock).mockReturnValue(true);
+    (userAuth.isUserAuthorizedForGame as Mock).mockResolvedValue({authorized: true, reason: 'participant'});
+    (userAuth.isUserAuthorizedForRoom as Mock).mockResolvedValue({authorized: true, reason: 'participant'});
 
     mockSocket = {
       join: vi.fn().mockResolvedValue(undefined),
@@ -28,6 +47,13 @@ describe('SocketManager', () => {
       emit: vi.fn(),
       on: vi.fn(),
       to: vi.fn().mockReturnThis(),
+      disconnect: vi.fn(),
+      id: 'mock-socket-id',
+      handshake: {
+        query: {userId: 'test-user-123'},
+        auth: {},
+        headers: {},
+      },
     };
 
     mockIo = {
@@ -197,14 +223,14 @@ describe('SocketManager', () => {
       }
     });
 
-    it('should handle join_game', () => {
+    it('should handle join_game', async () => {
       const gid = 'test-gid-123';
       const ack = vi.fn();
       const joinHandler = (mockSocket.on as Mock).mock.calls.find((call) => call[0] === 'join_game')?.[1];
 
       expect(joinHandler).toBeDefined();
       if (joinHandler) {
-        joinHandler(gid, ack);
+        await joinHandler(gid, ack);
         expect(mockSocket.join).toHaveBeenCalledWith(`game-${gid}`);
         expect(ack).toHaveBeenCalled();
       }
@@ -391,14 +417,14 @@ describe('SocketManager', () => {
       }
     });
 
-    it('should handle join_room', () => {
+    it('should handle join_room', async () => {
       const rid = 'test-room-123';
       const ack = vi.fn();
       const joinHandler = (mockSocket.on as Mock).mock.calls.find((call) => call[0] === 'join_room')?.[1];
 
       expect(joinHandler).toBeDefined();
       if (joinHandler) {
-        joinHandler(rid, ack);
+        await joinHandler(rid, ack);
         expect(mockSocket.join).toHaveBeenCalledWith(`room-${rid}`);
         expect(ack).toHaveBeenCalled();
       }

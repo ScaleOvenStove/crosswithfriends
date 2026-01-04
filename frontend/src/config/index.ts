@@ -1,133 +1,90 @@
 /**
- * Centralized configuration module
- * Consolidates all environment variables, API URLs, feature flags, and app configuration
+ * Application configuration
+ *
+ * Server URL Configuration:
+ * - VITE_API_URL: Full API URL (e.g., http://localhost:3021) - overrides all other settings
+ * - VITE_WS_URL: Full WebSocket URL (e.g., http://localhost:3021) - overrides all other settings
+ * - VITE_SERVER_PORT: Server port (default: 3021) - used when VITE_USE_LOCAL_SERVER=1
+ * - VITE_USE_LOCAL_SERVER: Use local server (default: false) - uses localhost with VITE_SERVER_PORT
+ * - VITE_ENV: Environment mode (production, staging, development)
  */
 
-import {logger} from '../utils/logger';
+const isLocalServer = import.meta.env.VITE_USE_LOCAL_SERVER === '1';
+const isProduction = import.meta.env.VITE_ENV === 'production';
+const serverPort = import.meta.env.VITE_SERVER_PORT || '3021';
 
-interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  databaseURL: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId?: string;
-}
-
-interface Config {
-  env: {
-    mode: string;
-    isDevelopment: boolean;
-    isProduction: boolean;
-  };
-  api: {
-    baseURL: string;
-    socketHost: string;
-    useLocalServer: boolean;
-  };
-  firebase: {
-    config: FirebaseConfig;
-    offline: boolean;
-  };
-  features: {
-    fencing: boolean;
-    [key: string]: boolean;
-  };
-}
-
-const getEnvVar = (key: string, defaultValue?: string): string => {
-  const value = import.meta.env[key];
-  if (value === undefined && defaultValue === undefined) {
-    throw new Error(`Required environment variable ${key} is not set`);
+// Determine API URL with priority: VITE_API_URL > local server > production > staging
+const getApiUrl = (): string => {
+  // Explicit API URL takes highest priority
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
-  // Use nullish coalescing to preserve empty strings and only fallback for undefined
-  return value ?? defaultValue ?? '';
+
+  // Local server mode
+  if (isLocalServer) {
+    return `http://localhost:${serverPort}`;
+  }
+
+  // Production or staging
+  return isProduction
+    ? 'https://downforacross-com.onrender.com'
+    : 'https://crosswithfriendsbackend-staging.onrender.com';
 };
 
-const isDevelopment = import.meta.env.MODE === 'development';
-const isProduction = import.meta.env.MODE === 'production';
+// Determine WebSocket URL with priority: VITE_WS_URL > VITE_API_URL > local server > production > staging
+const getWsUrl = (): string => {
+  // Explicit WebSocket URL takes highest priority
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL;
+  }
 
-// API Configuration
-const DEV_REMOTE_SERVER_URL = getEnvVar(
-  'VITE_STAGING_API_URL',
-  'crosswithfriendsbackend-staging.onrender.com'
-);
-const PROD_REMOTE_SERVER_URL = getEnvVar('VITE_API_URL', 'downforacross-com.onrender.com');
-const REMOTE_SERVER = isDevelopment ? DEV_REMOTE_SERVER_URL : PROD_REMOTE_SERVER_URL;
+  // Use API URL if explicitly set
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
 
-// Use https for staging/production, http only for localhost
-const REMOTE_SERVER_URL = REMOTE_SERVER.includes('localhost')
-  ? `${typeof window !== 'undefined' ? window.location.protocol : 'http:'}//${REMOTE_SERVER}`
-  : `https://${REMOTE_SERVER}`;
+  // Local server mode
+  if (isLocalServer) {
+    return `http://localhost:${serverPort}`;
+  }
 
-// Warn about HTTPS in development (can cause issues with local servers)
-// Only warn if explicitly disallowed via environment flag
-if (
-  typeof window !== 'undefined' &&
-  window.location.protocol === 'https' &&
-  isDevelopment &&
-  import.meta.env['VITE_DISALLOW_HTTPS_IN_DEV'] === '1'
-) {
-  logger.warn(
-    'HTTPS detected in development mode. This may cause issues with local servers and WebSocket connections. ' +
-      'Consider using HTTP for local development. To disable this warning, remove VITE_DISALLOW_HTTPS_IN_DEV from your environment.',
-    {protocol: window.location.protocol}
-  );
-}
-
-const useLocalServer = getEnvVar('VITE_USE_LOCAL_SERVER', '0') === '1';
-const serverUrl = useLocalServer ? 'http://localhost:3021' : REMOTE_SERVER_URL;
-
-// Firebase Configuration
-const FIREBASE_CONFIGS: Record<string, FirebaseConfig> = {
-  production: {
-    apiKey: 'AIzaSyCe4BWm9kbjXFwlZcmq4x8DvLD3TDoinhA',
-    authDomain: 'crosswordsio.firebaseapp.com',
-    databaseURL: 'https://crosswordsio.firebaseio.com',
-    projectId: 'crosswordsio',
-    storageBucket: 'crosswordsio.appspot.com',
-    messagingSenderId: '1021412055058',
-  },
-  development: {
-    apiKey: 'AIzaSyC4Er27aLKgSK4u2Z8aRfD6mr8AvLPA8tA',
-    authDomain: 'dfac-fa059.firebaseapp.com',
-    databaseURL: 'https://dfac-fa059.firebaseio.com',
-    projectId: 'dfac-fa059',
-    storageBucket: 'dfac-fa059.appspot.com',
-    messagingSenderId: '132564774895',
-    appId: '1:132564774895:web:a3bf48cd38c4df81e8901a',
-  },
+  // Production or staging
+  return isProduction
+    ? 'https://downforacross-com.onrender.com'
+    : 'https://crosswithfriendsbackend-staging.onrender.com';
 };
 
-const env = getEnvVar('VITE_ENV', import.meta.env.MODE);
-const selectedFirebaseConfig = FIREBASE_CONFIGS[env] || FIREBASE_CONFIGS['development'];
+const apiUrl = getApiUrl();
+const wsUrl = getWsUrl();
 
-export const config: Config = {
-  env: {
-    mode: import.meta.env.MODE || 'development',
-    isDevelopment,
-    isProduction,
-  },
-  api: {
-    baseURL: serverUrl,
-    socketHost: serverUrl,
-    useLocalServer,
-  },
+export const config = {
+  apiUrl,
+  wsUrl,
+
   firebase: {
-    config: selectedFirebaseConfig!,
-    offline: false,
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || '',
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
   },
+
   features: {
-    fencing: true,
+    enableAuth: true, // Firebase auth enabled
+    enableBeta: true,
+    enableChat: true,
+    enableRooms: true,
+    enableBattleMode: true,
+    enableFencing: true,
   },
-};
+} as const;
 
-// Export individual config sections for convenience
-export const {env: envConfig, api: apiConfig, firebase: firebaseConfig, features: featureFlags} = config;
+/**
+ * API Base URL for generated API client
+ * Includes the /api path prefix
+ */
+export const API_BASE_URL = `${apiUrl}/api`;
 
-// Export commonly used values
-export const SERVER_URL = apiConfig.baseURL;
-export const SOCKET_HOST = apiConfig.socketHost;
-export const IS_DEVELOPMENT = envConfig.isDevelopment;
-export const IS_PRODUCTION = envConfig.isProduction;
+export default config;

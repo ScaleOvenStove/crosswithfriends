@@ -1,234 +1,166 @@
-import './css/battle.css';
+/**
+ * Battle Page - Competitive battle mode
+ * Players race to complete the same puzzle - first to finish wins
+ */
 
-import {isMobile} from '@crosswithfriends/shared/lib/jsUtils';
-import redirect from '@crosswithfriends/shared/lib/redirect';
-import {Box, Stack} from '@mui/material';
-import classnames from 'classnames';
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import {useParams} from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { useUser, useGame, useBattleMode } from '@hooks/index';
+import { useSocket } from '@sockets/index';
+import Nav from '@components/common/Nav';
+import BattleGrid from '@components/Battle/BattleGrid';
+import ScoreBoard from '@components/Battle/ScoreBoard';
+import { GameSkeleton } from '@components/common/skeletons';
 
-import {useBattle} from '../hooks/useBattle';
+const Battle = () => {
+  const { bid } = useParams<{ bid: string }>();
+  const { user } = useUser();
+  const { socket } = useSocket();
+  const [showVictory, setShowVictory] = useState(false);
 
-interface Player {
-  name: string;
-  team: number;
-}
+  // Load game state with puzzle data
+  const { puzzle, cells, isLoading: gameLoading, error: gameError } = useGame(bid || '');
 
-const Battle: React.FC = () => {
-  const params = useParams<{bid: string}>();
-  const [team, setTeam] = useState<number | undefined>(undefined);
-  const [games, setGames] = useState<string[] | undefined>(undefined);
-  const [startedAt, setStartedAt] = useState<number | undefined>(undefined);
-  const [redirecting, setRedirecting] = useState<boolean>(false);
-  const [name, setName] = useState<string | undefined>(undefined);
-  const [players, setPlayers] = useState<Player[] | undefined>(undefined);
-
-  const mobile = useMemo(() => isMobile(), []);
-
-  const bid = useMemo(() => {
-    return Number(params.bid);
-  }, [params.bid]);
-
-  const path = useMemo(() => `/battle/${bid}`, [bid]);
-
-  const battle = useBattle({
-    path,
-    onGames: (gamesList: string[]) => {
-      setGames(gamesList);
-    },
-    onStartedAt: (startedAtTime: number) => {
-      setStartedAt(startedAtTime);
-    },
-    onPlayers: (playersRecord: unknown) => {
-      setPlayers(Object.values(playersRecord as Record<string, Player>));
+  // Battle mode hook
+  const { players, leaderboard, cellOwnership, isGameActive, winner } = useBattleMode({
+    gameId: bid || '',
+    mode: 'battle',
+    onGameComplete: () => {
+      setShowVictory(true);
+      setTimeout(() => setShowVictory(false), 5000);
     },
   });
 
-  const handleTeamSelect = useCallback(
-    (teamNum: number): void => {
-      if (name) {
-        battle.addPlayer(name, teamNum);
-        setTeam(teamNum);
-      }
+  // Handle cell fill - broadcast to all players
+  const handleCellFill = useCallback(
+    (row: number, col: number, value: string) => {
+      if (!user || !socket || !bid) return;
+
+      // Emit cell update event for battle mode
+      socket.emit('game_event', {
+        gid: bid,
+        type: 'updateCell',
+        params: {
+          row,
+          col,
+          value,
+        },
+        user: user.id,
+        timestamp: Date.now(),
+      });
     },
-    [name, battle]
+    [user, socket, bid]
   );
 
-  const handleChangeName = useCallback(
-    (newName: string): void => {
-      localStorage.setItem(`battle_${bid}`, newName);
-      setName(newName);
-    },
-    [bid]
-  );
+  // Convert cells to simple grid format for BattleGrid
+  const grid = cells.map((row) => row.map((cell) => cell.value));
 
-  const handleUnload = useCallback((): void => {
-    if (name && typeof team === 'number' && !redirecting) {
-      battle.removePlayer(name, team);
-    }
-  }, [name, team, redirecting, battle]);
-
-  useEffect(() => {
-    document.title = 'Down For A Battle';
-  }, []);
-
-  useEffect(() => {
-    battle.attach();
-    window.addEventListener('beforeunload', handleUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-      battle.detach();
-    };
-  }, [battle, handleUnload]);
-
-  useEffect(() => {
-    if (startedAt && team !== undefined && games && !redirecting) {
-      const self = games[team];
-      // Use setTimeout to avoid calling setState synchronously in effect
-      setTimeout(() => {
-        setRedirecting(true);
-        redirect(`/beta/game/${self}`);
-      }, 0);
-    }
-  }, [startedAt, team, games, redirecting]);
-
-  const renderPlayer = useCallback(
-    (player: Player, idx: number): JSX.Element => (
-      <Box className="battle--player" key={idx} sx={{display: 'flex'}}>
-        {' '}
-        {player.name}{' '}
-      </Box>
-    ),
-    []
-  );
-
-  const renderTeam = useCallback(
-    (teamPlayers: Player[], idx: number): JSX.Element => (
-      <Box className="battle--team" key={idx} sx={{display: 'flex'}}>
-        <Box className="battle--team-name" sx={{display: 'flex'}}>
-          {' '}
-          Team
-          {Number(idx) + 1}
-        </Box>
-        {teamPlayers.map(renderPlayer)}
-      </Box>
-    ),
-    [renderPlayer]
-  );
-
-  const renderTeams = useCallback((): JSX.Element => {
-    if (!players) return <Box className="battle--teams" sx={{display: 'flex'}} />;
-    const numTeams = Math.max(Math.max(...players.map((p) => p.team), 0) || 0, 2);
-    const teams = Array.from({length: numTeams}, (_, teamNum) => players.filter((p) => p.team === teamNum));
-
+  if (!bid) {
     return (
-      <Box className="battle--teams" sx={{display: 'flex'}}>
-        {teams.map(renderTeam)}
-      </Box>
+      <div className="battle-page">
+        <Nav />
+        <div className="container">
+          <div className="error-message">Invalid battle ID</div>
+        </div>
+      </div>
     );
-  }, [players, renderTeam]);
+  }
 
-  const disabled = !name; // both undefined & '' are falsy
-  const buttonClass = classnames('battle--button', {
-    disabled,
-  });
+  if (!user || gameLoading) {
+    return (
+      <div className="battle-page">
+        <Nav />
+        <GameSkeleton />
+      </div>
+    );
+  }
+
+  if (gameError) {
+    return (
+      <div className="battle-page">
+        <Nav />
+        <div className="container">
+          <div className="error-message">
+            <p>Failed to load battle: {gameError}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn-secondary"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <Stack
-      className={classnames('battle', {mobile})}
-      direction="column"
-      sx={{
-        flex: 1,
-        width: '100%',
-        height: '100%',
-      }}
-    >
-      <Box className="battle--main" sx={{flex: 1, display: 'flex'}}>
-        <Stack direction="column" sx={{flexShrink: 0}}>
-          {typeof team !== 'number' && (
-            <Box className="battle--selector" sx={{display: 'flex'}}>
-              <Box className="battle--buttons" sx={{display: 'flex'}}>
-                <Box
-                  className={buttonClass}
-                  sx={{display: 'flex', justifyContent: 'center'}}
-                  onClick={() => {
-                    if (!disabled) handleTeamSelect(0);
-                  }}
-                  onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
-                      e.preventDefault();
-                      handleTeamSelect(0);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={disabled ? -1 : 0}
-                  aria-label="Select Team 1"
-                >
-                  Team 1
-                </Box>
-                <Box
-                  className={buttonClass}
-                  sx={{display: 'flex', justifyContent: 'center'}}
-                  onClick={() => {
-                    if (!disabled) handleTeamSelect(1);
-                  }}
-                  onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
-                      e.preventDefault();
-                      handleTeamSelect(1);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={disabled ? -1 : 0}
-                  aria-label="Select Team 2"
-                >
-                  Team 2
-                </Box>
-              </Box>
-              <Box className="battle--name" sx={{display: 'flex'}}>
-                <input
-                  className="battle--input"
-                  placeholder="Name..."
-                  onChange={(event) => {
-                    handleChangeName(event.target.value);
-                  }}
-                />
-              </Box>
-              {renderTeams()}
-            </Box>
+    <div className="battle-page">
+      <Nav />
+      <div className="battle-container">
+        <header className="battle-header">
+          <div className="battle-title-section">
+            <h1>Battle Mode</h1>
+            <span className="beta-badge">BETA</span>
+          </div>
+          {puzzle && (
+            <div className="puzzle-info">
+              <h2>{puzzle.title || 'Untitled Puzzle'}</h2>
+              {puzzle.author && <p className="author">by {puzzle.author}</p>}
+            </div>
           )}
-          {typeof team === 'number' && !startedAt && (
-            <Box className="battle--selector" sx={{display: 'flex'}}>
-              <Box className="battle--teams" sx={{display: 'flex'}}>
-                (This starts the game for all players)
-              </Box>
-              <Box className="battle--buttons" sx={{display: 'flex'}}>
-                <Box
-                  className="battle--button"
-                  sx={{display: 'flex', justifyContent: 'center'}}
-                  onClick={() => {
-                    battle.start();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      battle.start();
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Start battle"
-                >
-                  Start
-                </Box>
-              </Box>
-              {renderTeams()}
-            </Box>
-          )}
-        </Stack>
-      </Box>
-    </Stack>
+          <p className="battle-description">Race to complete the puzzle first!</p>
+        </header>
+
+        {showVictory && winner && (
+          <div className="victory-modal">
+            <div className="victory-content">
+              <h2>🎉 Victory! 🎉</h2>
+              <p>{winner.displayName} completed the puzzle!</p>
+            </div>
+          </div>
+        )}
+
+        <div className="battle-main">
+          <div className="battle-grid-section">
+            {grid.length > 0 ? (
+              <BattleGrid
+                grid={grid}
+                cellOwnership={cellOwnership}
+                players={players}
+                currentPlayerId={user.id}
+                mode="battle"
+                onCellFill={handleCellFill}
+              />
+            ) : (
+              <div className="grid-loading">
+                <p>Loading puzzle...</p>
+              </div>
+            )}
+
+            {!isGameActive && (
+              <div className="game-status-overlay">
+                <p>Waiting for game to start...</p>
+              </div>
+            )}
+          </div>
+
+          <aside className="battle-sidebar">
+            <ScoreBoard players={leaderboard} mode="battle" currentPlayerId={user.id} />
+
+            <div className="battle-info">
+              <h3>How to Play</h3>
+              <ul>
+                <li>Fill in the crossword puzzle</li>
+                <li>First player to complete wins</li>
+                <li>Watch opponent progress in real-time</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
   );
 };
 

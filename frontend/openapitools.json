@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.17.0",
+    "generators": {
+      "typescript-fetch": {
+        "generatorName": "typescript-fetch",
+        "output": "src/api/generated",
+        "glob": "openapi.json",
+        "additionalProperties": {
+          "supportsES6": true,
+          "npmName": "@crosswithfriends/api-client",
+          "npmVersion": "1.0.0",
+          "typescriptThreePlus": true,
+          "useSingleRequestParameter": false,
+          "withInterfaces": true,
+          "modelPropertyNaming": "camelCase",
+          "legacyDiscriminatorBehavior": false,
+          "disallowAdditionalPropertiesIfNotPresent": false
+        }
+      }
+    }
+  }
+}

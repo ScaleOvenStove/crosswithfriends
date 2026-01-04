@@ -1,66 +1,43 @@
-const js = require('@eslint/js');
-const typescript = require('@typescript-eslint/eslint-plugin');
-const typescriptParser = require('@typescript-eslint/parser');
-const react = require('eslint-plugin-react');
-const reactHooks = require('eslint-plugin-react-hooks');
-const jsxA11y = require('eslint-plugin-jsx-a11y');
-const importPlugin = require('eslint-plugin-import');
-const prettier = require('eslint-config-prettier');
+/**
+ * ESLint Configuration for Cross with Friends Frontend
+ */
 
-module.exports = [
-  // Base JavaScript recommended rules
+import js from '@eslint/js';
+import typescript from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import importPlugin from 'eslint-plugin-import';
+
+export default [
   js.configs.recommended,
-
-  // Global ignores (must be in a separate object)
   {
-    ignores: [
-      'node_modules/**',
-      'build/**',
-      'dist/**',
-      '*.config.js',
-      '*.config.ts',
-      'coverage/**',
-      '.vite/**',
-      'public/**',
-    ],
-  },
-
-  // TypeScript and TSX files
-  {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
-      parser: typescriptParser,
+      parser: tsParser,
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: {
           jsx: true,
         },
-        project: ['./tsconfig.json'],
+        project: './tsconfig.json',
       },
       globals: {
-        window: 'readonly',
+        React: 'readonly',
+        JSX: 'readonly',
         document: 'readonly',
-        navigator: 'readonly',
-        localStorage: 'readonly',
-        sessionStorage: 'readonly',
+        window: 'readonly',
         console: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
         fetch: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        requestAnimationFrame: 'readonly',
-        cancelAnimationFrame: 'readonly',
-        requestIdleCallback: 'readonly',
-        cancelIdleCallback: 'readonly',
-        getComputedStyle: 'readonly',
-        JSX: 'readonly',
-        React: 'readonly',
-        visualViewport: 'readonly',
-        NodeJS: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        navigator: 'readonly',
       },
     },
     plugins: {
@@ -74,9 +51,6 @@ module.exports = [
       react: {
         version: 'detect',
       },
-      'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.tsx'],
-      },
       'import/resolver': {
         typescript: {
           alwaysTryTypes: true,
@@ -85,165 +59,183 @@ module.exports = [
       },
     },
     rules: {
-      // TypeScript ESLint recommended rules
-      ...(typescript.configs?.recommended?.rules || {}),
+      // ==========================================
+      // React Best Practices
+      // ==========================================
 
-      // TypeScript specific overrides
+      // Enforce React Hooks rules
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+
+      // Prevent missing key prop in JSX
+      'react/jsx-key': [
+        'error',
+        {
+          checkFragmentShorthand: true,
+          checkKeyMustBeforeSpread: true,
+        },
+      ],
+
+      // Prevent usage of dangerous JSX properties
+      'react/no-danger': 'warn',
+      'react/no-danger-with-children': 'error',
+
+      // Prevent missing React when using JSX
+      'react/react-in-jsx-scope': 'off', // Not needed in React 19
+
+      // Prevent invalid HTML attribute
+      'react/no-unknown-property': 'error',
+
+      // Prevent usage of setState in componentDidMount
+      'react/no-did-mount-set-state': 'warn',
+
+      // Prevent direct mutation of this.state
+      'react/no-direct-mutation-state': 'error',
+
+      // Prevent usage of Array index in keys
+      'react/no-array-index-key': 'warn',
+
+      // Prevent missing displayName in a React component definition
+      'react/display-name': 'off', // Allow anonymous components
+
+      // Enforce consistent function type for function components
+      'react/function-component-definition': [
+        'error',
+        {
+          namedComponents: 'arrow-function',
+          unnamedComponents: 'arrow-function',
+        },
+      ],
+
+      // Prevent usage of button without type attribute
+      'react/button-has-type': 'error',
+
+      // Prevent void DOM elements from receiving children
+      'react/void-dom-elements-no-children': 'error',
+
+      // ==========================================
+      // Accessibility Best Practices (WCAG 2.1 AA)
+      // ==========================================
+
+      // Require alt text on images
+      'jsx-a11y/alt-text': [
+        'error',
+        {
+          elements: ['img', 'object', 'area', 'input[type="image"]'],
+        },
+      ],
+
+      // Enforce ARIA props are valid
+      'jsx-a11y/aria-props': 'error',
+      'jsx-a11y/aria-proptypes': 'error',
+      'jsx-a11y/aria-unsupported-elements': 'error',
+
+      // Enforce ARIA roles are valid
+      'jsx-a11y/role-has-required-aria-props': 'error',
+      'jsx-a11y/role-supports-aria-props': 'error',
+
+      // Prevent redundant roles
+      'jsx-a11y/no-redundant-roles': 'error',
+
+      // Enforce anchor elements have content
+      'jsx-a11y/anchor-has-content': 'error',
+
+      // Enforce anchors are valid
+      'jsx-a11y/anchor-is-valid': [
+        'error',
+        {
+          aspects: ['invalidHref', 'preferButton'],
+        },
+      ],
+
+      // Enforce click events have keyboard events
+      'jsx-a11y/click-events-have-key-events': 'warn',
+
+      // Enforce elements with onClick have role
+      'jsx-a11y/no-static-element-interactions': 'warn',
+
+      // Enforce keyboard accessibility
+      'jsx-a11y/interactive-supports-focus': 'error',
+
+      // Enforce labels on form elements
+      'jsx-a11y/label-has-associated-control': [
+        'error',
+        {
+          required: {
+            some: ['nesting', 'id'],
+          },
+        },
+      ],
+
+      // Enforce lang attribute has valid value
+      'jsx-a11y/lang': 'error',
+
+      // Enforce media elements have captions
+      'jsx-a11y/media-has-caption': 'warn',
+
+      // Prevent autofocus
+      'jsx-a11y/no-autofocus': ['warn', { ignoreNonDOM: true }],
+
+      // Prevent positive tabIndex
+      'jsx-a11y/tabindex-no-positive': 'error',
+
+      // Enforce heading hierarchy
+      'jsx-a11y/heading-has-content': 'error',
+
+      // Enforce scope attribute is only used on th elements
+      'jsx-a11y/scope': 'error',
+
+      // ==========================================
+      // TypeScript Best Practices
+      // ==========================================
+
+      'no-unused-vars': 'off', // Disable base rule as it conflicts with TypeScript version
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      'no-undef': 'off', // Disable as TypeScript handles this
       '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/no-use-before-define': 'off',
-      '@typescript-eslint/no-shadow': 'warn',
-      '@typescript-eslint/naming-convention': [
-        'error',
-        {
-          selector: 'default',
-          format: null,
-          trailingUnderscore: 'allow',
-        },
-      ],
-      '@typescript-eslint/no-unused-expressions': ['error', {allowShortCircuit: true}],
 
-      // React recommended rules
-      ...(react.configs?.recommended?.rules || {}),
-      ...(reactHooks.configs?.recommended?.rules || {}),
+      // ==========================================
+      // Import Best Practices
+      // ==========================================
 
-      // React specific overrides
-      'react/react-in-jsx-scope': 'off', // Not needed in React 17+
-      'react/prop-types': ['error', {skipUndeclared: true}],
-      'react/jsx-filename-extension': ['error', {extensions: ['.tsx']}],
-      'react/jsx-props-no-spreading': 'warn',
-      'react/jsx-no-bind': 'warn',
-      'react/jsx-no-useless-fragment': 'error',
-      'react/no-array-index-key': 'warn',
-      'react/button-has-type': 'off',
-      'react/sort-comp': 'off',
-      'react/destructuring-assignment': 'off',
-      'react/jsx-one-expression-per-line': 'off',
-      'react/require-default-props': 'off', // Not needed with TypeScript
-      'react/no-unused-prop-types': 'off', // Not needed with TypeScript
-
-      // React Hooks rules
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/preserve-manual-memoization': 'off', // Can cause false positives with React Compiler
-      'react-hooks/refs': 'warn', // Can be too strict
-      'react-hooks/immutability': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-
-      // JSX A11y recommended rules
-      ...(jsxA11y.configs?.recommended?.rules || {}),
-
-      // JSX A11y overrides
-      'jsx-a11y/click-events-have-key-events': 'warn',
-      'jsx-a11y/no-static-element-interactions': 'warn',
-      'jsx-a11y/label-has-associated-control': 'warn',
-      'jsx-a11y/no-noninteractive-element-interactions': 'warn',
-      'jsx-a11y/mouse-events-have-key-events': 'warn',
-      'jsx-a11y/no-noninteractive-tabindex': 'warn',
-      'jsx-a11y/tabindex-no-positive': 'warn',
-
-      // Import rules
-      'import/order': [
-        'error',
-        {
-          groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
-          'newlines-between': 'always',
-          alphabetize: {
-            order: 'asc',
-            caseInsensitive: true,
-          },
-        },
-      ],
       'import/no-unresolved': 'error',
-      'import/extensions': [
-        'error',
-        'ignorePackages',
-        {
-          ts: 'never',
-          tsx: 'never',
-          js: 'never',
-          jsx: 'never',
-        },
-      ],
-      'import/prefer-default-export': 'off',
-      'import/no-default-export': 'off',
+      'import/named': 'error',
+      'import/default': 'error',
+      'import/no-cycle': 'warn',
       'import/no-duplicates': 'error',
-      'import/no-unused-modules': 'off', // Can be slow
 
-      // General JavaScript/TypeScript rules
-      'no-console': ['warn', {allow: ['warn', 'error']}],
+      // ==========================================
+      // General Best Practices
+      // ==========================================
+
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-debugger': 'error',
-      'no-unused-vars': 'off', // Use TypeScript version instead
-      'no-underscore-dangle': ['warn', {allowAfterThis: true}],
-      'no-plusplus': ['error', {allowForLoopAfterthoughts: true}],
-      'no-param-reassign': ['warn', {props: false}],
+      'no-alert': 'error',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'prefer-arrow-callback': 'error',
       'no-nested-ternary': 'warn',
-      'prefer-const': ['error', {destructuring: 'all'}],
-      'prefer-destructuring': ['error', {array: false}],
-      'consistent-return': 'warn',
-      'class-methods-use-this': 'warn',
-      'no-restricted-syntax': 'off',
-      'no-unused-expressions': 'off', // Use TypeScript version instead
+      eqeqeq: ['error', 'always'],
     },
   },
-
-  // JavaScript and JSX files
   {
-    files: ['**/*.{js,jsx}'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        window: 'readonly',
-        document: 'readonly',
-        navigator: 'readonly',
-        localStorage: 'readonly',
-        sessionStorage: 'readonly',
-        console: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        fetch: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        requestAnimationFrame: 'readonly',
-        cancelAnimationFrame: 'readonly',
-        requestIdleCallback: 'readonly',
-        cancelIdleCallback: 'readonly',
-        getComputedStyle: 'readonly',
-        JSX: 'readonly',
-        React: 'readonly',
-        visualViewport: 'readonly',
-        NodeJS: 'readonly',
-      },
-    },
-    plugins: {
-      react,
-      'react-hooks': reactHooks,
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
-    },
-    rules: {
-      ...(react.configs?.recommended?.rules || {}),
-      ...(reactHooks.configs?.recommended?.rules || {}),
-      'react/react-in-jsx-scope': 'off',
-    },
+    // Ignore patterns
+    ignores: [
+      'dist/**',
+      'build/**',
+      'node_modules/**',
+      '*.config.js',
+      '*.config.ts',
+      'coverage/**',
+      '.vite/**',
+    ],
   },
-
-  // Prettier integration (must be last to override conflicting rules)
-  ...(Array.isArray(prettier) ? prettier : [prettier]),
 ];

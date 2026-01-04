@@ -1,16 +1,18 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
 import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
-import * as puzzleModel from '../../model/puzzle.js';
-
-// Mock the model
-vi.mock('../../model/puzzle.js');
 
 describe('Record Solve API', () => {
-  let app: FastifyInstance;
+  let app: FastifyInstance & {
+    repositories: {
+      puzzle: {
+        recordSolve: Mock;
+      };
+    };
+  };
 
   beforeAll(async () => {
-    app = await buildTestApp();
+    app = (await buildTestApp()) as typeof app;
     await waitForApp(app);
   });
 
@@ -30,7 +32,7 @@ describe('Record Solve API', () => {
         time_to_solve: 120,
       };
 
-      (puzzleModel.recordSolve as Mock).mockResolvedValue(undefined);
+      app.repositories.puzzle.recordSolve.mockResolvedValue(undefined);
 
       const response = await app.inject({
         method: 'POST',
@@ -40,16 +42,16 @@ describe('Record Solve API', () => {
 
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.body)).toEqual({});
-      expect(puzzleModel.recordSolve).toHaveBeenCalledWith(
+      expect(app.repositories.puzzle.recordSolve).toHaveBeenCalledWith(
         mockPid,
         mockRequest.gid,
         mockRequest.time_to_solve
       );
     });
 
-    it('should handle errors from model', async () => {
+    it('should handle errors from repository', async () => {
       const error = new Error('Failed to record solve');
-      (puzzleModel.recordSolve as Mock).mockRejectedValue(error);
+      app.repositories.puzzle.recordSolve.mockRejectedValue(error);
 
       const response = await app.inject({
         method: 'POST',

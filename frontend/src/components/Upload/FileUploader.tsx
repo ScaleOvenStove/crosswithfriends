@@ -1,259 +1,219 @@
-import './css/fileUploader.css';
+/**
+ * FileUploader Component - Drag-and-drop file upload
+ * Implements REQ-3.2: Puzzle Upload
+ *
+ * Features:
+ * - Drag and drop area
+ * - Click to select file
+ * - File type validation
+ * - File size validation
+ * - Upload progress
+ */
 
-import PUZtoIPUZ from '@crosswithfriends/shared/lib/converter/PUZtoIPUZ';
-import fileTypeGuesser from '@crosswithfriends/shared/lib/fileTypeGuesser';
-import {hasShape} from '@crosswithfriends/shared/lib/jsUtils';
-import type {PuzzleJson} from '@crosswithfriends/shared/types';
-import React, {useCallback, useRef, useEffect} from 'react';
-import {MdFileUpload} from 'react-icons/md';
-import Swal from 'sweetalert2';
-
-import {useDropzone} from '../../utils/useDropzone';
-
-class UnknownFileTypeError extends Error {
-  errorType: string;
-  errorTitle: string;
-  errorText: string;
-  errorIcon: string;
-
-  constructor(fileType: string) {
-    const title = `Unknown file type: .${fileType}`;
-    super(title);
-    this.errorType = 'UnknownFileTypeError';
-    this.errorTitle = title;
-    this.errorText = 'The uploaded file could not be recognized';
-    this.errorIcon = 'warning';
-  }
-}
-
-class UnsupportedFileTypeError extends Error {
-  errorType: string;
-  errorTitle: string;
-  errorText: string;
-  errorIcon: string;
-
-  constructor(fileType: string) {
-    const title = `Unsupported file type: .${fileType}`;
-    super(title);
-    this.errorType = 'UnsupportedFileTypeError';
-    this.errorTitle = title;
-    this.errorText = 'The uploaded file is not currently supported';
-    this.errorIcon = 'warning';
-  }
-}
+import { useState, useCallback } from 'react';
+import { Box, Typography, Button, Alert, styled } from '@mui/material';
+import { CloudUpload as UploadIcon } from '@mui/icons-material';
+import { uploadPuzzleFile } from '@api/upload';
+import { UploadProgress } from './UploadProgress';
 
 interface FileUploaderProps {
-  v2?: boolean;
-  success: (puzzle: PuzzleJson) => void;
-  fail: () => void;
+  acceptedTypes?: string[];
+  maxSizeMB?: number;
+  onUploadSuccess?: (result: any) => void;
+  onUploadError?: (error: Error) => void;
+  isPublic?: boolean;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({v2, success, fail: _fail}) => {
-  const validIpuz = useCallback((puzzle: unknown): puzzle is PuzzleJson => {
-    // Validate ipuz format
-    const shape = {
-      version: '',
-      kind: [],
-      title: '',
-      author: '',
-      solution: [[]],
-      puzzle: [[]],
-      clues: {
-        Across: [],
-        Down: [],
-      },
-    };
-    return hasShape(puzzle, shape);
-  }, []);
-
-  const convertPUZ = useCallback((buffer: ArrayBuffer) => {
-    // Legacy converter - kept for backward compatibility
-    return PUZtoIPUZ(buffer);
-  }, []);
-
-  const validateIPUZ = useCallback(
-    async (readerResult: ArrayBuffer | string, _filename?: string): Promise<PuzzleJson> => {
-      // Parse .ipuz files as JSON
-      const text = typeof readerResult === 'string' ? readerResult : new TextDecoder().decode(readerResult);
-      try {
-        const puzzle = JSON.parse(text);
-        if (!validIpuz(puzzle)) {
-          throw new Error('Invalid iPUZ format');
-        }
-        return puzzle;
-      } catch (error) {
-        if (error instanceof Error) {
-          throw new Error(`Invalid iPUZ format: ${error.message}`);
-        }
-        throw new Error('Invalid iPUZ format');
-      }
+const DropZone = styled(Box)<{ isDragging?: boolean; hasError?: boolean }>(
+  ({ theme, isDragging, hasError }) => ({
+    border: `2px dashed ${
+      hasError
+        ? theme.palette.error.main
+        : isDragging
+          ? theme.palette.primary.main
+          : theme.palette.divider
+    }`,
+    borderRadius: theme.shape.borderRadius,
+    padding: theme.spacing(4),
+    textAlign: 'center',
+    cursor: 'pointer',
+    backgroundColor: isDragging ? theme.palette.action.hover : theme.palette.background.paper,
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+      borderColor: theme.palette.primary.main,
     },
-    [validIpuz]
-  );
+  })
+);
 
-  const attemptPuzzleConversionRef = useRef<
-    | ((
-        readerResult: ArrayBuffer | string,
-        fileType: string,
-        filename?: string
-      ) => Promise<PuzzleJson> | PuzzleJson)
-    | undefined
-  >(undefined);
+const FileInput = styled('input')({
+  display: 'none',
+});
 
-  const attemptPuzzleConversion = useCallback(
-    async (
-      readerResult: ArrayBuffer | string | null,
-      fileType: string,
-      filename?: string
-    ): Promise<PuzzleJson> => {
-      if (!readerResult) {
-        throw new Error('No file data provided');
-      }
+/**
+ * FileUploader component
+ */
+export const FileUploader = ({
+  acceptedTypes = ['.puz', '.ipuz'],
+  maxSizeMB = 10,
+  onUploadSuccess,
+  onUploadError,
+  isPublic = true,
+}: FileUploaderProps) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-      if (fileType === 'puz') {
-        // Legacy converter expects ArrayBuffer
-        if (typeof readerResult === 'string') {
-          throw new Error('PUZ files must be binary');
-        }
-        // Legacy converter returns ipuz format (PuzzleJson)
-        return convertPUZ(readerResult) as PuzzleJson;
-      } else if (fileType === 'ipuz') {
-        return await validateIPUZ(readerResult, filename);
-      } else if (fileType === 'jpz') {
-        throw new UnsupportedFileTypeError(fileType);
-      } else {
-        // fileTypeGuesser expects ArrayBuffer
-        if (typeof readerResult === 'string') {
-          throw new UnknownFileTypeError(fileType);
-        }
-        const guessedFileType = fileTypeGuesser(readerResult);
-        if (!guessedFileType) {
-          throw new UnknownFileTypeError(fileType);
-        } else {
-          // Only support ipuz for auto-detected formats
-          if (guessedFileType === 'ipuz') {
-            return await validateIPUZ(readerResult, filename);
-          }
-          // For other types, try the conversion recursively
-          const result = await attemptPuzzleConversionRef.current?.(readerResult, guessedFileType, filename);
-          if (!result) {
-            throw new Error('Failed to parse puzzle');
-          }
-          return result;
-        }
-      }
-    },
-    [convertPUZ, validateIPUZ]
-  );
+  /**
+   * Validate file
+   */
+  const validateFile = (file: File): string | null => {
+    // Check file type
+    const lastDotIndex = file.name.lastIndexOf('.');
+    const fileExt =
+      lastDotIndex > -1 ? '.' + file.name.substring(lastDotIndex + 1).toLowerCase() : '';
+    if (!fileExt || !acceptedTypes.includes(fileExt)) {
+      return `Invalid file type. Accepted types: ${acceptedTypes.join(', ')}`;
+    }
 
-  useEffect(() => {
-    attemptPuzzleConversionRef.current = attemptPuzzleConversion;
-  }, [attemptPuzzleConversion]);
+    // Check file size
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > maxSizeMB) {
+      return `File too large. Maximum size: ${maxSizeMB}MB`;
+    }
 
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      if (!file) {
+    return null;
+  };
+
+  /**
+   * Handle file upload
+   */
+  const handleUpload = useCallback(
+    async (file: File) => {
+      setError(null);
+      setSelectedFile(file);
+
+      const validationError = validateFile(file);
+      if (validationError) {
+        setError(validationError);
         return;
       }
-      const fileType = file.name.split('.').pop() || '';
-      const reader = new FileReader();
-      reader.addEventListener('loadend', async () => {
-        try {
-          if (reader.result === null) {
-            throw new Error('Failed to read file');
-          }
-          const puzzle = await attemptPuzzleConversion(reader.result, fileType, file.name);
 
-          // Validate the parsed puzzle
-          if (!validIpuz(puzzle)) {
-            throw new Error('Parsed puzzle failed validation');
-          }
+      setIsUploading(true);
+      setUploadProgress(0);
 
-          // Additional validation: ensure puzzle has required fields
-          if (!puzzle.solution || puzzle.solution.length === 0) {
-            throw new Error('Puzzle has no solution');
-          }
-          if (!puzzle.puzzle || puzzle.puzzle.length === 0) {
-            throw new Error('Puzzle has no puzzle grid');
-          }
-          if (!puzzle.clues || (!puzzle.clues.Across?.length && !puzzle.clues.Down?.length)) {
-            throw new Error('Puzzle has no clues');
-          }
+      try {
+        // Simulate progress (since API doesn't provide real progress)
+        const progressInterval = setInterval(() => {
+          setUploadProgress((prev) => Math.min(prev + 10, 90));
+        }, 200);
 
-          success(puzzle);
-        } catch (e: unknown) {
-          let defaultTitle = 'Something went wrong';
-          let defaultText = 'An unknown error occurred';
-          let defaultIcon: 'warning' | 'error' | 'info' | 'success' | 'question' = 'warning';
+        const result = await uploadPuzzleFile(file, isPublic);
 
-          if (e instanceof Error) {
-            defaultText = `The error message was: ${e.message}`;
-          }
+        clearInterval(progressInterval);
+        setUploadProgress(100);
 
-          if (e && typeof e === 'object' && 'errorTitle' in e) {
-            defaultTitle = String(e.errorTitle);
-          }
-          if (e && typeof e === 'object' && 'errorText' in e) {
-            defaultText = String(e.errorText);
-          }
-          if (e && typeof e === 'object' && 'errorIcon' in e) {
-            const icon = String(e.errorIcon);
-            if (
-              icon === 'warning' ||
-              icon === 'error' ||
-              icon === 'info' ||
-              icon === 'success' ||
-              icon === 'question'
-            ) {
-              defaultIcon = icon;
-            }
-          }
-
-          Swal.fire({
-            title: defaultTitle,
-            text: defaultText,
-            icon: defaultIcon,
-            confirmButtonText: 'OK',
-          });
-        }
-        const firstFile = acceptedFiles[0];
-        if (firstFile && 'preview' in firstFile && typeof firstFile.preview === 'string') {
-          window.URL.revokeObjectURL(firstFile.preview);
-        }
-      });
-      reader.readAsArrayBuffer(file);
+        setTimeout(() => {
+          setIsUploading(false);
+          setUploadProgress(0);
+          setSelectedFile(null);
+          onUploadSuccess?.(result);
+        }, 500);
+      } catch (err) {
+        setIsUploading(false);
+        setUploadProgress(0);
+        const error = err instanceof Error ? err : new Error('Upload failed');
+        setError(error.message);
+        onUploadError?.(error);
+      }
     },
-    [attemptPuzzleConversion, validIpuz, success]
+    [isPublic, maxSizeMB, acceptedTypes, onUploadSuccess, onUploadError]
   );
 
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({
-    onDrop,
-    accept: {
-      'application/octet-stream': ['.puz', '.ipuz'],
-    },
-  });
+  /**
+   * Handle drag events
+   */
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleUpload(files[0]);
+    }
+  };
+
+  /**
+   * Handle file input change
+   */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleUpload(files[0]);
+    }
+  };
+
+  /**
+   * Open file picker
+   */
+  const openFilePicker = () => {
+    document.getElementById('file-input')?.click();
+  };
 
   return (
-    <div
-      {...getRootProps()}
-      className="file-uploader"
-      style={{
-        ...(isDragActive && {
-          outline: '3px solid var(--main-blue)',
-          outlineOffset: '-10px',
-        }),
-      }}
-    >
-      <input {...getInputProps()} />
-      <div className={`file-uploader--wrapper ${v2 ? 'v2' : ''}`}>
-        <div className="file-uploader--box">
-          <MdFileUpload className="file-uploader--box--icon" />
-          Import .puz or .ipuz file
-        </div>
-      </div>
-    </div>
+    <Box>
+      {isUploading ? (
+        <UploadProgress fileName={selectedFile?.name || 'Uploading...'} progress={uploadProgress} />
+      ) : (
+        <>
+          <DropZone
+            isDragging={isDragging}
+            hasError={!!error}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={openFilePicker}
+          >
+            <UploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              Drag and drop a puzzle file here
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              or
+            </Typography>
+            <Button variant="contained" component="span" sx={{ mt: 2 }}>
+              Choose File
+            </Button>
+            <Typography variant="caption" display="block" color="text.secondary" mt={2}>
+              Accepted formats: {acceptedTypes.join(', ')} (max {maxSizeMB}MB)
+            </Typography>
+          </DropZone>
+
+          <FileInput
+            id="file-input"
+            type="file"
+            accept={acceptedTypes.join(',')}
+            onChange={handleFileSelect}
+          />
+
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </>
+      )}
+    </Box>
   );
 };
-
-export default FileUploader;

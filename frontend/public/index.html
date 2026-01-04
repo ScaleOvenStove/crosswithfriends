@@ -1,37 +1,17 @@
-<!doctype html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb#">
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"
-    />
-    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#4f46e5" />
     <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable = no"
+      name="description"
+      content="Cross with Friends - Real-time collaborative crossword puzzles"
     />
-
-
-    <!-- Polyfill for process (required by some libraries at runtime) -->
-    <script>
-      // Polyfill process for browser environment (must run before any modules)
-      // This ensures process is available for libraries that access it at runtime
-      (function (global) {
-        if (typeof global.process === 'undefined') {
-          global.process = {env: {}};
-        }
-        // Also ensure it's available as a bare identifier in non-strict contexts
-        if (typeof globalThis !== 'undefined') {
-          globalThis.process = global.process;
-        }
-      })(typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : this);
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/fullscreen-api-polyfill@1.1.2/fullscreen-api-polyfill.min.js"></script>
+    <title>Cross with Friends</title>
   </head>
   <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>

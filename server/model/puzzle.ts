@@ -1,154 +1,25 @@
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
-import Joi from 'joi';
 import * as uuid from 'uuid';
 
+import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import {logger} from '../utils/logger.js';
+import {
+  hasClueArrays,
+  normalizeClues,
+  removeLowercaseClueKeys,
+  extractMetadata,
+  getPuzzleTypeFromDimensions,
+  type CluesObject,
+  type NormalizedClues,
+} from '../utils/puzzleFormatUtils.js';
+import {validatePuzzle} from '../validation/puzzleSchema.js';
 
 import {pool} from './pool.js';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
-/**
- * Converts old puzzle format (with 'grid' and 'info') to ipuz format
- * This ensures all puzzles returned from the API are in the standard ipuz format
- */
-export function convertOldFormatToIpuz(puzzle: PuzzleJson): PuzzleJson {
-  // Check if this is old format
-  const isOldFormat = 'grid' in puzzle && Array.isArray((puzzle as {grid?: unknown}).grid);
-
-  // If already ipuz format, return as-is
-  if (!isOldFormat) {
-    return puzzle;
-  }
-
-  logger.debug('Converting old format puzzle to ipuz format');
-
-  const oldPuzzle = puzzle as {
-    grid?: string[][];
-    info?: {title?: string; author?: string; copyright?: string; description?: string; type?: string};
-    clues?: {down?: string[]; across?: string[]};
-    circles?: number[];
-    shades?: number[];
-  };
-
-  const grid = oldPuzzle.grid || [];
-  if (grid.length === 0 || !grid[0] || grid[0].length === 0) {
-    throw new Error('Old format puzzle has empty grid');
-  }
-
-  const height = grid.length;
-  const width = grid[0].length;
-  const info = oldPuzzle.info || {};
-
-  // Convert grid to solution format (same structure for old format)
-  const solution = grid.map((row) => row.map((cell) => cell));
-
-  // Generate puzzle grid with cell numbers
-  // We need to determine which cells are starts of words to assign numbers
-  let cellNumber = 1;
-  const puzzleGrid: (
-    | number
-    | string
-    | {cell: number; style: {shapebg?: string; fillbg?: string}}
-    | null
-  )[][] = [];
-  const circles = oldPuzzle.circles || [];
-  const shades = oldPuzzle.shades || [];
-
-  for (let r = 0; r < height; r++) {
-    const row: (number | string | {cell: number; style: {shapebg?: string; fillbg?: string}} | null)[] = [];
-    const solutionRow = solution[r];
-    if (!solutionRow) {
-      continue;
-    }
-    for (let c = 0; c < width; c++) {
-      const cell = solutionRow[c];
-      const isBlack = cell === '.' || cell === null || cell === '#';
-
-      if (isBlack) {
-        row.push('#');
-      } else {
-        // Determine if this cell starts a word
-        const prevRow = r > 0 ? solution[r - 1] : undefined;
-        const nextRow = r < height - 1 ? solution[r + 1] : undefined;
-        const startsAcross = c === 0 || solutionRow[c - 1] === '.' || solutionRow[c - 1] === '#';
-        const startsDown = r === 0 || prevRow?.[c] === '.' || prevRow?.[c] === '#';
-        const hasAcrossWord =
-          startsAcross && c < width - 1 && solutionRow[c + 1] !== '.' && solutionRow[c + 1] !== '#';
-        const hasDownWord = startsDown && r < height - 1 && nextRow?.[c] !== '.' && nextRow?.[c] !== '#';
-
-        const cellIdx = r * width + c;
-        const hasCircle = circles.includes(cellIdx);
-        const hasShade = shades.includes(cellIdx);
-
-        if (hasAcrossWord || hasDownWord) {
-          // Cell starts a word, gets a number
-          if (hasCircle || hasShade) {
-            const style: {shapebg?: string; fillbg?: string} = {};
-            if (hasCircle) style.shapebg = 'circle';
-            if (hasShade) style.fillbg = 'gray';
-            row.push({cell: cellNumber, style});
-          } else {
-            row.push(cellNumber);
-          }
-          cellNumber += 1;
-        } else {
-          // Cell doesn't start a word
-          if (hasCircle || hasShade) {
-            const style: {shapebg?: string; fillbg?: string} = {};
-            if (hasCircle) style.shapebg = 'circle';
-            if (hasShade) style.fillbg = 'gray';
-            row.push({cell: 0, style});
-          } else {
-            row.push('0');
-          }
-        }
-      }
-    }
-    puzzleGrid.push(row);
-  }
-
-  // Convert clues from sparse array format to ipuz format
-  const oldAcross = oldPuzzle.clues?.across || [];
-  const oldDown = oldPuzzle.clues?.down || [];
-
-  const acrossClues: [string, string][] = [];
-  for (let i = 1; i < oldAcross.length; i += 2) {
-    const number = oldAcross[i];
-    const clue = oldAcross[i + 1];
-    if (number && clue) {
-      acrossClues.push([number, clue]);
-    }
-  }
-
-  const downClues: [string, string][] = [];
-  for (let i = 1; i < oldDown.length; i += 2) {
-    const number = oldDown[i];
-    const clue = oldDown[i + 1];
-    if (number && clue) {
-      downClues.push([number, clue]);
-    }
-  }
-
-  // Create ipuz format puzzle
-  const ipuzPuzzle: PuzzleJson = {
-    version: 'http://ipuz.org/v2',
-    kind: ['http://ipuz.org/crossword#1'],
-    dimensions: {width, height},
-    title: info.title || '',
-    author: info.author || '',
-    copyright: info.copyright || '',
-    notes: info.description || '',
-    solution,
-    puzzle: puzzleGrid,
-    clues: {
-      Across: acrossClues,
-      Down: downClues,
-    },
-  };
-
-  return ipuzPuzzle;
-}
+// Re-export adapter functions for backward compatibility
+export {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 
 export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   const startTime = Date.now();
@@ -169,7 +40,35 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   }
 
   // Always return ipuz format to clients
-  return convertOldFormatToIpuz(firstRow.content);
+  const puzzle = convertOldFormatToIpuz(firstRow.content);
+
+  // Normalize clues to v2 format
+  normalizePuzzleCluesWithLogging(puzzle, pid);
+
+  return puzzle;
+}
+
+/**
+ * Normalizes puzzle clues to v2 format with appropriate logging
+ */
+function normalizePuzzleCluesWithLogging(puzzle: PuzzleJson, pid: string): void {
+  if (!puzzle.clues) {
+    logger.warn({pid}, 'Puzzle has no clues object');
+    return;
+  }
+
+  const cluesInput = puzzle.clues as CluesObject;
+  if (!hasClueArrays(cluesInput)) {
+    logger.warn(
+      {pid, cluesKeys: Object.keys(puzzle.clues)},
+      'Puzzle has clues object but all clue arrays are empty'
+    );
+    return;
+  }
+
+  // Normalize clues to v2 format
+  puzzle.clues = normalizeClues(cluesInput);
+  removeLowercaseClueKeys(puzzle.clues as CluesObject);
 }
 
 const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string[] => {
@@ -182,12 +81,6 @@ const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']):
   }
   return ret;
 };
-
-// Helper to determine puzzle type from ipuz solution array length
-function getPuzzleTypeFromIpuz(ipuz: {solution?: unknown}): string {
-  const solution = Array.isArray(ipuz.solution) ? ipuz.solution : [];
-  return solution.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
-}
 
 export async function listPuzzles(
   filter: ListPuzzleRequestFilters,
@@ -282,92 +175,8 @@ export async function listPuzzles(
   return puzzles;
 }
 
-const string = (): Joi.StringSchema => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
-
-// Validator for ipuz format per https://www.puzzazz.com/ipuz/v1 and v2
-const puzzleValidator = Joi.object({
-  version: string().required(), // Supports both v1 and v2
-  kind: Joi.array().items(string()).required(),
-  dimensions: Joi.object({
-    width: Joi.number().integer().required(),
-    height: Joi.number().integer().required(),
-  }).required(),
-  title: string().required(),
-  author: string().required(),
-  copyright: string().optional(),
-  notes: string().optional(),
-  solution: Joi.array()
-    .items(
-      Joi.array()
-        .items(Joi.alternatives().try(string(), Joi.valid(null, '#')))
-        .min(1)
-    )
-    .min(1)
-    .required(),
-  puzzle: Joi.array()
-    .items(
-      Joi.array().items(
-        Joi.alternatives().try(
-          Joi.number(),
-          Joi.string(), // Allow string clue numbers like "1", "2", "10", "0" for empty
-          Joi.object({
-            cell: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
-            style: Joi.object({
-              shapebg: string().optional(),
-              fillbg: string().optional(),
-            }).optional(),
-          }),
-          Joi.valid(null)
-        )
-      )
-    )
-    .required(),
-  clues: Joi.object({
-    Across: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.array().items(string()), // v1 format: ["1", "clue text"]
-          Joi.object({
-            number: string(),
-            clue: string(),
-            cells: Joi.array().optional(), // v2 format with cells property
-          })
-        )
-      )
-      .required(),
-    Down: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.array().items(string()), // v1 format: ["1", "clue text"]
-          Joi.object({
-            number: string(),
-            clue: string(),
-            cells: Joi.array().optional(), // v2 format with cells property
-          })
-        )
-      )
-      .required(),
-  }).required(),
-});
-
-function validatePuzzle(puzzle: unknown): void {
-  logger.debug({keys: puzzle && typeof puzzle === 'object' ? Object.keys(puzzle) : []}, 'Puzzle keys');
-  const {error} = puzzleValidator.validate(puzzle);
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  // Ensure solution array is not empty
-  if (puzzle && typeof puzzle === 'object' && 'solution' in puzzle) {
-    const solution = (puzzle as {solution?: unknown}).solution;
-    if (!Array.isArray(solution) || solution.length === 0) {
-      throw new Error('Puzzle solution array must not be empty');
-    }
-    if (!Array.isArray(solution[0]) || solution[0].length === 0) {
-      throw new Error('Puzzle solution must have at least one non-empty row');
-    }
-  }
-}
+// Puzzle validation is now handled by validatePuzzle from validation/puzzleSchema.ts
+// Additional validation for solution array is done inline in addPuzzle function
 
 export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: string): Promise<string> {
   let puzzleId = pid;
@@ -375,12 +184,62 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
     puzzleId = uuid.v4().substring(0, 8);
   }
   validatePuzzle(puzzle);
+
+  // Normalize clues to v2 format before saving
+  // This ensures consistent storage format regardless of input format
+  const normalizedPuzzle = {...puzzle};
+  if (normalizedPuzzle.clues) {
+    try {
+      const cluesInput = normalizedPuzzle.clues as CluesObject;
+      const acrossCount =
+        (Array.isArray(cluesInput.Across) ? cluesInput.Across.length : 0) ||
+        (Array.isArray(cluesInput.across) ? cluesInput.across.length : 0);
+      const downCount =
+        (Array.isArray(cluesInput.Down) ? cluesInput.Down.length : 0) ||
+        (Array.isArray(cluesInput.down) ? cluesInput.down.length : 0);
+
+      logger.debug(
+        {
+          pid: puzzleId,
+          hasAcross: !!cluesInput.Across || !!cluesInput.across,
+          hasDown: !!cluesInput.Down || !!cluesInput.down,
+          acrossCount,
+          downCount,
+        },
+        'Converting clues before save'
+      );
+
+      normalizedPuzzle.clues = normalizeClues(cluesInput);
+      removeLowercaseClueKeys(normalizedPuzzle.clues as CluesObject);
+
+      const normalizedClues = normalizedPuzzle.clues as NormalizedClues;
+      logger.debug(
+        {
+          pid: puzzleId,
+          acrossCount: normalizedClues.Across?.length || 0,
+          downCount: normalizedClues.Down?.length || 0,
+        },
+        'Converted clues after save'
+      );
+    } catch (error) {
+      logger.error({error}, 'Failed to convert clues');
+      throw new Error(`Failed to convert clues: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    logger.warn({pid: puzzleId}, 'Puzzle has no clues object during save');
+  }
+
   const uploaded_at = Date.now();
+
+  // Only set pid_numeric if pid is numeric, otherwise NULL
+  // Check if pid matches numeric pattern: digits optionally with decimal point
+  const pidNumeric = /^([0-9]+[.]?[0-9]*|[.][0-9]+)$/.test(puzzleId) ? puzzleId : null;
+
   await pool.query(
     `
       INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric)
       VALUES ($1, to_timestamp($2), $3, $4, $5)`,
-    [puzzleId, uploaded_at / 1000, isPublic, puzzle, puzzleId]
+    [puzzleId, uploaded_at / 1000, isPublic, normalizedPuzzle, pidNumeric]
   );
   return puzzleId;
 }
@@ -445,32 +304,17 @@ export async function getPuzzleInfo(
 ): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
   const puzzle = await getPuzzle(pid);
 
-  // IMPORTANT: Production and staging share the same database, so we must support both formats
-  // Handle old format (with info object) and ipuz format (title/author at root)
-  if ('info' in puzzle && puzzle.info && typeof puzzle.info === 'object') {
-    // Old format: extract from info object
-    const info = puzzle.info as {
-      title?: string;
-      author?: string;
-      copyright?: string;
-      description?: string;
-      type?: string;
-    };
-    return {
-      title: info.title || '',
-      author: info.author || '',
-      copyright: info.copyright || '',
-      description: info.description || '',
-      type: info.type,
-    };
-  }
+  // Use shared utility for metadata extraction
+  const metadata = extractMetadata(puzzle);
 
-  // New format (ipuz): extract from root level
+  // Calculate type from solution dimensions if not present
+  const type = metadata.type || getPuzzleTypeFromDimensions(puzzle.solution?.length || 0);
+
   return {
-    title: puzzle.title || '',
-    author: puzzle.author || '',
-    copyright: puzzle.copyright || '',
-    description: puzzle.notes || '',
-    type: getPuzzleTypeFromIpuz(puzzle),
+    title: metadata.title,
+    author: metadata.author,
+    copyright: metadata.copyright,
+    description: metadata.description,
+    type,
   };
 }

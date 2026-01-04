@@ -1,26 +1,17 @@
 /// <reference types="vite/client" />
 
-import type {Socket} from 'socket.io-client';
-
-interface ConnectionStatus {
-  latency: number;
-  timestamp: number;
+interface ImportMetaEnv {
+  readonly VITE_USE_LOCAL_SERVER?: string;
+  readonly VITE_ENV?: string;
+  readonly VITE_FIREBASE_API_KEY?: string;
+  readonly VITE_FIREBASE_AUTH_DOMAIN?: string;
+  readonly VITE_FIREBASE_DATABASE_URL?: string;
+  readonly VITE_FIREBASE_PROJECT_ID?: string;
+  readonly VITE_FIREBASE_STORAGE_BUCKET?: string;
+  readonly VITE_FIREBASE_MESSAGING_SENDER_ID?: string;
+  readonly VITE_FIREBASE_APP_ID?: string;
 }
 
-declare global {
-  interface ImportMetaEnv {
-    readonly VITE_ENV?: string;
-    readonly VITE_USE_LOCAL_SERVER?: string;
-    readonly VITE_STAGING_API_URL?: string;
-    readonly VITE_API_URL?: string;
-    readonly VITE_MAINTENANCE_BANNER_ACTIVE?: string;
-    readonly VITE_MAINTENANCE_BANNER_MESSAGE?: string;
-    readonly VITE_SITE_DOWN?: string;
-    readonly MODE: string;
-  }
-
-  interface Window {
-    connectionStatus?: ConnectionStatus;
-    socket?: Socket;
-  }
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
 }

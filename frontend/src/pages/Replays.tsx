@@ -1,351 +1,97 @@
-import './css/replays.css';
+/**
+ * Replays Page - List of game replays
+ * Implements REQ-5.2: Replay List
+ */
 
-import HistoryWrapper from '@crosswithfriends/shared/lib/wrappers/HistoryWrapper';
-import {Box, Stack} from '@mui/material';
-import {ref, get} from 'firebase/database';
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
-import {useParams} from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import Nav from '@components/common/Nav';
+import { ListSkeleton } from '@components/common/skeletons';
+import { useStats } from '@hooks/index';
+import './Replays.css';
 
-const keyBy = <T,>(arr: T[], key: keyof T): Record<string, T> => {
-  return Object.fromEntries(arr.map((item) => [String(item[key]), item]));
+/**
+ * Format seconds to MM:SS or HH:MM:SS
+ */
+const formatDuration = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  return `${minutes}:${String(secs).padStart(2, '0')}`;
 };
 
-const range = (start: number, end: number, step: number = 1): number[] => {
-  const result: number[] = [];
-  for (let i = start; step > 0 ? i < end : i > end; i += step) {
-    result.push(i);
-  }
-  return result;
-};
+const Replays = () => {
+  const { pid } = useParams<{ pid?: string }>();
+  const { history, isLoading } = useStats();
 
-import Nav from '../components/common/Nav';
-import Timestamp from '../components/common/Timestamp';
-import {usePuzzle} from '../hooks/usePuzzle';
-import {db} from '../store/firebase';
+  // Filter by puzzle ID if provided
+  const replays = useMemo(() => {
+    const filteredHistory = pid ? history.filter((item) => item.puzzleId === pid) : history;
 
-interface TimeFormatterProps {
-  millis?: number;
-}
-
-const TimeFormatter: React.FC<TimeFormatterProps> = ({millis}) =>
-  millis ? (
-    <span>
-      {Math.floor(millis / 60000)}m{Math.floor(millis / 1000) % 60}s
-    </span>
-  ) : null;
-
-interface GameWithTime {
-  stopTime?: number;
-  startTime?: number;
-  pauseTime?: number;
-}
-
-function getTime(game: GameWithTime): number | undefined {
-  if (game.stopTime && game.startTime) {
-    let t = game.stopTime - game.startTime;
-    if (game.pauseTime) t += game.pauseTime;
-    return t;
-  }
-  return undefined;
-}
-
-interface GameWithChat {
-  chat?: {
-    messages?: Record<string, {sender?: string}>;
-  };
-  events?: Record<string, {type?: string; params?: {sender?: string}}>;
-}
-
-function getChatters(game: GameWithChat | null | undefined): string[] {
-  if (!game) return [];
-  if (game.chat) {
-    const {messages} = game.chat;
-    if (!messages) return [];
-    const chatters: string[] = [];
-    Object.values(messages).forEach((msg) => {
-      if (msg.sender) {
-        chatters.push(msg.sender);
-      }
-    });
-    return Array.from(new Set(chatters));
-  }
-  if (game.events) {
-    const chatters: string[] = [];
-    Object.values(game.events).forEach((event) => {
-      if (event.type === 'chat' && event.params?.sender) {
-        chatters.push(event.params.sender);
-      }
-    });
-    return Array.from(new Set(chatters));
-  }
-  return [];
-}
-
-interface GameInfo {
-  gid: string;
-  pid: number;
-  title?: string;
-  v2: boolean;
-  startTime: number;
-  solved?: boolean;
-  time?: number;
-  chatters: string[];
-  active: boolean;
-}
-
-interface SoloPlayer {
-  id: string;
-  solved: boolean;
-  time: number;
-}
-
-const Replays: React.FC = () => {
-  const params = useParams<{pid?: string}>();
-  const [games, setGames] = useState<Record<string, GameInfo>>({});
-  const [soloPlayers, _setSoloPlayers] = useState<SoloPlayer[]>([]);
-  const [puzInfo, setPuzInfo] = useState<GameInfo | null>(null);
-  const [limit, setLimit] = useState<number>(20);
-  const [error, _setError] = useState<Error | null>(null);
-
-  const pid = useMemo(() => {
-    if (!params.pid) {
-      return null;
-    }
-    return Number(params.pid);
-  }, [params.pid]);
-
-  const puzzlePath = useMemo(() => {
-    return pid ? `/puzzle/${pid}` : '';
-  }, [pid]);
-
-  const puzzle = usePuzzle({
-    path: puzzlePath,
-    pid: pid || 0,
-    onReady: (data) => {
-      if (data?.info) {
-        setPuzInfo(data.info);
-      }
-    },
-  });
-
-  interface RawGameData {
-    events?: Record<string, unknown>;
-    pid?: number;
-    solved?: boolean;
-    startTime?: number;
-    chat?: {
-      messages?: Record<string, {sender?: string}>;
-    };
-    [key: string]: unknown;
-  }
-
-  const processGame = useCallback((rawGame: RawGameData, gid: string): GameInfo => {
-    if (rawGame.events) {
-      const events = Object.values(rawGame.events);
-      const historyWrapper = new HistoryWrapper(events);
-      const game = historyWrapper.getSnapshot();
-      const startTime = historyWrapper.createEvent.timestamp / 1000;
-      return {
-        gid,
-        pid: game.pid,
-        title: game.info.title,
-        v2: true,
-        startTime,
-        solved: game.solved,
-        time: game.clock.totalTime,
-        chatters: getChatters(rawGame),
-        active: !game.clock.paused,
-      };
-    }
-    return {
-      gid,
-      pid: rawGame.pid,
-      v2: false,
-      solved: rawGame.solved,
-      startTime: rawGame.startTime / 1000,
-      time: getTime(rawGame),
-      chatters: getChatters(rawGame),
-      active: true,
-    };
-  }, []);
-
-  const updatePuzzles = useCallback(() => {
-    if (pid && puzzlePath) {
-      puzzle.attach();
-      puzzle.waitForReady().then(() => {
-        if (puzzle.data?.info) {
-          setPuzInfo(puzzle.data.info);
-        }
-        puzzle.listGames(limit).then((rawGames) => {
-          if (!rawGames) return;
-          const processedGames = Object.keys(rawGames).map((gid) => processGame(rawGames[gid], gid));
-          setGames(keyBy(processedGames, 'gid'));
-        });
-      });
-    } else {
-      get(ref(db, '/counters/gid')).then((snapshot) => {
-        const gid = Number(snapshot.val());
-        Promise.all(
-          range(gid - 1, gid - limit - 1, -1).map((g: number) =>
-            get(ref(db, `/game/${g.toString()}`)).then((snapshot) => ({...snapshot.val(), gid: g}))
-          )
-        ).then((rawGames: Array<RawGameData & {gid: string}>) => {
-          const processedGames = rawGames.map((g) => processGame(g, g.gid));
-          setGames(keyBy(processedGames, 'gid'));
-        });
-      });
-    }
-  }, [pid, limit, processGame, puzzle, puzzlePath]);
-
-  useEffect(() => {
-    updatePuzzles();
-    return () => {
-      if (puzzlePath) {
-        puzzle.detach();
-      }
-    };
-  }, [updatePuzzles, puzzle, puzzlePath]);
-
-  const linkToGame = useCallback(
-    (gid: string, {v2, active, solved}: {v2: boolean; active: boolean; solved?: boolean}): JSX.Element => {
-      return (
-        <a href={`${v2 ? '/beta' : ''}/game/${gid}`}>
-          {solved ? 'done' : active ? 'still playing' : 'paused'}
-        </a>
-      );
-    },
-    []
-  );
-
-  const puzzleTitle = useMemo(() => {
-    if (!puzzle.data?.info?.title) return '';
-    return puzzle.data.info.title;
-  }, [puzzle.data]);
-
-  useEffect(() => {
-    const title = pid ? `Replays ${pid}: ${puzzleTitle}` : `Last ${limit} games`;
-    document.title = title;
-  }, [pid, puzzleTitle, limit]);
-
-  const list1Items = useMemo(() => {
-    return Object.values(games).map(
-      ({pid: gamePid, gid, solved, startTime, time, chatters, v2, active, title}) => (
-        <tr key={gid}>
-          {pid ? null : (
-            <td style={{textAlign: 'left'}}>
-              <a href={`/replays/${gamePid}`}>{gamePid}</a>
-            </td>
-          )}
-          {pid ? null : <td>{title}</td>}
-          <td>
-            <a href={`/replay/${gid}`}>
-              Game #{gid}
-              {v2 ? '(beta)' : ''}
-            </a>
-          </td>
-          <td>
-            <Timestamp time={startTime} />
-          </td>
-          <td>
-            <TimeFormatter millis={time} />
-          </td>
-          <td>{linkToGame(gid, {v2, active, solved})}</td>
-          <td style={{overflow: 'auto', maxWidth: 300}}>{chatters.join(', ')}</td>
-        </tr>
-      )
-    );
-  }, [games, pid, linkToGame]);
-
-  const list2Items = useMemo(() => {
-    return soloPlayers.map(({id, solved, time}) => (
-      <tr key={id}>
-        <td>
-          <a href={`/replay/solo/${id}/${pid}`}>Play by player #{id}</a>
-        </td>
-        <td>Not implemented</td>
-        <td>
-          <TimeFormatter millis={time} />
-        </td>
-        <td>{solved ? 'done' : 'not done'}</td>
-        <td>
-          Solo by user
-          {id}
-        </td>
-      </tr>
-    ));
-  }, [soloPlayers, pid]);
+    // Sort by date, most recent first
+    return filteredHistory
+      .sort((a, b) => b.dateSolved.localeCompare(a.dateSolved))
+      .map((item) => ({
+        id: item.gameId,
+        puzzleTitle: item.title || 'Untitled Puzzle',
+        date: item.dateSolved,
+        duration: formatDuration(item.solveTime),
+        size: item.size,
+        checkedSquares: item.checkedSquareCount,
+        revealedSquares: item.revealedSquareCount,
+      }));
+  }, [history, pid]);
 
   return (
-    <Stack direction="column" className="replays">
-      <Nav v2 />
-      <div
-        style={{
-          paddingLeft: 30,
-          paddingTop: 20,
-          paddingBottom: 20,
-        }}
-      >
-        {puzInfo && !error && (
-          <div className="header">
-            <div className="header--title">{puzInfo.title}</div>
-            <div className="header--subtitle">Replays / currently playing games</div>
+    <div className="replays-page">
+      <Nav />
+      <div className="container">
+        <header className="replays-header">
+          <h1>Game Replays</h1>
+          {pid && <p>Showing replays for puzzle: {pid}</p>}
+        </header>
+
+        {isLoading ? (
+          <ListSkeleton count={4} />
+        ) : replays.length === 0 ? (
+          <div className="empty-state">
+            <p>No replays available yet.</p>
+            <p className="text-muted">Complete some puzzles to see your solve history here!</p>
+            <Link to="/" className="btn-primary">
+              Play a Puzzle
+            </Link>
+          </div>
+        ) : (
+          <div className="replays-list">
+            {replays.map((replay) => (
+              <Link key={replay.id} to={`/replay/${replay.id}`} className="replay-item">
+                <div className="replay-info">
+                  <h3>{replay.puzzleTitle}</h3>
+                  <div className="replay-meta">
+                    <span className="replay-date">📅 {replay.date}</span>
+                    <span className="replay-duration">⏱ {replay.duration}</span>
+                    <span className="replay-size">📏 {replay.size}</span>
+                    {replay.revealedSquares > 0 && (
+                      <span className="replay-revealed">💡 {replay.revealedSquares} revealed</span>
+                    )}
+                    {replay.checkedSquares > 0 && (
+                      <span className="replay-checked">✓ {replay.checkedSquares} checked</span>
+                    )}
+                  </div>
+                </div>
+                <button type="button" className="btn-secondary">
+                  Watch Replay →
+                </button>
+              </Link>
+            ))}
           </div>
         )}
-        <div
-          style={{
-            padding: 20,
-          }}
-        >
-          {error ? (
-            <div>Error loading replay</div>
-          ) : (
-            <table className="main-table">
-              <tbody>
-                <tr>
-                  {pid ? null : <th>Pid</th>}
-                  {pid ? null : <th>Title</th>}
-                  <th>Game</th>
-                  <th>Start time</th>
-                  <th>Duration</th>
-                  <th>Progress</th>
-                  <th>Participants</th>
-                </tr>
-                {list1Items}
-                {list2Items}
-              </tbody>
-            </table>
-          )}
-        </div>
       </div>
-
-      <Box
-        className="limit--container"
-        sx={{flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center'}}
-      >
-        <span className="limit--text">
-          Limit:
-          {limit}
-        </span>
-        &nbsp;
-        <button
-          className="limit--button"
-          onClick={() => {
-            setLimit(limit + 10);
-          }}
-        >
-          +
-        </button>
-        &nbsp;
-        <button
-          className="limit--button"
-          onClick={() => {
-            setLimit(limit + 50);
-          }}
-        >
-          ++
-        </button>
-      </Box>
-    </Stack>
+    </div>
   );
 };
 

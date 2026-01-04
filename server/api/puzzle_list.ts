@@ -1,9 +1,11 @@
-import type {ListPuzzleRequestFilters, ListPuzzleResponse} from '@crosswithfriends/shared/types';
-import type {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
 
-import {listPuzzles, convertOldFormatToIpuz} from '../model/puzzle.js';
+import '../types/fastify.js';
+import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
+import type {AppInstance} from '../types/fastify.js';
 
 import {createHttpError} from './errors.js';
+import type {ListPuzzlesResponse} from './generated/index.js';
 import {ErrorResponseSchema} from './schemas.js';
 
 interface PuzzleListQuery {
@@ -15,7 +17,7 @@ interface PuzzleListQuery {
 }
 
 // eslint-disable-next-line require-await
-async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
+async function puzzleListRouter(fastify: AppInstance): Promise<void> {
   const getOptions = {
     schema: {
       operationId: 'listPuzzles',
@@ -52,10 +54,10 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
     },
   };
 
-  fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzleResponse}>(
+  fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzlesResponse}>(
     '',
     getOptions,
-    async (request: FastifyRequest<{Querystring: PuzzleListQuery}>, _reply: FastifyReply) => {
+    async (request: any, _reply: any) => {
       const page = Number.parseInt(request.query.page, 10);
       const pageSize = Number.parseInt(request.query.pageSize, 10);
 
@@ -63,26 +65,39 @@ async function puzzleListRouter(fastify: FastifyInstance): Promise<void> {
         throw createHttpError('page and pageSize should be integers', 400);
       }
 
+      // Handle undefined string values from frontend (should be treated as missing)
+      const sizeMini = request.query.sizeMini;
+      const sizeStandard = request.query.sizeStandard;
       const filters: ListPuzzleRequestFilters = {
         sizeFilter: {
-          Mini: request.query.sizeMini === 'true',
-          Standard: request.query.sizeStandard === 'true',
+          Mini: sizeMini === 'true' && typeof sizeMini === 'string',
+          Standard: sizeStandard === 'true' && typeof sizeStandard === 'string',
         },
         nameOrTitleFilter: (request.query.nameOrTitle ?? '') as string,
       };
 
-      const rawPuzzleList = await listPuzzles(filters, pageSize, page * pageSize);
-      const puzzles = rawPuzzleList.map((puzzle) => {
-        // Convert old format to ipuz format for consistency
-        // All puzzles returned to clients are now in pure ipuz format
-        const content = convertOldFormatToIpuz(puzzle.content);
+      const result = await fastify.repositories.puzzle.list(filters, pageSize, page * pageSize);
+      const rawPuzzleList = result.puzzles;
 
-        return {
-          pid: puzzle.pid,
-          content,
-          stats: {numSolves: puzzle.times_solved},
-        };
-      });
+      const puzzles = rawPuzzleList.map(
+        (puzzle: {
+          pid: string;
+          puzzle: PuzzleJson;
+        }): {
+          pid: string;
+          content: PuzzleJson;
+          stats: {numSolves: number};
+        } => {
+          // Convert old format to ipuz format for consistency
+          // All puzzles returned to clients are now in pure ipuz format
+          const content = convertOldFormatToIpuz(puzzle.puzzle);
+          return {
+            pid: puzzle.pid,
+            content,
+            stats: {numSolves: 0}, // TODO: Add numSolves to repository response
+          };
+        }
+      );
 
       return {puzzles};
     }

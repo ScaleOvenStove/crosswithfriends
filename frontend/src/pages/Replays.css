@@ -1,0 +1,277 @@
+/**
+ * Replays Page Styles
+ * Styling for the game replays list page
+ */
+
+.replays-page {
+  min-height: 100vh;
+  background-color: var(--background-color, #f5f5f5);
+  display: flex;
+  flex-direction: column;
+}
+
+.replays-page .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  flex: 1;
+}
+
+/* Header Styles */
+.replays-header {
+  margin-bottom: 2rem;
+}
+
+.replays-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.replays-header p {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Replays List */
+.replays-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Replay Item */
+.replay-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.replay-item:hover {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  border-color: #d1d5db;
+}
+
+/* Replay Info */
+.replay-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.replay-info h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+/* Replay Meta */
+.replay-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.replay-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.replay-duration {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.replay-participants {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.replay-complete {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #059669;
+  font-weight: 500;
+}
+
+.replay-size {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.replay-revealed {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #f59e0b;
+}
+
+.replay-checked {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #059669;
+}
+
+/* Button Styles */
+.replay-item .btn-secondary {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.replay-item .btn-secondary:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.empty-state p {
+  margin: 0 0 0.5rem 0;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.empty-state .text-muted {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state .btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  transition: background-color 0.15s ease;
+}
+
+.empty-state .btn-primary:hover {
+  background: #2563eb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .replays-page .container {
+    padding: 1rem;
+  }
+
+  .replays-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .replay-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .replay-item .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .replay-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .replays-page {
+    background-color: #111827;
+  }
+
+  .replays-header h1 {
+    color: #f9fafb;
+  }
+
+  .replays-header p {
+    color: #9ca3af;
+  }
+
+  .replay-item {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .replay-item:hover {
+    border-color: #4b5563;
+  }
+
+  .replay-info h3 {
+    color: #f9fafb;
+  }
+
+  .replay-meta {
+    color: #9ca3af;
+  }
+
+  .replay-item .btn-secondary {
+    background: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
+  }
+
+  .replay-item .btn-secondary:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+
+  .empty-state {
+    background: #1f2937;
+  }
+
+  .empty-state p {
+    color: #9ca3af;
+  }
+}

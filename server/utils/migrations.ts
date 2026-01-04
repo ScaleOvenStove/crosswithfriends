@@ -17,7 +17,7 @@ export interface MigrationStatus {
  * Get the list of migration files from the migrations directory
  */
 export async function getMigrationFiles(): Promise<string[]> {
-  const migrationsDir = join(process.cwd(), 'server', 'migrations');
+  const migrationsDir = join(process.cwd(), 'migrations');
   const files = await readdir(migrationsDir);
   return files.filter((file) => file.endsWith('.sql')).sort(); // Sort to ensure consistent ordering
 }
@@ -75,7 +75,7 @@ export async function checkMigrationStatus(): Promise<{
 }> {
   const migrationFiles = await getMigrationFiles();
   const appliedMigrations = await getAppliedMigrations();
-  const migrationsDir = join(process.cwd(), 'server', 'migrations');
+  const migrationsDir = join(process.cwd(), 'migrations');
 
   const allMigrations: MigrationStatus[] = [];
   const missingMigrations: string[] = [];
@@ -122,7 +122,7 @@ export async function checkMigrationStatus(): Promise<{
  * Apply a single migration file
  */
 export async function applyMigration(migrationFile: string): Promise<void> {
-  const migrationsDir = join(process.cwd(), 'server', 'migrations');
+  const migrationsDir = join(process.cwd(), 'migrations');
   const migrationPath = join(migrationsDir, migrationFile);
 
   logger.info({migrationFile}, 'Applying migration');
