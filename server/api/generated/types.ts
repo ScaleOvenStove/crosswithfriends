@@ -284,7 +284,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/link_preview/': {
+  '/link_preview': {
     parameters: {
       query?: never;
       header?: never;
@@ -739,7 +739,7 @@ export interface operations {
             /** @description Puzzle description/notes */
             notes?: string;
             /** @description Solution grid (new format) */
-            solution?: (string | null | '#')[][];
+            solution?: (string | null)[][];
             /** @description Puzzle grid (new format) */
             puzzle?: (
               | number
@@ -747,7 +747,7 @@ export interface operations {
               | {
                   [key: string]: unknown;
                 }
-              | null
+              | (string | null)
             )[][];
             clues: {
               /** @description Across clues in v2 object format {number, clue} */
@@ -772,7 +772,7 @@ export interface operations {
               [key: string]: unknown;
             };
             /** @description Legacy format: Solution grid */
-            grid?: (string | null | '#')[][];
+            grid?: (string | null)[][];
             /** @description Legacy format: Puzzle metadata */
             info?: {
               /** @description Puzzle type */
@@ -885,7 +885,7 @@ export interface operations {
             /** @description Puzzle description/notes */
             notes?: string;
             /** @description Solution grid (new format) */
-            solution?: (string | null | '#')[][];
+            solution?: (string | null)[][];
             /** @description Puzzle grid (new format) */
             puzzle?: (
               | number
@@ -893,7 +893,7 @@ export interface operations {
               | {
                   [key: string]: unknown;
                 }
-              | null
+              | (string | null)
             )[][];
             clues: {
               /** @description Across clues in v2 object format {number, clue} */
@@ -918,7 +918,7 @@ export interface operations {
               [key: string]: unknown;
             };
             /** @description Legacy format: Solution grid */
-            grid?: (string | null | '#')[][];
+            grid?: (string | null)[][];
             /** @description Legacy format: Puzzle metadata */
             info?: {
               /** @description Puzzle type */

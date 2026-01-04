@@ -124,7 +124,7 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Authentication
     // ========================================================================
-    createToken: async (request: any, _reply: any) => {
+    createToken: (request: any, _reply: any) => {
       request.log.debug({body: request.body ? Object.keys(request.body) : []}, 'Creating auth token');
 
       let userId = request.body?.userId;
