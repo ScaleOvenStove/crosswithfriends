@@ -2,10 +2,10 @@
 
 All URIs are relative to *https://www.crosswithfriends.com/api*
 
-| Method                                                 | HTTP request           | Description      |
-| ------------------------------------------------------ | ---------------------- | ---------------- |
-| [**getLinkPreview**](LinkPreviewApi.md#getlinkpreview) | **GET** /link_preview/ | Get link preview |
-| [**getOembed**](LinkPreviewApi.md#getoembed)           | **GET** /oembed        | Get oEmbed data  |
+| Method                                                 | HTTP request          | Description      |
+| ------------------------------------------------------ | --------------------- | ---------------- |
+| [**getLinkPreview**](LinkPreviewApi.md#getlinkpreview) | **GET** /link_preview | Get link preview |
+| [**getOembed**](LinkPreviewApi.md#getoembed)           | **GET** /oembed       | Get oEmbed data  |
 
 ## getLinkPreview
 

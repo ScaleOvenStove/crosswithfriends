@@ -108,7 +108,7 @@ export class LinkPreviewApi extends runtime.BaseAPI implements LinkPreviewApiInt
 
     const headerParameters: runtime.HTTPHeaders = {};
 
-    let urlPath = `/link_preview/`;
+    let urlPath = `/link_preview`;
 
     const response = await this.request(
       {

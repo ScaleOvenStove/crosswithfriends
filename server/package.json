@@ -10,7 +10,7 @@
     "serve": "node dist/server/server.js",
     "serve:prod": "while true; do env $(cat ../../.env.prod | xargs) NODE_ENV=production PORT=3021 tsx server.ts || true; done",
     "serve:staging": "while true; do env $(cat ../../.env.staging | xargs) NODE_ENV=production PORT=4021 tsx server.ts || true; done",
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json && fix-esm-import-path dist/server",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json && fix-esm-import-path dist/server && cp openapi.json dist/server/openapi.json",
     "start": "tsx server.ts",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
