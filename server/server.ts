@@ -1,5 +1,8 @@
 import crypto from 'crypto';
+import {readFileSync} from 'fs';
 import {Server as HTTPServer} from 'http';
+import {dirname, join} from 'path';
+import {fileURLToPath} from 'url';
 
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
@@ -180,19 +183,25 @@ async function runServer(): Promise<void> {
       }
     );
 
-    // Register Swagger plugin with static OpenAPI spec (spec-first approach)
-    // The OpenAPI spec in openapi.json is the source of truth
-    await app.register(swagger, {
-      mode: 'static',
-      specification: {
-        path: './openapi.json',
-        baseDir: new URL('.', import.meta.url).pathname,
-      },
-    });
+    const serverFilename = fileURLToPath(import.meta.url);
+    const serverDirname = dirname(serverFilename);
+    const openApiPath = join(serverDirname, 'openapi.json');
+    try {
+      const openApiSpec = JSON.parse(readFileSync(openApiPath, 'utf-8'));
+      await app.register(swagger, {
+        mode: 'static',
+        specification: {
+          document: openApiSpec,
+        },
+      });
+    } catch (error) {
+      logger.error(
+        {error, openApiPath, serverDirname},
+        'Failed to load OpenAPI specification for Swagger. Swagger UI will not be available.'
+      );
+      // Continue without Swagger - the API will still work via fastify-openapi-glue
+    }
 
-    // Register Swagger UI (with optional production access control)
-    // In production, you may want to restrict access to Swagger UI
-    // Options: 1) Add rate limiting, 2) Require auth, 3) Disable entirely
     const swaggerEnabled = !config.server.isProduction || process.env.ENABLE_SWAGGER_UI === 'true';
 
     if (swaggerEnabled) {
