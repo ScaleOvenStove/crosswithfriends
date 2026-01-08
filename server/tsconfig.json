@@ -24,7 +24,12 @@
     "baseUrl": "..",
     "paths": {
       "@shared/*": ["shared/src/shared/*"],
-      "@lib/*": ["shared/src/lib/*"]
+      "@lib/*": ["shared/src/lib/*"],
+      "@crosswithfriends/shared/lib/*": ["shared/src/lib/*"],
+      "@crosswithfriends/shared/fencingGameEvents/*": ["shared/src/shared/fencingGameEvents/*"],
+      "@crosswithfriends/shared/roomEvents": ["shared/src/shared/roomEvents"],
+      "@crosswithfriends/shared/types": ["shared/src/shared/types"],
+      "@crosswithfriends/shared/*": ["shared/src/shared/*"]
     }
   },
   "include": [".", "../shared/src/lib", "../shared/src/shared", "./utils"],
