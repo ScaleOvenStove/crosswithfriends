@@ -417,6 +417,27 @@ async function runServer(): Promise<void> {
       });
     });
 
+    // Readiness endpoint - verifies database connectivity
+    app.get('/readyz', async (_request: any, reply: any) => {
+      try {
+        // Perform a lightweight database round-trip to verify connectivity
+        await pool.query('SELECT 1');
+        reply.code(200).send({
+          status: 'ready',
+          database: 'connected',
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        // Database connection failed - return 503 Service Unavailable
+        reply.code(503).send({
+          status: 'not ready',
+          database: 'disconnected',
+          timestamp: new Date().toISOString(),
+          error: error instanceof Error ? error.message : 'Database connection failed',
+        });
+      }
+    });
+
     // Root route handler - return API info
     app.get('/', (_request: any, reply: any) => {
       reply.code(200).send({

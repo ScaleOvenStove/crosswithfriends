@@ -17,16 +17,13 @@ const poolConfig: pg.PoolConfig = {
 
 // If DATABASE_URL is provided (e.g. in Docker, Heroku, or Render), use it
 // This overrides all individual connection parameters
+// Note: Validation is handled in config/index.ts - we assume config has already validated inputs
 if (config.database.connectionString) {
   poolConfig.connectionString = config.database.connectionString;
   logger.info('Using DATABASE_URL connection string');
 } else {
   // Use individual connection parameters
-  if (!config.database.user || !config.database.database) {
-    throw new Error(
-      'Database configuration error: Either DATABASE_URL must be set, or both user and database must be configured'
-    );
-  }
+  // Config module has already validated that both user and database are provided
   poolConfig.host = config.database.host;
   poolConfig.user = config.database.user;
   poolConfig.database = config.database.database;
