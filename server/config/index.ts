@@ -26,8 +26,8 @@ const configSchema = z.object({
   // Database configuration
   database: z.object({
     host: z.string().default('localhost'),
-    user: z.string(),
-    database: z.string(),
+    user: z.string().optional(),
+    database: z.string().optional(),
     password: z.string().optional(),
     sslMode: z.enum(['disable', 'require']).default('disable'),
     useSSL: z.boolean(),
@@ -177,17 +177,28 @@ function buildConfig(): Config {
 
   try {
     const validated = configSchema.parse(rawConfig);
+
+    // Validate that either connectionString OR (user and database) are provided
+    if (!validated.database.connectionString) {
+      if (!validated.database.user || !validated.database.database) {
+        throw new Error(
+          'Database configuration error: Either DATABASE_URL must be set, or both PGUSER and PGDATABASE must be set'
+        );
+      }
+    }
+
     logger.info(
       {
         nodeEnv: validated.server.nodeEnv,
         port: validated.server.port,
         dbHost: validated.database.host,
-        dbName: validated.database.database,
-        dbUser: validated.database.user,
+        dbName: validated.database.database || 'from DATABASE_URL',
+        dbUser: validated.database.user || 'from DATABASE_URL',
         dbUseSSL: validated.database.useSSL,
         dbSslRejectUnauthorized: validated.database.sslRejectUnauthorized,
         poolMax: validated.database.pool.max,
         poolMin: validated.database.pool.min,
+        usingConnectionString: !!validated.database.connectionString,
       },
       'Configuration loaded and validated'
     );
