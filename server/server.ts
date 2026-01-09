@@ -57,6 +57,8 @@ async function runServer(): Promise<void> {
       // This replaces the custom correlationId utility for HTTP requests
       requestIdHeader: 'x-request-id', // Check this header for incoming request IDs
       genReqId: () => crypto.randomUUID(), // Generate UUID if header not present
+      // Set connection timeout to prevent hanging requests (60 seconds)
+      connectionTimeout: 60000,
       logger: config.server.isProduction
         ? {
             level: 'info',
@@ -133,10 +135,40 @@ async function runServer(): Promise<void> {
       },
     });
 
+    // Add response logging hook to track slow/failed requests
+    app.addHook('onResponse', (request: any, reply: any) => {
+      const responseTime = reply.getResponseTime();
+      const statusCode = reply.statusCode;
+      const responseSize = reply.getHeader('content-length') || 'unknown';
+
+      // Log slow requests (>1s) or errors
+      if (responseTime > 1000 || statusCode >= 400) {
+        logger.warn(
+          {
+            method: request.method,
+            url: request.url,
+            statusCode,
+            responseTime: `${responseTime.toFixed(2)}ms`,
+            responseSize,
+            reqId: request.id,
+          },
+          statusCode >= 400 ? 'Request failed' : 'Slow request'
+        );
+      }
+    });
+
     // Set custom error handler with sanitization for production
     app.setErrorHandler(
       (error: Error & {statusCode?: number; validation?: unknown}, request: any, reply: any) => {
-        request.log.error(error);
+        request.log.error(
+          {
+            err: error,
+            url: request.url,
+            method: request.method,
+            statusCode: error.statusCode ?? 500,
+          },
+          'Request error'
+        );
 
         // Handle validation errors - sanitize validation details
         if (error.validation) {
@@ -196,7 +228,12 @@ async function runServer(): Promise<void> {
       });
     } catch (error) {
       logger.error(
-        {error, openApiPath, serverDirname},
+        {
+          error: error instanceof Error ? error.message : String(error),
+          openApiPath,
+          serverDirname,
+          cwd: process.cwd(),
+        },
         'Failed to load OpenAPI specification for Swagger. Swagger UI will not be available.'
       );
       // Continue without Swagger - the API will still work via fastify-openapi-glue
@@ -361,6 +398,82 @@ async function runServer(): Promise<void> {
 
     // Register API routes
     await app.register(apiRouter, {prefix: '/api'});
+
+    // Health check endpoints (common paths for Kubernetes/Render)
+    // These are lightweight and don't require database connections
+    app.get('/healthz', (_request: any, reply: any) => {
+      reply.code(200).send({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    });
+
+    app.get('/api/healthz', (_request: any, reply: any) => {
+      reply.code(200).send({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    });
+
+    // Readiness endpoint - verifies database connectivity
+    app.get('/readyz', async (_request: any, reply: any) => {
+      try {
+        // Perform a lightweight database round-trip to verify connectivity
+        await pool.query('SELECT 1');
+        reply.code(200).send({
+          status: 'ready',
+          database: 'connected',
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        // Log the full error server-side for debugging (may contain sensitive DB info)
+        logger.error(
+          {
+            err: error,
+            endpoint: '/readyz',
+            context: 'Database readiness check failed',
+          },
+          'Database connection failed during readiness check'
+        );
+        // Database connection failed - return 503 Service Unavailable
+        // Return generic message to avoid leaking sensitive database information
+        reply.code(503).send({
+          status: 'not ready',
+          database: 'disconnected',
+          timestamp: new Date().toISOString(),
+          error: 'Database connection failed',
+        });
+      }
+    });
+
+    // Root route handler - return API info
+    app.get('/', (_request: any, reply: any) => {
+      reply.code(200).send({
+        name: 'Cross with Friends API',
+        version: '1.0.0',
+        status: 'ok',
+        endpoints: {
+          api: '/api',
+          docs: '/api/docs',
+          health: '/api/health',
+        },
+      });
+    });
+
+    // Catch-all 404 handler for unhandled routes
+    app.setNotFoundHandler((request: any, reply: any) => {
+      reply.code(404).send({
+        error: 'Not Found',
+        message: `Route ${request.method} ${request.url} not found`,
+        availableEndpoints: {
+          api: '/api',
+          docs: '/api/docs',
+          health: '/api/health',
+        },
+      });
+    });
 
     // Store references for graceful shutdown
     let io: SocketIOServer | null = null;

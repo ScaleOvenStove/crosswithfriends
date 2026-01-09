@@ -7,9 +7,6 @@ import {logger} from '../utils/logger.js';
 
 // Build connection config from centralized configuration
 const poolConfig: pg.PoolConfig = {
-  host: config.database.host,
-  user: config.database.user,
-  database: config.database.database,
   // Connection pool settings for better performance
   max: config.database.pool.max,
   min: config.database.pool.min,
@@ -18,29 +15,40 @@ const poolConfig: pg.PoolConfig = {
   statement_timeout: config.database.pool.statementTimeout,
 };
 
-// If DATABASE_URL is provided (e.g. in Docker or Heroku), use it
+// If DATABASE_URL is provided (e.g. in Docker, Heroku, or Render), use it
+// This overrides all individual connection parameters
+// Note: Validation is handled in config/index.ts - we assume config has already validated inputs
 if (config.database.connectionString) {
   poolConfig.connectionString = config.database.connectionString;
-  // Still apply our timeouts
-  poolConfig.statement_timeout = config.database.pool.statementTimeout;
+  logger.info('Using DATABASE_URL connection string');
+} else {
+  // Use individual connection parameters
+  // Config module has already validated that both user and database are provided
+  poolConfig.host = config.database.host;
+  poolConfig.user = config.database.user;
+  poolConfig.database = config.database.database;
 }
 
-// Only include password if it's explicitly set and non-empty
-// Empty strings can cause SCRAM authentication errors
-if (config.database.password !== undefined && config.database.password !== '') {
-  poolConfig.password = config.database.password;
-}
+// Only set password and SSL when NOT using connectionString
+// (connectionString already contains all connection info including SSL)
+if (!config.database.connectionString) {
+  // Only include password if it's explicitly set and non-empty
+  // Empty strings can cause SCRAM authentication errors
+  if (config.database.password !== undefined && config.database.password !== '') {
+    poolConfig.password = config.database.password;
+  }
 
-// Only include SSL config if needed
-if (config.database.useSSL) {
-  poolConfig.ssl = {
-    rejectUnauthorized: config.database.sslRejectUnauthorized,
-  };
+  // Only include SSL config if needed
+  if (config.database.useSSL) {
+    poolConfig.ssl = {
+      rejectUnauthorized: config.database.sslRejectUnauthorized,
+    };
 
-  if (!config.database.sslRejectUnauthorized) {
-    logger.warn(
-      'SSL certificate validation is DISABLED. This should only be used in development with self-signed certificates.'
-    );
+    if (!config.database.sslRejectUnauthorized) {
+      logger.warn(
+        'SSL certificate validation is DISABLED. This should only be used in development with self-signed certificates.'
+      );
+    }
   }
 }
 

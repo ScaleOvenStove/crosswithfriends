@@ -54,6 +54,22 @@ export interface PuzzleMetadata {
 }
 
 /**
+ * Full normalized puzzle data for database columns
+ * Includes all fields needed for the normalized schema
+ */
+export interface NormalizedPuzzleData {
+  title: string;
+  author: string;
+  copyright: string;
+  notes: string;
+  version: string;
+  kind: string[];
+  width: number;
+  height: number;
+  puzzleType: 'Mini Puzzle' | 'Daily Puzzle';
+}
+
+/**
  * Checks if a puzzle is in the old format (has 'grid' field)
  */
 export function isOldFormat(puzzle: PuzzleJson | OldPuzzleFormat): boolean {
@@ -275,4 +291,94 @@ export function normalizePuzzleClues(puzzle: PuzzleJson): void {
 
   const normalizedClues = normalizeClues(puzzle.clues as CluesObject);
   puzzle.clues = normalizedClues;
+}
+
+/**
+ * Extracts puzzle dimensions from either format
+ * Returns {width, height} or defaults to {0, 0} if not determinable
+ */
+export function extractDimensions(puzzle: PuzzleJson | OldPuzzleFormat): {width: number; height: number} {
+  // Try ipuz format first
+  if ('dimensions' in puzzle && puzzle.dimensions) {
+    const dims = puzzle.dimensions as {width?: number; height?: number};
+    if (typeof dims.width === 'number' && typeof dims.height === 'number') {
+      return {width: dims.width, height: dims.height};
+    }
+  }
+
+  // Try to calculate from solution array (ipuz format)
+  if ('solution' in puzzle && Array.isArray(puzzle.solution) && puzzle.solution.length > 0) {
+    const height = puzzle.solution.length;
+    const firstRow = puzzle.solution[0];
+    const width = Array.isArray(firstRow) ? firstRow.length : 0;
+    return {width, height};
+  }
+
+  // Try to calculate from puzzle grid (ipuz format)
+  if ('puzzle' in puzzle && Array.isArray(puzzle.puzzle) && puzzle.puzzle.length > 0) {
+    const height = puzzle.puzzle.length;
+    const firstRow = puzzle.puzzle[0];
+    const width = Array.isArray(firstRow) ? firstRow.length : 0;
+    return {width, height};
+  }
+
+  // Try old format with grid
+  if (isOldFormat(puzzle)) {
+    const oldPuzzle = puzzle as OldPuzzleFormat;
+    if (oldPuzzle.grid && oldPuzzle.grid.length > 0) {
+      const height = oldPuzzle.grid.length;
+      const firstRow = oldPuzzle.grid[0];
+      const width = Array.isArray(firstRow) ? firstRow.length : 0;
+      return {width, height};
+    }
+  }
+
+  logger.warn('Could not determine puzzle dimensions');
+  return {width: 0, height: 0};
+}
+
+/**
+ * Extracts the version string from a puzzle
+ * Defaults to 'http://ipuz.org/v1' if not present
+ */
+export function extractVersion(puzzle: PuzzleJson | OldPuzzleFormat): string {
+  if ('version' in puzzle && typeof puzzle.version === 'string') {
+    return puzzle.version;
+  }
+  return 'http://ipuz.org/v1';
+}
+
+/**
+ * Extracts the kind array from a puzzle
+ * Defaults to ['http://ipuz.org/crossword#1'] if not present
+ */
+export function extractKind(puzzle: PuzzleJson | OldPuzzleFormat): string[] {
+  if ('kind' in puzzle && Array.isArray(puzzle.kind)) {
+    return puzzle.kind.map((k) => String(k));
+  }
+  return ['http://ipuz.org/crossword#1'];
+}
+
+/**
+ * Extracts all normalized data needed for database columns
+ * This is the main function to use when inserting/updating puzzles
+ */
+export function extractNormalizedData(puzzle: PuzzleJson | OldPuzzleFormat): NormalizedPuzzleData {
+  const metadata = extractMetadata(puzzle);
+  const dimensions = extractDimensions(puzzle);
+  const version = extractVersion(puzzle);
+  const kind = extractKind(puzzle);
+  const puzzleType = getPuzzleTypeFromDimensions(dimensions.height);
+
+  return {
+    title: metadata.title || 'Untitled',
+    author: metadata.author || 'Unknown',
+    copyright: metadata.copyright || '',
+    notes: metadata.description || '',
+    version,
+    kind,
+    width: dimensions.width,
+    height: dimensions.height,
+    puzzleType,
+  };
 }
