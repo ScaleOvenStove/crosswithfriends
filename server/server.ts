@@ -428,12 +428,22 @@ async function runServer(): Promise<void> {
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
+        // Log the full error server-side for debugging (may contain sensitive DB info)
+        logger.error(
+          {
+            err: error,
+            endpoint: '/readyz',
+            context: 'Database readiness check failed',
+          },
+          'Database connection failed during readiness check'
+        );
         // Database connection failed - return 503 Service Unavailable
+        // Return generic message to avoid leaking sensitive database information
         reply.code(503).send({
           status: 'not ready',
           database: 'disconnected',
           timestamp: new Date().toISOString(),
-          error: error instanceof Error ? error.message : 'Database connection failed',
+          error: 'Database connection failed',
         });
       }
     });
