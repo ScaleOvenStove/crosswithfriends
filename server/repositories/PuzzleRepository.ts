@@ -1,6 +1,7 @@
 /**
  * Puzzle Repository Implementation
  * Handles all database operations for puzzles
+ *
  */
 
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
@@ -9,6 +10,7 @@ import * as uuid from 'uuid';
 
 import {convertCluesToV2, convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import {logger} from '../utils/logger.js';
+import {extractNormalizedData} from '../utils/puzzleFormatUtils.js';
 import {validatePuzzle} from '../validation/puzzleSchema.js';
 
 import type {IPuzzleRepository} from './interfaces/IPuzzleRepository.js';
@@ -18,9 +20,21 @@ export class PuzzleRepository implements IPuzzleRepository {
 
   async findById(pid: string): Promise<PuzzleJson> {
     const startTime = Date.now();
+    // Query uses normalized columns where available, falls back to puzzle_data for grid/clues
+    // The puzzle_data column contains solution, puzzle grid, and clues
     const {rows} = await this.pool.query(
       `
-      SELECT content
+      SELECT
+        title,
+        author,
+        copyright,
+        notes,
+        version,
+        kind,
+        width,
+        height,
+        puzzle_type,
+        puzzle_data
       FROM puzzles
       WHERE pid = $1
     `,
@@ -34,8 +48,23 @@ export class PuzzleRepository implements IPuzzleRepository {
       throw new Error(`Puzzle ${pid} not found`);
     }
 
-    // Always return ipuz format to clients
-    const puzzle = convertOldFormatToIpuz(firstRow.content);
+    // Reconstruct full PuzzleJson from normalized columns + puzzle_data
+    // Start with puzzle_data and overlay normalized metadata
+    const puzzleData = firstRow.puzzle_data || {};
+    const puzzle: PuzzleJson = {
+      ...convertOldFormatToIpuz(puzzleData),
+      // Overlay normalized columns (these are authoritative after migration)
+      title: firstRow.title || puzzleData.title || '',
+      author: firstRow.author || puzzleData.author || '',
+      copyright: firstRow.copyright || puzzleData.copyright || '',
+      notes: firstRow.notes || puzzleData.notes || '',
+      version: firstRow.version || puzzleData.version || 'http://ipuz.org/v1',
+      kind: firstRow.kind || puzzleData.kind || ['http://ipuz.org/crossword#1'],
+      dimensions: {
+        width: firstRow.width || puzzleData.dimensions?.width || 0,
+        height: firstRow.height || puzzleData.dimensions?.height || 0,
+      },
+    };
 
     // Debug: Log clues before conversion
     logger.debug(
@@ -125,11 +154,46 @@ export class PuzzleRepository implements IPuzzleRepository {
     // Check if pid matches numeric pattern: digits optionally with decimal point
     const pidNumeric = /^([0-9]+[.]?[0-9]*|[.][0-9]+)$/.test(puzzleId) ? puzzleId : null;
 
+    // Extract normalized data for dedicated columns
+    const normalizedData = extractNormalizedData(normalizedPuzzle);
+
+    // Insert with normalized columns + puzzle_data JSONB
     await this.pool.query(
       `
-      INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric)
-      VALUES ($1, to_timestamp($2), $3, $4, $5)`,
-      [puzzleId, uploaded_at / 1000, isPublic, normalizedPuzzle, pidNumeric]
+      INSERT INTO puzzles (
+        pid,
+        pid_numeric,
+        uid,
+        is_public,
+        uploaded_at,
+        updated_at,
+        title,
+        author,
+        copyright,
+        notes,
+        version,
+        kind,
+        width,
+        height,
+        puzzle_data
+      )
+      VALUES ($1, $2, $3, $4, to_timestamp($5), to_timestamp($5), $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        puzzleId,
+        pidNumeric,
+        null, // uid - can be passed in later if needed
+        isPublic,
+        uploaded_at / 1000,
+        normalizedData.title,
+        normalizedData.author,
+        normalizedData.copyright,
+        normalizedData.notes,
+        normalizedData.version,
+        normalizedData.kind,
+        normalizedData.width,
+        normalizedData.height,
+        normalizedPuzzle,
+      ]
     );
 
     return puzzleId;
@@ -163,39 +227,19 @@ export class PuzzleRepository implements IPuzzleRepository {
     // Parameter offset depends on whether size filter is present
     const parameterOffset = sizeFilterArray.length > 0 ? 4 : 3;
 
+    // Use normalized columns for filtering (much faster than JSONB extraction)
     const parameterizedTileAuthorFilter = parametersForTitleAuthorFilter
-      .map(
-        (_s, idx) =>
-          `AND (
-          (COALESCE(content ->> 'title', content -> 'info' ->> 'title', '') || ' ' ||
-           COALESCE(content ->> 'author', content -> 'info' ->> 'author', '')) ILIKE $${idx + parameterOffset}
-        )`
-      )
+      .map((_s, idx) => `AND (title || ' ' || author) ILIKE $${idx + parameterOffset}`)
       .join('\n');
 
     // Build count-specific title/author filter with correct parameter indices
     const countParamOffset = sizeFilterArray.length > 0 ? 2 : 1;
     const countTitleAuthorFilter = parametersForTitleAuthorFilter
-      .map(
-        (_s, idx) =>
-          `AND (
-          (COALESCE(content ->> 'title', content -> 'info' ->> 'title', '') || ' ' ||
-           COALESCE(content ->> 'author', content -> 'info' ->> 'author', '')) ILIKE $${idx + countParamOffset}
-        )`
-      )
+      .map((_s, idx) => `AND (title || ' ' || author) ILIKE $${idx + countParamOffset}`)
       .join('\n');
 
-    const sizeFilterCondition =
-      sizeFilterArray.length > 0
-        ? `AND (
-      CASE
-        WHEN content->'info'->>'type' IS NOT NULL THEN
-          (content->'info'->>'type')
-        WHEN jsonb_array_length(content->'solution') <= 10 THEN 'Mini Puzzle'
-        ELSE 'Daily Puzzle'
-      END = ANY($1)
-    )`
-        : '';
+    // Use normalized puzzle_type column for size filtering (much faster)
+    const sizeFilterCondition = sizeFilterArray.length > 0 ? `AND puzzle_type = ANY($1)` : '';
 
     const queryParams =
       sizeFilterArray.length > 0
@@ -221,10 +265,23 @@ export class PuzzleRepository implements IPuzzleRepository {
 
     const total = parseInt(countResult.rows[0]?.total || '0', 10);
 
-    // Execute paginated query
+    // Execute paginated query using normalized columns
     const result = await this.pool.query(
       `
-      SELECT pid, uploaded_at, content, times_solved
+      SELECT 
+        pid,
+        uploaded_at,
+        title,
+        author,
+        copyright,
+        notes,
+        version,
+        kind,
+        width,
+        height,
+        puzzle_type,
+        puzzle_data,
+        times_solved
       FROM puzzles
       WHERE is_public = true
       ${sizeFilterCondition}
@@ -237,10 +294,35 @@ export class PuzzleRepository implements IPuzzleRepository {
     );
     const rows = result.rows;
 
-    const puzzles = rows.map((row: {pid: string; content: PuzzleJson; times_solved: string}) => ({
-      pid: row.pid,
-      puzzle: row.content,
-    }));
+    // Reconstruct PuzzleJson from normalized columns + puzzle_data
+    const puzzles = rows.map(
+      (row: {
+        pid: string;
+        title: string;
+        author: string;
+        copyright: string;
+        notes: string;
+        version: string;
+        kind: string[];
+        width: number;
+        height: number;
+        puzzle_type: string;
+        puzzle_data: PuzzleJson;
+        times_solved: string;
+      }) => ({
+        pid: row.pid,
+        puzzle: {
+          ...row.puzzle_data,
+          title: row.title,
+          author: row.author,
+          copyright: row.copyright,
+          notes: row.notes,
+          version: row.version,
+          kind: row.kind,
+          dimensions: {width: row.width, height: row.height},
+        } as PuzzleJson,
+      })
+    );
 
     const ms = Date.now() - startTime;
     logger.debug(`listPuzzles (${JSON.stringify(filter)}, ${limit}, ${offset}) took ${ms}ms`);
@@ -276,7 +358,7 @@ export class PuzzleRepository implements IPuzzleRepository {
       );
       await client.query(
         `
-        UPDATE puzzles SET times_solved = times_solved + 1
+        UPDATE puzzles SET times_solved = times_solved + 1, updated_at = NOW()
         WHERE pid = $1
       `,
         [pid]
