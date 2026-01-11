@@ -18,7 +18,7 @@ describe('Puzzle Model', () => {
   describe('getPuzzle', () => {
     it('should retrieve and return ipuz puzzle unchanged', async () => {
       const mockPid = 'test-pid-123';
-      const mockPuzzle = {
+      const mockPuzzleData = {
         version: 'http://ipuz.org/v2',
         kind: ['http://ipuz.org/crossword#1'],
         dimensions: {width: 2, height: 1},
@@ -29,14 +29,31 @@ describe('Puzzle Model', () => {
         clues: {Across: [], Down: []},
       };
 
+      // Mock normalized schema response
       (pool.query as Mock).mockResolvedValue({
-        rows: [{content: mockPuzzle}],
+        rows: [
+          {
+            title: 'Test Puzzle',
+            author: 'Test Author',
+            copyright: '',
+            notes: '',
+            version: 'http://ipuz.org/v2',
+            kind: ['http://ipuz.org/crossword#1'],
+            width: 2,
+            height: 1,
+            puzzle_type: 'Mini Puzzle',
+            puzzle_data: mockPuzzleData,
+          },
+        ],
       });
 
       const puzzle = await puzzleModel.getPuzzle(mockPid);
 
-      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('SELECT content'), [mockPid]);
-      expect(puzzle).toEqual(mockPuzzle);
+      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), [mockPid]);
+      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('puzzle_data'), [mockPid]);
+      expect(puzzle.title).toBe('Test Puzzle');
+      expect(puzzle.author).toBe('Test Author');
+      expect(puzzle.dimensions).toEqual({width: 2, height: 1});
     });
 
     it('should convert old format puzzle to ipuz format', async () => {
@@ -61,8 +78,22 @@ describe('Puzzle Model', () => {
         shades: [],
       };
 
+      // Mock normalized schema response with old format in puzzle_data
       (pool.query as Mock).mockResolvedValue({
-        rows: [{content: oldFormatPuzzle}],
+        rows: [
+          {
+            title: 'Old Puzzle',
+            author: 'Old Author',
+            copyright: '© 2023',
+            notes: 'Old description',
+            version: 'http://ipuz.org/v1',
+            kind: ['http://ipuz.org/crossword#1'],
+            width: 4,
+            height: 2,
+            puzzle_type: 'Mini Puzzle',
+            puzzle_data: oldFormatPuzzle,
+          },
+        ],
       });
 
       const puzzle = await puzzleModel.getPuzzle(mockPid);
@@ -229,17 +260,36 @@ describe('Puzzle Model', () => {
       const limit = 10;
       const offset = 0;
 
+      // Mock normalized schema response
       const mockRows = [
         {
           pid: 'pid1',
           uploaded_at: '2024-01-01',
-          content: {title: 'Puzzle 1'},
+          title: 'Puzzle 1',
+          author: 'Author 1',
+          copyright: '',
+          notes: '',
+          version: 'http://ipuz.org/v1',
+          kind: ['http://ipuz.org/crossword#1'],
+          width: 5,
+          height: 5,
+          puzzle_type: 'Mini Puzzle',
+          puzzle_data: {title: 'Puzzle 1'},
           times_solved: '5',
         },
         {
           pid: 'pid2',
           uploaded_at: '2024-01-02',
-          content: {title: 'Puzzle 2'},
+          title: 'Puzzle 2',
+          author: 'Author 2',
+          copyright: '',
+          notes: '',
+          version: 'http://ipuz.org/v1',
+          kind: ['http://ipuz.org/crossword#1'],
+          width: 5,
+          height: 5,
+          puzzle_type: 'Mini Puzzle',
+          puzzle_data: {title: 'Puzzle 2'},
           times_solved: '10',
         },
       ];
@@ -251,8 +301,10 @@ describe('Puzzle Model', () => {
       expect(puzzles).toHaveLength(2);
       expect(puzzles[0].pid).toBe('pid1');
       expect(puzzles[0].times_solved).toBe(5);
+      expect(puzzles[0].content.title).toBe('Puzzle 1');
       expect(puzzles[1].pid).toBe('pid2');
       expect(puzzles[1].times_solved).toBe(10);
+      expect(puzzles[1].content.title).toBe('Puzzle 2');
     });
 
     it('should filter by Mini puzzle size', async () => {
@@ -267,8 +319,11 @@ describe('Puzzle Model', () => {
 
       await puzzleModel.listPuzzles(filter, limit, offset);
 
+      // Query should use puzzle_type column for filtering
       const query = (pool.query as Mock).mock.calls[0][0];
-      expect(query).toContain('Mini Puzzle');
+      expect(query).toContain('puzzle_type');
+      const params = (pool.query as Mock).mock.calls[0][1];
+      expect(params[0]).toContain('Mini Puzzle');
     });
 
     it('should filter by Standard puzzle size', async () => {
@@ -283,11 +338,14 @@ describe('Puzzle Model', () => {
 
       await puzzleModel.listPuzzles(filter, limit, offset);
 
+      // Query should use puzzle_type column for filtering
       const query = (pool.query as Mock).mock.calls[0][0];
-      expect(query).toContain('Daily Puzzle');
+      expect(query).toContain('puzzle_type');
+      const params = (pool.query as Mock).mock.calls[0][1];
+      expect(params[0]).toContain('Daily Puzzle');
     });
 
-    it('should filter by title/author search', async () => {
+    it('should filter by title/author search using normalized columns', async () => {
       const filter = {
         nameOrTitleFilter: 'test puzzle',
         sizeFilter: {Mini: false, Standard: false},
@@ -299,6 +357,10 @@ describe('Puzzle Model', () => {
 
       await puzzleModel.listPuzzles(filter, limit, offset);
 
+      // Should use normalized title and author columns
+      const query = (pool.query as Mock).mock.calls[0][0];
+      expect(query).toContain('title');
+      expect(query).toContain('author');
       const queryParams = (pool.query as Mock).mock.calls[0][1];
       expect(queryParams).toContain('%test%');
       expect(queryParams).toContain('%puzzle%');
@@ -340,7 +402,7 @@ describe('Puzzle Model', () => {
   });
 
   describe('addPuzzle', () => {
-    it('should add puzzle with generated pid', async () => {
+    it('should add puzzle with generated pid and normalized columns', async () => {
       const mockPuzzle = {
         version: '1',
         kind: ['crossword'],
@@ -357,9 +419,18 @@ describe('Puzzle Model', () => {
       const pid = await puzzleModel.addPuzzle(mockPuzzle, true);
 
       expect(pool.query).toHaveBeenCalled();
+      const query = (pool.query as Mock).mock.calls[0][0];
+      // Should insert into normalized columns
+      expect(query).toContain('title');
+      expect(query).toContain('author');
+      expect(query).toContain('width');
+      expect(query).toContain('height');
+      expect(query).toContain('puzzle_data');
+
       const callArgs = (pool.query as Mock).mock.calls[0][1];
-      expect(callArgs[2]).toBe(true); // isPublic
-      expect(callArgs[3]).toEqual(mockPuzzle); // content
+      expect(callArgs[3]).toBe(true); // isPublic
+      expect(callArgs[5]).toBe('Test Puzzle'); // title
+      expect(callArgs[6]).toBe('Test Author'); // author
       expect(pid).toBeDefined();
       expect(pid.length).toBeGreaterThan(0);
     });
@@ -420,6 +491,8 @@ describe('Puzzle Model', () => {
         expect.stringContaining('UPDATE puzzles SET times_solved'),
         [mockPid]
       );
+      // Should also update updated_at
+      expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('updated_at'), [mockPid]);
       expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
       expect(mockClient.release).toHaveBeenCalled();
     });
@@ -461,93 +534,71 @@ describe('Puzzle Model', () => {
   });
 
   describe('getPuzzleInfo', () => {
-    it('should extract info from ipuz format', async () => {
+    it('should query normalized columns directly', async () => {
       const mockPid = 'test-pid-123';
-      const mockPuzzle = {
-        title: 'Test Puzzle',
-        author: 'Test Author',
-        copyright: '© 2024',
-        notes: 'Test notes',
-        solution: [['.', 'A']],
-      };
 
+      // Mock normalized schema response - getPuzzleInfo now queries columns directly
       (pool.query as Mock).mockResolvedValue({
-        rows: [{content: mockPuzzle}],
+        rows: [
+          {
+            title: 'Test Puzzle',
+            author: 'Test Author',
+            copyright: '© 2024',
+            notes: 'Test notes',
+            puzzle_type: 'Mini Puzzle',
+          },
+        ],
       });
 
       const info = await puzzleModel.getPuzzleInfo(mockPid);
+
+      // Should query normalized columns directly
+      const query = (pool.query as Mock).mock.calls[0][0];
+      expect(query).toContain('title');
+      expect(query).toContain('author');
+      expect(query).toContain('copyright');
+      expect(query).toContain('notes');
+      expect(query).toContain('puzzle_type');
 
       expect(info).toEqual({
         title: 'Test Puzzle',
         author: 'Test Author',
         copyright: '© 2024',
         description: 'Test notes',
-        type: 'Mini Puzzle', // <= 10 rows
-      });
-    });
-
-    it('should extract info from old format', async () => {
-      const mockPid = 'test-pid-123';
-      const mockPuzzle = {
-        info: {
-          title: 'Old Format Puzzle',
-          author: 'Old Author',
-          copyright: '© 2023',
-          description: 'Old description',
-          type: 'Daily Puzzle',
-        },
-        grid: [
-          ['A', 'B'],
-          ['C', 'D'],
-        ], // Need valid grid for conversion
-        clues: {
-          across: ['', '1', 'AB', '2', 'CD'],
-          down: ['', '1', 'AC', '2', 'BD'],
-        },
-      };
-
-      (pool.query as Mock).mockResolvedValue({
-        rows: [{content: mockPuzzle}],
-      });
-
-      const info = await puzzleModel.getPuzzleInfo(mockPid);
-
-      // Type is determined from puzzle size, not from info.type
-      // The grid is 2x2, which would be classified as "Mini Puzzle"
-      expect(info).toEqual({
-        title: 'Old Format Puzzle',
-        author: 'Old Author',
-        copyright: '© 2023',
-        description: 'Old description',
         type: 'Mini Puzzle',
       });
     });
 
-    it('should determine type from solution size for ipuz', async () => {
+    it('should return puzzle type from normalized column', async () => {
       const mockPid = 'test-pid-123';
-      // Mini puzzle (<= 10 rows)
-      const miniPuzzle = {
-        title: 'Mini',
-        author: 'Author',
-        solution: Array(10).fill(['.', 'A']),
-      };
 
+      // Mini puzzle
       (pool.query as Mock).mockResolvedValue({
-        rows: [{content: miniPuzzle}],
+        rows: [
+          {
+            title: 'Mini',
+            author: 'Author',
+            copyright: '',
+            notes: '',
+            puzzle_type: 'Mini Puzzle',
+          },
+        ],
       });
 
       let info = await puzzleModel.getPuzzleInfo(mockPid);
       expect(info.type).toBe('Mini Puzzle');
 
-      // Daily puzzle (> 10 rows)
-      const dailyPuzzle = {
-        title: 'Daily',
-        author: 'Author',
-        solution: Array(15).fill(['.', 'A']),
-      };
-
+      // Daily puzzle
       (pool.query as Mock).mockResolvedValue({
-        rows: [{content: dailyPuzzle}],
+        rows: [
+          {
+            title: 'Daily',
+            author: 'Author',
+            copyright: '',
+            notes: '',
+            puzzle_type: 'Daily Puzzle',
+          },
+        ],
       });
 
       info = await puzzleModel.getPuzzleInfo(mockPid);
@@ -556,20 +607,30 @@ describe('Puzzle Model', () => {
 
     it('should handle missing optional fields', async () => {
       const mockPid = 'test-pid-123';
-      const mockPuzzle = {
-        title: 'Test Puzzle',
-        author: 'Test Author',
-        solution: [['.', 'A']],
-      };
 
       (pool.query as Mock).mockResolvedValue({
-        rows: [{content: mockPuzzle}],
+        rows: [
+          {
+            title: 'Test Puzzle',
+            author: 'Test Author',
+            copyright: null,
+            notes: null,
+            puzzle_type: 'Mini Puzzle',
+          },
+        ],
       });
 
       const info = await puzzleModel.getPuzzleInfo(mockPid);
 
       expect(info.copyright).toBe('');
       expect(info.description).toBe('');
+    });
+
+    it('should throw error when puzzle not found', async () => {
+      const mockPid = 'nonexistent-pid';
+      (pool.query as Mock).mockResolvedValue({rows: []});
+
+      await expect(puzzleModel.getPuzzleInfo(mockPid)).rejects.toThrow(`Puzzle ${mockPid} not found`);
     });
   });
 });

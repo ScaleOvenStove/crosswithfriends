@@ -4,12 +4,14 @@
  */
 
 import { useParams, useLocation, useSearchParams } from 'react-router-dom';
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { Box, Container, styled } from '@mui/material';
+import { useHotkeys } from 'react-hotkeys-hook';
 import Nav from '@components/common/Nav';
 import { Grid, CluePanel, ActiveHint } from '@components/Grid';
 import { GameToolbar } from '@components/Toolbar';
 import { ChatPanel } from '@components/Chat';
+import { KeyboardShortcutsHelp } from '@components/Help';
 import { GameSkeleton } from '@components/common/skeletons';
 import ErrorLayout from '@components/common/ErrorLayout';
 import { ComponentErrorBoundary } from '@components/common/ComponentErrorBoundary';
@@ -126,6 +128,13 @@ const Game = () => {
   const isNewGame = searchParams.get('new') === 'true';
   const puzzleIdFromQuery = searchParams.get('pid'); // Puzzle ID from query params (for newly created games)
   const hasSentInvite = useRef(false);
+
+  // Help modal state
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // Keyboard shortcuts for help modal (? and F1)
+  useHotkeys('shift+/', () => setShowHelpModal(true), { preventDefault: true });
+  useHotkeys('f1', () => setShowHelpModal(true), { preventDefault: true });
 
   // Use either gid (for existing games) or pid (for new puzzles)
   const gameId = gid || pid;
@@ -408,6 +417,7 @@ const Game = () => {
         onCheck={handleCheck}
         onReveal={handleReveal}
         onReset={handleReset}
+        onShowHelp={() => setShowHelpModal(true)}
       />
 
       <GameContent>
@@ -426,6 +436,10 @@ const Game = () => {
                   onCellClick={handleCellSelect}
                   onCellChange={handleCellUpdate}
                   onDirectionToggle={toggleDirection}
+                  onTogglePencil={togglePencilMode}
+                  onCheck={handleCheck}
+                  onReveal={handleReveal}
+                  clues={safeClues}
                 />
               </ComponentErrorBoundary>
             </GridSection>
@@ -457,6 +471,9 @@ const Game = () => {
           </ComponentErrorBoundary>
         </ChatSection>
       </GameContent>
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp open={showHelpModal} onClose={() => setShowHelpModal(false)} />
     </GamePageContainer>
   );
 };
