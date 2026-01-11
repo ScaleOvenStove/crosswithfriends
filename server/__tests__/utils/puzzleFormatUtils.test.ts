@@ -181,7 +181,7 @@ describe('puzzleFormatUtils', () => {
         version: 'http://ipuz.org/v2',
         kind: ['http://ipuz.org/crossword#1'],
         dimensions: {width: 15, height: 15},
-        solution: Array(15).fill(Array(15).fill('A')),
+        solution: Array.from({length: 15}, () => Array(15).fill('A')),
       } as unknown as PuzzleJson;
 
       const result = extractNormalizedData(puzzle);
