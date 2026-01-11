@@ -275,6 +275,8 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
   const normalizedData = extractNormalizedData(normalizedPuzzle);
 
   // Insert with normalized columns + puzzle_data JSONB
+  // Note: puzzle_type is a generated column computed from height, so it's not in the INSERT
+  // The generated column will automatically compute puzzle_type based on height
   await pool.query(
     `
       INSERT INTO puzzles (

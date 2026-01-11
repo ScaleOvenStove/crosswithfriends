@@ -100,7 +100,7 @@ const ShortcutRow = ({ keys, description }: ShortcutRowProps) => (
   <StyledTableRow>
     <ShortcutCell>
       {keys.map((key, index) => (
-        <span key={key}>
+        <span key={`${key}-${index}`}>
           <ShortcutKey>{key}</ShortcutKey>
           {index < keys.length - 1 && ' + '}
         </span>

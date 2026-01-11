@@ -246,26 +246,8 @@ CREATE TRIGGER sync_clues_trigger
 -- PHASE 6: Populate puzzle_clues for existing puzzles
 -- ============================================================================
 
--- Run the sync function for all existing puzzles
--- This is done by triggering an UPDATE that doesn't change the content
-DO $$
-DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN SELECT pid FROM puzzles
-    LOOP
-        BEGIN
-            -- Trigger the sync by updating a non-content field
-            -- The trigger will extract clues from content
-            PERFORM sync_puzzle_clues() FROM puzzles WHERE pid = r.pid;
-        EXCEPTION WHEN OTHERS THEN
-            -- Log error but continue with other puzzles
-            RAISE NOTICE 'Failed to sync clues for puzzle %: %', r.pid, SQLERRM;
-        END;
-    END LOOP;
-END $$;
-
--- Alternative: Direct insert for all puzzles (more efficient for large datasets)
+-- Direct insert for all puzzles (more efficient for large datasets)
+-- Note: The trigger will handle future inserts/updates automatically
 INSERT INTO puzzle_clues (pid, clue_number, direction, clue_text)
 SELECT 
     p.pid,

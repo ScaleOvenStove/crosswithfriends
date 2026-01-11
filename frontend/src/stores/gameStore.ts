@@ -46,6 +46,7 @@ interface GameStore {
   updateCursor: (userId: string, row: number, col: number) => void;
   setSelectedCell: (row: number, col: number) => void;
   toggleDirection: () => void;
+  setSelectedCellAndDirection: (row: number, col: number, direction: 'across' | 'down') => void;
   togglePencilMode: () => void;
   toggleAutoCheckMode: () => void;
   setComplete: (isComplete: boolean) => void;
@@ -150,6 +151,12 @@ export const useGameStore = create<GameStore>()(
         set((state) => ({
           selectedDirection: state.selectedDirection === 'across' ? 'down' : 'across',
         })),
+
+      setSelectedCellAndDirection: (row, col, direction) =>
+        set({
+          selectedCell: { row, col },
+          selectedDirection: direction,
+        }),
 
       togglePencilMode: () =>
         set((state) => ({

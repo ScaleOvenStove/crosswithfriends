@@ -14,7 +14,7 @@ import { styled } from '@mui/material/styles';
 import { Paper } from '@mui/material';
 import { GridCell } from './GridCell';
 import { useKeyboardNavigation } from '@hooks/ui/useKeyboardNavigation';
-import type { Cell, User, Cursor } from '../../types';
+import type { Cell, User, Cursor, Clue } from '../../types';
 
 interface GridProps {
   cells: Cell[][];
@@ -29,7 +29,7 @@ interface GridProps {
   onTogglePencil?: () => void;
   onCheck?: (scope: 'cell' | 'word' | 'puzzle') => void;
   onReveal?: (scope: 'cell' | 'word' | 'puzzle') => void;
-  clues?: { across: import('../../types').Clue[]; down: import('../../types').Clue[] };
+  clues?: { across: Clue[]; down: Clue[] };
 }
 
 const GridContainer = styled(Paper)(({ theme }) => ({

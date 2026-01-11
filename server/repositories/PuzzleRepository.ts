@@ -158,6 +158,7 @@ export class PuzzleRepository implements IPuzzleRepository {
     const normalizedData = extractNormalizedData(normalizedPuzzle);
 
     // Insert with normalized columns + puzzle_data JSONB
+    // Note: puzzle_type is a generated column computed from height, so it's not in the INSERT
     await this.pool.query(
       `
       INSERT INTO puzzles (
@@ -177,7 +178,7 @@ export class PuzzleRepository implements IPuzzleRepository {
         height,
         puzzle_data
       )
-      VALUES ($1, $2, $3, $4, to_timestamp($5), to_timestamp($5), $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      VALUES ($1, $2, $3, $4, to_timestamp($5), to_timestamp($5), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         puzzleId,
         pidNumeric,

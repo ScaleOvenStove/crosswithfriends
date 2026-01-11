@@ -356,11 +356,14 @@ export const useKeyboardNavigation = ({
             nextClueItem.direction
           );
           if (unfilledCell) {
-            onCellSelect(unfilledCell.row, unfilledCell.col);
-            // Change direction if needed
-            if (nextClueItem.direction !== currentDirection) {
-              onDirectionToggle();
-            }
+            // Atomically set both cell and direction to avoid intermediate inconsistent state
+            useGameStore
+              .getState()
+              .setSelectedCellAndDirection(
+                unfilledCell.row,
+                unfilledCell.col,
+                nextClueItem.direction
+              );
             return;
           }
         }
@@ -371,14 +374,14 @@ export const useKeyboardNavigation = ({
       if (fallbackClue) {
         const startCell = findClueStartCell(cells, fallbackClue.clue.number);
         if (startCell) {
-          onCellSelect(startCell.row, startCell.col);
-          if (fallbackClue.direction !== currentDirection) {
-            onDirectionToggle();
-          }
+          // Atomically set both cell and direction to avoid intermediate inconsistent state
+          useGameStore
+            .getState()
+            .setSelectedCellAndDirection(startCell.row, startCell.col, fallbackClue.direction);
         }
       }
     },
-    [cells, clues, onCellSelect, onDirectionToggle]
+    [cells, clues]
   );
 
   /**
