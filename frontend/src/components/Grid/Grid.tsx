@@ -26,6 +26,10 @@ interface GridProps {
   onCellClick: (row: number, col: number) => void;
   onCellChange: (row: number, col: number, value: string) => void;
   onDirectionToggle: () => void;
+  onTogglePencil?: () => void;
+  onCheck?: (scope: 'cell' | 'word' | 'puzzle') => void;
+  onReveal?: (scope: 'cell' | 'word' | 'puzzle') => void;
+  clues?: { across: import('../../types').Clue[]; down: import('../../types').Clue[] };
 }
 
 const GridContainer = styled(Paper)(({ theme }) => ({
@@ -129,6 +133,10 @@ export const Grid = ({
   onCellClick,
   onCellChange,
   onDirectionToggle,
+  onTogglePencil,
+  onCheck,
+  onReveal,
+  clues,
 }: GridProps) => {
   // Calculate grid dimensions
   const rows = cells.length;
@@ -165,6 +173,10 @@ export const Grid = ({
     onCellSelect: onCellClick,
     onCellUpdate: onCellChange,
     onDirectionToggle,
+    onTogglePencil,
+    onCheck,
+    onReveal,
+    clues,
   });
 
   // Determine if a cell is selected, highlighted, or in current word
