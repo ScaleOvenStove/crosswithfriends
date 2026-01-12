@@ -30,6 +30,7 @@ import {
   Visibility as RevealIcon,
   RestartAlt as ResetIcon,
   Edit as PencilIcon,
+  HelpOutline as HelpIcon,
 } from '@mui/icons-material';
 import { ClockDisplay } from '@components/common/ClockDisplay';
 
@@ -49,6 +50,7 @@ interface GameToolbarProps {
   onCheck: GameActionHandler;
   onReveal: GameActionHandler;
   onReset: GameActionHandler;
+  onShowHelp?: () => void;
 }
 
 const ToolbarContainer = styled(Box)(({ theme }) => ({
@@ -78,6 +80,7 @@ export const GameToolbar = ({
   onCheck,
   onReveal,
   onReset,
+  onShowHelp,
 }: GameToolbarProps) => {
   const [checkAnchor, setCheckAnchor] = useState<null | HTMLElement>(null);
   const [revealAnchor, setRevealAnchor] = useState<null | HTMLElement>(null);
@@ -185,6 +188,17 @@ export const GameToolbar = ({
         control={<Switch checked={isAutoCheckMode} onChange={onToggleAutoCheck} />}
         label="Auto-check"
       />
+
+      {onShowHelp && (
+        <>
+          <Divider orientation="vertical" flexItem />
+          <Tooltip title="Keyboard shortcuts (?)">
+            <Button startIcon={<HelpIcon />} onClick={onShowHelp} variant="outlined" size="small">
+              Help
+            </Button>
+          </Tooltip>
+        </>
+      )}
 
       {isComplete && (
         <Typography variant="h6" color="success.main" sx={{ ml: 'auto' }}>

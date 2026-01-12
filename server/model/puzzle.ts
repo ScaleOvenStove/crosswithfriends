@@ -1,3 +1,8 @@
+/**
+ * Legacy Puzzle Model
+ *
+ */
+
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
 import * as uuid from 'uuid';
 
@@ -7,8 +12,7 @@ import {
   hasClueArrays,
   normalizeClues,
   removeLowercaseClueKeys,
-  extractMetadata,
-  getPuzzleTypeFromDimensions,
+  extractNormalizedData,
   type CluesObject,
   type NormalizedClues,
 } from '../utils/puzzleFormatUtils.js';
@@ -23,12 +27,22 @@ export {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 
 export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   const startTime = Date.now();
+  // Query uses normalized columns where available, falls back to puzzle_data for grid/clues
   const {rows} = await pool.query(
     `
-      SELECT content
+      SELECT 
+        title,
+        author,
+        copyright,
+        notes,
+        version,
+        kind,
+        width,
+        height,
+        puzzle_type,
+        puzzle_data
       FROM puzzles
       WHERE pid = $1
-      
     `,
     [pid]
   );
@@ -39,8 +53,28 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
     throw new Error(`Puzzle ${pid} not found`);
   }
 
-  // Always return ipuz format to clients
-  const puzzle = convertOldFormatToIpuz(firstRow.content);
+  // Reconstruct full PuzzleJson from normalized columns + puzzle_data
+  const puzzleData = firstRow.puzzle_data || {};
+  const convertedPuzzle = convertOldFormatToIpuz(puzzleData);
+  // Check if puzzle was converted from old format (has 'grid' field)
+  const wasOldFormat = 'grid' in puzzleData && Array.isArray((puzzleData as any).grid);
+  const puzzle: PuzzleJson = {
+    ...convertedPuzzle,
+    // Overlay normalized columns (these are authoritative after migration)
+    title: firstRow.title || puzzleData.title || '',
+    author: firstRow.author || puzzleData.author || '',
+    copyright: firstRow.copyright || puzzleData.copyright || '',
+    notes: firstRow.notes || puzzleData.notes || '',
+    // If converted from old format, use v2 version from conversion; otherwise use stored version
+    version: wasOldFormat
+      ? convertedPuzzle.version
+      : firstRow.version || puzzleData.version || 'http://ipuz.org/v1',
+    kind: firstRow.kind || puzzleData.kind || ['http://ipuz.org/crossword#1'],
+    dimensions: {
+      width: firstRow.width || puzzleData.dimensions?.width || 0,
+      height: firstRow.height || puzzleData.dimensions?.height || 0,
+    },
+  };
 
   // Normalize clues to v2 format
   normalizePuzzleCluesWithLogging(puzzle, pid);
@@ -104,48 +138,37 @@ export async function listPuzzles(
   // - With size filter: $1=sizeFilter, $2=limit, $3=offset, $4+=titleAuthorFilter
   // - Without size filter: $1=limit, $2=offset, $3+=titleAuthorFilter
   const parameterOffset = sizeFilterArray.length > 0 ? 4 : 3;
-  // see https://github.com/brianc/node-postgres/wiki/FAQ#11-how-do-i-build-a-where-foo-in--query-to-find-rows-matching-an-array-of-values
-  // for why this is okay.
-  // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL cause, but will for multiple ands
-  // note this is not vulnerable to SQL injection because this string is just dynamically constructing params of the form $#
-  // which we fully control.
-  //
-  // IMPORTANT: Production and staging share the same database, so we must support both formats:
-  // - Old format: content->'info'->>'title' and content->'info'->>'author' (legacy puzzles)
-  // - New format (ipuz): content->>'title' and content->>'author' (new puzzles)
-  //
-  // For size, we determine from solution array length (Mini if <= 10 rows, Standard if > 10)
-  // or from info.type if it exists (old format)
+
+  // Use normalized columns for filtering (much faster than JSONB extraction)
   const parameterizedTileAuthorFilter = parametersForTitleAuthorFilter
-    .map(
-      (_s, idx) =>
-        `AND (
-          (COALESCE(content ->> 'title', content -> 'info' ->> 'title', '') || ' ' ||
-           COALESCE(content ->> 'author', content -> 'info' ->> 'author', '')) ILIKE $${idx + parameterOffset}
-        )`
-    )
+    .map((_s, idx) => `AND (title || ' ' || author) ILIKE $${idx + parameterOffset}`)
     .join('\n');
-  // Size filter: check solution array length (jsonb_array_length on first dimension)
-  // Mini: <= 10 rows, Standard: > 10 rows
-  // Handle both old format (content->'info'->>'type') and ipuz format (content->'solution')
-  const sizeFilterCondition =
-    sizeFilterArray.length > 0
-      ? `AND (
-      CASE
-        WHEN content->'info'->>'type' IS NOT NULL THEN
-          (content->'info'->>'type')
-        WHEN jsonb_array_length(content->'solution') <= 10 THEN 'Mini Puzzle'
-        ELSE 'Daily Puzzle'
-      END = ANY($1)
-    )`
-      : '';
+
+  // Use normalized puzzle_type column for size filtering (much faster)
+  const sizeFilterCondition = sizeFilterArray.length > 0 ? `AND puzzle_type = ANY($1)` : '';
+
   const queryParams =
     sizeFilterArray.length > 0
       ? [sizeFilterArray, limit, offset, ...parametersForTitleAuthorFilter]
       : [limit, offset, ...parametersForTitleAuthorFilter];
+
+  // Query using normalized columns
   const {rows} = await pool.query(
     `
-      SELECT pid, uploaded_at, content, times_solved
+      SELECT 
+        pid,
+        uploaded_at,
+        title,
+        author,
+        copyright,
+        notes,
+        version,
+        kind,
+        width,
+        height,
+        puzzle_type,
+        puzzle_data,
+        times_solved
       FROM puzzles
       WHERE is_public = true
       ${sizeFilterCondition}
@@ -156,17 +179,36 @@ export async function listPuzzles(
     `,
     queryParams
   );
+
+  // Reconstruct PuzzleJson from normalized columns + puzzle_data
   const puzzles = rows.map(
     (row: {
       pid: string;
       uploaded_at: string;
-      is_public: boolean;
-      content: PuzzleJson;
+      title: string;
+      author: string;
+      copyright: string;
+      notes: string;
+      version: string;
+      kind: string[];
+      width: number;
+      height: number;
+      puzzle_type: string;
+      puzzle_data: PuzzleJson;
       times_solved: string;
-      // NOTE: numeric returns as string in pg-promise
-      // See https://stackoverflow.com/questions/39168501/pg-promise-returns-integers-as-strings
     }) => ({
-      ...row,
+      pid: row.pid,
+      uploaded_at: row.uploaded_at,
+      content: {
+        ...row.puzzle_data,
+        title: row.title,
+        author: row.author,
+        copyright: row.copyright,
+        notes: row.notes,
+        version: row.version,
+        kind: row.kind,
+        dimensions: {width: row.width, height: row.height},
+      } as PuzzleJson,
       times_solved: Number(row.times_solved),
     })
   );
@@ -235,11 +277,48 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
   // Check if pid matches numeric pattern: digits optionally with decimal point
   const pidNumeric = /^([0-9]+[.]?[0-9]*|[.][0-9]+)$/.test(puzzleId) ? puzzleId : null;
 
+  // Extract normalized data for dedicated columns
+  const normalizedData = extractNormalizedData(normalizedPuzzle);
+
+  // Insert with normalized columns + puzzle_data JSONB
+  // Note: puzzle_type is a generated column computed from height, so it's not in the INSERT
+  // The generated column will automatically compute puzzle_type based on height
   await pool.query(
     `
-      INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric)
-      VALUES ($1, to_timestamp($2), $3, $4, $5)`,
-    [puzzleId, uploaded_at / 1000, isPublic, normalizedPuzzle, pidNumeric]
+      INSERT INTO puzzles (
+        pid,
+        pid_numeric,
+        uid,
+        is_public,
+        uploaded_at,
+        updated_at,
+        title,
+        author,
+        copyright,
+        notes,
+        version,
+        kind,
+        width,
+        height,
+        puzzle_data
+      )
+      VALUES ($1, $2, $3, $4, to_timestamp($5), to_timestamp($5), $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [
+      puzzleId,
+      pidNumeric,
+      null, // uid - can be passed in later if needed
+      isPublic,
+      uploaded_at / 1000,
+      normalizedData.title,
+      normalizedData.author,
+      normalizedData.copyright,
+      normalizedData.notes,
+      normalizedData.version,
+      normalizedData.kind,
+      normalizedData.width,
+      normalizedData.height,
+      normalizedPuzzle,
+    ]
   );
   return puzzleId;
 }
@@ -285,7 +364,7 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
     );
     await client.query(
       `
-      UPDATE puzzles SET times_solved = times_solved + 1
+      UPDATE puzzles SET times_solved = times_solved + 1, updated_at = NOW()
       WHERE pid = $1
     `,
       [pid]
@@ -302,19 +381,26 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
 export async function getPuzzleInfo(
   pid: string
 ): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
-  const puzzle = await getPuzzle(pid);
+  // Use normalized columns directly (much faster than fetching full puzzle)
+  const {rows} = await pool.query(
+    `
+      SELECT title, author, copyright, notes, puzzle_type
+      FROM puzzles
+      WHERE pid = $1
+    `,
+    [pid]
+  );
 
-  // Use shared utility for metadata extraction
-  const metadata = extractMetadata(puzzle);
-
-  // Calculate type from solution dimensions if not present
-  const type = metadata.type || getPuzzleTypeFromDimensions(puzzle.solution?.length || 0);
+  const firstRow = rows[0];
+  if (!firstRow) {
+    throw new Error(`Puzzle ${pid} not found`);
+  }
 
   return {
-    title: metadata.title,
-    author: metadata.author,
-    copyright: metadata.copyright,
-    description: metadata.description,
-    type,
+    title: firstRow.title || '',
+    author: firstRow.author || '',
+    copyright: firstRow.copyright || '',
+    description: firstRow.notes || '',
+    type: firstRow.puzzle_type,
   };
 }
