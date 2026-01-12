@@ -144,8 +144,17 @@ describe('Puzzle IPuz File Loading', () => {
       const fileContent = readFileSync(filePath, 'utf-8');
       const puzzle = JSON.parse(fileContent);
 
+      // Mock normalized schema response - getPuzzleInfo queries normalized columns directly
       (pool.query as Mock).mockResolvedValue({
-        rows: [{content: puzzle}],
+        rows: [
+          {
+            title: puzzle.title || '',
+            author: puzzle.author || '',
+            copyright: puzzle.copyright || '',
+            notes: puzzle.notes || '',
+            puzzle_type: 'Daily Puzzle', // Default type for this puzzle
+          },
+        ],
       });
 
       const info = await puzzleModel.getPuzzleInfo('test-pid');

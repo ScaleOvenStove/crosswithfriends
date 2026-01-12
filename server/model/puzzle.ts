@@ -55,14 +55,18 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
 
   // Reconstruct full PuzzleJson from normalized columns + puzzle_data
   const puzzleData = firstRow.puzzle_data || {};
+  const convertedPuzzle = convertOldFormatToIpuz(puzzleData);
+  // Check if puzzle was converted from old format (has 'grid' field)
+  const wasOldFormat = 'grid' in puzzleData && Array.isArray((puzzleData as any).grid);
   const puzzle: PuzzleJson = {
-    ...convertOldFormatToIpuz(puzzleData),
+    ...convertedPuzzle,
     // Overlay normalized columns (these are authoritative after migration)
     title: firstRow.title || puzzleData.title || '',
     author: firstRow.author || puzzleData.author || '',
     copyright: firstRow.copyright || puzzleData.copyright || '',
     notes: firstRow.notes || puzzleData.notes || '',
-    version: firstRow.version || puzzleData.version || 'http://ipuz.org/v1',
+    // If converted from old format, use v2 version from conversion; otherwise use stored version
+    version: wasOldFormat ? convertedPuzzle.version : (firstRow.version || puzzleData.version || 'http://ipuz.org/v1'),
     kind: firstRow.kind || puzzleData.kind || ['http://ipuz.org/crossword#1'],
     dimensions: {
       width: firstRow.width || puzzleData.dimensions?.width || 0,
