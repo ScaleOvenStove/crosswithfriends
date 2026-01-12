@@ -66,7 +66,9 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
     copyright: firstRow.copyright || puzzleData.copyright || '',
     notes: firstRow.notes || puzzleData.notes || '',
     // If converted from old format, use v2 version from conversion; otherwise use stored version
-    version: wasOldFormat ? convertedPuzzle.version : (firstRow.version || puzzleData.version || 'http://ipuz.org/v1'),
+    version: wasOldFormat
+      ? convertedPuzzle.version
+      : firstRow.version || puzzleData.version || 'http://ipuz.org/v1',
     kind: firstRow.kind || puzzleData.kind || ['http://ipuz.org/crossword#1'],
     dimensions: {
       width: firstRow.width || puzzleData.dimensions?.width || 0,
