@@ -4,12 +4,12 @@
  * Decorates Fastify with the centralized config object.
  */
 
-import type {FastifyInstance, FastifyPluginAsync} from 'fastify';
+import type {FastifyInstance, FastifyPluginCallback} from 'fastify';
 import fp from 'fastify-plugin';
 
 import {config} from '../config/index.js';
 
-const configPlugin: FastifyPluginAsync = async (fastify: FastifyInstance): Promise<void> => {
+const configPlugin: FastifyPluginCallback = (fastify: FastifyInstance): void => {
   fastify.decorate('config', config);
 };
 

@@ -6,6 +6,7 @@
  */
 
 import type {FastifyReply, FastifyRequest} from 'fastify';
+
 import {config} from '../config/index.js';
 import type {AppInstance} from '../types/fastify.js';
 import {
@@ -26,8 +27,7 @@ import type {
 } from './generated/index.js';
 import {ErrorResponseSchema} from './schemas.js';
 
-// eslint-disable-next-line require-await
-async function authRouter(fastify: AppInstance): Promise<void> {
+function authRouter(fastify: AppInstance): void {
   // Create a new authentication token
   const createTokenOptions = {
     schema: {
@@ -64,11 +64,7 @@ async function authRouter(fastify: AppInstance): Promise<void> {
   fastify.post<{Body: CreateTokenRequest; Reply: CreateTokenResponse}>(
     '/token',
     createTokenOptions,
-    // eslint-disable-next-line require-await
-    async (
-      request: FastifyRequest<{Body: CreateTokenRequest}>,
-      _reply: FastifyReply
-    ): Promise<CreateTokenResponse> => {
+    (request: FastifyRequest<{Body: CreateTokenRequest}>, _reply: FastifyReply): CreateTokenResponse => {
       request.log.debug({body: request.body ? Object.keys(request.body) : []}, 'Creating auth token');
 
       let userId = request.body?.userId;

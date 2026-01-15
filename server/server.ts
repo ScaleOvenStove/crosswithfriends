@@ -305,7 +305,6 @@ async function runServer(): Promise<void> {
         },
         staticCSP: true,
       });
-
     } else {
       // In production or when disabled, return 404 for docs
       app.get('/api/docs', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {

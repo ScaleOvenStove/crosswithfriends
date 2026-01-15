@@ -1,12 +1,12 @@
 import type {FastifyReply, FastifyRequest} from 'fastify';
+
 import '../types/fastify.js';
 import type {AppInstance} from '../types/fastify.js';
 
 import type {IncrementGidResponse, IncrementPidResponse} from './generated/index.js';
 import {IncrementGidResponseSchema, IncrementPidResponseSchema, ErrorResponseSchema} from './schemas.js';
 
-// eslint-disable-next-line require-await
-async function countersRouter(fastify: AppInstance): Promise<void> {
+function countersRouter(fastify: AppInstance): void {
   const gidOptions = {
     schema: {
       operationId: 'getNewGameId',

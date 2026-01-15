@@ -1,4 +1,5 @@
 import type {FastifyReply, FastifyRequest} from 'fastify';
+
 import type {AppInstance} from '../types/fastify.js';
 
 import type {HealthResponse} from './generated/index.js';
@@ -7,8 +8,7 @@ import {HealthResponseSchema} from './schemas.js';
 /**
  * Health check endpoint for Docker and monitoring
  */
-// eslint-disable-next-line require-await
-async function healthRouter(fastify: AppInstance): Promise<void> {
+function healthRouter(fastify: AppInstance): void {
   const options = {
     schema: {
       operationId: 'getHealth',

@@ -109,6 +109,8 @@ export class GameRepository implements IGameRepository {
       await client.query('BEGIN');
       const results: T[] = [];
       for (const operation of operations) {
+        // Sequential operations are required within a single transaction.
+        // eslint-disable-next-line no-await-in-loop
         const result = await operation(client);
         results.push(result);
       }

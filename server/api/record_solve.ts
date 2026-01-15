@@ -1,4 +1,5 @@
 import type {FastifyReply, FastifyRequest} from 'fastify';
+
 import '../types/fastify.js';
 import type {AppInstance} from '../types/fastify.js';
 

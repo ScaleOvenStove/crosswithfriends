@@ -6,6 +6,7 @@
 import admin from 'firebase-admin';
 
 import {config} from '../config/index.js';
+
 import {logger} from './logger.js';
 import {isInsecureModeAllowed} from './securityValidation.js';
 

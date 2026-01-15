@@ -246,7 +246,7 @@ function buildConfig(): Config {
       }
     }
 
-    console.info(
+    console.warn(
       {
         nodeEnv: validated.server.nodeEnv,
         port: validated.server.port,

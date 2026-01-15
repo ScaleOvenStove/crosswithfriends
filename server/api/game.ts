@@ -6,8 +6,8 @@ import {getPuzzleSolves} from '../model/puzzle_solve.js';
 import type {AppInstance} from '../types/fastify.js';
 import {validateGameId, validatePuzzleId} from '../utils/inputValidation.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
-import {authenticateRequest, isValidUserId} from '../utils/userAuth.js';
 import {hasStringProperty, isObject} from '../utils/typeGuards.js';
+import {authenticateRequest, isValidUserId} from '../utils/userAuth.js';
 
 import {createHttpError} from './errors.js';
 import type {CreateGameRequest, CreateGameResponse, GetGameResponse} from './generated/index.js';

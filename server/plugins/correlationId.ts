@@ -28,7 +28,7 @@ declare module 'fastify' {
 
 const correlationIdPlugin = (fastify: AppInstance): void => {
   // Add correlation ID to every request
-  fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  fastify.addHook('onRequest', (request: FastifyRequest, reply: FastifyReply): void => {
     if (request.url === '/' || request.url === '/healthz') {
       request.log.info({url: request.url}, 'correlationId onRequest');
     }

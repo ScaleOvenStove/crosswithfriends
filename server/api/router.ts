@@ -8,11 +8,11 @@ import type {AppInstance} from '../types/fastify.js';
 
 import {createHandlers} from './handlers.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const filename = fileURLToPath(import.meta.url);
+const dirnamePath = dirname(filename);
 
 // Load OpenAPI spec from file (source of truth)
-const specPath = join(__dirname, '..', 'openapi.json');
+const specPath = join(dirnamePath, '..', 'openapi.json');
 const specification = JSON.parse(readFileSync(specPath, 'utf-8'));
 
 async function apiRouter(fastify: AppInstance): Promise<void> {

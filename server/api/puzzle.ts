@@ -95,15 +95,16 @@ async function puzzleRouter(fastify: AppInstance): Promise<void> {
 
       // Validate puzzle ID format
       const pidValidation = validatePuzzleId(pid);
-      if (!pidValidation.valid) {
+      const pidValue = pidValidation.value;
+      if (!pidValidation.valid || !pidValue) {
         throw createHttpError(pidValidation.error || 'Invalid puzzle ID', 400);
       }
 
       try {
-        const puzzle = await fastify.repositories.puzzle.findById(pidValidation.value!);
+        const puzzle = await fastify.repositories.puzzle.findById(pidValue);
         return puzzle;
       } catch (error) {
-        request.log.error(error, `Failed to get puzzle ${pidValidation.value}`);
+        request.log.error(error, `Failed to get puzzle ${pidValue}`);
         throw createHttpError('Puzzle not found', 404);
       }
     }

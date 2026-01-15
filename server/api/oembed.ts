@@ -1,4 +1,5 @@
 import type {FastifyReply, FastifyRequest} from 'fastify';
+
 import type {AppInstance} from '../types/fastify.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 
@@ -9,8 +10,7 @@ interface OEmbedQuery {
   author: string;
 }
 
-// eslint-disable-next-line require-await
-async function oEmbedRouter(fastify: AppInstance): Promise<void> {
+function oEmbedRouter(fastify: AppInstance): void {
   const getOptions = {
     schema: {
       operationId: 'getOembed',

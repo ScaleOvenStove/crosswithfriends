@@ -7,7 +7,7 @@
  * - Closes pool on server shutdown
  */
 
-import type {FastifyInstance, FastifyPluginAsync} from 'fastify';
+import type {FastifyInstance, FastifyPluginCallback} from 'fastify';
 import fp from 'fastify-plugin';
 
 import {closePool, createPool} from '../model/pool.js';
@@ -16,7 +16,7 @@ import {logger} from '../utils/logger.js';
 /**
  * Database plugin implementation
  */
-const databasePlugin: FastifyPluginAsync = async (fastify: FastifyInstance): Promise<void> => {
+const databasePlugin: FastifyPluginCallback = (fastify: FastifyInstance): void => {
   // Create the database pool
   const pool = createPool(fastify.config);
 
