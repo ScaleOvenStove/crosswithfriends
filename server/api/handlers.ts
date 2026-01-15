@@ -6,6 +6,7 @@
  */
 
 import type {InfoJson, ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
+import type {FastifyReply, FastifyRequest} from 'fastify';
 
 import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import {config} from '../config/index.js';
@@ -22,9 +23,31 @@ import {escapeHtml, escapeHtmlAttribute} from '../utils/htmlEscape.js';
 import {validateGameId, validatePuzzleId} from '../utils/inputValidation.js';
 import {isFBMessengerCrawler, isLinkExpanderBot} from '../utils/link_preview_util.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
+import {hasStringProperty, isJwtPayload, isString} from '../utils/typeGuards.js';
 import {authenticateRequest, isValidUserId} from '../utils/userAuth.js';
 
 import {createHttpError} from './errors.js';
+import type {
+  CreateGameRequest,
+  CreateGameResponse,
+  CreatePuzzleResponse,
+  CreateTokenRequest,
+  CreateTokenResponse,
+  GetActiveGamePidResponse,
+  GetCurrentUserResponse,
+  GetGameResponse,
+  HealthResponse,
+  IncrementGidResponse,
+  IncrementPidResponse,
+  ListPuzzleStatsRequest,
+  ListPuzzleStatsResponse,
+  ListPuzzlesResponse,
+  OEmbedResponse,
+  RecordSolveRequest,
+  RecordSolveResponse,
+  ValidateTokenRequest,
+  ValidateTokenResponse,
+} from './generated/index.js';
 import {computePuzzleStats} from './stats.js';
 
 // Re-export computePuzzleStats for use by the handlers
@@ -47,6 +70,37 @@ const ALLOWED_DOMAINS = [
   'www.crosswithfriends.com',
   ...(isNonProduction ? ['localhost', '127.0.0.1', '0.0.0.0', '[::1]', 'example.com'] : []),
 ];
+
+interface PuzzleListQuery {
+  page: string;
+  pageSize: string;
+  sizeMini?: string;
+  sizeStandard?: string;
+  nameOrTitle?: string;
+}
+
+interface CreatePuzzleBody {
+  pid?: string;
+  puzzle: PuzzleJson;
+  isPublic?: boolean;
+}
+
+interface CreateGameQuery {
+  userId?: string;
+  token?: string;
+}
+
+interface LinkPreviewQuery {
+  url: string;
+}
+
+interface OEmbedQuery {
+  author: string;
+}
+
+interface FirebaseTokenBody {
+  firebaseToken: string;
+}
 
 function validatePreviewUrl(urlString: string): URL {
   let url: URL;
@@ -108,12 +162,14 @@ function validatePreviewUrl(urlString: string): URL {
 /**
  * Creates handlers that have access to Fastify app instance (repositories, services, etc.)
  */
-export function createHandlers(fastify: AppInstance) {
+export function createHandlers(fastify: AppInstance): Record<string, unknown> {
   return {
     // ========================================================================
     // Health
     // ========================================================================
-    getHealth: (_request: any, _reply: any) => {
+    getHealth: (request: FastifyRequest, _reply: FastifyReply): HealthResponse => {
+      // Log health check for monitoring (but keep it lightweight)
+      request.log.debug('Health check requested');
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -124,7 +180,10 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Authentication
     // ========================================================================
-    createToken: (request: any, _reply: any) => {
+    createToken: (
+      request: FastifyRequest<{Body: CreateTokenRequest}>,
+      _reply: FastifyReply
+    ): CreateTokenResponse => {
       request.log.debug({body: request.body ? Object.keys(request.body) : []}, 'Creating auth token');
 
       let userId = request.body?.userId;
@@ -149,7 +208,10 @@ export function createHandlers(fastify: AppInstance) {
       return {token, userId, expiresAt};
     },
 
-    exchangeFirebaseToken: async (request: any, _reply: any) => {
+    exchangeFirebaseToken: async (
+      request: FastifyRequest<{Body: FirebaseTokenBody}>,
+      _reply: FastifyReply
+    ): Promise<CreateTokenResponse> => {
       request.log.debug('Exchanging Firebase token for backend JWT');
 
       const {firebaseToken} = request.body;
@@ -191,7 +253,10 @@ export function createHandlers(fastify: AppInstance) {
       return {token, userId, expiresAt};
     },
 
-    validateToken: (request: any, _reply: any) => {
+    validateToken: (
+      request: FastifyRequest<{Body: ValidateTokenRequest}>,
+      _reply: FastifyReply
+    ): ValidateTokenResponse => {
       request.log.debug('Validating auth token');
 
       const {token} = request.body;
@@ -215,14 +280,16 @@ export function createHandlers(fastify: AppInstance) {
       }
     },
 
-    getCurrentUser: async (request: any, _reply: any) => {
+    getCurrentUser: async (
+      request: FastifyRequest,
+      _reply: FastifyReply
+    ): Promise<GetCurrentUserResponse> => {
       request.log.debug('Getting current user');
 
       try {
         await request.jwtVerify();
-        const user = request.user as JwtPayload;
-
-        if (!user.userId) {
+        const user = request.user;
+        if (!isJwtPayload(user)) {
           throw createHttpError('Invalid token payload', 401);
         }
 
@@ -240,7 +307,10 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Puzzles
     // ========================================================================
-    listPuzzles: async (request: any, _reply: any) => {
+    listPuzzles: async (
+      request: FastifyRequest<{Querystring: PuzzleListQuery}>,
+      _reply: FastifyReply
+    ): Promise<ListPuzzlesResponse> => {
       const page = Number.parseInt(request.query.page, 10);
       const pageSize = Number.parseInt(request.query.pageSize, 10);
 
@@ -255,7 +325,7 @@ export function createHandlers(fastify: AppInstance) {
           Mini: sizeMini === 'true' && typeof sizeMini === 'string',
           Standard: sizeStandard === 'true' && typeof sizeStandard === 'string',
         },
-        nameOrTitleFilter: (request.query.nameOrTitle ?? '') as string,
+        nameOrTitleFilter: request.query.nameOrTitle ?? '',
       };
 
       const result = await fastify.repositories.puzzle.list(filters, pageSize, page * pageSize);
@@ -274,7 +344,10 @@ export function createHandlers(fastify: AppInstance) {
       return {puzzles};
     },
 
-    createPuzzle: async (request: any, _reply: any) => {
+    createPuzzle: async (
+      request: FastifyRequest<{Body: CreatePuzzleBody}>,
+      _reply: FastifyReply
+    ): Promise<CreatePuzzleResponse> => {
       logRequest(request);
 
       if (request.body.pid) {
@@ -284,28 +357,33 @@ export function createHandlers(fastify: AppInstance) {
         }
       }
 
+      const puzzle = convertOldFormatToIpuz(request.body.puzzle);
       const pid = await fastify.repositories.puzzle.create(
         request.body.pid || '',
-        request.body.puzzle,
+        puzzle,
         request.body.isPublic ?? false
       );
       return {pid};
     },
 
-    getPuzzleById: async (request: any, _reply: any) => {
+    getPuzzleById: async (
+      request: FastifyRequest<{Params: {pid: string}}>,
+      _reply: FastifyReply
+    ): Promise<PuzzleJson> => {
       logRequest(request);
       const {pid} = request.params;
 
       const pidValidation = validatePuzzleId(pid);
-      if (!pidValidation.valid) {
+      const pidValue = pidValidation.value;
+      if (!pidValidation.valid || !pidValue) {
         throw createHttpError(pidValidation.error || 'Invalid puzzle ID', 400);
       }
 
       try {
-        const puzzle = await fastify.repositories.puzzle.findById(pidValidation.value!);
+        const puzzle = await fastify.repositories.puzzle.findById(pidValue);
         return puzzle;
       } catch (error) {
-        request.log.error(error, `Failed to get puzzle ${pidValidation.value}`);
+        request.log.error(error, `Failed to get puzzle ${pidValue}`);
         throw createHttpError('Puzzle not found', 404);
       }
     },
@@ -313,22 +391,27 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Games
     // ========================================================================
-    createGame: async (request: any, _reply: any) => {
+    createGame: async (
+      request: FastifyRequest<{Body: CreateGameRequest; Querystring: CreateGameQuery}>,
+      _reply: FastifyReply
+    ): Promise<CreateGameResponse> => {
       logRequest(request);
 
       const gidValidation = validateGameId(request.body.gid);
-      if (!gidValidation.valid) {
+      const gidValue = gidValidation.value;
+      if (!gidValidation.valid || !gidValue) {
         throw createHttpError(gidValidation.error || 'Invalid game ID', 400);
       }
 
       const pidValidation = validatePuzzleId(request.body.pid);
-      if (!pidValidation.valid) {
+      const pidValue = pidValidation.value;
+      if (!pidValidation.valid || !pidValue) {
         throw createHttpError(pidValidation.error || 'Invalid puzzle ID', 400);
       }
 
       let userId: string | null = null;
       const authResult = authenticateRequest({
-        query: request.query as {userId?: string; token?: string} | undefined,
+        query: request.query,
         headers: request.headers,
         body: request.body,
       });
@@ -342,24 +425,24 @@ export function createHandlers(fastify: AppInstance) {
         throw createHttpError(errorMessage, 401);
       }
 
-      const gid = await fastify.repositories.game.createInitialEvent(
-        gidValidation.value!,
-        pidValidation.value!,
-        userId
-      );
+      const gid = await fastify.repositories.game.createInitialEvent(gidValue, pidValue, userId);
       return {gid};
     },
 
-    getGameById: async (request: any, _reply: any) => {
+    getGameById: async (
+      request: FastifyRequest<{Params: {gid: string}}>,
+      _reply: FastifyReply
+    ): Promise<GetGameResponse> => {
       logRequest(request);
       const {gid} = request.params;
 
       const gidValidation = validateGameId(gid);
-      if (!gidValidation.valid) {
+      const gidValue = gidValidation.value;
+      if (!gidValidation.valid || !gidValue) {
         throw createHttpError(gidValidation.error || 'Invalid game ID', 400);
       }
 
-      const puzzleSolves = await getPuzzleSolves([gidValidation.value!]);
+      const puzzleSolves = await getPuzzleSolves(fastify.db, [gidValue]);
 
       if (puzzleSolves.length === 0) {
         throw createHttpError('Game not found', 404);
@@ -369,7 +452,7 @@ export function createHandlers(fastify: AppInstance) {
       if (!gameState) {
         throw createHttpError('Game not found', 404);
       }
-      const puzzleInfo = (await fastify.services.puzzle.getPuzzleInfo(gameState.pid)) as InfoJson;
+      const puzzleInfo = await fastify.services.puzzle.getPuzzleInfo(gameState.pid);
 
       return {
         gid,
@@ -381,23 +464,27 @@ export function createHandlers(fastify: AppInstance) {
       };
     },
 
-    getActiveGamePid: async (request: any, _reply: any) => {
+    getActiveGamePid: async (
+      request: FastifyRequest<{Params: {gid: string}}>,
+      _reply: FastifyReply
+    ): Promise<GetActiveGamePidResponse> => {
       logRequest(request);
       const {gid} = request.params;
 
       const gidValidation = validateGameId(gid);
-      if (!gidValidation.valid) {
+      const gidValue = gidValidation.value;
+      if (!gidValidation.valid || !gidValue) {
         throw createHttpError(gidValidation.error || 'Invalid game ID', 400);
       }
 
-      const {events} = await fastify.repositories.game.getEvents(gidValidation.value!, {limit: 1});
+      const {events} = await fastify.repositories.game.getEvents(gidValue, {limit: 1});
       const createEvent = events.find((e: {type: string}) => e.type === 'create');
       if (!createEvent || createEvent.type !== 'create') {
         throw createHttpError('Active game not found', 404);
       }
 
-      const createParams = createEvent.params as {pid: string};
-      const pid = createParams.pid;
+      const createParams = createEvent.params;
+      const pid = hasStringProperty(createParams, 'pid') ? createParams.pid : undefined;
       if (!pid) {
         throw createHttpError('Puzzle ID not found in game create event', 500);
       }
@@ -408,7 +495,10 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Record Solve
     // ========================================================================
-    recordPuzzleSolve: async (request: any, _reply: any) => {
+    recordPuzzleSolve: async (
+      request: FastifyRequest<{Params: {pid: string}; Body: RecordSolveRequest}>,
+      _reply: FastifyReply
+    ): Promise<RecordSolveResponse> => {
       await fastify.repositories.puzzle.recordSolve(
         request.params.pid,
         request.body.gid,
@@ -420,7 +510,10 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Stats
     // ========================================================================
-    submitStats: async (request: any, _reply: any) => {
+    submitStats: async (
+      request: FastifyRequest<{Body: ListPuzzleStatsRequest}>,
+      _reply: FastifyReply
+    ): Promise<ListPuzzleStatsResponse> => {
       const {gids} = request.body;
       const startTime = Date.now();
 
@@ -428,7 +521,7 @@ export function createHandlers(fastify: AppInstance) {
         throw createHttpError('gids are invalid', 400);
       }
 
-      const puzzleSolves = await getPuzzleSolves(gids);
+      const puzzleSolves = await getPuzzleSolves(fastify.db, gids);
       const puzzleStats = computePuzzleStats(puzzleSolves);
       const stats = puzzleStats.map((stat) => ({
         size: stat.size,
@@ -467,13 +560,13 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Counters
     // ========================================================================
-    getNewGameId: async (request: any, _reply: any) => {
+    getNewGameId: async (request: FastifyRequest, _reply: FastifyReply): Promise<IncrementGidResponse> => {
       request.log.debug('increment gid');
       const gid = await fastify.repositories.counters.getNextGameId();
       return {gid};
     },
 
-    getNewPuzzleId: async (request: any, _reply: any) => {
+    getNewPuzzleId: async (request: FastifyRequest, _reply: FastifyReply): Promise<IncrementPidResponse> => {
       request.log.debug('increment pid');
       const pid = await fastify.repositories.counters.getNextPuzzleId();
       return {pid};
@@ -482,13 +575,19 @@ export function createHandlers(fastify: AppInstance) {
     // ========================================================================
     // Link Preview / OEmbed
     // ========================================================================
-    getOembed: (request: any, _reply: any) => {
+    getOembed: (
+      request: FastifyRequest<{Querystring: OEmbedQuery}>,
+      _reply: FastifyReply
+    ): OEmbedResponse => {
       logRequest(request);
       const author = request.query.author;
       return {type: 'link', version: '1.0', author_name: author};
     },
 
-    getLinkPreview: async (request: any, reply: any) => {
+    getLinkPreview: async (
+      request: FastifyRequest<{Querystring: LinkPreviewQuery}>,
+      reply: FastifyReply
+    ): Promise<void> => {
       logRequest(request);
 
       const url = validatePreviewUrl(request.query.url);
@@ -500,13 +599,13 @@ export function createHandlers(fastify: AppInstance) {
         if (!gid) {
           throw createHttpError('Invalid URL path: missing game ID', 400);
         }
-        info = (await fastify.repositories.game.getInfo(gid)) as InfoJson;
+        info = await fastify.repositories.game.getInfo(gid);
       } else if (pathParts[1] === 'play') {
         const pid = pathParts[2];
         if (!pid) {
           throw createHttpError('Invalid URL path: missing puzzle ID', 400);
         }
-        info = (await fastify.services.puzzle.getPuzzleInfo(pid)) as InfoJson;
+        info = await fastify.services.puzzle.getPuzzleInfo(pid);
       } else {
         throw createHttpError('Invalid URL path', 400);
       }
@@ -515,10 +614,12 @@ export function createHandlers(fastify: AppInstance) {
         throw createHttpError('Game or puzzle not found', 404);
       }
 
-      const ua = request.headers['user-agent'] as string | undefined;
+      const uaHeader = request.headers['user-agent'];
+      const ua = isString(uaHeader) ? uaHeader : undefined;
 
       if (!isLinkExpanderBot(ua)) {
-        return reply.code(302).header('Location', url.href).send();
+        reply.code(302).header('Location', url.href).send();
+        return;
       }
 
       const host = request.headers.host || '';
@@ -535,7 +636,7 @@ export function createHandlers(fastify: AppInstance) {
       const safeUrl = escapeHtmlAttribute(url.href || '');
       const safeOembedUrl = escapeHtmlAttribute(oembedEndpointUrl);
 
-      return reply.type('text/html').send(String.raw`
+      reply.type('text/html').send(String.raw`
         <html prefix="og: https://ogp.me/ns/website#">
             <head>
                 <title>${safeTitle}</title>
@@ -548,7 +649,8 @@ export function createHandlers(fastify: AppInstance) {
                 <meta name="theme-color" content="#6aa9f4">
             </head>
         </html>
-      `);
+    `);
+      return;
     },
   };
 }

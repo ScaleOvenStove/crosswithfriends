@@ -12,6 +12,11 @@ Fastify-based HTTP and WebSocket server for the crosswithfriends application. Th
 - **Testing**: [Vitest](https://vitest.dev/) v4 - Unit and integration testing
 - **Build**: TypeScript with `tsc` and `tsc-alias`
 
+## Configuration
+
+All configuration is provided via environment variables (12-factor). `.env` files are only loaded in development/test.
+See `server/docs/environment.md` for the full list and defaults.
+
 ## Architecture
 
 ### Deployment Environments
@@ -666,14 +671,126 @@ server/
 └── package.json      # Dependencies and scripts
 ```
 
+## OpenAPI Spec-First Development
+
+The backend uses a **spec-first** approach where `openapi.json` is the single source of truth for the API contract. Routes are automatically generated from the spec, and TypeScript types are derived from it.
+
+### How It Works
+
+1. **OpenAPI Spec**: The `openapi.json` file defines all API endpoints, request/response schemas, and validation rules
+2. **Route Generation**: `fastify-openapi-glue` automatically creates Fastify routes from the spec
+3. **Handler Implementation**: Business logic is implemented in `api/handlers.ts`, mapped by `operationId`
+4. **Type Generation**: `openapi-typescript` generates TypeScript types from the spec
+
+### Architecture
+
+```
+openapi.json          (Source of Truth)
+    │
+    ├──► api/generated/types.ts     (Generated types for backend)
+    ├──► api/generated/index.ts     (Convenience type exports)
+    ├──► fastify-openapi-glue       (Auto-generates routes)
+    └──► frontend/src/api/generated (Generated API client)
+```
+
+### Key Files
+
+| File                     | Purpose                                         |
+| ------------------------ | ----------------------------------------------- |
+| `openapi.json`           | OpenAPI 3.0 specification - the source of truth |
+| `api/handlers.ts`        | Handler implementations mapped by operationId   |
+| `api/generated/types.ts` | Auto-generated TypeScript types                 |
+| `api/generated/index.ts` | Convenience type exports                        |
+
+### Generating Types
+
+After modifying `openapi.json`:
+
+```bash
+# From server directory
+yarn api:generate
+
+# Or from root directory
+yarn api:generate:server    # Server types only
+yarn api:generate:frontend  # Frontend client only
+yarn api:generate           # Both
+```
+
+### Available Scripts
+
+| Script              | Description                                 |
+| ------------------- | ------------------------------------------- |
+| `yarn api:generate` | Generate TypeScript types from openapi.json |
+
+### Adding a New Endpoint
+
+1. **Add to `openapi.json`**: Define the path, method, operationId, request/response schemas
+2. **Generate types**: Run `yarn api:generate`
+3. **Implement handler**: Add handler function in `api/handlers.ts` with the operationId name
+4. **Update frontend**: Run `yarn api:generate:frontend` from root
+
+### Example: Adding a New Endpoint
+
+**1. Add to `openapi.json`:**
+
+```json
+{
+  "paths": {
+    "/new-endpoint": {
+      "get": {
+        "operationId": "getNewEndpoint",
+        "summary": "Description of endpoint",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**2. Add handler in `api/handlers.ts`:**
+
+```typescript
+export function createHandlers(fastify: AppInstance) {
+  return {
+    // ... existing handlers ...
+
+    getNewEndpoint: async (request: any, reply: any) => {
+      return {data: 'Hello World'};
+    },
+  };
+}
+```
+
+### Type Import Pattern
+
+```typescript
+// Import from generated types
+import type {CreateGameRequest, CreateGameResponse, GetGameResponse} from './generated/index.js';
+```
+
 ## Development Workflow
 
-1. **Make changes** to server code
-2. **Run tests** to ensure nothing breaks: `yarn test:backend`
-3. **Lint code**: `yarn lint:backend`
-4. **Format code**: `yarn format`
-5. **Test locally**: `yarn devbackend`
-6. **Commit changes** (lint-staged will run automatically)
+1. **Make changes** to `openapi.json` for API changes
+2. **Regenerate types**: `yarn api:generate`
+3. **Run tests** to ensure nothing breaks: `yarn test:backend`
+4. **Lint code**: `yarn lint:backend`
+5. **Format code**: `yarn format`
+6. **Test locally**: `yarn devbackend`
+7. **Commit changes** (lint-staged will run automatically)
 
 ## Troubleshooting
 

@@ -1,15 +1,13 @@
+import type {Pool} from 'pg';
 import {describe, it, expect, beforeEach, vi, type Mock} from 'vitest';
 import * as gameModel from '../../model/game.js';
 import type {GameEvent} from '../../model/game.js';
-import {pool} from '../../model/pool.js';
 import * as puzzleModel from '../../model/puzzle.js';
 
-// Mock the database pool
-vi.mock('../../model/pool.js', () => ({
-  pool: {
-    query: vi.fn(),
-  },
-}));
+const mockPool = {
+  query: vi.fn(),
+  connect: vi.fn(),
+} as unknown as Pool;
 
 // Mock puzzle model
 vi.mock('../../model/puzzle.js');
@@ -27,22 +25,22 @@ describe('Game Model', () => {
         {type: 'updateCell', timestamp: 2000},
       ];
 
-      (pool.query as Mock).mockResolvedValueOnce({
+      (mockPool.query as Mock).mockResolvedValueOnce({
         rows: mockEvents.map((event) => ({event_payload: event, total: '2'})),
       });
 
-      const result = await gameModel.getGameEvents(mockGid);
+      const result = await gameModel.getGameEvents(mockPool, mockGid);
 
-      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), [mockGid]);
+      expect(mockPool.query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), [mockGid]);
       expect(result.events).toEqual(mockEvents);
       expect(result.total).toBe(2);
     });
 
     it('should return empty array when no events exist', async () => {
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValueOnce({rows: []});
+      (mockPool.query as Mock).mockResolvedValueOnce({rows: []});
 
-      const result = await gameModel.getGameEvents(mockGid);
+      const result = await gameModel.getGameEvents(mockPool, mockGid);
       expect(result.events).toEqual([]);
       expect(result.total).toBe(0);
     });
@@ -54,13 +52,13 @@ describe('Game Model', () => {
         {type: 'updateCell', timestamp: 2000},
       ];
 
-      (pool.query as Mock).mockResolvedValueOnce({
+      (mockPool.query as Mock).mockResolvedValueOnce({
         rows: mockEvents.map((event) => ({event_payload: event, total: '5'})),
       });
 
-      const result = await gameModel.getGameEvents(mockGid, {limit: 2});
+      const result = await gameModel.getGameEvents(mockPool, mockGid, {limit: 2});
 
-      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('LIMIT'), [mockGid, 2]);
+      expect(mockPool.query).toHaveBeenCalledWith(expect.stringContaining('LIMIT'), [mockGid, 2]);
       expect(result.events).toEqual(mockEvents);
       expect(result.total).toBe(5);
     });
@@ -69,13 +67,13 @@ describe('Game Model', () => {
       const mockGid = 'test-gid-123';
       const mockEvents = [{type: 'updateCell', timestamp: 2000}];
 
-      (pool.query as Mock).mockResolvedValueOnce({
+      (mockPool.query as Mock).mockResolvedValueOnce({
         rows: mockEvents.map((event) => ({event_payload: event, total: '5'})),
       });
 
-      const result = await gameModel.getGameEvents(mockGid, {limit: 1, offset: 1});
+      const result = await gameModel.getGameEvents(mockPool, mockGid, {limit: 1, offset: 1});
 
-      expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('OFFSET'), [mockGid, 1, 1]);
+      expect(mockPool.query).toHaveBeenCalledWith(expect.stringContaining('OFFSET'), [mockGid, 1, 1]);
       expect(result.events).toEqual(mockEvents);
       expect(result.total).toBe(5);
     });
@@ -84,11 +82,11 @@ describe('Game Model', () => {
       const mockGid = 'test-gid-123';
       const mockEvents = [{type: 'create', timestamp: 1000}];
 
-      (pool.query as Mock).mockResolvedValueOnce({
+      (mockPool.query as Mock).mockResolvedValueOnce({
         rows: mockEvents.map((event) => ({event_payload: event, total: '100'})),
       });
 
-      const result = await gameModel.getGameEvents(mockGid, {limit: 1});
+      const result = await gameModel.getGameEvents(mockPool, mockGid, {limit: 1});
       expect(result.total).toBe(100);
       expect(result.events.length).toBe(1);
     });
@@ -104,7 +102,7 @@ describe('Game Model', () => {
         description: 'Test description',
       };
 
-      (pool.query as Mock).mockResolvedValue({
+      (mockPool.query as Mock).mockResolvedValue({
         rows: [
           {
             event_payload: {
@@ -119,9 +117,9 @@ describe('Game Model', () => {
         rowCount: 1,
       });
 
-      const info = await gameModel.getGameInfo(mockGid);
+      const info = await gameModel.getGameInfo(mockPool, mockGid);
 
-      expect(pool.query).toHaveBeenCalledWith(
+      expect(mockPool.query).toHaveBeenCalledWith(
         "SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create'",
         [mockGid]
       );
@@ -130,12 +128,12 @@ describe('Game Model', () => {
 
     it('should return default info when game not found', async () => {
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValue({
+      (mockPool.query as Mock).mockResolvedValue({
         rows: [],
         rowCount: 0,
       });
 
-      const info = await gameModel.getGameInfo(mockGid);
+      const info = await gameModel.getGameInfo(mockPool, mockGid);
 
       expect(info).toEqual({
         title: '',
@@ -147,7 +145,7 @@ describe('Game Model', () => {
 
     it('should return default info when multiple create events exist', async () => {
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValue({
+      (mockPool.query as Mock).mockResolvedValue({
         rows: [
           {event_payload: {params: {game: {info: {title: 'First'}}}}},
           {event_payload: {params: {game: {info: {title: 'Second'}}}}},
@@ -155,7 +153,7 @@ describe('Game Model', () => {
         rowCount: 2,
       });
 
-      const info = await gameModel.getGameInfo(mockGid);
+      const info = await gameModel.getGameInfo(mockPool, mockGid);
       // When rowCount != 1, returns default info
       expect(info).toEqual({
         title: '',
@@ -181,11 +179,11 @@ describe('Game Model', () => {
         },
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addGameEvent(mockGid, mockEvent);
+      await gameModel.addGameEvent(mockPool, mockGid, mockEvent);
 
-      expect(pool.query).toHaveBeenCalledWith(
+      expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO game_events'),
         expect.arrayContaining([
           mockGid,
@@ -206,11 +204,14 @@ describe('Game Model', () => {
         params: {cell: {r: 0, c: 1}, value: 'A', autocheck: false, id: 'user123'},
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addGameEvent(mockGid, mockEvent);
+      await gameModel.addGameEvent(mockPool, mockGid, mockEvent);
 
-      expect(pool.query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([mockGid, null]));
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining([mockGid, null])
+      );
     });
 
     it('should convert timestamp to ISO string', async () => {
@@ -222,11 +223,11 @@ describe('Game Model', () => {
         params: {cell: {r: 0, c: 1}, value: 'A', autocheck: false, id: 'user123'},
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addGameEvent(mockGid, mockEvent);
+      await gameModel.addGameEvent(mockPool, mockGid, mockEvent);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const isoString = callArgs[2];
       expect(isoString).toBe(new Date(timestamp).toISOString());
     });
@@ -239,11 +240,11 @@ describe('Game Model', () => {
         params: {cell: {r: 0, c: 1}, value: 'A', autocheck: false, id: 'user123'},
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addGameEvent(mockGid, mockEvent);
+      await gameModel.addGameEvent(mockPool, mockGid, mockEvent);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const isoString = callArgs[2];
       // Should be a valid ISO string (current time)
       expect(isoString).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
@@ -280,12 +281,12 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      const result = await gameModel.addInitialGameEvent(mockGid, mockPid);
+      const result = await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-      expect(puzzleModel.getPuzzle).toHaveBeenCalledWith(mockPid);
-      expect(pool.query).toHaveBeenCalled();
+      expect(puzzleModel.getPuzzle).toHaveBeenCalledWith(mockPool, mockPid);
+      expect(mockPool.query).toHaveBeenCalled();
       expect(result).toBe(mockGid);
     });
 
@@ -302,7 +303,9 @@ describe('Game Model', () => {
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
 
-      await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow('empty solution array');
+      await expect(gameModel.addInitialGameEvent(mockPool, mockGid, mockPid)).rejects.toThrow(
+        'empty solution array'
+      );
     });
 
     it('should throw error for solution with empty rows', async () => {
@@ -318,7 +321,7 @@ describe('Game Model', () => {
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
 
-      await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow('empty rows');
+      await expect(gameModel.addInitialGameEvent(mockPool, mockGid, mockPid)).rejects.toThrow('empty rows');
     });
 
     it('should extract circles from puzzle grid', async () => {
@@ -339,11 +342,11 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addInitialGameEvent(mockGid, mockPid);
+      await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const event = callArgs[4];
       expect(event.params.game.circles).toBeDefined();
       expect(event.params.game.circles).toContain(1); // Index 1 (row 0, col 1)
@@ -367,11 +370,11 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addInitialGameEvent(mockGid, mockPid);
+      await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const event = callArgs[4];
       expect(event.params.game.shades).toBeDefined();
       expect(event.params.game.shades).toContain(1); // Index 1
@@ -401,11 +404,11 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addInitialGameEvent(mockGid, mockPid);
+      await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const event = callArgs[4];
       // Clues are aligned to grid numbers, so check that clues exist
       expect(event.params.game.clues.across).toBeDefined();
@@ -442,11 +445,11 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addInitialGameEvent(mockGid, mockPid);
+      await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const event = callArgs[4];
       // Clues are aligned to grid numbers, so check that clues exist
       expect(event.params.game.clues.across).toBeDefined();
@@ -470,11 +473,11 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(miniPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addInitialGameEvent(mockGid, mockPid);
+      await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-      let callArgs = (pool.query as Mock).mock.calls[0][1];
+      let callArgs = (mockPool.query as Mock).mock.calls[0][1];
       let event = callArgs[4];
       expect(event.params.game.info.type).toBe('Mini Puzzle');
 
@@ -490,11 +493,11 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(dailyPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await gameModel.addInitialGameEvent(mockGid, mockPid);
+      await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-      callArgs = (pool.query as Mock).mock.calls[0][1];
+      callArgs = (mockPool.query as Mock).mock.calls[0][1];
       event = callArgs[4];
       expect(event.params.game.info.type).toBe('Daily Puzzle');
     });
@@ -513,11 +516,11 @@ describe('Game Model', () => {
       };
 
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
       // This should not throw because makeGrid will create a valid grid
       // The error case would require a more complex scenario
-      await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).resolves.toBe(mockGid);
+      await expect(gameModel.addInitialGameEvent(mockPool, mockGid, mockPid)).resolves.toBe(mockGid);
     });
 
     describe('Old format puzzle support (backward compatibility)', () => {
@@ -545,16 +548,16 @@ describe('Game Model', () => {
         };
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-        (pool.query as Mock).mockResolvedValue({});
+        (mockPool.query as Mock).mockResolvedValue({});
 
-        const result = await gameModel.addInitialGameEvent(mockGid, mockPid);
+        const result = await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-        expect(puzzleModel.getPuzzle).toHaveBeenCalledWith(mockPid);
-        expect(pool.query).toHaveBeenCalled();
+        expect(puzzleModel.getPuzzle).toHaveBeenCalledWith(mockPool, mockPid);
+        expect(mockPool.query).toHaveBeenCalled();
         expect(result).toBe(mockGid);
 
         // Verify the event was created with correct metadata from info object
-        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const callArgs = (mockPool.query as Mock).mock.calls[0][1];
         const event = callArgs[4];
         expect(event.params.game.info.title).toBe('Old Format Puzzle');
         expect(event.params.game.info.author).toBe('Old Author');
@@ -583,11 +586,11 @@ describe('Game Model', () => {
         };
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-        (pool.query as Mock).mockResolvedValue({});
+        (mockPool.query as Mock).mockResolvedValue({});
 
-        await gameModel.addInitialGameEvent(mockGid, mockPid);
+        await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const callArgs = (mockPool.query as Mock).mock.calls[0][1];
         const event = callArgs[4];
         expect(event.params.game.circles).toBeDefined();
         expect(event.params.game.circles).toContain(1);
@@ -615,12 +618,12 @@ describe('Game Model', () => {
         };
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-        (pool.query as Mock).mockResolvedValue({});
+        (mockPool.query as Mock).mockResolvedValue({});
 
-        const result = await gameModel.addInitialGameEvent(mockGid, mockPid);
+        const result = await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
         expect(result).toBe(mockGid);
-        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const callArgs = (mockPool.query as Mock).mock.calls[0][1];
         const event = callArgs[4];
         expect(event.params.game.info.title).toBe('Minimal Puzzle');
         expect(event.params.game.info.author).toBe('');
@@ -648,7 +651,9 @@ describe('Game Model', () => {
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
 
-        await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow('empty grid array');
+        await expect(gameModel.addInitialGameEvent(mockPool, mockGid, mockPid)).rejects.toThrow(
+          'empty grid array'
+        );
       });
 
       it('should throw error for puzzle with unrecognized format', async () => {
@@ -662,7 +667,9 @@ describe('Game Model', () => {
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
 
-        await expect(gameModel.addInitialGameEvent(mockGid, mockPid)).rejects.toThrow('unrecognized format');
+        await expect(gameModel.addInitialGameEvent(mockPool, mockGid, mockPid)).rejects.toThrow(
+          'unrecognized format'
+        );
       });
 
       it('should use old format when both grid and solution exist (old format checked first)', async () => {
@@ -693,12 +700,12 @@ describe('Game Model', () => {
         };
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-        (pool.query as Mock).mockResolvedValue({});
+        (mockPool.query as Mock).mockResolvedValue({});
 
-        await gameModel.addInitialGameEvent(mockGid, mockPid);
+        await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
         // Verify it used old format (grid with 'X' and 'Y', not 'A' and 'B')
-        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const callArgs = (mockPool.query as Mock).mock.calls[0][1];
         const event = callArgs[4];
         // The solution should be from old format grid, not ipuz solution
         expect(event.params.game.solution).toEqual([
@@ -730,11 +737,11 @@ describe('Game Model', () => {
         };
 
         (puzzleModel.getPuzzle as Mock).mockResolvedValue(mockPuzzle);
-        (pool.query as Mock).mockResolvedValue({});
+        (mockPool.query as Mock).mockResolvedValue({});
 
-        await gameModel.addInitialGameEvent(mockGid, mockPid);
+        await gameModel.addInitialGameEvent(mockPool, mockGid, mockPid);
 
-        const callArgs = (pool.query as Mock).mock.calls[0][1];
+        const callArgs = (mockPool.query as Mock).mock.calls[0][1];
         const event = callArgs[4];
         // Clues should be converted and aligned to grid
         expect(event.params.game.clues.across).toBeDefined();

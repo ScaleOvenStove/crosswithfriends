@@ -8,36 +8,6 @@
   },
   "components": {"schemas": {}},
   "paths": {
-    "/health": {
-      "get": {
-        "operationId": "getHealth",
-        "summary": "Health check",
-        "tags": ["Health"],
-        "description": "Health check endpoint for Docker and monitoring",
-        "responses": {
-          "200": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["status", "timestamp", "uptime"],
-                  "properties": {
-                    "status": {"type": "string"},
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time",
-                      "description": "ISO 8601 format timestamp"
-                    },
-                    "uptime": {"type": "number", "description": "Process uptime in seconds"}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/auth/token": {
       "post": {
         "operationId": "createToken",

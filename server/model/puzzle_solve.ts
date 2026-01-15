@@ -2,7 +2,7 @@ import type {PuzzleJson} from '@crosswithfriends/shared/types';
 
 import {logger} from '../utils/logger.js';
 
-import {pool} from './pool.js';
+import type {DatabasePool} from './pool.js';
 
 export type SolvedPuzzleType = {
   pid: string;
@@ -27,7 +27,7 @@ type RawFetchedPuzzleSolve = {
   };
 };
 
-export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[]> {
+export async function getPuzzleSolves(pool: DatabasePool, gids: string[]): Promise<SolvedPuzzleType[]> {
   const startTime = Date.now();
   const {rows}: {rows: RawFetchedPuzzleSolve[]} = await pool.query(
     `

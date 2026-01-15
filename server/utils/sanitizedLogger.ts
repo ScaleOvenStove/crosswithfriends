@@ -1,3 +1,5 @@
+import type {FastifyRequest} from 'fastify';
+
 /**
  * Sanitized Logging Utility
  *
@@ -62,7 +64,7 @@ export function createBodySummary(body: unknown): {keys: string[]; size: number}
  * @param message - Optional log message
  * @deprecated Use request.log directly - Fastify's serializers now handle header sanitization
  */
-export function logRequest(request: any, message = 'got req'): void {
+export function logRequest(request: FastifyRequest, message = 'got req'): void {
   request.log.debug(
     {
       method: request.method,

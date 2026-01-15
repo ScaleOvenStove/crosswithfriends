@@ -1,6 +1,7 @@
 import {describe, it, expect, beforeAll, afterAll, beforeEach, vi, type Mock} from 'vitest';
 import {buildTestApp, closeApp, waitForApp} from '../helpers.js';
 import type {FastifyInstance} from 'fastify';
+import type {AppInstance} from '../../types/fastify.js';
 import * as puzzleSolveModel from '../../model/puzzle_solve.js';
 import type {SolvedPuzzleType} from '../../model/puzzle_solve.js';
 import * as statsApi from '../../api/stats.js';
@@ -28,6 +29,7 @@ describe('Stats API', () => {
 
   describe('POST /api/stats', () => {
     it('should return puzzle stats for valid gids', async () => {
+      const db = (app as AppInstance).db;
       const mockGids = ['gid1', 'gid2'];
       const mockPuzzleSolves: SolvedPuzzleType[] = [
         {
@@ -66,7 +68,7 @@ describe('Stats API', () => {
       expect(body).toHaveProperty('history');
       expect(body.stats).toBeInstanceOf(Array);
       expect(body.history).toBeInstanceOf(Array);
-      expect(puzzleSolveModel.getPuzzleSolves).toHaveBeenCalledWith(mockGids);
+      expect(puzzleSolveModel.getPuzzleSolves).toHaveBeenCalledWith(db, mockGids);
     });
 
     it('should return stats for empty gids array', async () => {
@@ -111,7 +113,8 @@ describe('Stats API', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       // Verify getPuzzleSolves was called with correct arguments
-      expect(puzzleSolveModel.getPuzzleSolves).toHaveBeenCalledWith(mockGids);
+      const db = (app as AppInstance).db;
+      expect(puzzleSolveModel.getPuzzleSolves).toHaveBeenCalledWith(db, mockGids);
       expect(body.stats).toHaveLength(1);
       // If stats[0] is empty, the computePuzzleStats function might not be working correctly
       // or the mock data isn't in the right format

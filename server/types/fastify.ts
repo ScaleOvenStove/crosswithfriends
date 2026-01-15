@@ -1,6 +1,6 @@
 /**
  * Type augmentations for Fastify custom decorators
- * These are added via app.decorate() in server.ts
+ * These are added via plugins and app.decorate() in server.ts
  */
 
 import type {
@@ -12,11 +12,15 @@ import type {
   FastifyTypeProviderDefault,
 } from 'fastify';
 
+import type {Config} from '../config/index.js';
+import type {DatabasePool} from '../model/pool.js';
+
 declare module 'fastify' {
   interface FastifyInstance {
     repositories: import('../repositories/index.js').Repositories;
     services: import('../services/index.js').Services;
-    pool: import('pg').Pool;
+    db: DatabasePool;
+    config: Config;
   }
 }
 

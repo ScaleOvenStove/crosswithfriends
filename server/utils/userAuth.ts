@@ -19,6 +19,7 @@ import {
 } from './auth.js';
 import {logger} from './logger.js';
 import {isInsecureModeAllowed} from './securityValidation.js';
+import {hasUserId} from './typeGuards.js';
 
 /**
  * Result of authentication attempt
@@ -129,7 +130,7 @@ export function isValidUserId(userId: string | null | undefined): boolean {
 interface AuthenticatableRequest {
   query?: {userId?: string; token?: string};
   headers?: {[key: string]: string | string[] | undefined};
-  body?: {userId?: string};
+  body?: Record<string, unknown>;
 }
 
 /**
@@ -220,12 +221,9 @@ function extractLegacyUserIdFromRequest(request: AuthenticatableRequest): string
   }
 
   // Try body (for POST requests)
-  if (request.body && typeof request.body === 'object' && 'userId' in request.body) {
-    const userId = (request.body as {userId?: unknown}).userId;
-    if (typeof userId === 'string') {
-      const trimmed = userId.trim();
-      if (trimmed) return trimmed;
-    }
+  if (request.body && hasUserId(request.body)) {
+    const trimmed = request.body.userId.trim();
+    if (trimmed) return trimmed;
   }
 
   return null;

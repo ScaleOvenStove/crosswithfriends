@@ -5,6 +5,8 @@
 
 import admin from 'firebase-admin';
 
+import {config} from '../config/index.js';
+
 import {logger} from './logger.js';
 import {isInsecureModeAllowed} from './securityValidation.js';
 
@@ -40,7 +42,7 @@ export async function initializeFirebaseAdmin(): Promise<void> {
   try {
     // Try to initialize with service account credentials
     // First check for explicit credentials file path
-    const credentialsPath = process.env.FIREBASE_CREDENTIALS_PATH;
+    const credentialsPath = config.firebase.credentialsPath;
     if (credentialsPath) {
       // For ES modules, we need to use createRequire or read the file
       // Using fs.readFileSync for simplicity
@@ -58,7 +60,7 @@ export async function initializeFirebaseAdmin(): Promise<void> {
     }
 
     // Try to initialize with service account JSON in environment variable
-    const credentialsJson = process.env.FIREBASE_CREDENTIALS_JSON;
+    const credentialsJson = config.firebase.credentialsJson;
     if (credentialsJson) {
       const serviceAccount = JSON.parse(credentialsJson);
       admin.initializeApp({

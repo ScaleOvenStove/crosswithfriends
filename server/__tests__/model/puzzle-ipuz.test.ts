@@ -3,14 +3,11 @@ import {readFileSync} from 'fs';
 import {join} from 'path';
 import * as puzzleModel from '../../model/puzzle.js';
 import {addInitialGameEvent} from '../../model/game.js';
-import {pool} from '../../model/pool.js';
 
-// Mock the database pool
-vi.mock('../../model/pool.js', () => ({
-  pool: {
-    query: vi.fn(),
-  },
-}));
+const mockPool = {
+  query: vi.fn(),
+  connect: vi.fn(),
+};
 
 // Mock puzzle model but allow getPuzzle to be mocked in tests
 vi.mock('../../model/puzzle.js', async () => {
@@ -128,15 +125,15 @@ describe('Puzzle IPuz File Loading', () => {
       const puzzle = JSON.parse(fileContent);
 
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
       // Mock getPuzzle using the mocked module
       (puzzleModel.getPuzzle as Mock).mockResolvedValue(puzzle);
 
-      await addInitialGameEvent(mockGid, 'test-pid');
+      await addInitialGameEvent(mockPool, mockGid, 'test-pid');
 
-      expect(puzzleModel.getPuzzle).toHaveBeenCalledWith('test-pid');
-      expect(pool.query).toHaveBeenCalled();
+      expect(puzzleModel.getPuzzle).toHaveBeenCalledWith(mockPool, 'test-pid');
+      expect(mockPool.query).toHaveBeenCalled();
     });
 
     it('should extract metadata from puzzle.ipuz', async () => {
@@ -145,7 +142,7 @@ describe('Puzzle IPuz File Loading', () => {
       const puzzle = JSON.parse(fileContent);
 
       // Mock normalized schema response - getPuzzleInfo queries normalized columns directly
-      (pool.query as Mock).mockResolvedValue({
+      (mockPool.query as Mock).mockResolvedValue({
         rows: [
           {
             title: puzzle.title || '',
@@ -157,7 +154,7 @@ describe('Puzzle IPuz File Loading', () => {
         ],
       });
 
-      const info = await puzzleModel.getPuzzleInfo('test-pid');
+      const info = await puzzleModel.getPuzzleInfo(mockPool, 'test-pid');
 
       expect(info.title).toBe(puzzle.title || '');
       expect(info.author).toBe(puzzle.author || '');
@@ -186,11 +183,11 @@ describe('Puzzle IPuz File Loading', () => {
         const fileContent = readFileSync(filePath, 'utf-8');
         const puzzle = JSON.parse(fileContent);
 
-        (pool.query as Mock).mockResolvedValue({
+        (mockPool.query as Mock).mockResolvedValue({
           rows: [{content: puzzle}],
         });
 
-        const info = await puzzleModel.getPuzzleInfo('test-pid');
+        const info = await puzzleModel.getPuzzleInfo(mockPool, 'test-pid');
         // Type is determined by solution length
         const solutionLength = Array.isArray(puzzle.solution) ? puzzle.solution.length : 0;
         const actualType = solutionLength > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
@@ -249,10 +246,10 @@ describe('Puzzle IPuz File Loading', () => {
       const puzzle = JSON.parse(fileContent);
 
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
       vi.spyOn(puzzleModel, 'getPuzzle').mockResolvedValue(puzzle);
 
-      await addInitialGameEvent(mockGid, 'test-pid');
+      await addInitialGameEvent(mockPool, mockGid, 'test-pid');
 
       // Check if puzzle has circles in grid
       if (puzzle.puzzle && Array.isArray(puzzle.puzzle)) {
@@ -270,7 +267,7 @@ describe('Puzzle IPuz File Loading', () => {
 
         if (hasCircles) {
           // Should extract circles
-          const callArgs = (pool.query as Mock).mock.calls.find((call) =>
+          const callArgs = (mockPool.query as Mock).mock.calls.find((call) =>
             call[0].includes('INSERT INTO game_events')
           )?.[1];
           if (callArgs) {
@@ -287,10 +284,10 @@ describe('Puzzle IPuz File Loading', () => {
       const puzzle = JSON.parse(fileContent);
 
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
       vi.spyOn(puzzleModel, 'getPuzzle').mockResolvedValue(puzzle);
 
-      await addInitialGameEvent(mockGid, 'test-pid');
+      await addInitialGameEvent(mockPool, mockGid, 'test-pid');
 
       // Check if puzzle has shades in grid
       if (puzzle.puzzle && Array.isArray(puzzle.puzzle)) {
@@ -308,7 +305,7 @@ describe('Puzzle IPuz File Loading', () => {
 
         if (hasShades) {
           // Should extract shades
-          const callArgs = (pool.query as Mock).mock.calls.find((call) =>
+          const callArgs = (mockPool.query as Mock).mock.calls.find((call) =>
             call[0].includes('INSERT INTO game_events')
           )?.[1];
           if (callArgs) {
@@ -325,12 +322,12 @@ describe('Puzzle IPuz File Loading', () => {
       const puzzle = JSON.parse(fileContent);
 
       const mockGid = 'test-gid-123';
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
       vi.spyOn(puzzleModel, 'getPuzzle').mockResolvedValue(puzzle);
 
-      await addInitialGameEvent(mockGid, 'test-pid');
+      await addInitialGameEvent(mockPool, mockGid, 'test-pid');
 
-      const callArgs = (pool.query as Mock).mock.calls.find((call) =>
+      const callArgs = (mockPool.query as Mock).mock.calls.find((call) =>
         call[0].includes('INSERT INTO game_events')
       )?.[1];
       if (callArgs) {

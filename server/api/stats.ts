@@ -1,3 +1,5 @@
+import type {FastifyReply, FastifyRequest} from 'fastify';
+
 import type {SolvedPuzzleType} from '../model/puzzle_solve.js';
 import {getPuzzleSolves} from '../model/puzzle_solve.js';
 import type {AppInstance} from '../types/fastify.js';
@@ -104,7 +106,10 @@ async function statsRouter(fastify: AppInstance): Promise<void> {
   fastify.post<{Body: ListPuzzleStatsRequest; Reply: ListPuzzleStatsResponse}>(
     '',
     postOptions,
-    async (request: any, _reply: any) => {
+    async (
+      request: FastifyRequest<{Body: ListPuzzleStatsRequest}>,
+      _reply: FastifyReply
+    ): Promise<ListPuzzleStatsResponse> => {
       const {gids} = request.body;
       const startTime = Date.now();
 
@@ -112,7 +117,7 @@ async function statsRouter(fastify: AppInstance): Promise<void> {
         throw createHttpError('gids are invalid', 400);
       }
 
-      const puzzleSolves = await getPuzzleSolves(gids);
+      const puzzleSolves = await getPuzzleSolves(fastify.db, gids);
       const puzzleStats = computePuzzleStats(puzzleSolves);
       const stats = puzzleStats.map((stat) => ({
         size: stat.size,

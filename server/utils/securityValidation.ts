@@ -16,30 +16,36 @@ export interface SecurityIssue {
 }
 
 /**
+ * Detects if the current environment is staging
+ * Staging uses NODE_ENV=production but should have more lenient security requirements
+ */
+function isStaging(): boolean {
+  return config.environment.isStaging;
+}
+
+/**
  * Validates security configuration for production deployment
  * @returns Array of security issues found
  */
 export function validateSecurityConfig(): SecurityIssue[] {
   const issues: SecurityIssue[] = [];
+  const isStagingEnv = isStaging();
 
   if (config.server.isProduction) {
-    // Critical: AUTH_TOKEN_SECRET must be set in production
-    if (!process.env.AUTH_TOKEN_SECRET || process.env.AUTH_TOKEN_SECRET.length < 32) {
+    // In staging, these are warnings; in production, they're critical
+    const authSeverity = isStagingEnv ? 'warning' : 'critical';
+
+    // AUTH_TOKEN_SECRET must be set in production (warning in staging)
+    if (!config.auth.tokenSecret || config.auth.tokenSecret.length < 32) {
       issues.push({
-        severity: 'critical',
+        severity: authSeverity,
         message: 'AUTH_TOKEN_SECRET is not set or is too short (minimum 32 characters)',
         recommendation: 'Set AUTH_TOKEN_SECRET environment variable with a strong secret',
       });
     }
 
-    // Critical: REQUIRE_AUTH must not be explicitly set to false in production
-    if (process.env.REQUIRE_AUTH === 'false') {
-      issues.push({
-        severity: 'critical',
-        message: 'REQUIRE_AUTH is explicitly set to false in production',
-        recommendation: 'Remove REQUIRE_AUTH=false or set it to true for production',
-      });
-    }
+    // REQUIRE_AUTH validation removed - config module now enforces requireAuth=true in production
+    // regardless of REQUIRE_AUTH env var value, making explicit env var check redundant
 
     // Note: SSL certificate validation is now enforced in production via config
     // This check is kept for documentation purposes but should never trigger
@@ -54,9 +60,9 @@ export function validateSecurityConfig(): SecurityIssue[] {
 
     // Warning: Firebase Admin should be configured for production
     if (
-      !process.env.FIREBASE_CREDENTIALS_PATH &&
-      !process.env.FIREBASE_CREDENTIALS_JSON &&
-      !process.env.GOOGLE_APPLICATION_CREDENTIALS
+      !config.firebase.credentialsPath &&
+      !config.firebase.credentialsJson &&
+      !config.firebase.googleApplicationCredentials
     ) {
       issues.push({
         severity: 'warning',
@@ -117,13 +123,16 @@ export function runSecurityValidation(): void {
       );
     }
 
-    if (config.server.isProduction) {
+    const isStagingEnv = isStaging();
+
+    // In staging, allow startup with warnings; in production, block startup
+    if (config.server.isProduction && !isStagingEnv) {
       throw new Error(
         `Critical security issues found in production configuration: ${criticalIssues.map((i) => i.message).join('; ')}`
       );
     } else {
       logger.warn(
-        'Critical security issues found but allowing startup in non-production mode. ' +
+        `Critical security issues found but allowing startup${isStagingEnv ? ' in staging mode' : ' in non-production mode'}. ` +
           'These MUST be resolved before deploying to production.'
       );
     }
@@ -136,10 +145,6 @@ export function runSecurityValidation(): void {
  * @returns true only if in development or test AND not in production
  */
 export function isInsecureModeAllowed(): boolean {
-  // Explicitly check NODE_ENV is not production AND server config agrees
-  return (
-    process.env.NODE_ENV !== 'production' &&
-    !config.server.isProduction &&
-    process.env.REQUIRE_AUTH !== 'true'
-  );
+  // Explicitly check server config and auth requirements
+  return !config.server.isProduction && !config.auth.requireAuth;
 }

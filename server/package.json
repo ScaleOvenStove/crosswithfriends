@@ -26,7 +26,8 @@
   "dependencies": {
     "@crosswithfriends/shared": "workspace:*",
     "@fastify/cors": "^11.1.0",
-    "@fastify/jwt": "^9.0.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/jwt": "^10.0.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/swagger": "^9.6.1",
     "@fastify/swagger-ui": "^5.2.3",
@@ -34,6 +35,7 @@
     "escape-html": "^1.0.3",
     "fastify": "^5.6.2",
     "fastify-openapi-glue": "^4.7.0",
+    "fastify-plugin": "^5.1.0",
     "firebase-admin": "^13.6.0",
     "joi": "^18.0.2",
     "pg": "^8.16.3",

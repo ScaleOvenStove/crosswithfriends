@@ -362,7 +362,8 @@ __metadata:
     "@crosswithfriends/shared": "workspace:*"
     "@eslint/js": "npm:^9.39.1"
     "@fastify/cors": "npm:^11.1.0"
-    "@fastify/jwt": "npm:^9.0.0"
+    "@fastify/helmet": "npm:^13.0.2"
+    "@fastify/jwt": "npm:^10.0.0"
     "@fastify/rate-limit": "npm:^10.3.0"
     "@fastify/swagger": "npm:^9.6.1"
     "@fastify/swagger-ui": "npm:^5.2.3"
@@ -382,6 +383,7 @@ __metadata:
     eslint-plugin-import: "npm:^2.32.0"
     fastify: "npm:^5.6.2"
     fastify-openapi-glue: "npm:^4.7.0"
+    fastify-plugin: "npm:^5.1.0"
     firebase-admin: "npm:^13.6.0"
     fix-esm-import-path: "npm:^1.10.3"
     joi: "npm:^18.0.2"
@@ -1147,7 +1149,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fastify/error@npm:^4.0.0":
+"@fastify/error@npm:^4.0.0, @fastify/error@npm:^4.2.0":
   version: 4.2.0
   resolution: "@fastify/error@npm:4.2.0"
   checksum: 10c0/8bdafe95b368a71dfc5644ef22e0a2412dfbb2f300cf4658fdbd9035c96d7c034c53fd7d38e1150437d9cf7a2d75e6bd05e458cf9ba5f2e47e527df8a5e0bd4e
@@ -1170,16 +1172,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fastify/jwt@npm:^9.0.0":
-  version: 9.1.0
-  resolution: "@fastify/jwt@npm:9.1.0"
+"@fastify/helmet@npm:^13.0.2":
+  version: 13.0.2
+  resolution: "@fastify/helmet@npm:13.0.2"
   dependencies:
-    "@fastify/error": "npm:^4.0.0"
-    "@lukeed/ms": "npm:^2.0.2"
-    fast-jwt: "npm:^5.0.0"
     fastify-plugin: "npm:^5.0.0"
+    helmet: "npm:^8.0.0"
+  checksum: 10c0/d0dbabdd3ccafc723eb5c1d0dbf76c462c69c9a7f7b54d299c776f327ed2e708b4a9b335b92a6b1f9a2d9b5c46a64d0936b0955b9f2733df34004be92968a51b
+  languageName: node
+  linkType: hard
+
+"@fastify/jwt@npm:^10.0.0":
+  version: 10.0.0
+  resolution: "@fastify/jwt@npm:10.0.0"
+  dependencies:
+    "@fastify/error": "npm:^4.2.0"
+    "@lukeed/ms": "npm:^2.0.2"
+    fast-jwt: "npm:^6.0.2"
+    fastify-plugin: "npm:^5.0.1"
     steed: "npm:^1.1.3"
-  checksum: 10c0/52eab6c2a3f9803fcf656e8d46d90a62a16ba8308a1a04f4e5edead413bf9efadca76f6cd1f550ead4da5696f6b08965234163d59d30d036c1c1d0c0f662fea0
+  checksum: 10c0/52fc50c95df5e783562969fd7a4208c37bf762ce94ea8109e237151f57c76940e121e09e87be326d8aad42a7541372b9c7e4279e1464f69c4b1b670c2b5829bb
   languageName: node
   linkType: hard
 
@@ -6947,15 +6959,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-jwt@npm:^5.0.0":
-  version: 5.0.6
-  resolution: "fast-jwt@npm:5.0.6"
+"fast-jwt@npm:^6.0.2":
+  version: 6.1.0
+  resolution: "fast-jwt@npm:6.1.0"
   dependencies:
     "@lukeed/ms": "npm:^2.0.2"
     asn1.js: "npm:^5.4.1"
     ecdsa-sig-formatter: "npm:^1.0.11"
     mnemonist: "npm:^0.40.0"
-  checksum: 10c0/6384ea5cf5ff2e12077725b1bc11bcf77a304c9be2237a8b8066cad2a96a6425a2000a636acc1796d0836924cf6a5b684c9092ce9ce6ee595bd378d299070891
+  checksum: 10c0/bf5e268c209ef3ee0b321ebac643fc44facecc1811476c3899dbf611fbf044b7b3d0036036fb2c3b1a4cc9e1809c782c3c3622f0bd298da51833f5d6cd81687a
   languageName: node
   linkType: hard
 
@@ -7036,7 +7048,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fastify-plugin@npm:^5.0.0, fastify-plugin@npm:^5.0.1":
+"fastify-plugin@npm:^5.0.0, fastify-plugin@npm:^5.0.1, fastify-plugin@npm:^5.1.0":
   version: 5.1.0
   resolution: "fastify-plugin@npm:5.1.0"
   checksum: 10c0/61b330b8cb03a3581b796d745137499a782934abcf65dbf9a41d07248520cfd220b3ae8b16afeaf81af712e68e1ac24352895132cfeb2b372c66662c0170f365
@@ -8074,6 +8086,13 @@ __metadata:
   dependencies:
     function-bind: "npm:^1.1.2"
   checksum: 10c0/3769d434703b8ac66b209a4cca0737519925bbdb61dd887f93a16372b14694c63ff4e797686d87c90f08168e81082248b9b028bad60d4da9e0d1148766f56eb9
+  languageName: node
+  linkType: hard
+
+"helmet@npm:^8.0.0":
+  version: 8.1.0
+  resolution: "helmet@npm:8.1.0"
+  checksum: 10c0/94d3a7ebc88dbda1421635bdf33f00724adb5252269e93c5ab296ec0db11336d01265659ad3739ab1a1e881fb23a686ff7e788aac6a5fb929285134f157df763
   languageName: node
   linkType: hard
 

@@ -1,3 +1,5 @@
+import type {FastifyReply, FastifyRequest} from 'fastify';
+
 import '../types/fastify.js';
 import type {AppInstance} from '../types/fastify.js';
 
@@ -30,7 +32,10 @@ async function recordSolveRouter(fastify: AppInstance): Promise<void> {
   fastify.post<{Params: {pid: string}; Body: RecordSolveRequest; Reply: RecordSolveResponse}>(
     '/:pid',
     postOptions,
-    async (request: any, _reply: any) => {
+    async (
+      request: FastifyRequest<{Params: {pid: string}; Body: RecordSolveRequest}>,
+      _reply: FastifyReply
+    ): Promise<RecordSolveResponse> => {
       await fastify.repositories.puzzle.recordSolve(
         request.params.pid,
         request.body.gid,

@@ -1,8 +1,8 @@
 import {logger} from '../utils/logger.js';
 
-import {pool} from './pool.js';
+import type {DatabasePool} from './pool.js';
 
-export async function incrementGid(): Promise<string> {
+export async function incrementGid(pool: DatabasePool): Promise<string> {
   const startTime = Date.now();
   const {rows} = await pool.query(
     `
@@ -18,7 +18,7 @@ export async function incrementGid(): Promise<string> {
   return firstRow.nextval as string;
 }
 
-export async function incrementPid(): Promise<string> {
+export async function incrementPid(pool: DatabasePool): Promise<string> {
   const startTime = Date.now();
   const {rows} = await pool.query(
     `

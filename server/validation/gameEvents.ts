@@ -1,5 +1,8 @@
 import {z} from 'zod';
 
+import type {GameEvent, GameEventType} from '../model/game.js';
+import {isObject} from '../utils/typeGuards.js';
+
 // Base schemas for common types
 const cellCoordsSchema = z.object({
   r: z.number().int().nonnegative(),
@@ -95,9 +98,11 @@ const revealAllCluesEventParamsSchema = z.object({});
 
 const startGameEventParamsSchema = z.object({});
 
-const clockStartEventParamsSchema = z.object({});
-const clockPauseEventParamsSchema = z.object({});
-const clockResetEventParamsSchema = z.object({});
+const addPingEventParamsSchema = z.object({}).passthrough();
+const updateColorEventParamsSchema = z.object({}).passthrough();
+const updateClockEventParamsSchema = z.object({}).passthrough();
+const resetEventParamsSchema = z.object({}).passthrough();
+const chatEventParamsSchema = z.object({}).passthrough();
 
 const sendChatMessageEventParamsSchema = z.object({
   id: z.string().min(1),
@@ -125,27 +130,50 @@ const updateCursorEventParamsSchema = z.object({
   timestamp: z.number().optional(),
 });
 
+const gameEventTypeValues = [
+  'create',
+  'updateCell',
+  'updateCursor',
+  'addPing',
+  'updateDisplayName',
+  'updateColor',
+  'updateClock',
+  'check',
+  'reveal',
+  'reset',
+  'chat',
+  'sendChatMessage',
+  'updateTeamName',
+  'updateTeamId',
+  'revealAllClues',
+  'startGame',
+] as const;
+
+const gameEventTypeSchema = z.enum(gameEventTypeValues);
+
 // Base game event schema
 const baseGameEventSchema = z.object({
   user: z.string().optional(),
   timestamp: z.number().positive(),
-  type: z.string(),
+  type: gameEventTypeSchema,
   params: z.unknown(),
 });
 
 // Event type to params schema mapping
-const eventParamsSchemas: Record<string, z.ZodSchema> = {
+const eventParamsSchemas: Record<GameEventType, z.ZodSchema> = {
   create: createEventParamsSchema,
   updateCell: updateCellEventParamsSchema,
+  addPing: addPingEventParamsSchema,
   check: checkEventParamsSchema,
   reveal: revealEventParamsSchema,
   revealAllClues: revealAllCluesEventParamsSchema,
   startGame: startGameEventParamsSchema,
-  clockStart: clockStartEventParamsSchema,
-  clockPause: clockPauseEventParamsSchema,
-  clockReset: clockResetEventParamsSchema,
   sendChatMessage: sendChatMessageEventParamsSchema,
   updateDisplayName: updateDisplayNameEventParamsSchema,
+  updateColor: updateColorEventParamsSchema,
+  updateClock: updateClockEventParamsSchema,
+  reset: resetEventParamsSchema,
+  chat: chatEventParamsSchema,
   updateTeamName: updateTeamNameEventParamsSchema,
   updateTeamId: updateTeamIdEventParamsSchema,
   updateCursor: updateCursorEventParamsSchema,
@@ -157,8 +185,16 @@ const eventParamsSchemas: Record<string, z.ZodSchema> = {
 export function validateGameEvent(event: unknown): {
   valid: boolean;
   error?: string;
-  validatedEvent?: z.infer<typeof baseGameEventSchema> & {params: unknown};
+  validatedEvent?: GameEvent;
 } {
+  if (isObject(event) && 'type' in event && typeof event.type === 'string') {
+    if (!(event.type in eventParamsSchemas)) {
+      return {
+        valid: false,
+        error: `Unknown event type: ${event.type}`,
+      };
+    }
+  }
   // First validate base structure
   const baseResult = baseGameEventSchema.safeParse(event);
   if (!baseResult.success) {
@@ -188,12 +224,15 @@ export function validateGameEvent(event: unknown): {
     };
   }
 
+  const validatedEvent: GameEvent = {
+    ...baseResult.data,
+    type,
+    params: paramsResult.data as GameEvent['params'],
+  };
+
   return {
     valid: true,
-    validatedEvent: {
-      ...baseResult.data,
-      params: paramsResult.data,
-    },
+    validatedEvent,
   };
 }
 

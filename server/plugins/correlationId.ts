@@ -13,6 +13,9 @@
  * - Adds the ID to response headers for client-side tracking
  */
 
+import type {FastifyRequest, FastifyReply} from 'fastify';
+import fp from 'fastify-plugin';
+
 import type {AppInstance} from '../types/fastify.js';
 import {CORRELATION_ID_HEADER} from '../utils/correlationId.js';
 
@@ -23,9 +26,12 @@ declare module 'fastify' {
   }
 }
 
-export function correlationIdPlugin(fastify: AppInstance): void {
+const correlationIdPlugin = (fastify: AppInstance): void => {
   // Add correlation ID to every request
-  fastify.addHook('onRequest', (request: any, reply: any, done: () => void) => {
+  fastify.addHook('onRequest', (request: FastifyRequest, reply: FastifyReply): void => {
+    if (request.url === '/' || request.url === '/healthz') {
+      request.log.info({url: request.url}, 'correlationId onRequest');
+    }
     // Use Fastify's built-in request.id (already generated via genReqId option)
     const correlationId = request.id;
 
@@ -33,8 +39,9 @@ export function correlationIdPlugin(fastify: AppInstance): void {
 
     // Add to response headers for client tracking
     reply.header(CORRELATION_ID_HEADER, correlationId);
-    done();
   });
-}
+};
 
-export default correlationIdPlugin;
+export default fp(correlationIdPlugin, {
+  name: 'correlationId',
+});

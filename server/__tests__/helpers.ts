@@ -1,4 +1,4 @@
-import fastify from 'fastify';
+import fastify, {type FastifyError, type FastifyReply, type FastifyRequest} from 'fastify';
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import {vi} from 'vitest';
@@ -30,6 +30,11 @@ export async function buildTestApp(): Promise<AppInstance> {
 
   // Register JWT plugin for authentication
   await app.register(fastifyJwt, getJwtOptions());
+
+  const mockDb = {
+    query: vi.fn(),
+    connect: vi.fn(),
+  };
 
   // Create mock repositories
   const mockRepositories: Repositories = {
@@ -72,11 +77,12 @@ export async function buildTestApp(): Promise<AppInstance> {
   };
 
   // Decorate the app with mock repositories and services
+  app.decorate('db', mockDb);
   app.decorate('repositories', mockRepositories);
   app.decorate('services', mockServices);
 
   // Set custom error handler (same as production)
-  app.setErrorHandler((error: any, request: any, reply: any) => {
+  app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
     request.log.error(error);
 
     // Handle validation errors
@@ -134,6 +140,31 @@ export async function buildTestApp(): Promise<AppInstance> {
       statusCode,
       error: errorName,
       message: errorObj.message || 'An error occurred',
+    });
+  });
+
+  // Register health endpoints to match server.ts
+  app.get('/healthz', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    await reply.code(200).send({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
+
+  app.get('/api/healthz', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    await reply.code(200).send({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
+
+  app.get('/api/health', (_request: FastifyRequest, reply: FastifyReply): void => {
+    reply.code(200).send({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
     });
   });
 

@@ -2,7 +2,7 @@ import {createHash} from 'crypto';
 import {readdir, readFile} from 'fs/promises';
 import {join} from 'path';
 
-import {pool} from '../model/pool.js';
+import type {DatabasePool} from '../model/pool.js';
 
 import {logger} from './logger.js';
 
@@ -33,7 +33,9 @@ export async function calculateMigrationChecksum(migrationPath: string): Promise
 /**
  * Get migrations that have been applied to the database
  */
-export async function getAppliedMigrations(): Promise<Map<string, {appliedAt: Date; checksum?: string}>> {
+export async function getAppliedMigrations(
+  pool: DatabasePool
+): Promise<Map<string, {appliedAt: Date; checksum?: string}>> {
   // First, ensure the schema_migrations table exists
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations
@@ -68,13 +70,13 @@ export async function getAppliedMigrations(): Promise<Map<string, {appliedAt: Da
 /**
  * Check migration status - returns which migrations are applied and which are missing
  */
-export async function checkMigrationStatus(): Promise<{
+export async function checkMigrationStatus(pool: DatabasePool): Promise<{
   allMigrations: MigrationStatus[];
   missingMigrations: string[];
   upToDate: boolean;
 }> {
   const migrationFiles = await getMigrationFiles();
-  const appliedMigrations = await getAppliedMigrations();
+  const appliedMigrations = await getAppliedMigrations(pool);
   const migrationsDir = join(process.cwd(), 'migrations');
 
   const allMigrations: MigrationStatus[] = [];
@@ -121,7 +123,7 @@ export async function checkMigrationStatus(): Promise<{
 /**
  * Apply a single migration file
  */
-export async function applyMigration(migrationFile: string): Promise<void> {
+export async function applyMigration(pool: DatabasePool, migrationFile: string): Promise<void> {
   const migrationsDir = join(process.cwd(), 'migrations');
   const migrationPath = join(migrationsDir, migrationFile);
 
@@ -160,8 +162,8 @@ export async function applyMigration(migrationFile: string): Promise<void> {
 /**
  * Apply all missing migrations
  */
-export async function applyMissingMigrations(): Promise<void> {
-  const status = await checkMigrationStatus();
+export async function applyMissingMigrations(pool: DatabasePool): Promise<void> {
+  const status = await checkMigrationStatus(pool);
 
   if (status.upToDate) {
     logger.info('All migrations are up to date');
@@ -173,7 +175,7 @@ export async function applyMissingMigrations(): Promise<void> {
   // Migrations must be applied sequentially to maintain order dependencies
   for (const migrationFile of status.missingMigrations) {
     // eslint-disable-next-line no-await-in-loop
-    await applyMigration(migrationFile);
+    await applyMigration(pool, migrationFile);
   }
 
   logger.info('All migrations applied successfully');
