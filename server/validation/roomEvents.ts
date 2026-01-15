@@ -1,3 +1,4 @@
+import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
 import {RoomEventType} from '@crosswithfriends/shared/roomEvents';
 import {z} from 'zod';
 
@@ -30,7 +31,7 @@ const roomEventParamsSchemas: Record<RoomEventType, z.ZodSchema> = {
 export function validateRoomEvent(event: unknown): {
   valid: boolean;
   error?: string;
-  validatedEvent?: z.infer<typeof baseRoomEventSchema> & {params: unknown};
+  validatedEvent?: RoomEvent;
 } {
   // First validate base structure
   const baseResult = baseRoomEventSchema.safeParse(event);
@@ -62,7 +63,18 @@ export function validateRoomEvent(event: unknown): {
 
   // For USER_PING, ensure uid in params matches event uid
   if (type === RoomEventType.USER_PING) {
-    const pingParams = paramsResult.data as {uid: string};
+    const pingParams = paramsResult.data;
+    if (
+      typeof pingParams !== 'object' ||
+      pingParams === null ||
+      !('uid' in pingParams) ||
+      typeof pingParams.uid !== 'string'
+    ) {
+      return {
+        valid: false,
+        error: 'USER_PING event params missing uid',
+      };
+    }
     if (pingParams.uid !== uid) {
       return {
         valid: false,

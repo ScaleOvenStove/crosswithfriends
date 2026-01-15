@@ -12,7 +12,8 @@
 
 /* eslint-disable no-console */
 
-import {pool} from '../model/pool.js';
+import {config} from '../config/index.js';
+import {createPool} from '../model/pool.js';
 import {logger} from '../utils/logger.js';
 import {applyMissingMigrations, checkMigrationStatus} from '../utils/migrations.js';
 
@@ -21,11 +22,11 @@ async function main(): Promise<void> {
 
   // Check database connection configuration
   const dbConfig = {
-    host: process.env.PGHOST || 'localhost',
-    user: process.env.PGUSER || process.env.USER || 'unknown',
-    database: process.env.PGDATABASE || 'unknown',
-    hasPassword: !!process.env.PGPASSWORD,
-    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    host: config.database.host,
+    user: config.database.user || 'unknown',
+    database: config.database.database || 'unknown',
+    hasPassword: !!config.database.password,
+    hasDatabaseUrl: !!config.database.connectionString,
   };
 
   console.log('\n🔍 Database Configuration:');
@@ -51,8 +52,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  const pool = createPool(config);
   try {
-    const status = await checkMigrationStatus();
+    const status = await checkMigrationStatus(pool);
 
     console.log('\n📊 Migration Status:\n');
     console.log('Migration Name'.padEnd(40) + 'Status'.padEnd(15) + 'Applied At');
@@ -81,7 +83,7 @@ async function main(): Promise<void> {
 
       if (shouldApply) {
         console.log('Applying missing migrations...\n');
-        await applyMissingMigrations();
+        await applyMissingMigrations(pool);
         console.log('✅ All migrations applied successfully!\n');
         process.exit(0);
       } else {

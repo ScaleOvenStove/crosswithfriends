@@ -1,4 +1,5 @@
 import type {ListPuzzleRequestFilters, PuzzleJson} from '@crosswithfriends/shared/types';
+import type {FastifyReply, FastifyRequest} from 'fastify';
 
 import '../types/fastify.js';
 import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
@@ -57,7 +58,10 @@ async function puzzleListRouter(fastify: AppInstance): Promise<void> {
   fastify.get<{Querystring: PuzzleListQuery; Reply: ListPuzzlesResponse}>(
     '',
     getOptions,
-    async (request: any, _reply: any) => {
+    async (
+      request: FastifyRequest<{Querystring: PuzzleListQuery}>,
+      _reply: FastifyReply
+    ): Promise<ListPuzzlesResponse> => {
       const page = Number.parseInt(request.query.page, 10);
       const pageSize = Number.parseInt(request.query.pageSize, 10);
 
@@ -73,7 +77,7 @@ async function puzzleListRouter(fastify: AppInstance): Promise<void> {
           Mini: sizeMini === 'true' && typeof sizeMini === 'string',
           Standard: sizeStandard === 'true' && typeof sizeStandard === 'string',
         },
-        nameOrTitleFilter: (request.query.nameOrTitle ?? '') as string,
+        nameOrTitleFilter: request.query.nameOrTitle ?? '',
       };
 
       const result = await fastify.repositories.puzzle.list(filters, pageSize, page * pageSize);

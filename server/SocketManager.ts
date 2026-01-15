@@ -1,16 +1,18 @@
 // ============= Server Values ===========
 
 import type {RoomEvent} from '@crosswithfriends/shared/roomEvents';
-import {Server as SocketIOServer, type Socket} from 'socket.io';
+import {Server as SocketIOServer} from 'socket.io';
 
 import {config} from './config/index.js';
 import type {GameEvent} from './model/game.js';
 import {addGameEvent, getGameEvents} from './model/game.js';
+import type {DatabasePool} from './model/pool.js';
 import {addRoomEvent, getRoomEvents} from './model/room.js';
 import type {IGameRepository} from './repositories/interfaces/IGameRepository.js';
 import type {IRoomRepository} from './repositories/interfaces/IRoomRepository.js';
 import {getOrCreateCorrelationId} from './utils/correlationId.js';
 import {logger} from './utils/logger.js';
+import {isArray, isObject, isString} from './utils/typeGuards.js';
 import {
   authenticateSocket,
   isUserAuthorizedForGame,
@@ -33,23 +35,28 @@ interface SocketManagerRepositories {
 
 // Look for { .sv: 'timestamp' } and replace with Date.now()
 function assignTimestamp(event: unknown): unknown {
-  if (event && typeof event === 'object') {
-    const eventObj = event as SocketEvent;
+  if (isArray(event)) {
+    return event.map((item) => assignTimestamp(item));
+  }
+  if (isObject(event)) {
     // Handle Firebase-style server timestamp placeholder
-    if (eventObj['.sv'] === 'timestamp') {
+    if (event['.sv'] === 'timestamp' && Object.keys(event).length === 1) {
       return Date.now();
     }
-    // Handle arrays
-    if (Array.isArray(eventObj)) {
-      return eventObj.map((item) => assignTimestamp(item));
-    }
-    // Clone object properly
+
     const result: SocketEvent = {};
-    for (const key in eventObj) {
-      if (Object.prototype.hasOwnProperty.call(eventObj, key)) {
-        result[key] = assignTimestamp(eventObj[key]);
+    if (event['.sv'] === 'timestamp' && !('timestamp' in event)) {
+      result.timestamp = Date.now();
+    }
+    for (const key in event) {
+      if (Object.prototype.hasOwnProperty.call(event, key)) {
+        if (key === '.sv') {
+          continue;
+        }
+        result[key] = assignTimestamp(event[key]);
       }
     }
+
     // Ensure timestamp field is always valid for event objects
     if ('timestamp' in result) {
       const timestamp = result.timestamp;
@@ -75,10 +82,12 @@ function assignTimestamp(event: unknown): unknown {
 
 class SocketManager {
   io: SocketIOServer;
+  private db: DatabasePool;
   private repositories: SocketManagerRepositories | null = null;
 
-  constructor(io: SocketIOServer, repositories?: SocketManagerRepositories) {
+  constructor(io: SocketIOServer, db: DatabasePool, repositories?: SocketManagerRepositories) {
     this.io = io;
+    this.db = db;
     if (repositories) {
       this.repositories = repositories;
     }
@@ -93,15 +102,25 @@ class SocketManager {
   }
 
   async addGameEvent(gid: string, event: SocketEvent | GameEvent): Promise<void> {
-    const gameEvent: GameEvent = assignTimestamp(event) as GameEvent;
-    await addGameEvent(gid, gameEvent);
-    this.io.to(`game-${gid}`).emit('game_event', gameEvent);
+    const timestamped = assignTimestamp(event);
+    const validation = validateGameEvent(timestamped);
+    if (!validation.valid || !validation.validatedEvent) {
+      logger.warn({gid, error: validation.error}, 'Rejected invalid game event');
+      return;
+    }
+    await addGameEvent(this.db, gid, validation.validatedEvent);
+    this.io.to(`game-${gid}`).emit('game_event', validation.validatedEvent);
   }
 
   async addRoomEvent(rid: string, event: SocketEvent | RoomEvent): Promise<void> {
-    const roomEvent: RoomEvent = assignTimestamp(event) as RoomEvent;
-    await addRoomEvent(rid, roomEvent);
-    this.io.to(`room-${rid}`).emit('room_event', roomEvent);
+    const timestamped = assignTimestamp(event);
+    const validation = validateRoomEvent(timestamped);
+    if (!validation.valid || !validation.validatedEvent) {
+      logger.warn({rid, error: validation.error}, 'Rejected invalid room event');
+      return;
+    }
+    await addRoomEvent(this.db, rid, validation.validatedEvent);
+    this.io.to(`room-${rid}`).emit('room_event', validation.validatedEvent);
   }
 
   /**
@@ -166,14 +185,13 @@ class SocketManager {
       // In development mode, userId will be null, which is allowed
 
       // Extract or generate correlation ID for this connection
-      const correlationId = getOrCreateCorrelationId(
-        socket.handshake.headers as Record<string, string | string[] | undefined>
-      );
+      const correlationId = getOrCreateCorrelationId(socket.handshake.headers);
 
       // Store user ID and correlation ID on socket instance for later use
       // userId may be null in development mode
-      (socket as Socket & {userId?: string | null; correlationId: string}).userId = userId;
-      (socket as Socket & {userId?: string | null; correlationId: string}).correlationId = correlationId;
+      const socketData: {userId?: string | null; correlationId?: string} = socket.data;
+      socketData.userId = userId;
+      socketData.correlationId = correlationId;
 
       logger.info(
         {socketId: socket.id, userId: userId || 'anonymous', correlationId},
@@ -207,7 +225,7 @@ class SocketManager {
           }
 
           // Verify user is authorized to join this game
-          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
+          const socketUserId = isString(socket.data.userId) ? socket.data.userId : null;
 
           // In development mode, allow joining without authentication
           if (!socketUserId || !isValidUserId(socketUserId)) {
@@ -271,7 +289,7 @@ class SocketManager {
           }
 
           // Verify user is authorized to access this game
-          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
+          const socketUserId = isString(socket.data.userId) ? socket.data.userId : null;
           if (!socketUserId || !isValidUserId(socketUserId)) {
             if (config.auth.requireAuth) {
               logger.warn({socketId: socket.id, gid}, '[socket] Unauthorized sync_all_game_events attempt');
@@ -297,7 +315,7 @@ class SocketManager {
             }
           }
 
-          const {events} = await getGameEvents(gid);
+          const {events} = await getGameEvents(this.db, gid);
           logger.debug({gid, eventCount: events.length}, '[socket] Syncing game events');
           if (ack) void ack(events);
         } catch (error) {
@@ -313,7 +331,7 @@ class SocketManager {
             return;
           }
 
-          const {events, total} = await getGameEvents(data.gid, {limit: data.limit || 1000});
+          const {events, total} = await getGameEvents(this.db, data.gid, {limit: data.limit || 1000});
           logger.debug(
             {gid: data.gid, eventCount: events.length, total},
             '[socket] Syncing recent game events'
@@ -335,12 +353,12 @@ class SocketManager {
             }
 
             // Calculate offset for archived events (events before the recent ones)
-            const {total} = await getGameEvents(data.gid);
+            const {total} = await getGameEvents(this.db, data.gid);
             const recentLimit = 1000;
             const archivedOffset = Math.max(0, total - recentLimit - (data.offset || 0));
             const archivedLimit = data.limit || 1000;
 
-            const {events} = await getGameEvents(data.gid, {
+            const {events} = await getGameEvents(this.db, data.gid, {
               limit: archivedLimit,
               offset: archivedOffset,
             });
@@ -380,7 +398,7 @@ class SocketManager {
           }
 
           // Get authenticated user ID from socket
-          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
+          const socketUserId = isString(socket.data.userId) ? socket.data.userId : null;
           if (!socketUserId || !isValidUserId(socketUserId)) {
             if (config.auth.requireAuth) {
               logger.warn({socketId: socket.id, gid}, '[socket] Unauthenticated game event attempt');
@@ -403,7 +421,11 @@ class SocketManager {
           }
 
           // Ensure event has the authenticated user ID
-          const validatedEvent = validation.validatedEvent as GameEvent;
+          const validatedEvent = validation.validatedEvent;
+          if (!validatedEvent) {
+            socket.emit('game_error', {error: 'Invalid event payload'});
+            return;
+          }
           validatedEvent.user = socketUserId;
 
           await this.addGameEvent(gid, validatedEvent);
@@ -426,7 +448,7 @@ class SocketManager {
           }
 
           // Verify user is authorized to join this room
-          const socketUserId = (socket as Socket & {userId?: string | null}).userId;
+          const socketUserId = isString(socket.data.userId) ? socket.data.userId : null;
           if (!socketUserId || !isValidUserId(socketUserId)) {
             if (config.auth.requireAuth) {
               logger.warn({socketId: socket.id, rid}, '[socket] Unauthorized join_room attempt');
@@ -488,7 +510,7 @@ class SocketManager {
           }
 
           // Verify user is authorized to access this room
-          const socketUserId = (socket as Socket & {userId?: string}).userId;
+          const socketUserId = isString(socket.data.userId) ? socket.data.userId : null;
           if (!socketUserId || !isValidUserId(socketUserId)) {
             logger.warn({socketId: socket.id, rid}, '[socket] Unauthorized sync_all_room_events attempt');
             if (ack) void ack({error: 'Authentication required'});
@@ -506,7 +528,7 @@ class SocketManager {
             return;
           }
 
-          const events = await getRoomEvents(rid);
+          const events = await getRoomEvents(this.db, rid);
           logger.debug({rid, eventCount: events.length}, '[socket] Syncing room events');
           if (ack) void ack(events);
         } catch (error) {
@@ -541,7 +563,7 @@ class SocketManager {
           }
 
           // Get authenticated user ID from socket
-          const socketUserId = (socket as Socket & {userId?: string}).userId;
+          const socketUserId = isString(socket.data.userId) ? socket.data.userId : null;
           if (!socketUserId || !isValidUserId(socketUserId)) {
             logger.warn({socketId: socket.id, rid}, '[socket] Unauthenticated room event attempt');
             if (ack) void ack({error: 'Authentication required'});
@@ -557,9 +579,13 @@ class SocketManager {
           }
 
           // Ensure event has the authenticated user ID (if room events support uid field)
-          const validatedEvent = validation.validatedEvent as RoomEvent;
+          const validatedEvent = validation.validatedEvent;
+          if (!validatedEvent) {
+            socket.emit('room_error', {error: 'Invalid event payload'});
+            return;
+          }
           if ('uid' in validatedEvent && validatedEvent.uid === undefined) {
-            (validatedEvent as RoomEvent & {uid?: string}).uid = socketUserId;
+            validatedEvent.uid = socketUserId;
           }
 
           await this.addRoomEvent(rid, validatedEvent);

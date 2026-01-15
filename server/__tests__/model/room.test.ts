@@ -1,14 +1,11 @@
 import {describe, it, expect, beforeEach, vi, type Mock} from 'vitest';
 import {RoomEventType} from '@crosswithfriends/shared/roomEvents';
 import * as roomModel from '../../model/room.js';
-import {pool} from '../../model/pool.js';
 
-// Mock the database pool
-vi.mock('../../model/pool.js', () => ({
-  pool: {
-    query: vi.fn(),
-  },
-}));
+const mockPool = {
+  query: vi.fn(),
+  connect: vi.fn(),
+};
 
 describe('Room Model', () => {
   beforeEach(() => {
@@ -23,13 +20,13 @@ describe('Room Model', () => {
         {type: RoomEventType.SET_GAME, timestamp: 2000, uid: 'user1', params: {gid: 'game1'}},
       ];
 
-      (pool.query as Mock).mockResolvedValue({
+      (mockPool.query as Mock).mockResolvedValue({
         rows: mockEvents.map((event) => ({event_payload: event})),
       });
 
-      const events = await roomModel.getRoomEvents(mockRid);
+      const events = await roomModel.getRoomEvents(mockPool, mockRid);
 
-      expect(pool.query).toHaveBeenCalledWith(
+      expect(mockPool.query).toHaveBeenCalledWith(
         'SELECT event_payload FROM room_events WHERE rid=$1 ORDER BY ts ASC',
         [mockRid]
       );
@@ -38,9 +35,9 @@ describe('Room Model', () => {
 
     it('should return empty array when no events exist', async () => {
       const mockRid = 'test-room-123';
-      (pool.query as Mock).mockResolvedValue({rows: []});
+      (mockPool.query as Mock).mockResolvedValue({rows: []});
 
-      const events = await roomModel.getRoomEvents(mockRid);
+      const events = await roomModel.getRoomEvents(mockPool, mockRid);
       expect(events).toEqual([]);
     });
 
@@ -55,11 +52,11 @@ describe('Room Model', () => {
           params: {uid: `user${i}`},
         }));
 
-      (pool.query as Mock).mockResolvedValue({
+      (mockPool.query as Mock).mockResolvedValue({
         rows: mockEvents.map((event) => ({event_payload: event})),
       });
 
-      const events = await roomModel.getRoomEvents(mockRid);
+      const events = await roomModel.getRoomEvents(mockPool, mockRid);
       expect(events).toHaveLength(10);
     });
   });
@@ -76,11 +73,11 @@ describe('Room Model', () => {
         uid: 'user123',
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await roomModel.addRoomEvent(mockRid, mockEvent);
+      await roomModel.addRoomEvent(mockPool, mockRid, mockEvent);
 
-      expect(pool.query).toHaveBeenCalledWith(
+      expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO room_events'),
         expect.arrayContaining([
           mockRid,
@@ -102,11 +99,11 @@ describe('Room Model', () => {
         uid: 'user123',
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await roomModel.addRoomEvent(mockRid, mockEvent);
+      await roomModel.addRoomEvent(mockPool, mockRid, mockEvent);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const isoString = callArgs[2];
       expect(isoString).toBe(new Date(timestamp).toISOString());
     });
@@ -120,11 +117,11 @@ describe('Room Model', () => {
         uid: 'user123',
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await roomModel.addRoomEvent(mockRid, mockEvent);
+      await roomModel.addRoomEvent(mockPool, mockRid, mockEvent);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const isoString = callArgs[2];
       // Should be a valid ISO string (current time)
       expect(isoString).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
@@ -139,11 +136,11 @@ describe('Room Model', () => {
         uid: 'user123',
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await roomModel.addRoomEvent(mockRid, mockEvent);
+      await roomModel.addRoomEvent(mockPool, mockRid, mockEvent);
 
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       const isoString = callArgs[2];
       // Should be a valid ISO string (current time fallback)
       expect(isoString).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
@@ -160,12 +157,12 @@ describe('Room Model', () => {
         uid: 'user123',
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await roomModel.addRoomEvent(mockRid, mockEvent);
+      await roomModel.addRoomEvent(mockPool, mockRid, mockEvent);
 
-      expect(pool.query).toHaveBeenCalled();
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      expect(mockPool.query).toHaveBeenCalled();
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       expect(callArgs[4].type).toBe(RoomEventType.SET_GAME);
       expect(callArgs[4].params.gid).toBe('game-456');
     });
@@ -181,12 +178,12 @@ describe('Room Model', () => {
         uid: 'user789',
       };
 
-      (pool.query as Mock).mockResolvedValue({});
+      (mockPool.query as Mock).mockResolvedValue({});
 
-      await roomModel.addRoomEvent(mockRid, mockEvent);
+      await roomModel.addRoomEvent(mockPool, mockRid, mockEvent);
 
-      expect(pool.query).toHaveBeenCalled();
-      const callArgs = (pool.query as Mock).mock.calls[0][1];
+      expect(mockPool.query).toHaveBeenCalled();
+      const callArgs = (mockPool.query as Mock).mock.calls[0][1];
       expect(callArgs[4].type).toBe(RoomEventType.USER_PING);
       expect(callArgs[4].params.uid).toBe('user789');
     });

@@ -1,12 +1,14 @@
 import type {PuzzleJson} from '@crosswithfriends/shared/types';
+import type {FastifyReply, FastifyRequest} from 'fastify';
 
 import '../types/fastify.js';
+import {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 import type {AppInstance} from '../types/fastify.js';
 import {validatePuzzleId} from '../utils/inputValidation.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 
 import {createHttpError} from './errors.js';
-import type {CreatePuzzleRequest, CreatePuzzleResponse} from './generated/index.js';
+import type {CreatePuzzleResponse} from './generated/index.js';
 import {
   AddPuzzleRequestSchema,
   AddPuzzleResponseSchema,
@@ -16,6 +18,11 @@ import {
 
 // eslint-disable-next-line require-await
 async function puzzleRouter(fastify: AppInstance): Promise<void> {
+  interface CreatePuzzleBody {
+    pid?: string;
+    puzzle: PuzzleJson;
+    isPublic?: boolean;
+  }
   const postOptions = {
     schema: {
       operationId: 'createPuzzle',
@@ -31,10 +38,13 @@ async function puzzleRouter(fastify: AppInstance): Promise<void> {
     },
   };
 
-  fastify.post<{Body: CreatePuzzleRequest; Reply: CreatePuzzleResponse}>(
+  fastify.post<{Body: CreatePuzzleBody; Reply: CreatePuzzleResponse}>(
     '',
     postOptions,
-    async (request: any, _reply: any) => {
+    async (
+      request: FastifyRequest<{Body: CreatePuzzleBody}>,
+      _reply: FastifyReply
+    ): Promise<CreatePuzzleResponse> => {
       logRequest(request);
 
       // Validate puzzle ID format if provided
@@ -45,9 +55,10 @@ async function puzzleRouter(fastify: AppInstance): Promise<void> {
         }
       }
 
+      const puzzle = convertOldFormatToIpuz(request.body.puzzle);
       const pid = await fastify.repositories.puzzle.create(
         request.body.pid || '',
-        request.body.puzzle,
+        puzzle,
         request.body.isPublic ?? false
       );
       return {pid};
@@ -78,7 +89,7 @@ async function puzzleRouter(fastify: AppInstance): Promise<void> {
   fastify.get<{Params: {pid: string}; Reply: PuzzleJson}>(
     '/:pid',
     getOptions,
-    async (request: any, _reply: any) => {
+    async (request: FastifyRequest<{Params: {pid: string}}>, _reply: FastifyReply): Promise<PuzzleJson> => {
       logRequest(request);
       const {pid} = request.params;
 

@@ -1,62 +1,62 @@
 import pg from 'pg';
 
-import {config} from '../config/index.js';
+import type {Config} from '../config/index.js';
 import {logger} from '../utils/logger.js';
 
 // ============= Database Operations ============
 
-// Build connection config from centralized configuration
-const poolConfig: pg.PoolConfig = {
-  // Connection pool settings for better performance
-  max: config.database.pool.max,
-  min: config.database.pool.min,
-  idleTimeoutMillis: config.database.pool.idleTimeoutMillis,
-  connectionTimeoutMillis: config.database.pool.connectionTimeoutMillis,
-  statement_timeout: config.database.pool.statementTimeout,
-};
-
-// If DATABASE_URL is provided (e.g. in Docker, Heroku, or Render), use it
-// This overrides all individual connection parameters
-// Note: Validation is handled in config/index.ts - we assume config has already validated inputs
-if (config.database.connectionString) {
-  poolConfig.connectionString = config.database.connectionString;
-  logger.info('Using DATABASE_URL connection string');
-} else {
-  // Use individual connection parameters
-  // Config module has already validated that both user and database are provided
-  poolConfig.host = config.database.host;
-  poolConfig.user = config.database.user;
-  poolConfig.database = config.database.database;
-}
-
-// Only set password and SSL when NOT using connectionString
-// (connectionString already contains all connection info including SSL)
-if (!config.database.connectionString) {
-  // Only include password if it's explicitly set and non-empty
-  // Empty strings can cause SCRAM authentication errors
-  if (config.database.password !== undefined && config.database.password !== '') {
-    poolConfig.password = config.database.password;
-  }
-
-  // Only include SSL config if needed
-  if (config.database.useSSL) {
-    poolConfig.ssl = {
-      rejectUnauthorized: config.database.sslRejectUnauthorized,
-    };
-
-    if (!config.database.sslRejectUnauthorized) {
-      logger.warn(
-        'SSL certificate validation is DISABLED. This should only be used in development with self-signed certificates.'
-      );
-    }
-  }
-}
-
 /**
  * Creates a new database connection pool
+ * @param appConfig - Centralized application configuration
  * @returns A new PostgreSQL pool instance
  */
-export function createPool(): pg.Pool {
+export function createPool(appConfig: Config): pg.Pool {
+  const poolConfig: pg.PoolConfig = {
+    // Connection pool settings for better performance
+    max: appConfig.database.pool.max,
+    min: appConfig.database.pool.min,
+    idleTimeoutMillis: appConfig.database.pool.idleTimeoutMillis,
+    connectionTimeoutMillis: appConfig.database.pool.connectionTimeoutMillis,
+    statement_timeout: appConfig.database.pool.statementTimeout,
+  };
+
+  // If DATABASE_URL is provided (e.g. in Docker, Heroku, or Render), use it
+  // This overrides all individual connection parameters
+  // Note: Validation is handled in config/index.ts - we assume config has already validated inputs
+  if (appConfig.database.connectionString) {
+    poolConfig.connectionString = appConfig.database.connectionString;
+    logger.info('Using DATABASE_URL connection string');
+  } else {
+    // Use individual connection parameters
+    // Config module has already validated that both user and database are provided
+    poolConfig.host = appConfig.database.host;
+    poolConfig.user = appConfig.database.user;
+    poolConfig.database = appConfig.database.database;
+  }
+
+  // Only set password and SSL when NOT using connectionString
+  // (connectionString already contains all connection info including SSL)
+  if (!appConfig.database.connectionString) {
+    // Only include password if it's explicitly set and non-empty
+    // Empty strings can cause SCRAM authentication errors
+    if (appConfig.database.password !== undefined && appConfig.database.password !== '') {
+      poolConfig.password = appConfig.database.password;
+    }
+
+    // Only include SSL config if needed
+    if (appConfig.database.useSSL) {
+      poolConfig.ssl = {
+        rejectUnauthorized: appConfig.database.sslRejectUnauthorized,
+      };
+
+      if (!appConfig.database.sslRejectUnauthorized) {
+        logger.warn(
+          'SSL certificate validation is DISABLED. This should only be used in development with self-signed certificates.'
+        );
+      }
+    }
+  }
+
   const pool = new pg.Pool(poolConfig);
 
   // Add error handlers for better debugging
@@ -65,7 +65,7 @@ export function createPool(): pg.Pool {
   });
 
   // Log pool events in development
-  if (config.server.isDevelopment) {
+  if (appConfig.server.isDevelopment) {
     pool.on('connect', () => {
       logger.debug('New database client connected');
     });
@@ -85,5 +85,5 @@ export async function closePool(pool: pg.Pool): Promise<void> {
   await pool.end();
 }
 
-// Export singleton for backward compatibility (deprecated - use createPool instead)
-export const pool = createPool();
+// Type export for use in dependency injection
+export type DatabasePool = pg.Pool;

@@ -5,6 +5,7 @@
  * Uses @fastify/jwt for JWT token management.
  */
 
+import type {FastifyReply, FastifyRequest} from 'fastify';
 import {config} from '../config/index.js';
 import type {AppInstance} from '../types/fastify.js';
 import {
@@ -14,6 +15,7 @@ import {
   type JwtPayload,
 } from '../utils/auth.js';
 import {isFirebaseAdminInitialized, verifyFirebaseToken} from '../utils/firebaseAdmin.js';
+import {isJwtPayload} from '../utils/typeGuards.js';
 
 import {createHttpError} from './errors.js';
 import type {
@@ -63,7 +65,10 @@ async function authRouter(fastify: AppInstance): Promise<void> {
     '/token',
     createTokenOptions,
     // eslint-disable-next-line require-await
-    async (request: any, _reply: any) => {
+    async (
+      request: FastifyRequest<{Body: CreateTokenRequest}>,
+      _reply: FastifyReply
+    ): Promise<CreateTokenResponse> => {
       request.log.debug({body: request.body ? Object.keys(request.body) : []}, 'Creating auth token');
 
       let userId = request.body?.userId;
@@ -138,7 +143,10 @@ async function authRouter(fastify: AppInstance): Promise<void> {
   fastify.post<{Body: {firebaseToken: string}; Reply: CreateTokenResponse}>(
     '/firebase-token',
     firebaseTokenOptions,
-    async (request: any, _reply: any) => {
+    async (
+      request: FastifyRequest<{Body: {firebaseToken: string}}>,
+      _reply: FastifyReply
+    ): Promise<CreateTokenResponse> => {
       request.log.debug('Exchanging Firebase token for backend JWT');
 
       const {firebaseToken} = request.body;
@@ -238,7 +246,7 @@ async function authRouter(fastify: AppInstance): Promise<void> {
   fastify.post<{Body: ValidateTokenRequest; Reply: ValidateTokenResponse}>(
     '/validate',
     validateTokenOptions,
-    (request: any, _reply: any) => {
+    (request: FastifyRequest<{Body: ValidateTokenRequest}>, _reply: FastifyReply): ValidateTokenResponse => {
       request.log.debug('Validating auth token');
 
       const {token} = request.body;
@@ -295,7 +303,7 @@ async function authRouter(fastify: AppInstance): Promise<void> {
   fastify.get<{Reply: {userId: string; expiresAt: number}}>(
     '/me',
     meOptions,
-    async (request: any, _reply: any) => {
+    async (request: FastifyRequest, _reply: FastifyReply): Promise<{userId: string; expiresAt: number}> => {
       request.log.debug('Getting current user');
 
       try {
@@ -303,9 +311,8 @@ async function authRouter(fastify: AppInstance): Promise<void> {
         await request.jwtVerify();
 
         // Access decoded payload via request.user (set by @fastify/jwt)
-        const user = request.user as JwtPayload;
-
-        if (!user.userId) {
+        const user = request.user;
+        if (!isJwtPayload(user)) {
           throw createHttpError('Invalid token payload', 401);
         }
 

@@ -18,14 +18,14 @@ import {
 } from '../utils/puzzleFormatUtils.js';
 import {validatePuzzle} from '../validation/puzzleSchema.js';
 
-import {pool} from './pool.js';
+import type {DatabasePool} from './pool.js';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
 // Re-export adapter functions for backward compatibility
 export {convertOldFormatToIpuz} from '../adapters/puzzleFormatAdapter.js';
 
-export async function getPuzzle(pid: string): Promise<PuzzleJson> {
+export async function getPuzzle(pool: DatabasePool, pid: string): Promise<PuzzleJson> {
   const startTime = Date.now();
   // Query uses normalized columns where available, falls back to puzzle_data for grid/clues
   const {rows} = await pool.query(
@@ -57,7 +57,8 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   const puzzleData = firstRow.puzzle_data || {};
   const convertedPuzzle = convertOldFormatToIpuz(puzzleData);
   // Check if puzzle was converted from old format (has 'grid' field)
-  const wasOldFormat = 'grid' in puzzleData && Array.isArray((puzzleData as any).grid);
+  const puzzleDataWithGrid = puzzleData as {grid?: unknown};
+  const wasOldFormat = 'grid' in puzzleDataWithGrid && Array.isArray(puzzleDataWithGrid.grid);
   const puzzle: PuzzleJson = {
     ...convertedPuzzle,
     // Overlay normalized columns (these are authoritative after migration)
@@ -117,6 +118,7 @@ const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']):
 };
 
 export async function listPuzzles(
+  pool: DatabasePool,
   filter: ListPuzzleRequestFilters,
   limit: number,
   offset: number
@@ -220,7 +222,12 @@ export async function listPuzzles(
 // Puzzle validation is now handled by validatePuzzle from validation/puzzleSchema.ts
 // Additional validation for solution array is done inline in addPuzzle function
 
-export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: string): Promise<string> {
+export async function addPuzzle(
+  pool: DatabasePool,
+  puzzle: PuzzleJson,
+  isPublic = false,
+  pid?: string
+): Promise<string> {
   let puzzleId = pid;
   if (!puzzleId) {
     puzzleId = uuid.v4().substring(0, 8);
@@ -323,7 +330,7 @@ export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: stri
   return puzzleId;
 }
 
-async function isGidAlreadySolved(gid: string): Promise<boolean> {
+async function isGidAlreadySolved(pool: DatabasePool, gid: string): Promise<boolean> {
   // Note: This gate makes use of the assumption "one pid per gid";
   // The unique index on (pid, gid) is more strict than this
   const {rows} = await pool.query(
@@ -341,11 +348,16 @@ async function isGidAlreadySolved(gid: string): Promise<boolean> {
   return firstRow.count > 0;
 }
 
-export async function recordSolve(pid: string, gid: string, timeToSolve: number): Promise<void> {
+export async function recordSolve(
+  pool: DatabasePool,
+  pid: string,
+  gid: string,
+  timeToSolve: number
+): Promise<void> {
   const solved_time = Date.now();
 
   // Clients may log a solve multiple times; skip logging after the first one goes through
-  if (await isGidAlreadySolved(gid)) {
+  if (await isGidAlreadySolved(pool, gid)) {
     return;
   }
   const client = await pool.connect();
@@ -379,6 +391,7 @@ export async function recordSolve(pid: string, gid: string, timeToSolve: number)
 }
 
 export async function getPuzzleInfo(
+  pool: DatabasePool,
   pid: string
 ): Promise<{title: string; author: string; copyright: string; description: string; type?: string}> {
   // Use normalized columns directly (much faster than fetching full puzzle)

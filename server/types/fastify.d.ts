@@ -24,7 +24,8 @@ declare module 'fastify' {
   > {
     repositories: import('../repositories/index.js').Repositories;
     services: import('../services/index.js').Services;
-    pool: import('pg').Pool;
+    db: import('pg').Pool;
+    config: import('../config/index.js').Config;
   }
 }
 

@@ -5,12 +5,11 @@
 # ============================================================================
 # Stage 1: Dependencies
 # ============================================================================
-FROM node:20-alpine AS dependencies
+FROM node:24-alpine AS dependencies
 
-# Install security updates, dumb-init, and yarn
+# Install security updates and enable yarn
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache dumb-init && \
     corepack enable && \
     corepack prepare yarn@stable --activate && \
     rm -rf /var/cache/apk/*
@@ -32,7 +31,7 @@ RUN yarn install --immutable && \
 # ============================================================================
 # Stage 2: Build
 # ============================================================================
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 # Enable yarn
 RUN corepack enable && \
@@ -54,9 +53,8 @@ RUN yarn install --immutable && yarn cache clean
 COPY server/ ./server/
 COPY shared/ ./shared/
 
-# Copy TypeScript config files needed for build
-COPY tsconfig.base.json ./
-COPY tsconfig.json ./
+
+COPY tsconfig.base.json tsconfig.json turbo.json ./
 
 # Build the TypeScript code
 RUN yarn build:backend && \
@@ -66,12 +64,12 @@ RUN yarn build:backend && \
 # ============================================================================
 # Stage 3: Production
 # ============================================================================
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 
-# Install security updates and dumb-init
+# Install security updates, dumb-init, and wget (for health checks)
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache dumb-init && \
+    apk add --no-cache dumb-init wget && \
     rm -rf /var/cache/apk/*
 
 WORKDIR /app
@@ -102,9 +100,8 @@ USER nodejs
 # Expose port (can be overridden via environment variable)
 EXPOSE 3000
 
-# Health check endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD wget --no-verbose --tries=1 --spider --timeout=5 http://localhost:3000/api/health || exit 1
 
 # Use dumb-init to handle signals properly (SIGTERM, SIGINT, etc.)
 ENTRYPOINT ["dumb-init", "--"]

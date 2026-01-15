@@ -26,10 +26,11 @@ import type {
   LegacyUpdateColorParams,
   LegacyUpdateCursorParams,
 } from './legacyEventTypes.js';
-import {pool} from './pool.js';
+import type {DatabasePool} from './pool.js';
 import {getPuzzle} from './puzzle.js';
 
 export async function getGameEvents(
+  pool: DatabasePool,
   gid: string,
   options?: {limit?: number; offset?: number}
 ): Promise<{events: GameEvent[]; total: number}> {
@@ -37,11 +38,11 @@ export async function getGameEvents(
 
   // Use COUNT(*) OVER() window function to get total in a single query
   let query = `
-    SELECT 
+    SELECT
       event_payload,
       COUNT(*) OVER() as total
-    FROM game_events 
-    WHERE gid=$1 
+    FROM game_events
+    WHERE gid=$1
     ORDER BY ts ASC
   `;
   const params: unknown[] = [gid];
@@ -67,7 +68,7 @@ export async function getGameEvents(
   return {events, total};
 }
 
-export async function getGameInfo(gid: string): Promise<GameJson['info']> {
+export async function getGameInfo(pool: DatabasePool, gid: string): Promise<GameJson['info']> {
   const res = await pool.query("SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create'", [
     gid,
   ]);
@@ -158,7 +159,7 @@ export interface InitialGameEvent extends GameEvent {
   params: CreateEventParams;
 }
 
-export async function addGameEvent(gid: string, event: GameEvent): Promise<void> {
+export async function addGameEvent(pool: DatabasePool, gid: string, event: GameEvent): Promise<void> {
   await pool.query(
     `
       INSERT INTO game_events (gid, uid, ts, event_type, event_payload)
@@ -167,8 +168,13 @@ export async function addGameEvent(gid: string, event: GameEvent): Promise<void>
   );
 }
 
-export async function addInitialGameEvent(gid: string, pid: string, userId?: string | null): Promise<string> {
-  const puzzle = await getPuzzle(pid);
+export async function addInitialGameEvent(
+  pool: DatabasePool,
+  gid: string,
+  pid: string,
+  userId?: string | null
+): Promise<string> {
+  const puzzle = await getPuzzle(pool, pid);
   logger.debug({pid}, 'got puzzle');
 
   // Use centralized format converter
@@ -197,6 +203,6 @@ export async function addInitialGameEvent(gid: string, pid: string, userId?: str
       },
     },
   };
-  await addGameEvent(gid, initialEvent);
+  await addGameEvent(pool, gid, initialEvent);
   return gid;
 }

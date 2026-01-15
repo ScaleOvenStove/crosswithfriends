@@ -4,13 +4,14 @@ import {fileURLToPath} from 'url';
 import * as dotenv from 'dotenv';
 import {z} from 'zod';
 
-import {logger} from '../utils/logger.js';
-
-// Load environment variables from .env files
+// Load environment variables from .env files (development/test only)
 const currentFilename = fileURLToPath(import.meta.url);
 const currentDirname = path.dirname(currentFilename);
-dotenv.config(); // Try loading .env from current directory
-dotenv.config({path: path.resolve(currentDirname, '../../.env')}); // Try parent directory
+const runtimeNodeEnv = process.env.NODE_ENV || 'development';
+if (runtimeNodeEnv !== 'production') {
+  dotenv.config(); // Try loading .env from current directory
+  dotenv.config({path: path.resolve(currentDirname, '../../.env')}); // Try parent directory
+}
 
 // Configuration schema with validation and defaults
 const configSchema = z.object({
@@ -55,6 +56,14 @@ const configSchema = z.object({
 
   // CORS configuration
   cors: z.object({
+    enabled: z
+      .union([z.boolean(), z.string()])
+      .transform((val) => {
+        if (typeof val === 'boolean') return val;
+        return val?.toLowerCase() !== 'false';
+      })
+      .pipe(z.boolean())
+      .default('true'),
     origins: z
       .string()
       .transform((val) =>
@@ -71,11 +80,39 @@ const configSchema = z.object({
 
   // Authentication configuration
   auth: z.object({
+    // JWT secret for signing tokens (required in production)
+    tokenSecret: z.string().optional(),
     // Whether to require authentication for API endpoints
     // In development, this can be set to false for easier testing
     requireAuth: z.boolean(),
     // Token expiry in milliseconds (default: 24 hours)
     tokenExpiryMs: z.coerce.number().default(24 * 60 * 60 * 1000),
+  }),
+
+  // Firebase configuration
+  firebase: z.object({
+    // Path to Firebase credentials file
+    credentialsPath: z.string().optional(),
+    // Firebase credentials as JSON string
+    credentialsJson: z.string().optional(),
+    // Google application credentials path
+    googleApplicationCredentials: z.string().optional(),
+  }),
+
+  // Feature flags
+  features: z.object({
+    // Enable Swagger UI documentation
+    swaggerUi: z.boolean(),
+  }),
+
+  // Environment detection
+  environment: z.object({
+    // Explicit environment flag (development, staging, production)
+    explicit: z.string().optional(),
+    // Staging flag
+    isStaging: z.boolean(),
+    // Hostname (for environment detection)
+    hostname: z.string().optional(),
   }),
 
   // Application URLs configuration
@@ -116,7 +153,7 @@ function buildConfig(): Config {
   if (nodeEnv === 'production') {
     // In production, ALWAYS verify SSL certificates
     if (process.env.PGSSL_REJECT_UNAUTHORIZED === 'false') {
-      logger.warn(
+      console.warn(
         'PGSSL_REJECT_UNAUTHORIZED=false is ignored in production. SSL certificate verification is enforced.'
       );
     }
@@ -125,6 +162,13 @@ function buildConfig(): Config {
     // In development/test, allow disabling for self-signed certs
     sslRejectUnauthorized = process.env.PGSSL_REJECT_UNAUTHORIZED !== 'false';
   }
+
+  // Detect if running in staging environment
+  const isStaging =
+    process.env.ENVIRONMENT === 'staging' ||
+    process.env.STAGING === 'true' ||
+    process.env.STAGING === '1' ||
+    (typeof process.env.HOSTNAME === 'string' && process.env.HOSTNAME.includes('staging'));
 
   const rawConfig = {
     server: {
@@ -157,12 +201,27 @@ function buildConfig(): Config {
       timeWindowMs: process.env.RATE_LIMIT_WINDOW_MS,
     },
     cors: {
+      enabled: process.env.CORS_ENABLED === 'true',
       origins: process.env.CORS_ORIGINS,
     },
     auth: {
+      tokenSecret: process.env.AUTH_TOKEN_SECRET,
       // Require auth in production, optional in development/test
       requireAuth: nodeEnv === 'production' || process.env.REQUIRE_AUTH === 'true',
       tokenExpiryMs: process.env.AUTH_TOKEN_EXPIRY_MS,
+    },
+    firebase: {
+      credentialsPath: process.env.FIREBASE_CREDENTIALS_PATH,
+      credentialsJson: process.env.FIREBASE_CREDENTIALS_JSON,
+      googleApplicationCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    },
+    features: {
+      swaggerUi: !nodeEnv || nodeEnv !== 'production' || process.env.ENABLE_SWAGGER_UI === 'true',
+    },
+    environment: {
+      explicit: process.env.ENVIRONMENT,
+      isStaging,
+      hostname: process.env.HOSTNAME,
     },
     urls: {
       productionApi: process.env.PRODUCTION_API_URL,
@@ -187,7 +246,7 @@ function buildConfig(): Config {
       }
     }
 
-    logger.info(
+    console.info(
       {
         nodeEnv: validated.server.nodeEnv,
         port: validated.server.port,
@@ -205,7 +264,7 @@ function buildConfig(): Config {
     return validated;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error({errors: error.issues}, 'Configuration validation failed');
+      console.error({errors: error.issues}, 'Configuration validation failed');
       throw new Error(
         `Invalid configuration: ${error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`
       );

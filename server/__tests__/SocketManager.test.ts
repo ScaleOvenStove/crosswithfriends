@@ -13,6 +13,7 @@ vi.mock('../utils/userAuth.js');
 describe('SocketManager', () => {
   let socketManager: SocketManager;
   let mockIo: SocketIOServer;
+  let mockPool: {query: Mock; connect: Mock};
   let mockSocket: {
     join: Mock;
     leave: Mock;
@@ -22,6 +23,7 @@ describe('SocketManager', () => {
     disconnect: Mock;
     id: string;
     userId?: string;
+    data: {userId?: string | null; correlationId?: string};
     handshake: {
       query: {userId?: string};
       auth: {userId?: string};
@@ -49,6 +51,7 @@ describe('SocketManager', () => {
       to: vi.fn().mockReturnThis(),
       disconnect: vi.fn(),
       id: 'mock-socket-id',
+      data: {},
       handshake: {
         query: {userId: 'test-user-123'},
         auth: {},
@@ -67,7 +70,12 @@ describe('SocketManager', () => {
       emit: vi.fn(),
     } as unknown as SocketIOServer;
 
-    socketManager = new SocketManager(mockIo);
+    mockPool = {
+      query: vi.fn(),
+      connect: vi.fn(),
+    };
+
+    socketManager = new SocketManager(mockIo, mockPool);
   });
 
   describe('constructor', () => {
@@ -97,6 +105,7 @@ describe('SocketManager', () => {
       await socketManager.addGameEvent(mockGid, mockEvent);
 
       expect(gameModel.addGameEvent).toHaveBeenCalledWith(
+        mockPool,
         mockGid,
         expect.objectContaining({type: 'updateCell'})
       );
@@ -109,7 +118,12 @@ describe('SocketManager', () => {
       const mockEvent = {
         '.sv': 'timestamp',
         type: 'updateCell',
-        params: {},
+        params: {
+          cell: {r: 0, c: 1},
+          value: 'A',
+          autocheck: false,
+          id: 'user123',
+        },
       };
 
       (gameModel.addGameEvent as Mock).mockResolvedValue(undefined);
@@ -118,10 +132,9 @@ describe('SocketManager', () => {
 
       await socketManager.addGameEvent(mockGid, mockEvent);
 
-      const callArgs = (gameModel.addGameEvent as Mock).mock.calls[0][1];
-      // When the event itself is {.sv: 'timestamp'}, assignTimestamp returns Date.now() directly
-      expect(typeof callArgs).toBe('number');
-      expect(callArgs).toBeGreaterThan(0);
+      const callArgs = (gameModel.addGameEvent as Mock).mock.calls[0][2];
+      expect(typeof callArgs.timestamp).toBe('number');
+      expect(callArgs.timestamp).toBeGreaterThan(0);
     });
 
     it('should handle nested Firebase timestamps', async () => {
@@ -129,7 +142,12 @@ describe('SocketManager', () => {
       const mockEvent = {
         timestamp: {'.sv': 'timestamp'},
         type: 'updateCell',
-        params: {},
+        params: {
+          cell: {r: 0, c: 1},
+          value: 'A',
+          autocheck: false,
+          id: 'user123',
+        },
       };
 
       (gameModel.addGameEvent as Mock).mockResolvedValue(undefined);
@@ -138,7 +156,7 @@ describe('SocketManager', () => {
 
       await socketManager.addGameEvent(mockGid, mockEvent);
 
-      const callArgs = (gameModel.addGameEvent as Mock).mock.calls[0][1];
+      const callArgs = (gameModel.addGameEvent as Mock).mock.calls[0][2];
       expect(typeof callArgs.timestamp).toBe('number');
     });
 
@@ -147,7 +165,12 @@ describe('SocketManager', () => {
       const mockEvent = {
         timestamp: NaN,
         type: 'updateCell',
-        params: {},
+        params: {
+          cell: {r: 0, c: 1},
+          value: 'A',
+          autocheck: false,
+          id: 'user123',
+        },
       };
 
       (gameModel.addGameEvent as Mock).mockResolvedValue(undefined);
@@ -156,7 +179,7 @@ describe('SocketManager', () => {
 
       await socketManager.addGameEvent(mockGid, mockEvent);
 
-      const callArgs = (gameModel.addGameEvent as Mock).mock.calls[0][1];
+      const callArgs = (gameModel.addGameEvent as Mock).mock.calls[0][2];
       expect(typeof callArgs.timestamp).toBe('number');
       expect(callArgs.timestamp).toBeGreaterThan(0);
     });
@@ -179,6 +202,7 @@ describe('SocketManager', () => {
       await socketManager.addRoomEvent(mockRid, mockEvent);
 
       expect(roomModel.addRoomEvent).toHaveBeenCalledWith(
+        mockPool,
         mockRid,
         expect.objectContaining({type: 'SET_GAME'})
       );
@@ -265,7 +289,7 @@ describe('SocketManager', () => {
 
       if (syncHandler) {
         await syncHandler(gid, ack);
-        expect(gameModel.getGameEvents).toHaveBeenCalledWith(gid);
+        expect(gameModel.getGameEvents).toHaveBeenCalledWith(mockPool, gid);
         expect(ack).toHaveBeenCalledWith(mockEvents);
       }
     });
@@ -286,7 +310,7 @@ describe('SocketManager', () => {
 
       if (syncHandler) {
         await syncHandler(data, ack);
-        expect(gameModel.getGameEvents).toHaveBeenCalledWith(data.gid, {limit: 100});
+        expect(gameModel.getGameEvents).toHaveBeenCalledWith(mockPool, data.gid, {limit: 100});
         expect(ack).toHaveBeenCalledWith({events: mockEvents, total: 5});
       }
     });
@@ -304,7 +328,7 @@ describe('SocketManager', () => {
 
       if (syncHandler) {
         await syncHandler(data, ack);
-        expect(gameModel.getGameEvents).toHaveBeenCalledWith(data.gid, {limit: 1000});
+        expect(gameModel.getGameEvents).toHaveBeenCalledWith(mockPool, data.gid, {limit: 1000});
         expect(ack).toHaveBeenCalledWith({events: mockEvents, total: 1});
       }
     });
@@ -340,9 +364,9 @@ describe('SocketManager', () => {
       if (syncHandler) {
         await syncHandler(data, ack);
         expect(gameModel.getGameEvents).toHaveBeenCalledTimes(2);
-        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(1, data.gid);
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(1, mockPool, data.gid);
         // archivedOffset = Math.max(0, 1050 - 1000 - 0) = 50
-        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(2, data.gid, {
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(2, mockPool, data.gid, {
           limit: 50,
           offset: 50,
         });
@@ -366,9 +390,9 @@ describe('SocketManager', () => {
       if (syncHandler) {
         await syncHandler(data, ack);
         expect(gameModel.getGameEvents).toHaveBeenCalledTimes(2);
-        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(1, data.gid);
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(1, mockPool, data.gid);
         // archivedOffset = Math.max(0, 2000 - 1000 - 0) = 1000
-        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(2, data.gid, {
+        expect(gameModel.getGameEvents).toHaveBeenNthCalledWith(2, mockPool, data.gid, {
           limit: 1000,
           offset: 1000,
         });
@@ -412,7 +436,7 @@ describe('SocketManager', () => {
 
       if (gameEventHandler) {
         await gameEventHandler(message, ack);
-        expect(gameModel.addGameEvent).toHaveBeenCalledWith(message.gid, expect.any(Object));
+        expect(gameModel.addGameEvent).toHaveBeenCalledWith(mockPool, message.gid, expect.any(Object));
         expect(ack).toHaveBeenCalled();
       }
     });
@@ -456,7 +480,7 @@ describe('SocketManager', () => {
 
       if (syncHandler) {
         await syncHandler(rid, ack);
-        expect(roomModel.getRoomEvents).toHaveBeenCalledWith(rid);
+        expect(roomModel.getRoomEvents).toHaveBeenCalledWith(mockPool, rid);
         expect(ack).toHaveBeenCalledWith(mockEvents);
       }
     });
@@ -483,7 +507,7 @@ describe('SocketManager', () => {
 
       if (roomEventHandler) {
         await roomEventHandler(message, ack);
-        expect(roomModel.addRoomEvent).toHaveBeenCalledWith(message.rid, expect.any(Object));
+        expect(roomModel.addRoomEvent).toHaveBeenCalledWith(mockPool, message.rid, expect.any(Object));
         expect(ack).toHaveBeenCalled();
       }
     });

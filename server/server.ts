@@ -5,18 +5,18 @@ import {dirname, join} from 'path';
 import {fileURLToPath} from 'url';
 
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import fastifyJwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import fastify from 'fastify';
+import fastify, {type FastifyRequest, type FastifyReply} from 'fastify';
 import {Server as SocketIOServer} from 'socket.io';
 
 import apiRouter from './api/router.js';
 import {config} from './config/index.js';
-import {closePool, createPool} from './model/pool.js';
-import {correlationIdPlugin} from './plugins/correlationId.js';
-import {securityHeaders} from './plugins/securityHeaders.js';
+import configPlugin from './plugins/config.js';
+import databasePlugin from './plugins/database.js';
 import {createRepositories} from './repositories/index.js';
 import {createServices} from './services/index.js';
 import SocketManager from './SocketManager.js';
@@ -25,11 +25,15 @@ import {createSanitizedErrorResponse} from './utils/errorSanitizer.js';
 import {initializeFirebaseAdmin} from './utils/firebaseAdmin.js';
 import {logger} from './utils/logger.js';
 import {runSecurityValidation} from './utils/securityValidation.js';
+import {hasStringProperty} from './utils/typeGuards.js';
 import {initRateLimiter, stopRateLimiter} from './utils/websocketRateLimit.js';
 
 // ================== Logging ================
 
 function logAllEvents(io: SocketIOServer): void {
+  if (config.server.isProduction) {
+    return;
+  }
   io.on('*', (event: string, ...args: unknown[]) => {
     try {
       const argsStr = JSON.stringify(args);
@@ -38,6 +42,30 @@ function logAllEvents(io: SocketIOServer): void {
       logger.debug({event, args}, `[${event}]`);
     }
   });
+}
+
+function isHealthEndpoint(url: string): boolean {
+  return url === '/api/health' || url === '/healthz' || url === '/api/healthz' || url === '/readyz';
+}
+
+function getRateLimitKey(request: FastifyRequest): string {
+  try {
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const parts = token.split('.');
+      if (parts.length === 3 && parts[1]) {
+        const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
+        const payload = JSON.parse(payloadJson);
+        if (hasStringProperty(payload, 'userId')) {
+          return `user:${payload.userId}:${request.ip}`;
+        }
+      }
+    }
+  } catch {
+    // If token parsing fails, fall back to IP-only
+  }
+  return `ip:${request.ip}`;
 }
 
 // ================== Main Entrypoint ================
@@ -52,6 +80,15 @@ async function runServer(): Promise<void> {
 
     // ======== Fastify Server Config ==========
     // In Fastify v5, fastify() returns a Promise
+    type SerializedRequest =
+      | {
+          method: string;
+          url: string;
+          headers: Record<string, string | string[] | undefined>;
+          remoteAddress: string;
+        }
+      | {error: string};
+
     const app = await fastify({
       // Use built-in request ID generation with custom generator
       // This replaces the custom correlationId utility for HTTP requests
@@ -64,27 +101,31 @@ async function runServer(): Promise<void> {
             level: 'info',
             // Pino serializers for request/response logging with header redaction
             serializers: {
-              req(request: any) {
-                const headers = {...request.headers};
-                // Redact sensitive headers
-                const sensitiveHeaders = [
-                  'authorization',
-                  'cookie',
-                  'set-cookie',
-                  'x-api-key',
-                  'x-auth-token',
-                ];
-                for (const key of Object.keys(headers)) {
-                  if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
-                    headers[key] = '[REDACTED]';
+              req(request: FastifyRequest): SerializedRequest {
+                try {
+                  const headers = {...request.headers};
+                  // Redact sensitive headers
+                  const sensitiveHeaders = [
+                    'authorization',
+                    'cookie',
+                    'set-cookie',
+                    'x-api-key',
+                    'x-auth-token',
+                  ];
+                  for (const key of Object.keys(headers)) {
+                    if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
+                      headers[key] = '[REDACTED]';
+                    }
                   }
+                  return {
+                    method: request.method,
+                    url: request.url,
+                    headers,
+                    remoteAddress: request.ip,
+                  };
+                } catch {
+                  return {error: 'Failed to serialize request'};
                 }
-                return {
-                  method: request.method,
-                  url: request.url,
-                  headers,
-                  remoteAddress: request.ip,
-                };
               },
             },
           }
@@ -100,27 +141,31 @@ async function runServer(): Promise<void> {
             },
             // Pino serializers for request/response logging with header redaction
             serializers: {
-              req(request: any) {
-                const headers = {...request.headers};
-                // Redact sensitive headers
-                const sensitiveHeaders = [
-                  'authorization',
-                  'cookie',
-                  'set-cookie',
-                  'x-api-key',
-                  'x-auth-token',
-                ];
-                for (const key of Object.keys(headers)) {
-                  if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
-                    headers[key] = '[REDACTED]';
+              req(request: FastifyRequest): SerializedRequest {
+                try {
+                  const headers = {...request.headers};
+                  // Redact sensitive headers
+                  const sensitiveHeaders = [
+                    'authorization',
+                    'cookie',
+                    'set-cookie',
+                    'x-api-key',
+                    'x-auth-token',
+                  ];
+                  for (const key of Object.keys(headers)) {
+                    if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
+                      headers[key] = '[REDACTED]';
+                    }
                   }
+                  return {
+                    method: request.method,
+                    url: request.url,
+                    headers,
+                    remoteAddress: request.ip,
+                  };
+                } catch {
+                  return {error: 'Failed to serialize request'};
                 }
-                return {
-                  method: request.method,
-                  url: request.url,
-                  headers,
-                  remoteAddress: request.ip,
-                };
               },
             },
           },
@@ -135,31 +180,30 @@ async function runServer(): Promise<void> {
       },
     });
 
-    // Add response logging hook to track slow/failed requests
-    app.addHook('onResponse', (request: any, reply: any) => {
-      const responseTime = reply.getResponseTime();
+    // Add response logging hook to track failed requests
+    app.addHook('onResponse', (request: FastifyRequest, reply: FastifyReply): void => {
       const statusCode = reply.statusCode;
-      const responseSize = reply.getHeader('content-length') || 'unknown';
-
-      // Log slow requests (>1s) or errors
-      if (responseTime > 1000 || statusCode >= 400) {
+      // Log errors
+      if (statusCode >= 400) {
         logger.warn(
           {
             method: request.method,
             url: request.url,
             statusCode,
-            responseTime: `${responseTime.toFixed(2)}ms`,
-            responseSize,
             reqId: request.id,
           },
-          statusCode >= 400 ? 'Request failed' : 'Slow request'
+          'Request failed'
         );
       }
     });
 
     // Set custom error handler with sanitization for production
     app.setErrorHandler(
-      (error: Error & {statusCode?: number; validation?: unknown}, request: any, reply: any) => {
+      (
+        error: Error & {statusCode?: number; validation?: unknown},
+        request: FastifyRequest,
+        reply: FastifyReply
+      ): void => {
         request.log.error(
           {
             err: error,
@@ -172,11 +216,24 @@ async function runServer(): Promise<void> {
 
         // Handle validation errors - sanitize validation details
         if (error.validation) {
+          const validationDetails: Array<{instancePath?: string; message?: string; keyword?: string}> =
+            Array.isArray(error.validation)
+              ? error.validation
+                  .filter(
+                    (item): item is Record<string, unknown> => typeof item === 'object' && item !== null
+                  )
+                  .map((item) => ({
+                    instancePath: typeof item.instancePath === 'string' ? item.instancePath : undefined,
+                    message: typeof item.message === 'string' ? item.message : undefined,
+                    keyword: typeof item.keyword === 'string' ? item.keyword : undefined,
+                  }))
+              : [];
+
           const response = createSanitizedErrorResponse(
             400,
             'Bad Request',
             'Validation error',
-            error.validation as Array<{instancePath?: string; message?: string; keyword?: string}>
+            validationDetails
           );
           reply.code(400).send(response);
           return;
@@ -215,33 +272,31 @@ async function runServer(): Promise<void> {
       }
     );
 
-    const serverFilename = fileURLToPath(import.meta.url);
-    const serverDirname = dirname(serverFilename);
-    const openApiPath = join(serverDirname, 'openapi.json');
-    try {
-      const openApiSpec = JSON.parse(readFileSync(openApiPath, 'utf-8'));
-      await app.register(swagger, {
-        mode: 'static',
-        specification: {
-          document: openApiSpec,
-        },
-      });
-    } catch (error) {
-      logger.error(
-        {
-          error: error instanceof Error ? error.message : String(error),
-          openApiPath,
-          serverDirname,
-          cwd: process.cwd(),
-        },
-        'Failed to load OpenAPI specification for Swagger. Swagger UI will not be available.'
-      );
-      // Continue without Swagger - the API will still work via fastify-openapi-glue
-    }
+    if (config.features.swaggerUi && !config.server.isProduction) {
+      const serverFilename = fileURLToPath(import.meta.url);
+      const serverDirname = dirname(serverFilename);
+      const openApiPath = join(serverDirname, 'openapi.json');
+      try {
+        const openApiSpec = JSON.parse(readFileSync(openApiPath, 'utf-8'));
+        await app.register(swagger, {
+          mode: 'static',
+          specification: {
+            document: openApiSpec,
+          },
+        });
+      } catch (error) {
+        logger.error(
+          {
+            error: error instanceof Error ? error.message : String(error),
+            openApiPath,
+            serverDirname,
+            cwd: process.cwd(),
+          },
+          'Failed to load OpenAPI specification for Swagger. Swagger UI will not be available.'
+        );
+        // Continue without Swagger - the API will still work via fastify-openapi-glue
+      }
 
-    const swaggerEnabled = !config.server.isProduction || process.env.ENABLE_SWAGGER_UI === 'true';
-
-    if (swaggerEnabled) {
       await app.register(swaggerUi, {
         routePrefix: '/api/docs',
         uiConfig: {
@@ -251,30 +306,32 @@ async function runServer(): Promise<void> {
         staticCSP: true,
       });
 
-      if (config.server.isProduction) {
-        logger.warn(
-          'Swagger UI is enabled in production. Consider setting ENABLE_SWAGGER_UI=false for security.'
-        );
-      }
     } else {
-      // In production without ENABLE_SWAGGER_UI, redirect to a 404
-      app.get('/api/docs', (_request: any, reply: any) => {
-        reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
+      // In production or when disabled, return 404 for docs
+      app.get('/api/docs', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+        await reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
-      app.get('/api/docs/*', (_request: any, reply: any) => {
-        reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
+      app.get('/api/docs/*', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+        await reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
-      logger.info('Swagger UI disabled in production. Set ENABLE_SWAGGER_UI=true to enable.');
+      logger.info('Swagger UI disabled.');
     }
 
-    // Register correlation ID plugin for request tracing
-    await app.register(correlationIdPlugin);
+    // Register config plugin first (centralized configuration)
+    await app.register(configPlugin);
 
-    // Register security headers plugin
-    // Adds essential security headers to all responses (X-Content-Type-Options, X-Frame-Options, etc.)
-    await app.register(securityHeaders);
+    // Register database plugin - creates pool and adds to Fastify decorators
+    // This must be registered before any routes that need database access
+    await app.register(databasePlugin);
 
-    // Helper function to validate CORS origins (used for both HTTP and WebSocket)
+    // Security headers via @fastify/helmet (replacement for custom plugin)
+    await app.register(helmet, {
+      contentSecurityPolicy: false, // API-only server; avoid CSP conflicts
+      hsts: config.server.isProduction,
+      crossOriginResourcePolicy: {policy: 'same-site'},
+    });
+
+    // Helper function to get allowed CORS origins
     const getAllowedOrigins = (): string[] => {
       // Use configured origins if provided, otherwise fall back to defaults
       if (config.cors.origins.length > 0) {
@@ -284,6 +341,7 @@ async function runServer(): Promise<void> {
       return [config.urls.productionFrontend, config.urls.productionFrontendAlt, config.urls.stagingFrontend];
     };
 
+    // Helper function to validate CORS origins (used for both HTTP and WebSocket)
     const validateOrigin = (origin: string | undefined): boolean => {
       if (config.server.isDevelopment) {
         // Allow all origins in development
@@ -295,29 +353,29 @@ async function runServer(): Promise<void> {
       return !origin || allowedOrigins.includes(origin);
     };
 
-    // Register CORS plugin
-    // In development, allow all origins for easier local development
-    // In production, this should be restricted to specific domains
-    if (config.server.isDevelopment) {
-      await app.register(cors, {
-        origin: true, // Allow all origins in development
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-      });
+    // Register CORS plugin (only if enabled)
+    if (config.cors.enabled) {
+      if (config.server.isDevelopment) {
+        // In development, allow all origins for easier local development
+        await app.register(cors, {
+          origin: true,
+          credentials: true,
+          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+          allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        });
+      } else {
+        // In production, validate specific origins
+        const allowedOrigins = getAllowedOrigins();
+        await app.register(cors, {
+          origin: allowedOrigins,
+          credentials: true,
+          methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+          allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        });
+      }
+      logger.info({enabled: true, isDevelopment: config.server.isDevelopment}, 'CORS enabled');
     } else {
-      await app.register(cors, {
-        origin: (origin: string | undefined): boolean => {
-          const allowed = validateOrigin(origin);
-          if (!allowed) {
-            logger.warn({origin}, 'CORS request blocked from origin');
-          }
-          return allowed;
-        },
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-      });
+      logger.info('CORS disabled via DISABLE_CORS environment variable');
     }
 
     // Register JWT plugin for authentication (@fastify/jwt)
@@ -329,40 +387,9 @@ async function runServer(): Promise<void> {
       max: config.rateLimit.max,
       timeWindow: config.rateLimit.timeWindowMs,
       cache: 10000, // Cache up to 10000 different rate limit keys
-      allowList: (req: any) => {
-        // Allow health check endpoint to bypass rate limiting
-        return req.url === '/api/health';
-      },
-      keyGenerator: (req: any) => {
-        // Enhanced rate limiting: use user ID + IP for authenticated requests
-        // This prevents both IP-based bypass (via VPN/proxy) and user-based abuse
-        try {
-          // Try to extract user ID from JWT token in Authorization header
-          const authHeader = req.headers.authorization;
-          if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.slice(7);
-            // Decode JWT payload without full verification for performance
-            // The actual verification happens in the route handlers
-            const parts = token.split('.');
-            if (parts.length === 3 && parts[1]) {
-              const payloadB64 = parts[1];
-              // payloadB64 is guaranteed to be string here due to check above
-              const payloadJson = Buffer.from(payloadB64 as string, 'base64url').toString('utf8');
-              const payload = JSON.parse(payloadJson) as {userId?: string};
-              if (payload.userId && typeof payload.userId === 'string') {
-                // Use both user ID and IP to prevent cross-user attacks
-                // and to ensure unauthenticated requests from same IP are also limited
-                return `user:${payload.userId}:${req.ip}`;
-              }
-            }
-          }
-        } catch {
-          // If token parsing fails, fall back to IP-only
-        }
-        // Fall back to IP-based rate limiting for unauthenticated requests
-        return `ip:${req.ip}`;
-      },
-      errorResponseBuilder: (_req: any, context: {ttl: number}) => {
+      allowList: (req: FastifyRequest): boolean => isHealthEndpoint(req.url),
+      keyGenerator: (req: FastifyRequest): string => getRateLimitKey(req),
+      errorResponseBuilder: (_req: FastifyRequest, context: {ttl: number}) => {
         return {
           statusCode: 429,
           error: 'Too Many Requests',
@@ -372,7 +399,7 @@ async function runServer(): Promise<void> {
       },
       // Only log when actually exceeded - onExceeding is too noisy for normal usage
       // The rate limit still enforces the limit, we just don't warn on every request
-      onExceeded: (req: any, key: string) => {
+      onExceeded: (req: FastifyRequest, key: string): void => {
         // Note: The actual context with ttl is not available in onExceeded
         // We log the rate limit event without retryAfter
         logger.warn(
@@ -386,43 +413,54 @@ async function runServer(): Promise<void> {
       },
     });
 
-    // Create database pool, repositories, and services
-    const pool = createPool();
-    const repositories = createRepositories(pool);
+    // Create repositories and services using the injected database pool
+    // The pool is now managed by the database plugin (app.db)
+    const repositories = createRepositories(app.db);
     const services = createServices(repositories);
 
     // Make repositories and services available to routes via Fastify decorator
     app.decorate('repositories', repositories);
     app.decorate('services', services);
-    app.decorate('pool', pool);
+
+    // Health check endpoints (common paths for Kubernetes/Render)
+    // These are lightweight and don't require database connections
+    // Register these BEFORE the API router to ensure they're matched first
+    app.get('/healthz', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+      await reply.code(200).send({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    });
+
+    app.get('/api/healthz', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+      await reply.code(200).send({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    });
+
+    // Direct health endpoint for Docker health checks
+    // This is a workaround for fastify-openapi-glue route not responding
+    // Must be registered BEFORE apiRouter to take precedence
+    app.get('/api/health', (_request: FastifyRequest, reply: FastifyReply): void => {
+      reply.code(200).send({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    });
 
     // Register API routes
     await app.register(apiRouter, {prefix: '/api'});
 
-    // Health check endpoints (common paths for Kubernetes/Render)
-    // These are lightweight and don't require database connections
-    app.get('/healthz', (_request: any, reply: any) => {
-      reply.code(200).send({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-      });
-    });
-
-    app.get('/api/healthz', (_request: any, reply: any) => {
-      reply.code(200).send({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-      });
-    });
-
     // Readiness endpoint - verifies database connectivity
-    app.get('/readyz', async (_request: any, reply: any) => {
+    app.get('/readyz', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
       try {
         // Perform a lightweight database round-trip to verify connectivity
-        await pool.query('SELECT 1');
-        reply.code(200).send({
+        await app.db.query('SELECT 1');
+        await reply.code(200).send({
           status: 'ready',
           database: 'connected',
           timestamp: new Date().toISOString(),
@@ -439,7 +477,7 @@ async function runServer(): Promise<void> {
         );
         // Database connection failed - return 503 Service Unavailable
         // Return generic message to avoid leaking sensitive database information
-        reply.code(503).send({
+        await reply.code(503).send({
           status: 'not ready',
           database: 'disconnected',
           timestamp: new Date().toISOString(),
@@ -449,8 +487,9 @@ async function runServer(): Promise<void> {
     });
 
     // Root route handler - return API info
-    app.get('/', (_request: any, reply: any) => {
-      reply.code(200).send({
+    // Fastify automatically handles HEAD requests for GET routes
+    app.get('/', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+      await reply.code(200).send({
         name: 'Cross with Friends API',
         version: '1.0.0',
         status: 'ok',
@@ -463,7 +502,7 @@ async function runServer(): Promise<void> {
     });
 
     // Catch-all 404 handler for unhandled routes
-    app.setNotFoundHandler((request: any, reply: any) => {
+    app.setNotFoundHandler((request: FastifyRequest, reply: FastifyReply): void => {
       reply.code(404).send({
         error: 'Not Found',
         message: `Route ${request.method} ${request.url} not found`,
@@ -481,42 +520,74 @@ async function runServer(): Promise<void> {
 
     // Initialize Socket.IO after server is ready but before listening
     app.addHook('onReady', () => {
-      const server = app.server as HTTPServer;
-      io = new SocketIOServer(server, {
-        pingInterval: 2000,
-        pingTimeout: 5000,
-        cors: {
-          origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-            // In development, allow all origins (including undefined/null for polling)
-            if (config.server.isDevelopment) {
-              callback(null, true);
-              return;
-            }
-            // In production, validate origin
-            if (validateOrigin(origin)) {
-              callback(null, true);
-            } else {
-              logger.warn({origin}, 'WebSocket CORS request blocked from origin');
-              callback(new Error('Not allowed by CORS'), false);
-            }
-          },
-          methods: ['GET', 'POST'],
-          credentials: true,
-        },
-      });
+      try {
+        const server: HTTPServer = app.server;
+        const socketIOOptions: {
+          pingInterval: number;
+          pingTimeout: number;
+          cors?: {
+            origin: (
+              origin: string | undefined,
+              callback: (err: Error | null, allow?: boolean) => void
+            ) => void;
+            methods: string[];
+            credentials: boolean;
+          };
+        } = {
+          pingInterval: 2000,
+          pingTimeout: 5000,
+        };
 
-      // Initialize rate limiter with automatic cleanup
-      initRateLimiter();
+        // Only add CORS configuration if CORS is enabled
+        if (config.cors.enabled) {
+          socketIOOptions.cors = {
+            origin: (
+              origin: string | undefined,
+              callback: (err: Error | null, allow?: boolean) => void
+            ): void => {
+              // In development, allow all origins (including undefined/null for polling)
+              if (config.server.isDevelopment) {
+                callback(null, true);
+                return;
+              }
+              // In production, validate origin
+              if (validateOrigin(origin)) {
+                callback(null, true);
+              } else {
+                logger.warn({origin}, 'WebSocket CORS request blocked from origin');
+                callback(new Error('Not allowed by CORS'), false);
+              }
+            },
+            methods: ['GET', 'POST'],
+            credentials: true,
+          };
+        }
 
-      socketManager = new SocketManager(io, {
-        game: repositories.game,
-        room: repositories.room,
-      });
-      socketManager.listen();
-      logAllEvents(io);
+        io = new SocketIOServer(server, socketIOOptions);
+
+        // Initialize rate limiter with automatic cleanup
+        initRateLimiter();
+
+        socketManager = new SocketManager(io, app.db, {
+          game: repositories.game,
+          room: repositories.room,
+        });
+        socketManager.listen();
+        logAllEvents(io);
+      } catch (error) {
+        logger.error({err: error}, 'Error in onReady hook');
+        throw error;
+      }
     });
 
-    await app.listen({port: config.server.port, host: '0.0.0.0'});
+    const address = await app.listen({port: config.server.port, host: '0.0.0.0'});
+
+    logger.info({
+      address,
+      port: config.server.port,
+      host: '0.0.0.0',
+      message: 'Server is listening on all interfaces (0.0.0.0)',
+    });
     app.log.info(`Listening on port ${config.server.port} `);
 
     // Graceful shutdown handler
@@ -543,16 +614,14 @@ async function runServer(): Promise<void> {
         }
         stopRateLimiter();
 
-        // 3. Close database pool
-        logger.info('Closing database pool...');
-        await closePool(pool);
-        logger.info('Database pool closed');
+        // Note: Database pool is automatically closed by the database plugin's onClose hook
+        // which is triggered by app.close() above
 
-        // 4. Clear force shutdown timeout
+        // 3. Clear force shutdown timeout
         clearTimeout(forceShutdownTimeout);
 
         logger.info('Graceful shutdown completed');
-        process.kill(process.pid, signal as string);
+        process.kill(process.pid, signal);
       } catch (error) {
         logger.error({err: error}, 'Error during graceful shutdown');
         clearTimeout(forceShutdownTimeout);
@@ -579,5 +648,15 @@ async function runServer(): Promise<void> {
     process.exit(1);
   }
 }
+
+// Add global error handlers to catch unhandled errors
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({err: reason, promise}, 'Unhandled promise rejection');
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error({err: error}, 'Uncaught exception');
+  process.exit(1);
+});
 
 void runServer();

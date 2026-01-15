@@ -24,11 +24,11 @@ export const TOKEN_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 let devSecret: string | null = null;
 
 /**
- * Gets the JWT secret from environment or generates a development secret
+ * Gets the JWT secret from config or generates a development secret
  * @returns The JWT secret string
  */
 export function getJwtSecret(): string {
-  const secret = process.env.AUTH_TOKEN_SECRET;
+  const secret = config.auth.tokenSecret;
   if (secret && secret.length >= 32) {
     return secret;
   }

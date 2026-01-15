@@ -1,3 +1,4 @@
+import type {FastifyReply, FastifyRequest} from 'fastify';
 import type {AppInstance} from '../types/fastify.js';
 
 import type {HealthResponse} from './generated/index.js';
@@ -20,13 +21,17 @@ async function healthRouter(fastify: AppInstance): Promise<void> {
     },
   };
 
-  fastify.get<{Reply: HealthResponse}>('', options, (_request: any, _reply: any) => {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    };
-  });
+  fastify.get<{Reply: HealthResponse}>(
+    '',
+    options,
+    (_request: FastifyRequest, _reply: FastifyReply): HealthResponse => {
+      return {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      };
+    }
+  );
 }
 
 export default healthRouter;

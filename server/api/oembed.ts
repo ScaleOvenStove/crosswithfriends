@@ -1,3 +1,4 @@
+import type {FastifyReply, FastifyRequest} from 'fastify';
 import type {AppInstance} from '../types/fastify.js';
 import {logRequest} from '../utils/sanitizedLogger.js';
 
@@ -32,7 +33,7 @@ async function oEmbedRouter(fastify: AppInstance): Promise<void> {
   fastify.get<{Querystring: OEmbedQuery; Reply: OEmbedResponse}>(
     '',
     getOptions,
-    (request: any, _reply: any) => {
+    (request: FastifyRequest<{Querystring: OEmbedQuery}>, _reply: FastifyReply): OEmbedResponse => {
       logRequest(request);
 
       const author = request.query.author;

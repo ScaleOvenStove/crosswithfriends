@@ -5,7 +5,9 @@
 
 import pino from 'pino';
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+import {config} from '../config/index.js';
+
+const isDevelopment = config.server.isDevelopment;
 const logLevel = isDevelopment ? 'debug' : 'info';
 
 // Create Pino logger instance
