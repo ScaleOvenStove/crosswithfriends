@@ -52,9 +52,6 @@ CREATE TABLE IF NOT EXISTS puzzle_clues (
 ALTER TABLE public.puzzle_clues OWNER to CURRENT_USER;
 GRANT ALL ON TABLE public.puzzle_clues TO CURRENT_USER;
 
--- Index on pid for fast lookup
-CREATE INDEX IF NOT EXISTS idx_puzzle_clues_pid ON puzzle_clues (pid);
-
 -- Full-text search index on clue text
 CREATE INDEX IF NOT EXISTS idx_puzzle_clues_text_search ON puzzle_clues
     USING GIN (to_tsvector('english', clue_text));
@@ -380,7 +377,6 @@ ADD CONSTRAINT puzzles_height_positive CHECK (height > 0);
 --   - idx_puzzles_type (size filtering)
 --   - idx_puzzles_list_filter (composite for list queries)
 --   - idx_puzzles_public_uploaded (date sorting)
---   - idx_puzzle_clues_pid (clue lookup)
 --   - idx_puzzle_clues_text_search (clue text search)
 --
 -- Trigger:

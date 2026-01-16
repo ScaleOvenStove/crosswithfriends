@@ -58,9 +58,7 @@ ADD CONSTRAINT game_events_uid_check CHECK (
     );
 -- Step 5: Add index on event_payload for better query performance (jsonb supports GIN indexes)
 CREATE INDEX IF NOT EXISTS game_events_event_payload_gin_idx ON public.game_events USING GIN (event_payload);
--- Step 6: Add index on gid and ts for common query patterns (if not already exists)
-CREATE INDEX IF NOT EXISTS game_events_gid_ts_idx_new ON public.game_events (gid, ts);
--- Step 7: Add index on event_type for filtering by event type
+-- Step 6: Add index on event_type for filtering by event type
 CREATE INDEX IF NOT EXISTS game_events_event_type_idx ON public.game_events (event_type);
 -- Note: Foreign key to puzzles table is not added because:
 -- 1. The pid is stored inside event_payload, not as a direct column
