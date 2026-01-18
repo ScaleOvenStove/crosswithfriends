@@ -126,7 +126,7 @@ const configSchema = z.object({
     // Alternative production frontend URL
     productionFrontendAlt: z.string().default('https://crosswithfriends.com'),
     // Staging frontend URL
-    stagingFrontend: z.string().default('https://crosswithfriendsbackend-staging.onrender.com'),
+    stagingFrontend: z.string().default('https://crosswithfriendsfrontend-staging.onrender.com'),
     // Link preview API endpoint (for Vercel middleware)
     linkPreviewApi: z.string().default('https://downforacross-com.onrender.com/api/link_preview'),
     // Site name for Open Graph
@@ -201,7 +201,7 @@ function buildConfig(): Config {
       timeWindowMs: process.env.RATE_LIMIT_WINDOW_MS,
     },
     cors: {
-      enabled: process.env.CORS_ENABLED === 'true',
+      enabled: process.env.CORS_ENABLED,
       origins: process.env.CORS_ORIGINS,
     },
     auth: {
