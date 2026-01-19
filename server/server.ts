@@ -1,9 +1,9 @@
 import 'dotenv-flow/config';
 import crypto from 'crypto';
-import { readFileSync } from 'fs';
-import { Server as HTTPServer } from 'http';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import {readFileSync} from 'fs';
+import {Server as HTTPServer} from 'http';
+import {dirname, join} from 'path';
+import {fileURLToPath} from 'url';
 
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -11,23 +11,23 @@ import fastifyJwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import fastify, { type FastifyRequest, type FastifyReply } from 'fastify';
-import { Server as SocketIOServer } from 'socket.io';
+import fastify, {type FastifyRequest, type FastifyReply} from 'fastify';
+import {Server as SocketIOServer} from 'socket.io';
 
 import apiRouter from './api/router.js';
-import { config } from './config/index.js';
+import {config} from './config/index.js';
 import configPlugin from './plugins/config.js';
 import databasePlugin from './plugins/database.js';
-import { createRepositories } from './repositories/index.js';
-import { createServices } from './services/index.js';
+import {createRepositories} from './repositories/index.js';
+import {createServices} from './services/index.js';
 import SocketManager from './SocketManager.js';
-import { getJwtOptions } from './utils/auth.js';
-import { createSanitizedErrorResponse } from './utils/errorSanitizer.js';
-import { initializeFirebaseAdmin } from './utils/firebaseAdmin.js';
-import { logger } from './utils/logger.js';
-import { runSecurityValidation } from './utils/securityValidation.js';
-import { hasStringProperty } from './utils/typeGuards.js';
-import { initRateLimiter, stopRateLimiter } from './utils/websocketRateLimit.js';
+import {getJwtOptions} from './utils/auth.js';
+import {createSanitizedErrorResponse} from './utils/errorSanitizer.js';
+import {initializeFirebaseAdmin} from './utils/firebaseAdmin.js';
+import {logger} from './utils/logger.js';
+import {runSecurityValidation} from './utils/securityValidation.js';
+import {hasStringProperty} from './utils/typeGuards.js';
+import {initRateLimiter, stopRateLimiter} from './utils/websocketRateLimit.js';
 
 // ================== Logging ================
 
@@ -38,9 +38,9 @@ function logAllEvents(io: SocketIOServer): void {
   io.on('*', (event: string, ...args: unknown[]) => {
     try {
       const argsStr = JSON.stringify(args);
-      logger.debug({ event, args: argsStr.length > 100 ? argsStr.substring(0, 100) : argsStr }, `[${event}]`);
+      logger.debug({event, args: argsStr.length > 100 ? argsStr.substring(0, 100) : argsStr}, `[${event}]`);
     } catch {
-      logger.debug({ event, args }, `[${event}]`);
+      logger.debug({event, args}, `[${event}]`);
     }
   });
 }
@@ -83,12 +83,12 @@ async function runServer(): Promise<void> {
     // In Fastify v5, fastify() returns a Promise
     type SerializedRequest =
       | {
-        method: string;
-        url: string;
-        headers: Record<string, string | string[] | undefined>;
-        remoteAddress: string;
-      }
-      | { error: string };
+          method: string;
+          url: string;
+          headers: Record<string, string | string[] | undefined>;
+          remoteAddress: string;
+        }
+      | {error: string};
 
     const app = await fastify({
       // Use built-in request ID generation with custom generator
@@ -99,77 +99,77 @@ async function runServer(): Promise<void> {
       connectionTimeout: 60000,
       logger: config.server.isProduction
         ? {
-          level: 'info',
-          // Pino serializers for request/response logging with header redaction
-          serializers: {
-            req(request: FastifyRequest): SerializedRequest {
-              try {
-                const headers = { ...request.headers };
-                // Redact sensitive headers
-                const sensitiveHeaders = [
-                  'authorization',
-                  'cookie',
-                  'set-cookie',
-                  'x-api-key',
-                  'x-auth-token',
-                ];
-                for (const key of Object.keys(headers)) {
-                  if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
-                    headers[key] = '[REDACTED]';
+            level: 'info',
+            // Pino serializers for request/response logging with header redaction
+            serializers: {
+              req(request: FastifyRequest): SerializedRequest {
+                try {
+                  const headers = {...request.headers};
+                  // Redact sensitive headers
+                  const sensitiveHeaders = [
+                    'authorization',
+                    'cookie',
+                    'set-cookie',
+                    'x-api-key',
+                    'x-auth-token',
+                  ];
+                  for (const key of Object.keys(headers)) {
+                    if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
+                      headers[key] = '[REDACTED]';
+                    }
                   }
+                  return {
+                    method: request.method,
+                    url: request.url,
+                    headers,
+                    remoteAddress: request.ip,
+                  };
+                } catch {
+                  return {error: 'Failed to serialize request'};
                 }
-                return {
-                  method: request.method,
-                  url: request.url,
-                  headers,
-                  remoteAddress: request.ip,
-                };
-              } catch {
-                return { error: 'Failed to serialize request' };
-              }
+              },
             },
-          },
-        }
+          }
         : {
-          level: 'debug',
-          transport: {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              translateTime: 'HH:MM:ss.l',
-              ignore: 'pid,hostname',
+            level: 'debug',
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translateTime: 'HH:MM:ss.l',
+                ignore: 'pid,hostname',
+              },
             },
-          },
-          // Pino serializers for request/response logging with header redaction
-          serializers: {
-            req(request: FastifyRequest): SerializedRequest {
-              try {
-                const headers = { ...request.headers };
-                // Redact sensitive headers
-                const sensitiveHeaders = [
-                  'authorization',
-                  'cookie',
-                  'set-cookie',
-                  'x-api-key',
-                  'x-auth-token',
-                ];
-                for (const key of Object.keys(headers)) {
-                  if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
-                    headers[key] = '[REDACTED]';
+            // Pino serializers for request/response logging with header redaction
+            serializers: {
+              req(request: FastifyRequest): SerializedRequest {
+                try {
+                  const headers = {...request.headers};
+                  // Redact sensitive headers
+                  const sensitiveHeaders = [
+                    'authorization',
+                    'cookie',
+                    'set-cookie',
+                    'x-api-key',
+                    'x-auth-token',
+                  ];
+                  for (const key of Object.keys(headers)) {
+                    if (sensitiveHeaders.some((sensitive) => key.toLowerCase().includes(sensitive))) {
+                      headers[key] = '[REDACTED]';
+                    }
                   }
+                  return {
+                    method: request.method,
+                    url: request.url,
+                    headers,
+                    remoteAddress: request.ip,
+                  };
+                } catch {
+                  return {error: 'Failed to serialize request'};
                 }
-                return {
-                  method: request.method,
-                  url: request.url,
-                  headers,
-                  remoteAddress: request.ip,
-                };
-              } catch {
-                return { error: 'Failed to serialize request' };
-              }
+              },
             },
           },
-        },
       ajv: {
         customOptions: {
           // Allow OpenAPI keywords like 'example' in schemas
@@ -201,7 +201,7 @@ async function runServer(): Promise<void> {
     // Set custom error handler with sanitization for production
     app.setErrorHandler(
       (
-        error: Error & { statusCode?: number; validation?: unknown },
+        error: Error & {statusCode?: number; validation?: unknown},
         request: FastifyRequest,
         reply: FastifyReply
       ): void => {
@@ -217,17 +217,17 @@ async function runServer(): Promise<void> {
 
         // Handle validation errors - sanitize validation details
         if (error.validation) {
-          const validationDetails: Array<{ instancePath?: string; message?: string; keyword?: string }> =
+          const validationDetails: Array<{instancePath?: string; message?: string; keyword?: string}> =
             Array.isArray(error.validation)
               ? error.validation
-                .filter(
-                  (item): item is Record<string, unknown> => typeof item === 'object' && item !== null
-                )
-                .map((item) => ({
-                  instancePath: typeof item.instancePath === 'string' ? item.instancePath : undefined,
-                  message: typeof item.message === 'string' ? item.message : undefined,
-                  keyword: typeof item.keyword === 'string' ? item.keyword : undefined,
-                }))
+                  .filter(
+                    (item): item is Record<string, unknown> => typeof item === 'object' && item !== null
+                  )
+                  .map((item) => ({
+                    instancePath: typeof item.instancePath === 'string' ? item.instancePath : undefined,
+                    message: typeof item.message === 'string' ? item.message : undefined,
+                    keyword: typeof item.keyword === 'string' ? item.keyword : undefined,
+                  }))
               : [];
 
           const response = createSanitizedErrorResponse(
@@ -309,10 +309,10 @@ async function runServer(): Promise<void> {
     } else {
       // In production or when disabled, return 404 for docs
       app.get('/api/docs', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-        await reply.code(404).send({ error: 'Not Found', message: 'API documentation is not available' });
+        await reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
       app.get('/api/docs/*', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-        await reply.code(404).send({ error: 'Not Found', message: 'API documentation is not available' });
+        await reply.code(404).send({error: 'Not Found', message: 'API documentation is not available'});
       });
       logger.info('Swagger UI disabled.');
     }
@@ -328,7 +328,7 @@ async function runServer(): Promise<void> {
     await app.register(helmet, {
       contentSecurityPolicy: false, // API-only server; avoid CSP conflicts
       hsts: config.server.isProduction,
-      crossOriginResourcePolicy: { policy: 'same-site' },
+      crossOriginResourcePolicy: {policy: 'same-site'},
     });
 
     // Helper function to get allowed CORS origins
@@ -373,7 +373,7 @@ async function runServer(): Promise<void> {
           allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         });
       }
-      logger.info({ enabled: true, isDevelopment: config.server.isDevelopment }, 'CORS enabled');
+      logger.info({enabled: true, isDevelopment: config.server.isDevelopment}, 'CORS enabled');
     } else {
       logger.info('CORS disabled via DISABLE_CORS environment variable');
     }
@@ -389,7 +389,7 @@ async function runServer(): Promise<void> {
       cache: 10000, // Cache up to 10000 different rate limit keys
       allowList: (req: FastifyRequest): boolean => isHealthEndpoint(req.url),
       keyGenerator: (req: FastifyRequest): string => getRateLimitKey(req),
-      errorResponseBuilder: (_req: FastifyRequest, context: { ttl: number }) => {
+      errorResponseBuilder: (_req: FastifyRequest, context: {ttl: number}) => {
         return {
           statusCode: 429,
           error: 'Too Many Requests',
@@ -453,7 +453,7 @@ async function runServer(): Promise<void> {
     });
 
     // Register API routes
-    await app.register(apiRouter, { prefix: '/api' });
+    await app.register(apiRouter, {prefix: '/api'});
 
     // Readiness endpoint - verifies database connectivity
     app.get('/readyz', async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
@@ -554,7 +554,7 @@ async function runServer(): Promise<void> {
               if (validateOrigin(origin)) {
                 callback(null, true);
               } else {
-                logger.warn({ origin }, 'WebSocket CORS request blocked from origin');
+                logger.warn({origin}, 'WebSocket CORS request blocked from origin');
                 callback(new Error('Not allowed by CORS'), false);
               }
             },
@@ -575,12 +575,12 @@ async function runServer(): Promise<void> {
         socketManager.listen();
         logAllEvents(io);
       } catch (error) {
-        logger.error({ err: error }, 'Error in onReady hook');
+        logger.error({err: error}, 'Error in onReady hook');
         throw error;
       }
     });
 
-    const address = await app.listen({ port: config.server.port, host: '0.0.0.0' });
+    const address = await app.listen({port: config.server.port, host: '0.0.0.0'});
 
     logger.info({
       address,
@@ -592,7 +592,7 @@ async function runServer(): Promise<void> {
 
     // Graceful shutdown handler
     const shutdown = async (signal: string): Promise<void> => {
-      logger.info({ signal }, 'Received shutdown signal, starting graceful shutdown...');
+      logger.info({signal}, 'Received shutdown signal, starting graceful shutdown...');
 
       // Set a timeout for forced shutdown (30 seconds)
       const forceShutdownTimeout = setTimeout(() => {
@@ -623,7 +623,7 @@ async function runServer(): Promise<void> {
         logger.info('Graceful shutdown completed');
         process.kill(process.pid, signal);
       } catch (error) {
-        logger.error({ err: error }, 'Error during graceful shutdown');
+        logger.error({err: error}, 'Error during graceful shutdown');
         clearTimeout(forceShutdownTimeout);
         process.exit(1);
       }
@@ -644,18 +644,18 @@ async function runServer(): Promise<void> {
       void shutdown('SIGINT');
     });
   } catch (err) {
-    logger.error({ err }, 'Failed to start server');
+    logger.error({err}, 'Failed to start server');
     process.exit(1);
   }
 }
 
 // Add global error handlers to catch unhandled errors
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error({ err: reason, promise }, 'Unhandled promise rejection');
+  logger.error({err: reason, promise}, 'Unhandled promise rejection');
 });
 
 process.on('uncaughtException', (error) => {
-  logger.error({ err: error }, 'Uncaught exception');
+  logger.error({err: error}, 'Uncaught exception');
   process.exit(1);
 });
 

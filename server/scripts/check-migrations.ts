@@ -13,10 +13,10 @@
 /* eslint-disable no-console */
 
 import 'dotenv-flow/config';
-import { config } from '../config/index.js';
-import { createPool } from '../model/pool.js';
-import { logger } from '../utils/logger.js';
-import { applyMissingMigrations, checkMigrationStatus } from '../utils/migrations.js';
+import {config} from '../config/index.js';
+import {createPool} from '../model/pool.js';
+import {logger} from '../utils/logger.js';
+import {applyMissingMigrations, checkMigrationStatus} from '../utils/migrations.js';
 
 async function main(): Promise<void> {
   const shouldApply = process.argv.includes('--apply');
@@ -94,12 +94,12 @@ async function main(): Promise<void> {
       }
     }
   } catch (error) {
-    logger.error({ err: error }, 'Failed to check migrations');
+    logger.error({err: error}, 'Failed to check migrations');
     console.error('\n❌ Error checking migrations:', error);
 
     // Provide helpful error messages for common issues
     if (error && typeof error === 'object' && 'code' in error) {
-      const err = error as { code?: string; message?: string };
+      const err = error as {code?: string; message?: string};
       if (err.code === '28P01') {
         console.error('\n💡 Authentication failed. Possible solutions:');
         console.error('   1. Check that PGPASSWORD is set correctly');
