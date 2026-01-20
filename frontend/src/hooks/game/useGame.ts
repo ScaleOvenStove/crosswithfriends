@@ -214,6 +214,11 @@ export const useGame = (
       }
       // In dev mode, user may be null, which is allowed
 
+      // Prevent updates if puzzle is complete or cell is revealed
+      if (isComplete || cells[row]?.[col]?.isRevealed) {
+        return;
+      }
+
       // Store original state for rollback
       const originalValue = cells[row]?.[col]?.value || '';
 

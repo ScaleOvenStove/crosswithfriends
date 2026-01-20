@@ -39,6 +39,7 @@ export interface Cell {
   number?: number;
   isGood?: boolean; // Cell is checked and correct
   isBad?: boolean; // Cell is checked and incorrect
+  isRevealed?: boolean; // Cell has been revealed by the user
 }
 
 export interface GameState {

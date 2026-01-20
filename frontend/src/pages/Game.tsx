@@ -303,6 +303,7 @@ const Game = () => {
         // eslint-disable-next-line no-alert
         if (confirm('Are you sure you want to reveal the entire puzzle?')) {
           revealPuzzle();
+          pauseClock();
         }
         break;
     }

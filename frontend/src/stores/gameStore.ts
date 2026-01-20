@@ -345,7 +345,14 @@ export const useGameStore = create<GameStore>()(
           const newCells = state.cells.map((r, i) =>
             i === row
               ? r.map((cell, j) =>
-                  j === col ? { ...cell, value: state.solution![row][col], isPencil: false } : cell
+                  j === col
+                    ? {
+                        ...cell,
+                        value: state.solution![row][col],
+                        isPencil: false,
+                        isRevealed: true,
+                      }
+                    : cell
                 )
               : r
           );
@@ -370,6 +377,7 @@ export const useGameStore = create<GameStore>()(
                 ...newCells[row][currentCol],
                 value: state.solution[row][currentCol],
                 isPencil: false,
+                isRevealed: true,
               };
               currentCol++;
             }
@@ -384,6 +392,7 @@ export const useGameStore = create<GameStore>()(
                 ...newCells[currentRow][col],
                 value: state.solution[currentRow][col],
                 isPencil: false,
+                isRevealed: true,
               };
               currentRow++;
             }
@@ -404,6 +413,7 @@ export const useGameStore = create<GameStore>()(
                     ...cell,
                     value: state.solution![rowIdx][colIdx],
                     isPencil: false,
+                    isRevealed: true,
                   }
             )
           );
