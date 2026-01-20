@@ -1,8 +1,8 @@
-import {describe, it, expect} from 'vitest';
+import { describe, it, expect } from 'vitest';
 import PUZtoIPUZ from '../PUZtoIPUZ';
 
 describe('PUZtoIPUZ', () => {
-  function createMockPUZBuffer(nrow, ncol, gridData, clues = {across: [], down: []}) {
+  function createMockPUZBuffer(nrow, ncol, gridData, clues = { across: [], down: [] }) {
     const buffer = new ArrayBuffer(1000);
     const bytes = new Uint8Array(buffer);
 
@@ -166,7 +166,7 @@ describe('PUZtoIPUZ', () => {
     expect(Array.isArray(result.clues.Down)).toBe(true);
   });
 
-  it('should format clues as [number, text] arrays', () => {
+  it('should format clues as object {number, clue}', () => {
     const gridData = [
       ['A', 'B'],
       ['C', 'D'],
@@ -179,9 +179,8 @@ describe('PUZtoIPUZ', () => {
     const result = PUZtoIPUZ(buffer);
 
     if (result.clues.Across.length > 0) {
-      expect(Array.isArray(result.clues.Across[0])).toBe(true);
-      expect(result.clues.Across[0][0]).toBe('1'); // Clue number as string
-      expect(result.clues.Across[0][1]).toBe('Clue 1');
+      expect(result.clues.Across[0]).toHaveProperty('number', '1');
+      expect(result.clues.Across[0]).toHaveProperty('clue', 'Clue 1');
     }
   });
 

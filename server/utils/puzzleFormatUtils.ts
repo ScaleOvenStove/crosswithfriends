@@ -4,17 +4,17 @@
  * Eliminates code duplication across server/adapters, server/model, and server/services.
  */
 
-import type {PuzzleJson} from '@crosswithfriends/shared/types';
+import type { PuzzleJson } from '@crosswithfriends/shared/types';
 
-import {logger} from './logger.js';
+import { logger } from './logger.js';
 
 /**
  * Represents the old puzzle format with 'grid' and 'info' fields
  */
 export interface OldPuzzleFormat {
   grid?: string[][];
-  info?: {title?: string; author?: string; copyright?: string; description?: string; type?: string};
-  clues?: {down?: string[]; across?: string[]};
+  info?: { title?: string; author?: string; copyright?: string; description?: string; type?: string };
+  clues?: { down?: string[]; across?: string[] };
   circles?: number[];
   shades?: number[];
 }
@@ -22,7 +22,7 @@ export interface OldPuzzleFormat {
 /**
  * Clue entry in v1 format (array) or v2 format (object)
  */
-export type ClueEntry = [string, string] | {number: string; clue: string; cells?: unknown};
+export type ClueEntry = [string, string] | { number: string; clue: string; cells?: unknown };
 
 /**
  * Clues object with both capitalized and lowercase keys for compatibility
@@ -38,8 +38,8 @@ export interface CluesObject {
  * Normalized clues object with only capitalized keys and v2 format
  */
 export interface NormalizedClues {
-  Across: Array<{number: string; clue: string; cells?: unknown}>;
-  Down: Array<{number: string; clue: string; cells?: unknown}>;
+  Across: Array<{ number: string; clue: string; cells?: unknown }>;
+  Down: Array<{ number: string; clue: string; cells?: unknown }>;
 }
 
 /**
@@ -160,38 +160,38 @@ function isClueArrayV2Format(clueArray: ClueEntry[] | undefined): boolean {
 function convertClueEntryToV2(
   clue: ClueEntry,
   index: number
-): {number: string; clue: string; cells?: unknown} | null {
+): { number: string; clue: string; cells?: unknown } | null {
   if (Array.isArray(clue) && clue.length >= 2) {
     // v1 format: ["1", "clue text"]
-    return {number: clue[0], clue: clue[1]};
+    return { number: clue[0], clue: clue[1] };
   }
 
   if (clue && typeof clue === 'object' && 'number' in clue && 'clue' in clue) {
     // v2 format: {number: "1", clue: "clue text", cells?: [...]}
-    const clueObj = clue as {number: string; clue: string; cells?: unknown; [key: string]: unknown};
+    const clueObj = clue as { number: string; clue: string; cells?: unknown;[key: string]: unknown };
 
     const numberIsNumeric = isNumeric(clueObj.number);
     const clueIsNumeric = isNumeric(clueObj.clue);
 
     // If number is not numeric but clue is, they're swapped
     if (!numberIsNumeric && clueIsNumeric) {
-      logger.warn({original: clueObj}, 'Detected swapped clue fields, fixing');
-      const {number: _num, clue: _clue, ...rest} = clueObj;
-      return {number: clueObj.clue, clue: clueObj.number, ...rest};
+      logger.warn({ original: clueObj }, 'Detected swapped clue fields, fixing');
+      const { number: _num, clue: _clue, ...rest } = clueObj;
+      return { number: clueObj.clue, clue: clueObj.number, ...rest };
     }
 
     // If both are non-numeric, use index as fallback
     if (!numberIsNumeric && !clueIsNumeric) {
-      logger.warn({clueObj, index}, `Clue at index ${index} has non-numeric number field, using fallback`);
-      const {number: _num, clue: _clue, ...rest} = clueObj;
-      return {number: String(index + 1), clue: clueObj.clue || clueObj.number, ...rest};
+      logger.warn({ clueObj, index }, `Clue at index ${index} has non-numeric number field, using fallback`);
+      const { number: _num, clue: _clue, ...rest } = clueObj;
+      return { number: String(index + 1), clue: clueObj.clue || clueObj.number, ...rest };
     }
 
     // Preserve all properties including cells
     return clueObj;
   }
 
-  logger.warn({clue, type: typeof clue, index}, `Invalid clue format at index ${index}`);
+  logger.warn({ clue, type: typeof clue, index }, `Invalid clue format at index ${index}`);
   return null;
 }
 
@@ -200,12 +200,12 @@ function convertClueEntryToV2(
  */
 function convertClueArrayToV2(
   clueArray: ClueEntry[] | undefined
-): Array<{number: string; clue: string; cells?: unknown}> {
+): Array<{ number: string; clue: string; cells?: unknown }> {
   if (!clueArray || !Array.isArray(clueArray) || clueArray.length === 0) {
     return [];
   }
 
-  const result: Array<{number: string; clue: string; cells?: unknown}> = [];
+  const result: Array<{ number: string; clue: string; cells?: unknown }> = [];
   for (let index = 0; index < clueArray.length; index++) {
     const clue: ClueEntry | undefined = clueArray[index];
     if (clue === undefined) continue;
@@ -229,12 +229,18 @@ function convertClueArrayToV2(
  */
 export function normalizeClues(clues: CluesObject | undefined): NormalizedClues {
   if (!clues) {
-    return {Across: [], Down: []};
+    return { Across: [], Down: [] };
   }
 
-  // Get clue arrays, preferring capitalized keys
-  const acrossClues = clues.Across || clues.across;
-  const downClues = clues.Down || clues.down;
+  // Get clue arrays, preferring capitalized keys IF they have content
+  // This handles cases where file has empty "Across": [] but populated "across": [...]
+  const hasAcross = Array.isArray(clues.Across) && clues.Across.length > 0;
+  const hasLowerAcross = Array.isArray(clues.across) && clues.across.length > 0;
+  const acrossClues = hasAcross ? clues.Across : (hasLowerAcross ? clues.across : (clues.Across || clues.across));
+
+  const hasDown = Array.isArray(clues.Down) && clues.Down.length > 0;
+  const hasLowerDown = Array.isArray(clues.down) && clues.down.length > 0;
+  const downClues = hasDown ? clues.Down : (hasLowerDown ? clues.down : (clues.Down || clues.down));
 
   // If clues are already in v2 format, return them as-is (idempotent)
   // Check if BOTH arrays are in v2 format (or empty)
@@ -297,12 +303,12 @@ export function normalizePuzzleClues(puzzle: PuzzleJson): void {
  * Extracts puzzle dimensions from either format
  * Returns {width, height} or defaults to {0, 0} if not determinable
  */
-export function extractDimensions(puzzle: PuzzleJson | OldPuzzleFormat): {width: number; height: number} {
+export function extractDimensions(puzzle: PuzzleJson | OldPuzzleFormat): { width: number; height: number } {
   // Try ipuz format first
   if ('dimensions' in puzzle && puzzle.dimensions) {
-    const dims = puzzle.dimensions as {width?: number; height?: number};
+    const dims = puzzle.dimensions as { width?: number; height?: number };
     if (typeof dims.width === 'number' && typeof dims.height === 'number') {
-      return {width: dims.width, height: dims.height};
+      return { width: dims.width, height: dims.height };
     }
   }
 
@@ -311,7 +317,7 @@ export function extractDimensions(puzzle: PuzzleJson | OldPuzzleFormat): {width:
     const height = puzzle.solution.length;
     const firstRow = puzzle.solution[0];
     const width = Array.isArray(firstRow) ? firstRow.length : 0;
-    return {width, height};
+    return { width, height };
   }
 
   // Try to calculate from puzzle grid (ipuz format)
@@ -319,7 +325,7 @@ export function extractDimensions(puzzle: PuzzleJson | OldPuzzleFormat): {width:
     const height = puzzle.puzzle.length;
     const firstRow = puzzle.puzzle[0];
     const width = Array.isArray(firstRow) ? firstRow.length : 0;
-    return {width, height};
+    return { width, height };
   }
 
   // Try old format with grid
@@ -329,12 +335,12 @@ export function extractDimensions(puzzle: PuzzleJson | OldPuzzleFormat): {width:
       const height = oldPuzzle.grid.length;
       const firstRow = oldPuzzle.grid[0];
       const width = Array.isArray(firstRow) ? firstRow.length : 0;
-      return {width, height};
+      return { width, height };
     }
   }
 
   logger.warn('Could not determine puzzle dimensions');
-  return {width: 0, height: 0};
+  return { width: 0, height: 0 };
 }
 
 /**
