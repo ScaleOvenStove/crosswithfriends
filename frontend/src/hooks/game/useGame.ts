@@ -37,7 +37,14 @@ export const useGame = (
   const cells = useGameStore((state) => state.cells);
   const users = useGameStore((state) => state.users);
   const isComplete = useGameStore((state) => state.isComplete);
-  const { updateCell, addUser, removeUser, updateCursor, setComplete, pauseClock } = useGameStore();
+
+  // Use shallow selector for actions to prevent re-renders on state changes
+  const updateCell = useGameStore((state) => state.updateCell);
+  const addUser = useGameStore((state) => state.addUser);
+  const removeUser = useGameStore((state) => state.removeUser);
+  const updateCursor = useGameStore((state) => state.updateCursor);
+  const setComplete = useGameStore((state) => state.setComplete);
+  const pauseClock = useGameStore((state) => state.pauseClock);
 
   const { user } = useUser();
 
@@ -281,7 +288,7 @@ export const useGame = (
             cell: { r: row, c: col },
             value: value,
             autocheck: false,
-            id: user?.id || null,
+            id: user?.id || '',
           },
         },
         (response: { success?: boolean; error?: string }) => {

@@ -71,7 +71,9 @@ const PuzzleListComponent = () => {
   // Flatten paginated data
   const puzzles = useMemo(() => {
     if (!data) return [];
-    return data.pages.flatMap((page) => page.puzzles.map(transformPuzzleForDisplay));
+    return data.pages.flatMap((page) =>
+      (page.puzzles || []).map((p: any) => transformPuzzleForDisplay(p))
+    );
   }, [data]);
 
   const handleLoadMore = () => {
@@ -91,24 +93,8 @@ const PuzzleListComponent = () => {
     setIsFilterOpen((prev) => !prev);
   }, []);
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading puzzles..." />;
-  }
-
-  if (error) {
-    return (
-      <div className="text-center p-12 bg-white rounded-lg border border-red-300 text-red-600">
-        <p className="mb-4">Failed to load puzzles. Please try again.</p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-primary hover:text-white hover:border-primary transition-all"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  // Render loading/error states within the content area instead of replacing the entire component
+  // to prevent focus loss in the search bar.
 
   return (
     <div className="flex gap-6 mt-8">
@@ -158,7 +144,20 @@ const PuzzleListComponent = () => {
           <FilterDebug filterState={filterState} searchTerm={searchTerm} filters={filters} />
         )}
 
-        {puzzles.length === 0 ? (
+        {isLoading ? (
+          <LoadingSpinner text="Loading puzzles..." />
+        ) : error ? (
+          <div className="text-center p-12 bg-white rounded-lg border border-red-300 text-red-600">
+            <p className="mb-4">Failed to load puzzles. Please try again.</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-primary hover:text-white hover:border-primary transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        ) : puzzles.length === 0 ? (
           <div className="text-center p-12 bg-white rounded-lg border border-gray-300 shadow-sm">
             <p className="text-gray-600 mb-2 text-lg font-medium">No puzzles found</p>
             <p className="text-gray-500 text-sm">Try adjusting your filters or search term.</p>
