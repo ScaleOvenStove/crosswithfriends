@@ -133,8 +133,14 @@ const Game = () => {
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Keyboard shortcuts for help modal (? and F1)
-  useHotkeys('shift+/', () => setShowHelpModal(true), { preventDefault: true });
-  useHotkeys('f1', () => setShowHelpModal(true), { preventDefault: true });
+  useHotkeys('shift+/', () => setShowHelpModal(true), {
+    preventDefault: true,
+    enableOnFormTags: ['INPUT'],
+  });
+  useHotkeys('f1', () => setShowHelpModal(true), {
+    preventDefault: true,
+    enableOnFormTags: ['INPUT'],
+  });
 
   // Use either gid (for existing games) or pid (for new puzzles)
   const gameId = gid || pid;

@@ -424,7 +424,7 @@ export const useKeyboardNavigation = ({
         onDirectionToggle();
       }
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [cells, selectedCell, onCellSelect, onDirectionToggle, enabled]
   );
 
@@ -445,7 +445,7 @@ export const useKeyboardNavigation = ({
         onDirectionToggle();
       }
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [cells, selectedCell, onCellSelect, onDirectionToggle, enabled]
   );
 
@@ -466,7 +466,7 @@ export const useKeyboardNavigation = ({
         onDirectionToggle();
       }
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [cells, selectedCell, onCellSelect, onDirectionToggle, enabled]
   );
 
@@ -487,7 +487,7 @@ export const useKeyboardNavigation = ({
         onDirectionToggle();
       }
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [cells, selectedCell, onCellSelect, onDirectionToggle, enabled]
   );
 
@@ -507,7 +507,7 @@ export const useKeyboardNavigation = ({
         if (nextCell) onCellSelect(nextCell.row, nextCell.col);
       }
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [cells, selectedCell, onCellSelect, enabled]
   );
 
@@ -526,7 +526,7 @@ export const useKeyboardNavigation = ({
         if (nextCell) onCellSelect(nextCell.row, nextCell.col);
       }
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [cells, selectedCell, onCellSelect, enabled]
   );
 
@@ -538,7 +538,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       movePerpendicular(false);
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [movePerpendicular, enabled, selectedCell]
   );
 
@@ -549,7 +549,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       movePerpendicular(true);
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [movePerpendicular, enabled, selectedCell]
   );
 
@@ -561,7 +561,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onDirectionToggle();
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onDirectionToggle, enabled]
   );
 
@@ -573,7 +573,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       navigateToUnfilledClue(true);
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [navigateToUnfilledClue, enabled]
   );
 
@@ -584,7 +584,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       navigateToUnfilledClue(false);
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [navigateToUnfilledClue, enabled]
   );
 
@@ -596,7 +596,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       navigateToWordBoundary(true);
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [navigateToWordBoundary, enabled, selectedCell]
   );
 
@@ -607,7 +607,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       navigateToWordBoundary(false);
     },
-    { enabled, preventDefault: true },
+    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [navigateToWordBoundary, enabled, selectedCell]
   );
 
@@ -619,7 +619,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onTogglePencil();
     },
-    { enabled: enabled && !!onTogglePencil, preventDefault: true },
+    { enabled: enabled && !!onTogglePencil, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onTogglePencil, enabled]
   );
 
@@ -631,7 +631,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onCheck('cell');
     },
-    { enabled: enabled && !!onCheck, preventDefault: true },
+    { enabled: enabled && !!onCheck, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onCheck, enabled]
   );
 
@@ -642,7 +642,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onCheck('word');
     },
-    { enabled: enabled && !!onCheck, preventDefault: true },
+    { enabled: enabled && !!onCheck, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onCheck, enabled]
   );
 
@@ -653,7 +653,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onCheck('puzzle');
     },
-    { enabled: enabled && !!onCheck, preventDefault: true },
+    { enabled: enabled && !!onCheck, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onCheck, enabled]
   );
 
@@ -665,7 +665,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onReveal('cell');
     },
-    { enabled: enabled && !!onReveal, preventDefault: true },
+    { enabled: enabled && !!onReveal, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onReveal, enabled]
   );
 
@@ -676,7 +676,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onReveal('word');
     },
-    { enabled: enabled && !!onReveal, preventDefault: true },
+    { enabled: enabled && !!onReveal, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onReveal, enabled]
   );
 
@@ -687,7 +687,7 @@ export const useKeyboardNavigation = ({
       e.preventDefault();
       onReveal('puzzle');
     },
-    { enabled: enabled && !!onReveal, preventDefault: true },
+    { enabled: enabled && !!onReveal, preventDefault: true, enableOnFormTags: ['INPUT'] },
     [onReveal, enabled]
   );
 
