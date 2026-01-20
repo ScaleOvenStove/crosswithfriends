@@ -44,7 +44,7 @@ function getRebus(bytes) {
   });
   // dict string format is k1:v1;k2:v2;...;kn:vn;
 
-  return { table, sols };
+  return {table, sols};
 }
 
 function getCircles(bytes) {
@@ -165,7 +165,7 @@ export default function PUZtoIPUZ(buffer) {
 
         if (hasCircle || hasShade) {
           // Cell with style - use object format
-          const cellObj = { cell: clueNum || 0 };
+          const cellObj = {cell: clueNum || 0};
           if (hasCircle || hasShade) {
             cellObj.style = {};
             if (hasCircle) {
@@ -209,10 +209,10 @@ export default function PUZtoIPUZ(buffer) {
 
   for (let i = 1; i <= n; i++) {
     if (isAcross[i]) {
-      acrossClues.push({ number: i.toString(), clue: readString() });
+      acrossClues.push({number: i.toString(), clue: readString()});
     }
     if (isDown[i]) {
-      downClues.push({ number: i.toString(), clue: readString() });
+      downClues.push({number: i.toString(), clue: readString()});
     }
   }
 

@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import {describe, it, expect} from 'vitest';
 import PUZtoIPUZ from '../PUZtoIPUZ';
 
 describe('PUZtoIPUZ', () => {
-  function createMockPUZBuffer(nrow, ncol, gridData, clues = { across: [], down: [] }) {
+  function createMockPUZBuffer(nrow, ncol, gridData, clues = {across: [], down: []}) {
     const buffer = new ArrayBuffer(1000);
     const bytes = new Uint8Array(buffer);
 
