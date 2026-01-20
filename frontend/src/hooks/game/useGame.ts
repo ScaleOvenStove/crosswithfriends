@@ -313,7 +313,12 @@ export const useGame = (
   // Cell selection handler
   const handleCellSelect = useCallback(
     (row: number, col: number) => {
-      gameUI.setSelectedCell(row, col);
+      // If clicking the already selected cell, toggle direction
+      if (gameUI.selectedCell?.row === row && gameUI.selectedCell?.col === col) {
+        gameUI.toggleDirection();
+      } else {
+        gameUI.setSelectedCell(row, col);
+      }
 
       // Emit cursor position
       if (gameId && user) {
