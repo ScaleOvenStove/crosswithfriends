@@ -32,6 +32,7 @@
     "@fastify/swagger": "^9.6.1",
     "@fastify/swagger-ui": "^5.2.3",
     "dotenv": "^17.2.3",
+    "dotenv-flow": "^4.1.0",
     "escape-html": "^1.0.3",
     "fastify": "^5.6.2",
     "fastify-openapi-glue": "^4.7.0",

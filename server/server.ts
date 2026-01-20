@@ -1,3 +1,4 @@
+import 'dotenv-flow/config';
 import crypto from 'crypto';
 import {readFileSync} from 'fs';
 import {Server as HTTPServer} from 'http';

@@ -179,7 +179,7 @@ export class PuzzleRepository implements IPuzzleRepository {
         height,
         puzzle_data
       )
-      VALUES ($1, $2, $3, $4, to_timestamp($5), to_timestamp($5), 0, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      VALUES ($1, $2, $3, $4, to_timestamp($5), to_timestamp($5), 0, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         puzzleId,
         pidNumeric,

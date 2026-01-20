@@ -12,6 +12,7 @@
 
 /* eslint-disable no-console */
 
+import 'dotenv-flow/config';
 import {config} from '../config/index.js';
 import {createPool} from '../model/pool.js';
 import {logger} from '../utils/logger.js';
