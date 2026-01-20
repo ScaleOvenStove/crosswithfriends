@@ -426,7 +426,14 @@ export const useGameStore = create<GameStore>()(
             i === row
               ? r.map((cell, j) =>
                   j === col
-                    ? { ...cell, value: '', isPencil: false, isGood: false, isBad: false }
+                    ? {
+                        ...cell,
+                        value: '',
+                        isPencil: false,
+                        isGood: false,
+                        isBad: false,
+                        isRevealed: false,
+                      }
                     : cell
                 )
               : r
@@ -452,6 +459,7 @@ export const useGameStore = create<GameStore>()(
                 isPencil: false,
                 isGood: false,
                 isBad: false,
+                isRevealed: false,
               };
               currentCol++;
             }
@@ -468,6 +476,7 @@ export const useGameStore = create<GameStore>()(
                 isPencil: false,
                 isGood: false,
                 isBad: false,
+                isRevealed: false,
               };
               currentRow++;
             }
@@ -482,7 +491,14 @@ export const useGameStore = create<GameStore>()(
             row.map((cell) =>
               cell.isBlack
                 ? cell
-                : { ...cell, value: '', isPencil: false, isGood: false, isBad: false }
+                : {
+                    ...cell,
+                    value: '',
+                    isPencil: false,
+                    isGood: false,
+                    isBad: false,
+                    isRevealed: false,
+                  }
             )
           );
           return {
