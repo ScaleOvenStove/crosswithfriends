@@ -269,22 +269,15 @@ const Game = () => {
   const handleCheck = (scope: 'cell' | 'word' | 'puzzle') => {
     if (!selectedCell) return;
 
-    let isCorrect = false;
     switch (scope) {
       case 'cell':
-        isCorrect = checkCell(selectedCell.row, selectedCell.col);
-        // eslint-disable-next-line no-alert
-        alert(isCorrect ? 'Cell is correct!' : 'Cell is incorrect');
+        checkCell(selectedCell.row, selectedCell.col);
         break;
       case 'word':
-        isCorrect = checkWord(selectedCell.row, selectedCell.col, selectedDirection);
-        // eslint-disable-next-line no-alert
-        alert(isCorrect ? 'Word is correct!' : 'Word has errors');
+        checkWord(selectedCell.row, selectedCell.col, selectedDirection);
         break;
       case 'puzzle':
-        isCorrect = checkPuzzle();
-        // eslint-disable-next-line no-alert
-        alert(isCorrect ? 'Puzzle is complete and correct!' : 'Puzzle has errors');
+        checkPuzzle();
         break;
     }
   };

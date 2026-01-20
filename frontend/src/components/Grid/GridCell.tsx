@@ -100,8 +100,8 @@ const CellContainer = styled('div')<{
     // Red background for incorrect cells
     backgroundColor = 'rgba(244, 67, 54, 0.15)';
   } else if (isRevealed) {
-    // Pink background for revealed cells (matching secondary color/Reveal button)
-    backgroundColor = 'rgba(233, 30, 99, 0.15)'; // Pink 500 equivalent with opacity
+    // Purple transparent (matching theme.palette.secondary.main #9c27b0)
+    backgroundColor = 'rgba(156, 39, 176, 0.15)';
   } else if (isGood) {
     // Green background for correct cells
     backgroundColor = 'rgba(76, 175, 80, 0.15)';
@@ -198,7 +198,7 @@ const CellInput = styled('input')<{
   } else if (isGood) {
     textColor = '#2e7d32'; // Green for correct
   } else if (isRevealed) {
-    textColor = '#c2185b'; // Darker pink for text visibility
+    textColor = '#7b1fa2'; // Purple for revealed (secondary.dark)
   } else if (isPencil) {
     textColor = theme.palette.text.secondary;
   } else if (needsDarkText) {
