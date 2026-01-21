@@ -31,7 +31,7 @@ const isLocalhostUrl = (url: string): boolean => {
 
   const hostPort = trimmed.split('/')[0] ?? '';
   let host: string;
-  
+
   // Handle bracketed IPv6 addresses (e.g., [::1]:3021)
   if (hostPort.startsWith('[')) {
     const bracketEnd = hostPort.indexOf(']');
@@ -41,9 +41,7 @@ const isLocalhostUrl = (url: string): boolean => {
     } else {
       // Malformed bracketed address, fall back to splitting on last ':'
       const lastColon = hostPort.lastIndexOf(':');
-      host = (lastColon !== -1 
-        ? hostPort.substring(0, lastColon) 
-        : hostPort).toLowerCase();
+      host = (lastColon !== -1 ? hostPort.substring(0, lastColon) : hostPort).toLowerCase();
     }
   } else {
     // For non-bracketed addresses, detect IPv6 addresses
@@ -69,12 +67,9 @@ const isLocalhostUrl = (url: string): boolean => {
       }
     }
   }
-  
+
   return (
-    host === 'localhost' ||
-    host.endsWith('.localhost') ||
-    host === '127.0.0.1' ||
-    host === '::1'
+    host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1' || host === '::1'
   );
 };
 
