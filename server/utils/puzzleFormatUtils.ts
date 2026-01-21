@@ -232,9 +232,15 @@ export function normalizeClues(clues: CluesObject | undefined): NormalizedClues 
     return {Across: [], Down: []};
   }
 
-  // Get clue arrays, preferring capitalized keys
-  const acrossClues = clues.Across || clues.across;
-  const downClues = clues.Down || clues.down;
+  // Get clue arrays, preferring capitalized keys IF they have content
+  // This handles cases where file has empty "Across": [] but populated "across": [...]
+  const hasAcross = Array.isArray(clues.Across) && clues.Across.length > 0;
+  const hasLowerAcross = Array.isArray(clues.across) && clues.across.length > 0;
+  const acrossClues = hasAcross ? clues.Across : hasLowerAcross ? clues.across : clues.Across || clues.across;
+
+  const hasDown = Array.isArray(clues.Down) && clues.Down.length > 0;
+  const hasLowerDown = Array.isArray(clues.down) && clues.down.length > 0;
+  const downClues = hasDown ? clues.Down : hasLowerDown ? clues.down : clues.Down || clues.down;
 
   // If clues are already in v2 format, return them as-is (idempotent)
   // Check if BOTH arrays are in v2 format (or empty)

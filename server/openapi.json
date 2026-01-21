@@ -4,9 +4,13 @@
     "title": "CrossWithFriends API",
     "description": "API for the CrossWithFriends crossword puzzle platform",
     "version": "1.0.0",
-    "contact": {"name": "CrossWithFriends"}
+    "contact": {
+      "name": "CrossWithFriends"
+    }
   },
-  "components": {"schemas": {}},
+  "components": {
+    "schemas": {}
+  },
   "paths": {
     "/auth/token": {
       "post": {
@@ -38,9 +42,18 @@
                   "type": "object",
                   "required": ["token", "userId", "expiresAt"],
                   "properties": {
-                    "token": {"type": "string", "description": "JWT authentication token"},
-                    "userId": {"type": "string", "description": "The user ID associated with this token"},
-                    "expiresAt": {"type": "number", "description": "Token expiration timestamp (ms)"}
+                    "token": {
+                      "type": "string",
+                      "description": "JWT authentication token"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "description": "The user ID associated with this token"
+                    },
+                    "expiresAt": {
+                      "type": "number",
+                      "description": "Token expiration timestamp (ms)"
+                    }
                   }
                 }
               }
@@ -54,10 +67,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -71,10 +96,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -96,7 +133,10 @@
                 "type": "object",
                 "required": ["firebaseToken"],
                 "properties": {
-                  "firebaseToken": {"type": "string", "description": "Firebase ID token from the frontend"}
+                  "firebaseToken": {
+                    "type": "string",
+                    "description": "Firebase ID token from the frontend"
+                  }
                 }
               }
             }
@@ -112,9 +152,18 @@
                   "type": "object",
                   "required": ["token", "userId", "expiresAt"],
                   "properties": {
-                    "token": {"type": "string", "description": "Backend JWT authentication token"},
-                    "userId": {"type": "string", "description": "The Firebase UID used as userId"},
-                    "expiresAt": {"type": "number", "description": "Token expiration timestamp (ms)"}
+                    "token": {
+                      "type": "string",
+                      "description": "Backend JWT authentication token"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "description": "The Firebase UID used as userId"
+                    },
+                    "expiresAt": {
+                      "type": "number",
+                      "description": "Token expiration timestamp (ms)"
+                    }
                   }
                 }
               }
@@ -128,10 +177,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -145,10 +206,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -162,10 +235,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -186,7 +271,12 @@
               "schema": {
                 "type": "object",
                 "required": ["token"],
-                "properties": {"token": {"type": "string", "description": "The token to validate"}}
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "The token to validate"
+                  }
+                }
               }
             }
           },
@@ -201,9 +291,18 @@
                   "type": "object",
                   "required": ["valid"],
                   "properties": {
-                    "valid": {"type": "boolean", "description": "Whether the token is valid"},
-                    "userId": {"type": "string", "description": "User ID from token (if valid)"},
-                    "expiresAt": {"type": "number", "description": "Token expiration (if valid)"}
+                    "valid": {
+                      "type": "boolean",
+                      "description": "Whether the token is valid"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "description": "User ID from token (if valid)"
+                    },
+                    "expiresAt": {
+                      "type": "number",
+                      "description": "Token expiration (if valid)"
+                    }
                   }
                 }
               }
@@ -217,10 +316,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -244,8 +355,14 @@
                   "type": "object",
                   "required": ["userId", "expiresAt"],
                   "properties": {
-                    "userId": {"type": "string", "description": "Current user ID"},
-                    "expiresAt": {"type": "number", "description": "Token expiration timestamp"}
+                    "userId": {
+                      "type": "string",
+                      "description": "Current user ID"
+                    },
+                    "expiresAt": {
+                      "type": "number",
+                      "description": "Token expiration timestamp"
+                    }
                   }
                 }
               }
@@ -259,10 +376,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -279,35 +408,45 @@
         "description": "Get a paginated list of puzzles with optional filters",
         "parameters": [
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "query",
             "name": "page",
             "required": true,
             "description": "Page number"
           },
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "query",
             "name": "pageSize",
             "required": true,
             "description": "Number of items per page"
           },
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "query",
             "name": "sizeMini",
             "required": false,
             "description": "Filter for mini puzzles (true/false)"
           },
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "query",
             "name": "sizeStandard",
             "required": false,
             "description": "Filter for standard puzzles (true/false)"
           },
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "query",
             "name": "nameOrTitle",
             "required": false,
@@ -322,7 +461,13 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "puzzles": {"type": "array", "items": {"type": "object", "additionalProperties": true}}
+                    "puzzles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
                   }
                 }
               }
@@ -336,10 +481,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -353,10 +510,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -383,24 +552,54 @@
                     "additionalProperties": true,
                     "required": ["clues"],
                     "properties": {
-                      "version": {"type": "string", "description": "IPuz version"},
-                      "kind": {"type": "array", "items": {"type": "string"}, "description": "IPuz kind"},
+                      "version": {
+                        "type": "string",
+                        "description": "IPuz version"
+                      },
+                      "kind": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "IPuz kind"
+                      },
                       "dimensions": {
                         "type": "object",
                         "properties": {
-                          "width": {"type": "number", "description": "Puzzle width"},
-                          "height": {"type": "number", "description": "Puzzle height"}
+                          "width": {
+                            "type": "number",
+                            "description": "Puzzle width"
+                          },
+                          "height": {
+                            "type": "number",
+                            "description": "Puzzle height"
+                          }
                         }
                       },
-                      "title": {"type": "string", "description": "Puzzle title"},
-                      "author": {"type": "string", "description": "Puzzle author"},
-                      "copyright": {"type": "string", "description": "Copyright information"},
-                      "notes": {"type": "string", "description": "Puzzle description/notes"},
+                      "title": {
+                        "type": "string",
+                        "description": "Puzzle title"
+                      },
+                      "author": {
+                        "type": "string",
+                        "description": "Puzzle author"
+                      },
+                      "copyright": {
+                        "type": "string",
+                        "description": "Copyright information"
+                      },
+                      "notes": {
+                        "type": "string",
+                        "description": "Puzzle description/notes"
+                      },
                       "solution": {
                         "type": "array",
                         "items": {
                           "type": "array",
-                          "items": {"type": "string", "nullable": true}
+                          "items": {
+                            "type": "string",
+                            "nullable": true
+                          }
                         },
                         "description": "Solution grid (new format)"
                       },
@@ -410,10 +609,20 @@
                           "type": "array",
                           "items": {
                             "anyOf": [
-                              {"type": "number"},
-                              {"type": "string"},
-                              {"type": "object", "additionalProperties": true},
-                              {"type": "string", "nullable": true}
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": true
+                              },
+                              {
+                                "type": "string",
+                                "nullable": true
+                              }
                             ]
                           }
                         },
@@ -426,36 +635,84 @@
                           "Across": {
                             "type": "array",
                             "items": {
-                              "type": "object",
-                              "required": ["number", "clue"],
-                              "properties": {
-                                "number": {"type": "string", "description": "Clue number"},
-                                "clue": {"type": "string", "description": "Clue text"},
-                                "cells": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": ["number", "clue"],
+                                  "properties": {
+                                    "number": {
+                                      "type": "string",
+                                      "description": "Clue number"
+                                    },
+                                    "clue": {
+                                      "type": "string",
+                                      "description": "Clue text"
+                                    },
+                                    "cells": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "description": "Optional array of [column, row] pairs (v2 format)"
+                                    }
+                                  }
+                                },
+                                {
                                   "type": "array",
-                                  "items": {"type": "array", "items": {"type": "number"}},
-                                  "description": "Optional array of [column, row] pairs (v2 format)"
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "minItems": 2,
+                                  "maxItems": 2,
+                                  "description": "v1 format: [number, clue]"
                                 }
-                              }
+                              ]
                             },
-                            "description": "Across clues in v2 object format {number, clue}"
+                            "description": "Across clues in v2 object format {number, clue} or v1 array format"
                           },
                           "Down": {
                             "type": "array",
                             "items": {
-                              "type": "object",
-                              "required": ["number", "clue"],
-                              "properties": {
-                                "number": {"type": "string", "description": "Clue number"},
-                                "clue": {"type": "string", "description": "Clue text"},
-                                "cells": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": ["number", "clue"],
+                                  "properties": {
+                                    "number": {
+                                      "type": "string",
+                                      "description": "Clue number"
+                                    },
+                                    "clue": {
+                                      "type": "string",
+                                      "description": "Clue text"
+                                    },
+                                    "cells": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "description": "Optional array of [column, row] pairs (v2 format)"
+                                    }
+                                  }
+                                },
+                                {
                                   "type": "array",
-                                  "items": {"type": "array", "items": {"type": "number"}},
-                                  "description": "Optional array of [column, row] pairs (v2 format)"
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "minItems": 2,
+                                  "maxItems": 2,
+                                  "description": "v1 format: [number, clue]"
                                 }
-                              }
+                              ]
                             },
-                            "description": "Down clues in v2 object format {number, clue}"
+                            "description": "Down clues in v2 object format {number, clue} or v1 array format"
                           }
                         }
                       },
@@ -463,7 +720,10 @@
                         "type": "array",
                         "items": {
                           "type": "array",
-                          "items": {"type": "string", "nullable": true}
+                          "items": {
+                            "type": "string",
+                            "nullable": true
+                          }
                         },
                         "description": "Legacy format: Solution grid"
                       },
@@ -471,17 +731,35 @@
                         "type": "object",
                         "additionalProperties": true,
                         "properties": {
-                          "type": {"type": "string", "description": "Puzzle type"},
-                          "title": {"type": "string", "description": "Puzzle title"},
-                          "author": {"type": "string", "description": "Puzzle author"},
-                          "description": {"type": "string", "description": "Puzzle description"}
+                          "type": {
+                            "type": "string",
+                            "description": "Puzzle type"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Puzzle title"
+                          },
+                          "author": {
+                            "type": "string",
+                            "description": "Puzzle author"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Puzzle description"
+                          }
                         },
                         "description": "Legacy format: Puzzle metadata"
                       }
                     }
                   },
-                  "pid": {"type": "string", "description": "Optional puzzle ID"},
-                  "isPublic": {"type": "boolean", "description": "Whether the puzzle is public"}
+                  "pid": {
+                    "type": "string",
+                    "description": "Optional puzzle ID"
+                  },
+                  "isPublic": {
+                    "type": "boolean",
+                    "description": "Whether the puzzle is public"
+                  }
                 }
               }
             }
@@ -496,7 +774,12 @@
                 "schema": {
                   "type": "object",
                   "required": ["pid"],
-                  "properties": {"pid": {"type": "string", "description": "Puzzle ID"}}
+                  "properties": {
+                    "pid": {
+                      "type": "string",
+                      "description": "Puzzle ID"
+                    }
+                  }
                 }
               }
             }
@@ -509,10 +792,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -526,10 +821,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -546,7 +853,9 @@
         "description": "Retrieves full puzzle data including grid, clues, and solution",
         "parameters": [
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "name": "pid",
             "required": true,
@@ -563,24 +872,54 @@
                   "additionalProperties": true,
                   "required": ["clues"],
                   "properties": {
-                    "version": {"type": "string", "description": "IPuz version"},
-                    "kind": {"type": "array", "items": {"type": "string"}, "description": "IPuz kind"},
+                    "version": {
+                      "type": "string",
+                      "description": "IPuz version"
+                    },
+                    "kind": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "IPuz kind"
+                    },
                     "dimensions": {
                       "type": "object",
                       "properties": {
-                        "width": {"type": "number", "description": "Puzzle width"},
-                        "height": {"type": "number", "description": "Puzzle height"}
+                        "width": {
+                          "type": "number",
+                          "description": "Puzzle width"
+                        },
+                        "height": {
+                          "type": "number",
+                          "description": "Puzzle height"
+                        }
                       }
                     },
-                    "title": {"type": "string", "description": "Puzzle title"},
-                    "author": {"type": "string", "description": "Puzzle author"},
-                    "copyright": {"type": "string", "description": "Copyright information"},
-                    "notes": {"type": "string", "description": "Puzzle description/notes"},
+                    "title": {
+                      "type": "string",
+                      "description": "Puzzle title"
+                    },
+                    "author": {
+                      "type": "string",
+                      "description": "Puzzle author"
+                    },
+                    "copyright": {
+                      "type": "string",
+                      "description": "Copyright information"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "description": "Puzzle description/notes"
+                    },
                     "solution": {
                       "type": "array",
                       "items": {
                         "type": "array",
-                        "items": {"type": "string", "nullable": true}
+                        "items": {
+                          "type": "string",
+                          "nullable": true
+                        }
                       },
                       "description": "Solution grid (new format)"
                     },
@@ -590,10 +929,20 @@
                         "type": "array",
                         "items": {
                           "anyOf": [
-                            {"type": "number"},
-                            {"type": "string"},
-                            {"type": "object", "additionalProperties": true},
-                            {"type": "string", "nullable": true}
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": true
+                            },
+                            {
+                              "type": "string",
+                              "nullable": true
+                            }
                           ]
                         }
                       },
@@ -606,36 +955,84 @@
                         "Across": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "required": ["number", "clue"],
-                            "properties": {
-                              "number": {"type": "string", "description": "Clue number"},
-                              "clue": {"type": "string", "description": "Clue text"},
-                              "cells": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": ["number", "clue"],
+                                "properties": {
+                                  "number": {
+                                    "type": "string",
+                                    "description": "Clue number"
+                                  },
+                                  "clue": {
+                                    "type": "string",
+                                    "description": "Clue text"
+                                  },
+                                  "cells": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "description": "Optional array of [column, row] pairs (v2 format)"
+                                  }
+                                }
+                              },
+                              {
                                 "type": "array",
-                                "items": {"type": "array", "items": {"type": "number"}},
-                                "description": "Optional array of [column, row] pairs (v2 format)"
+                                "items": {
+                                  "type": "string"
+                                },
+                                "minItems": 2,
+                                "maxItems": 2,
+                                "description": "v1 format: [number, clue]"
                               }
-                            }
+                            ]
                           },
-                          "description": "Across clues in v2 object format {number, clue}"
+                          "description": "Across clues in v2 object format {number, clue} or v1 array format"
                         },
                         "Down": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "required": ["number", "clue"],
-                            "properties": {
-                              "number": {"type": "string", "description": "Clue number"},
-                              "clue": {"type": "string", "description": "Clue text"},
-                              "cells": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": ["number", "clue"],
+                                "properties": {
+                                  "number": {
+                                    "type": "string",
+                                    "description": "Clue number"
+                                  },
+                                  "clue": {
+                                    "type": "string",
+                                    "description": "Clue text"
+                                  },
+                                  "cells": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "description": "Optional array of [column, row] pairs (v2 format)"
+                                  }
+                                }
+                              },
+                              {
                                 "type": "array",
-                                "items": {"type": "array", "items": {"type": "number"}},
-                                "description": "Optional array of [column, row] pairs (v2 format)"
+                                "items": {
+                                  "type": "string"
+                                },
+                                "minItems": 2,
+                                "maxItems": 2,
+                                "description": "v1 format: [number, clue]"
                               }
-                            }
+                            ]
                           },
-                          "description": "Down clues in v2 object format {number, clue}"
+                          "description": "Down clues in v2 object format {number, clue} or v1 array format"
                         }
                       }
                     },
@@ -643,7 +1040,10 @@
                       "type": "array",
                       "items": {
                         "type": "array",
-                        "items": {"type": "string", "nullable": true}
+                        "items": {
+                          "type": "string",
+                          "nullable": true
+                        }
                       },
                       "description": "Legacy format: Solution grid"
                     },
@@ -651,10 +1051,22 @@
                       "type": "object",
                       "additionalProperties": true,
                       "properties": {
-                        "type": {"type": "string", "description": "Puzzle type"},
-                        "title": {"type": "string", "description": "Puzzle title"},
-                        "author": {"type": "string", "description": "Puzzle author"},
-                        "description": {"type": "string", "description": "Puzzle description"}
+                        "type": {
+                          "type": "string",
+                          "description": "Puzzle type"
+                        },
+                        "title": {
+                          "type": "string",
+                          "description": "Puzzle title"
+                        },
+                        "author": {
+                          "type": "string",
+                          "description": "Puzzle author"
+                        },
+                        "description": {
+                          "type": "string",
+                          "description": "Puzzle description"
+                        }
                       },
                       "description": "Legacy format: Puzzle metadata"
                     }
@@ -671,10 +1083,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -688,10 +1112,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -713,8 +1149,14 @@
                 "type": "object",
                 "required": ["gid", "pid"],
                 "properties": {
-                  "gid": {"type": "string", "description": "Game ID"},
-                  "pid": {"type": "string", "description": "Puzzle ID"}
+                  "gid": {
+                    "type": "string",
+                    "description": "Game ID"
+                  },
+                  "pid": {
+                    "type": "string",
+                    "description": "Puzzle ID"
+                  }
                 }
               }
             }
@@ -729,7 +1171,12 @@
                 "schema": {
                   "type": "object",
                   "required": ["gid"],
-                  "properties": {"gid": {"type": "string", "description": "Game ID"}}
+                  "properties": {
+                    "gid": {
+                      "type": "string",
+                      "description": "Game ID"
+                    }
+                  }
                 }
               }
             }
@@ -742,10 +1189,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -762,7 +1221,9 @@
         "description": "Retrieves game information including puzzle details and solve time",
         "parameters": [
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "name": "gid",
             "required": true,
@@ -778,12 +1239,30 @@
                   "type": "object",
                   "required": ["gid", "pid", "title", "author", "duration", "size"],
                   "properties": {
-                    "gid": {"type": "string", "description": "Game ID"},
-                    "pid": {"type": "string", "description": "Puzzle ID"},
-                    "title": {"type": "string", "description": "Puzzle title"},
-                    "author": {"type": "string", "description": "Puzzle author"},
-                    "duration": {"type": "number", "description": "Time taken to solve in seconds"},
-                    "size": {"type": "string", "description": "Puzzle size"}
+                    "gid": {
+                      "type": "string",
+                      "description": "Game ID"
+                    },
+                    "pid": {
+                      "type": "string",
+                      "description": "Puzzle ID"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Puzzle title"
+                    },
+                    "author": {
+                      "type": "string",
+                      "description": "Puzzle author"
+                    },
+                    "duration": {
+                      "type": "number",
+                      "description": "Time taken to solve in seconds"
+                    },
+                    "size": {
+                      "type": "string",
+                      "description": "Puzzle size"
+                    }
                   }
                 }
               }
@@ -797,10 +1276,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -814,10 +1305,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -834,7 +1337,9 @@
         "description": "Retrieves the puzzle ID from an active (in-progress) game in game_events table",
         "parameters": [
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "name": "gid",
             "required": true,
@@ -848,7 +1353,14 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "properties": {"gid": {"type": "string"}, "pid": {"type": "string"}}
+                  "properties": {
+                    "gid": {
+                      "type": "string"
+                    },
+                    "pid": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
@@ -861,10 +1373,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -878,10 +1402,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -903,8 +1439,14 @@
                 "type": "object",
                 "required": ["gid", "time_to_solve"],
                 "properties": {
-                  "gid": {"type": "string", "description": "Game ID"},
-                  "time_to_solve": {"type": "number", "description": "Time taken to solve in seconds"}
+                  "gid": {
+                    "type": "string",
+                    "description": "Game ID"
+                  },
+                  "time_to_solve": {
+                    "type": "number",
+                    "description": "Time taken to solve in seconds"
+                  }
                 }
               }
             }
@@ -913,7 +1455,9 @@
         },
         "parameters": [
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "name": "pid",
             "required": true,
@@ -924,7 +1468,12 @@
           "200": {
             "description": "Empty response object",
             "content": {
-              "application/json": {"schema": {"type": "object", "description": "Empty response object"}}
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Empty response object"
+                }
+              }
             }
           },
           "500": {
@@ -935,10 +1484,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -960,7 +1521,13 @@
                 "type": "object",
                 "required": ["gids"],
                 "properties": {
-                  "gids": {"type": "array", "items": {"type": "string"}, "description": "Array of game IDs"}
+                  "gids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of game IDs"
+                  }
                 }
               }
             }
@@ -975,8 +1542,20 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "stats": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
-                    "history": {"type": "array", "items": {"type": "object", "additionalProperties": true}}
+                    "stats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    },
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
                   }
                 }
               }
@@ -990,10 +1569,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -1007,10 +1598,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -1027,7 +1630,9 @@
         "description": "Returns oEmbed format metadata for link previews",
         "parameters": [
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "query",
             "name": "author",
             "required": true,
@@ -1043,9 +1648,16 @@
                   "type": "object",
                   "required": ["type", "version", "author_name"],
                   "properties": {
-                    "type": {"type": "string"},
-                    "version": {"type": "string"},
-                    "author_name": {"type": "string", "description": "Author name"}
+                    "type": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "author_name": {
+                      "type": "string",
+                      "description": "Author name"
+                    }
                   }
                 }
               }
@@ -1062,7 +1674,9 @@
         "description": "Generates Open Graph metadata for social media link previews",
         "parameters": [
           {
-            "schema": {"type": "string"},
+            "schema": {
+              "type": "string"
+            },
             "in": "query",
             "name": "url",
             "required": true,
@@ -1074,11 +1688,16 @@
             "description": "HTML with Open Graph metadata",
             "content": {
               "application/json": {
-                "schema": {"type": "string", "description": "HTML with Open Graph metadata"}
+                "schema": {
+                  "type": "string",
+                  "description": "HTML with Open Graph metadata"
+                }
               }
             }
           },
-          "302": {"description": "Redirect for non-bot user agents"},
+          "302": {
+            "description": "Redirect for non-bot user agents"
+          },
           "400": {
             "description": "Default Response",
             "content": {
@@ -1087,10 +1706,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -1104,10 +1735,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -1130,7 +1773,12 @@
                 "schema": {
                   "type": "object",
                   "required": ["gid"],
-                  "properties": {"gid": {"type": "string", "description": "New game ID"}}
+                  "properties": {
+                    "gid": {
+                      "type": "string",
+                      "description": "New game ID"
+                    }
+                  }
                 }
               }
             }
@@ -1143,10 +1791,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -1169,7 +1829,12 @@
                 "schema": {
                   "type": "object",
                   "required": ["pid"],
-                  "properties": {"pid": {"type": "string", "description": "New puzzle ID"}}
+                  "properties": {
+                    "pid": {
+                      "type": "string",
+                      "description": "New puzzle ID"
+                    }
+                  }
                 }
               }
             }
@@ -1182,10 +1847,22 @@
                   "type": "object",
                   "required": ["error", "message"],
                   "properties": {
-                    "error": {"type": "string", "description": "Error type"},
-                    "message": {"type": "string", "description": "Error message"},
-                    "statusCode": {"type": "number", "description": "HTTP status code"},
-                    "retryAfter": {"type": "number", "description": "Retry after seconds (for rate limiting)"}
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "description": "HTTP status code"
+                    },
+                    "retryAfter": {
+                      "type": "number",
+                      "description": "Retry after seconds (for rate limiting)"
+                    }
                   }
                 }
               }
@@ -1196,16 +1873,43 @@
     }
   },
   "servers": [
-    {"url": "https://www.crosswithfriends.com/api", "description": "Production server"},
-    {"url": "https://crosswithfriendsbackend-staging.onrender.com/api", "description": "Staging server"},
-    {"url": "http://localhost:3021/api", "description": "Local development server"}
+    {
+      "url": "https://www.crosswithfriends.com/api",
+      "description": "Production server"
+    },
+    {
+      "url": "https://crosswithfriendsbackend-staging.onrender.com/api",
+      "description": "Staging server"
+    },
+    {
+      "url": "http://localhost:3021/api",
+      "description": "Local development server"
+    }
   ],
   "tags": [
-    {"name": "Health", "description": "Health check endpoints"},
-    {"name": "Games", "description": "Game management endpoints"},
-    {"name": "Puzzles", "description": "Puzzle management endpoints"},
-    {"name": "Stats", "description": "Statistics endpoints"},
-    {"name": "Counters", "description": "ID counter endpoints"},
-    {"name": "Link Preview", "description": "Link preview and oEmbed endpoints"}
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    },
+    {
+      "name": "Games",
+      "description": "Game management endpoints"
+    },
+    {
+      "name": "Puzzles",
+      "description": "Puzzle management endpoints"
+    },
+    {
+      "name": "Stats",
+      "description": "Statistics endpoints"
+    },
+    {
+      "name": "Counters",
+      "description": "ID counter endpoints"
+    },
+    {
+      "name": "Link Preview",
+      "description": "Link preview and oEmbed endpoints"
+    }
   ]
 }

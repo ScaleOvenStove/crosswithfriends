@@ -76,6 +76,7 @@ const CellContainer = styled('div')<{
   isInCurrentWord?: boolean;
   isGood?: boolean;
   isBad?: boolean;
+  isRevealed?: boolean;
   cursorColor?: string;
   otherCursorColors?: string[];
 }>(({
@@ -86,6 +87,7 @@ const CellContainer = styled('div')<{
   isInCurrentWord,
   isGood,
   isBad,
+  isRevealed,
   cursorColor,
   otherCursorColors,
 }) => {
@@ -97,6 +99,9 @@ const CellContainer = styled('div')<{
   } else if (isBad) {
     // Red background for incorrect cells
     backgroundColor = 'rgba(244, 67, 54, 0.15)';
+  } else if (isRevealed) {
+    // Purple transparent (matching theme.palette.secondary.main #9c27b0)
+    backgroundColor = 'rgba(156, 39, 176, 0.15)';
   } else if (isGood) {
     // Green background for correct cells
     backgroundColor = 'rgba(76, 175, 80, 0.15)';
@@ -180,7 +185,8 @@ const CellInput = styled('input')<{
   isInCurrentWord?: boolean;
   isGood?: boolean;
   isBad?: boolean;
-}>(({ theme, isPencil, isSelected, isHighlighted, isInCurrentWord, isGood, isBad }) => {
+  isRevealed?: boolean;
+}>(({ theme, isPencil, isSelected, isHighlighted, isInCurrentWord, isGood, isBad, isRevealed }) => {
   // Determine if we need dark text (for light backgrounds in dark mode)
   const needsDarkText =
     theme.palette.mode === 'dark' && (isSelected || isHighlighted || isInCurrentWord);
@@ -191,6 +197,8 @@ const CellInput = styled('input')<{
     textColor = '#d32f2f'; // Red for incorrect
   } else if (isGood) {
     textColor = '#2e7d32'; // Green for correct
+  } else if (isRevealed) {
+    textColor = '#7b1fa2'; // Purple for revealed (secondary.dark)
   } else if (isPencil) {
     textColor = theme.palette.text.secondary;
   } else if (needsDarkText) {
@@ -332,6 +340,7 @@ export const GridCell = memo<GridCellProps>(
         isInCurrentWord={isInCurrentWord}
         isGood={cell.isGood}
         isBad={cell.isBad}
+        isRevealed={cell.isRevealed}
         cursorColor={cursorColor}
         otherCursorColors={otherCursorColors}
         onClick={handleClick}
@@ -354,8 +363,10 @@ export const GridCell = memo<GridCellProps>(
           isInCurrentWord={isInCurrentWord}
           isGood={cell.isGood}
           isBad={cell.isBad}
+          isRevealed={cell.isRevealed}
           aria-label={`Cell ${row}-${col} input`}
           tabIndex={isSelected ? 0 : -1}
+          disabled={cell.isRevealed}
         />
         {cell.hasCircle && <Circle />}
         {/* Show cursor indicators for other users */}
@@ -394,6 +405,7 @@ export const GridCell = memo<GridCellProps>(
       prevProps.cell.isPencil === nextProps.cell.isPencil &&
       prevProps.cell.isGood === nextProps.cell.isGood &&
       prevProps.cell.isBad === nextProps.cell.isBad &&
+      prevProps.cell.isRevealed === nextProps.cell.isRevealed &&
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.isHighlighted === nextProps.isHighlighted &&
       prevProps.isInCurrentWord === nextProps.isInCurrentWord &&

@@ -133,8 +133,14 @@ const Game = () => {
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Keyboard shortcuts for help modal (? and F1)
-  useHotkeys('shift+/', () => setShowHelpModal(true), { preventDefault: true });
-  useHotkeys('f1', () => setShowHelpModal(true), { preventDefault: true });
+  useHotkeys('shift+/', () => setShowHelpModal(true), {
+    preventDefault: true,
+    enableOnFormTags: ['INPUT'],
+  });
+  useHotkeys('f1', () => setShowHelpModal(true), {
+    preventDefault: true,
+    enableOnFormTags: ['INPUT'],
+  });
 
   // Use either gid (for existing games) or pid (for new puzzles)
   const gameId = gid || pid;
@@ -269,22 +275,15 @@ const Game = () => {
   const handleCheck = (scope: 'cell' | 'word' | 'puzzle') => {
     if (!selectedCell) return;
 
-    let isCorrect = false;
     switch (scope) {
       case 'cell':
-        isCorrect = checkCell(selectedCell.row, selectedCell.col);
-        // eslint-disable-next-line no-alert
-        alert(isCorrect ? 'Cell is correct!' : 'Cell is incorrect');
+        checkCell(selectedCell.row, selectedCell.col);
         break;
       case 'word':
-        isCorrect = checkWord(selectedCell.row, selectedCell.col, selectedDirection);
-        // eslint-disable-next-line no-alert
-        alert(isCorrect ? 'Word is correct!' : 'Word has errors');
+        checkWord(selectedCell.row, selectedCell.col, selectedDirection);
         break;
       case 'puzzle':
-        isCorrect = checkPuzzle();
-        // eslint-disable-next-line no-alert
-        alert(isCorrect ? 'Puzzle is complete and correct!' : 'Puzzle has errors');
+        checkPuzzle();
         break;
     }
   };
@@ -303,6 +302,7 @@ const Game = () => {
         // eslint-disable-next-line no-alert
         if (confirm('Are you sure you want to reveal the entire puzzle?')) {
           revealPuzzle();
+          pauseClock();
         }
         break;
     }

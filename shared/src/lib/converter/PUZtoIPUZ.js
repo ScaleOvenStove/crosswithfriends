@@ -209,10 +209,10 @@ export default function PUZtoIPUZ(buffer) {
 
   for (let i = 1; i <= n; i++) {
     if (isAcross[i]) {
-      acrossClues.push([i.toString(), readString()]);
+      acrossClues.push({number: i.toString(), clue: readString()});
     }
     if (isDown[i]) {
-      downClues.push([i.toString(), readString()]);
+      downClues.push({number: i.toString(), clue: readString()});
     }
   }
 

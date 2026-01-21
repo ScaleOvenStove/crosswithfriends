@@ -37,7 +37,14 @@ export const useGame = (
   const cells = useGameStore((state) => state.cells);
   const users = useGameStore((state) => state.users);
   const isComplete = useGameStore((state) => state.isComplete);
-  const { updateCell, addUser, removeUser, updateCursor, setComplete, pauseClock } = useGameStore();
+
+  // Use shallow selector for actions to prevent re-renders on state changes
+  const updateCell = useGameStore((state) => state.updateCell);
+  const addUser = useGameStore((state) => state.addUser);
+  const removeUser = useGameStore((state) => state.removeUser);
+  const updateCursor = useGameStore((state) => state.updateCursor);
+  const setComplete = useGameStore((state) => state.setComplete);
+  const pauseClock = useGameStore((state) => state.pauseClock);
 
   const { user } = useUser();
 
@@ -214,6 +221,11 @@ export const useGame = (
       }
       // In dev mode, user may be null, which is allowed
 
+      // Prevent updates if puzzle is complete or cell is revealed
+      if (isComplete || cells[row]?.[col]?.isRevealed) {
+        return;
+      }
+
       // Store original state for rollback
       const originalValue = cells[row]?.[col]?.value || '';
 
@@ -276,7 +288,7 @@ export const useGame = (
             cell: { r: row, c: col },
             value: value,
             autocheck: false,
-            id: user?.id || null,
+            id: user?.id || '',
           },
         },
         (response: { success?: boolean; error?: string }) => {
@@ -301,7 +313,12 @@ export const useGame = (
   // Cell selection handler
   const handleCellSelect = useCallback(
     (row: number, col: number) => {
-      gameUI.setSelectedCell(row, col);
+      // If clicking the already selected cell, toggle direction
+      if (gameUI.selectedCell?.row === row && gameUI.selectedCell?.col === col) {
+        gameUI.toggleDirection();
+      } else {
+        gameUI.setSelectedCell(row, col);
+      }
 
       // Emit cursor position
       if (gameId && user) {
