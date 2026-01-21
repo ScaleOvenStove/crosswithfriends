@@ -30,7 +30,30 @@ const isLocalhostUrl = (url: string): boolean => {
   }
 
   const hostPort = trimmed.split('/')[0] ?? '';
-  const host = (hostPort.split(':')[0] ?? '').toLowerCase();
+  let host: string;
+  
+  // Handle bracketed IPv6 addresses (e.g., [::1]:3021)
+  if (hostPort.startsWith('[')) {
+    const bracketEnd = hostPort.indexOf(']');
+    if (bracketEnd !== -1) {
+      // Extract content between brackets as the host
+      host = hostPort.substring(1, bracketEnd).toLowerCase();
+    } else {
+      // Malformed bracketed address, fall back to splitting on last ':'
+      const lastColon = hostPort.lastIndexOf(':');
+      host = (lastColon !== -1 
+        ? hostPort.substring(0, lastColon) 
+        : hostPort).toLowerCase();
+    }
+  } else {
+    // For non-bracketed addresses, split on last ':' to handle IPv6 without brackets
+    const lastColon = hostPort.lastIndexOf(':');
+    host = (lastColon !== -1 
+      ? hostPort.substring(0, lastColon) 
+      : hostPort).toLowerCase();
+  }
+  
+  // Normalize [::1] to ::1 (though this shouldn't happen after extraction)
   const normalizedHost = host === '[::1]' ? '::1' : host;
   return (
     normalizedHost === 'localhost' ||

@@ -34,12 +34,21 @@ export const useFirebaseAuth = () => {
           try {
             const result = await authMethods.signInAnonymousUser();
             currentUser = result.user;
+            // Early return to let the follow-up auth state change handle token exchange
+            return;
           } catch (err) {
             console.error('Failed to sign in anonymously:', err);
             setError(err instanceof Error ? err.message : 'Anonymous sign in failed');
             setLoading(false);
             return;
           }
+        }
+
+        // Explicit null check before using currentUser
+        if (!currentUser) {
+          clearBackendToken();
+          setLoading(false);
+          return;
         }
 
         setUser(currentUser);
