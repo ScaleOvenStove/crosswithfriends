@@ -125,8 +125,46 @@ export async function uploadPuzzleFile(
   // Note: Cast to CreatePuzzleRequestPuzzle because the generated type is stricter
   // than the actual API (which accepts null in solution arrays)
   try {
+    // Normalize clues to match the generated API client's expectations
+    // 1. The generated client expects lowercase 'across' and 'down' keys
+    // 2. The generated client expects clues to be objects { number, clue }, not arrays
+    const clues = (puzzleJson as any).clues || {};
+    const normalizeClueList = (rawList: any[]) => {
+      if (!Array.isArray(rawList)) return [];
+      return rawList.map((item) => {
+        if (Array.isArray(item)) {
+          // Handle [number, clue] format
+          return { number: String(item[0]), clue: item[1] };
+        } else if (typeof item === 'object' && item !== null) {
+          // Handle existing object format, ensuring number is string
+          return {
+            ...item,
+            number: String(item.number || ''),
+            clue: item.clue || '',
+          };
+        }
+        return { number: '', clue: '' };
+      });
+    };
+
+    const normalizedClues = {
+      across: normalizeClueList(clues.Across || clues.across),
+      down: normalizeClueList(clues.Down || clues.down),
+    };
+
+    // Construct the request object cleanly
+    const requestPuzzle = {
+      ...puzzleJson,
+      clues: normalizedClues,
+    };
+
+    console.log(
+      '[Frontend Upload] Normalized puzzle JSON for upload:',
+      JSON.stringify(requestPuzzle.clues, null, 2)
+    );
+
     const response = await puzzlesApi.createPuzzle({
-      puzzle: puzzleJson as unknown as CreatePuzzleRequestPuzzle,
+      puzzle: requestPuzzle as unknown as CreatePuzzleRequestPuzzle,
       isPublic,
     });
 

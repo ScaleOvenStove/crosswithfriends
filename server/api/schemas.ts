@@ -96,48 +96,7 @@ export const PuzzleJsonSchema = {
     clues: {
       type: 'object',
       additionalProperties: true,
-      properties: {
-        Across: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['number', 'clue'],
-            properties: {
-              number: {type: 'string', description: 'Clue number'},
-              clue: {type: 'string', description: 'Clue text'},
-              cells: {
-                type: 'array',
-                items: {
-                  type: 'array',
-                  items: {type: 'number'},
-                },
-                description: 'Optional array of [column, row] pairs (v2 format)',
-              },
-            },
-          },
-          description: 'Across clues in v2 object format {number, clue}',
-        },
-        Down: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['number', 'clue'],
-            properties: {
-              number: {type: 'string', description: 'Clue number'},
-              clue: {type: 'string', description: 'Clue text'},
-              cells: {
-                type: 'array',
-                items: {
-                  type: 'array',
-                  items: {type: 'number'},
-                },
-                description: 'Optional array of [column, row] pairs (v2 format)',
-              },
-            },
-          },
-          description: 'Down clues in v2 object format {number, clue}',
-        },
-      },
+      description: 'Clues (permissive schema to prevent stripping)',
     },
     // Legacy format fields explicitly defined
     grid: {

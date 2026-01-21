@@ -133,6 +133,15 @@ export class PuzzleRepository implements IPuzzleRepository {
 
     PuzzleRepository.validatePuzzle(puzzle);
 
+    logger.info(
+      {
+        pid,
+        cluesKeys: puzzle.clues ? Object.keys(puzzle.clues) : [],
+        puzzleKeys: Object.keys(puzzle),
+      },
+      'PuzzleRepository.create: Clues before V2 conversion'
+    );
+
     // Normalize clues to v2 format before saving
     // This ensures consistent storage format regardless of input format
     const normalizedPuzzle = {...puzzle};
@@ -147,6 +156,17 @@ export class PuzzleRepository implements IPuzzleRepository {
         delete (normalizedPuzzle.clues as {down?: unknown}).down;
       }
     }
+
+    logger.info(
+      {
+        pid,
+        hasClues: !!normalizedPuzzle.clues,
+        cluesKeys: normalizedPuzzle.clues ? Object.keys(normalizedPuzzle.clues) : [],
+        acrossSample: (normalizedPuzzle.clues as any)?.Across?.[0],
+        downSample: (normalizedPuzzle.clues as any)?.Down?.[0],
+      },
+      'PuzzleRepository.create: Clues after V2 conversion (normalizedPuzzle)'
+    );
 
     const uploaded_at = Date.now();
 

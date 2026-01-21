@@ -32,7 +32,7 @@ export async function getPuzzleSolves(pool: DatabasePool, gids: string[]): Promi
   const {rows}: {rows: RawFetchedPuzzleSolve[]} = await pool.query(
     `
       SELECT
-        p.content,
+        p.puzzle_data as content,
         ps.pid,
         ps.gid,
         ps.solved_time,
