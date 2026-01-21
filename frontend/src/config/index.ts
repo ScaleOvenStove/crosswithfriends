@@ -46,20 +46,35 @@ const isLocalhostUrl = (url: string): boolean => {
         : hostPort).toLowerCase();
     }
   } else {
-    // For non-bracketed addresses, split on last ':' to handle IPv6 without brackets
-    const lastColon = hostPort.lastIndexOf(':');
-    host = (lastColon !== -1 
-      ? hostPort.substring(0, lastColon) 
-      : hostPort).toLowerCase();
+    // For non-bracketed addresses, detect IPv6 addresses
+    const colonCount = (hostPort.match(/:/g) || []).length;
+    if (colonCount >= 2) {
+      // Two or more colons indicates a bare IPv6 address
+      host = hostPort.toLowerCase();
+    } else {
+      // Split on last ':' only if suffix is all digits (port number)
+      const lastColon = hostPort.lastIndexOf(':');
+      if (lastColon !== -1) {
+        const suffix = hostPort.substring(lastColon + 1);
+        if (/^\d+$/.test(suffix)) {
+          // Suffix is all digits, treat as port
+          host = hostPort.substring(0, lastColon).toLowerCase();
+        } else {
+          // Suffix is not all digits, treat whole string as host
+          host = hostPort.toLowerCase();
+        }
+      } else {
+        // No colon found, treat whole string as host
+        host = hostPort.toLowerCase();
+      }
+    }
   }
   
-  // Normalize [::1] to ::1 (though this shouldn't happen after extraction)
-  const normalizedHost = host === '[::1]' ? '::1' : host;
   return (
-    normalizedHost === 'localhost' ||
-    normalizedHost.endsWith('.localhost') ||
-    normalizedHost === '127.0.0.1' ||
-    normalizedHost === '::1'
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '127.0.0.1' ||
+    host === '::1'
   );
 };
 
