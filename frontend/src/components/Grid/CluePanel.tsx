@@ -95,21 +95,18 @@ export const CluePanel = ({
         sx={{
           borderBottom: 1,
           borderColor: 'divider',
-          minHeight: 48,
+          minHeight: 52,
+          '& .MuiTab-root': {
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontSize: '0.9375rem',
+            textTransform: 'none',
+            letterSpacing: '0.01em',
+          },
         }}
       >
-        <Tab
-          label="Across"
-          id="clue-tab-0"
-          aria-controls="clue-tabpanel-0"
-          sx={{ fontWeight: 600 }}
-        />
-        <Tab
-          label="Down"
-          id="clue-tab-1"
-          aria-controls="clue-tabpanel-1"
-          sx={{ fontWeight: 600 }}
-        />
+        <Tab label="Across" id="clue-tab-0" aria-controls="clue-tabpanel-0" />
+        <Tab label="Down" id="clue-tab-1" aria-controls="clue-tabpanel-1" />
       </Tabs>
 
       <CustomTabPanel value={tabValue} index={0}>

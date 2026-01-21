@@ -97,6 +97,8 @@ const configSchema = z.object({
     credentialsJson: z.string().optional(),
     // Google application credentials path
     googleApplicationCredentials: z.string().optional(),
+    // Firebase Realtime Database URL
+    databaseURL: z.string().optional(),
   }),
 
   // Feature flags
@@ -214,6 +216,7 @@ function buildConfig(): Config {
       credentialsPath: process.env.FIREBASE_CREDENTIALS_PATH,
       credentialsJson: process.env.FIREBASE_CREDENTIALS_JSON,
       googleApplicationCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      databaseURL: process.env.FIREBASE_DATABASE_URL,
     },
     features: {
       swaggerUi: !nodeEnv || nodeEnv !== 'production' || process.env.ENABLE_SWAGGER_UI === 'true',

@@ -56,11 +56,15 @@ interface GameToolbarProps {
 const ToolbarContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.spacing(2),
-  padding: theme.spacing(2),
+  gap: theme.spacing(2.5),
+  padding: theme.spacing(2.5),
   backgroundColor: theme.palette.background.paper,
   borderBottom: `1px solid ${theme.palette.divider}`,
   flexWrap: 'wrap',
+  boxShadow:
+    theme.palette.mode === 'light'
+      ? '0 1px 3px rgba(44, 62, 80, 0.08)'
+      : '0 1px 3px rgba(0, 0, 0, 0.3)',
 }));
 
 /**

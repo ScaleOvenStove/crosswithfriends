@@ -13,11 +13,19 @@ const isLocalServer = import.meta.env.VITE_USE_LOCAL_SERVER === '1';
 const isProduction = import.meta.env.VITE_ENV === 'production';
 const serverPort = import.meta.env.VITE_SERVER_PORT || '3021';
 
+const normalizeUrl = (url: string): string => {
+  if (!/^https?:\/\//i.test(url)) {
+    return `https://${url}`;
+  }
+
+  return url;
+};
+
 // Determine API URL with priority: VITE_API_URL > local server > production > staging
 const getApiUrl = (): string => {
   // Explicit API URL takes highest priority
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    return normalizeUrl(import.meta.env.VITE_API_URL);
   }
 
   // Local server mode
@@ -35,12 +43,12 @@ const getApiUrl = (): string => {
 const getWsUrl = (): string => {
   // Explicit WebSocket URL takes highest priority
   if (import.meta.env.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL;
+    return normalizeUrl(import.meta.env.VITE_WS_URL);
   }
 
   // Use API URL if explicitly set
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    return normalizeUrl(import.meta.env.VITE_API_URL);
   }
 
   // Local server mode

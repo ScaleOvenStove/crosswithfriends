@@ -51,9 +51,13 @@ export async function initializeFirebaseAdmin(): Promise<void> {
       const serviceAccountPath = path.resolve(credentialsPath);
       const serviceAccountJson = fs.readFileSync(serviceAccountPath, 'utf8');
       const serviceAccount = JSON.parse(serviceAccountJson);
-      admin.initializeApp({
+      const initOptions: admin.AppOptions = {
         credential: admin.credential.cert(serviceAccount),
-      });
+      };
+      if (config.firebase.databaseURL) {
+        initOptions.databaseURL = config.firebase.databaseURL;
+      }
+      admin.initializeApp(initOptions);
       logger.info('Firebase Admin initialized with credentials file');
       firebaseAdminInitialized = true;
       return;
@@ -63,9 +67,13 @@ export async function initializeFirebaseAdmin(): Promise<void> {
     const credentialsJson = config.firebase.credentialsJson;
     if (credentialsJson) {
       const serviceAccount = JSON.parse(credentialsJson);
-      admin.initializeApp({
+      const initOptions: admin.AppOptions = {
         credential: admin.credential.cert(serviceAccount),
-      });
+      };
+      if (config.firebase.databaseURL) {
+        initOptions.databaseURL = config.firebase.databaseURL;
+      }
+      admin.initializeApp(initOptions);
       logger.info('Firebase Admin initialized with credentials JSON');
       firebaseAdminInitialized = true;
       return;
@@ -74,9 +82,13 @@ export async function initializeFirebaseAdmin(): Promise<void> {
     // Try to use default credentials (for GCP environments)
     // This will work if running on GCP or if GOOGLE_APPLICATION_CREDENTIALS is set
     try {
-      admin.initializeApp({
+      const initOptions: admin.AppOptions = {
         credential: admin.credential.applicationDefault(),
-      });
+      };
+      if (config.firebase.databaseURL) {
+        initOptions.databaseURL = config.firebase.databaseURL;
+      }
+      admin.initializeApp(initOptions);
       logger.info('Firebase Admin initialized with application default credentials');
       firebaseAdminInitialized = true;
       return;
@@ -111,12 +123,17 @@ export async function verifyFirebaseToken(idToken: string): Promise<{uid: string
       if (admin.apps && admin.apps.length > 0) {
         try {
           const decodedToken = await admin.auth().verifyIdToken(idToken);
+
           return {
             uid: decodedToken.uid,
             email: decodedToken.email,
           };
         } catch (error) {
-          logger.debug({err: error}, 'Firebase token verification failed');
+          logger.warn({err: error}, 'Firebase token verification failed');
+          // Log more details for debugging
+          if (error instanceof Error) {
+            logger.debug({errorMessage: error.message, errorName: error.name}, 'Firebase token verification error details');
+          }
           return null;
         }
       }

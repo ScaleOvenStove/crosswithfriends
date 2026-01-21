@@ -11,6 +11,7 @@ import { getDatabase } from 'firebase/database';
 import type { Database } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 import type { FirebaseStorage } from 'firebase/storage';
+import { getAnalytics, type Analytics } from 'firebase/analytics';
 import { config } from '@config/index';
 
 // Validate Firebase configuration from environment variables
@@ -56,6 +57,7 @@ let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let database: Database | null = null;
 let storage: FirebaseStorage | null = null;
+let analytics: Analytics | null = null;
 
 // Check if Firebase should be initialized
 const isFirebaseConfigured = validateFirebaseConfig();
@@ -67,6 +69,17 @@ if (isFirebaseConfigured) {
     database = getDatabase(app);
     storage = getStorage(app);
 
+    // Initialize Analytics only in browser environment
+    if (typeof window !== 'undefined') {
+      try {
+        analytics = getAnalytics(app);
+        console.log('[Firebase] Analytics initialized');
+      } catch (analyticsError) {
+        // Analytics may fail in some environments (e.g., SSR, localhost without proper setup)
+        console.warn('[Firebase] Analytics initialization skipped:', analyticsError);
+      }
+    }
+
     console.log('[Firebase] Initialized successfully');
   } catch (error) {
     console.error('[Firebase] Initialization error:', error);
@@ -75,5 +88,5 @@ if (isFirebaseConfigured) {
   console.warn('[Firebase] Skipping initialization due to missing configuration');
 }
 
-export { app, auth, database, storage, isFirebaseConfigured };
+export { app, auth, database, storage, analytics, isFirebaseConfigured };
 export default app;

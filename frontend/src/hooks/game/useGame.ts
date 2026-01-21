@@ -20,7 +20,7 @@ import { useGameClock } from './useGameClock';
 import { useGameEventSync } from './useGameEventSync';
 import { useGameUI } from './useGameUI';
 import { optimisticUpdateQueue } from '@services/optimisticUpdateQueue';
-import { safeValidateGameEvent } from '@schemas/gameEventSchemas';
+import { socketGameEventSchema } from '@schemas/gameEventSchemas';
 
 export const useGame = (
   gameId: string | undefined,
@@ -102,14 +102,15 @@ export const useGame = (
   const pendingUpdatesRef = useRef<Map<string, string>>(new Map());
 
   // Listen for real-time game events
-  useSocketEvent('game_event', (event: unknown) => {
-    const validation = safeValidateGameEvent(event);
-    if (!validation.success) {
-      console.warn('[useGame] Invalid game_event received:', validation.error);
+  useSocketEvent('game_event', (payload: unknown) => {
+    // Validate the payload structure first
+    const payloadValidation = socketGameEventSchema.safeParse(payload);
+    if (!payloadValidation.success) {
+      console.warn('[useGame] Invalid game_event payload received:', payloadValidation.error);
       return;
     }
 
-    const gameEvent = validation.data;
+    const { event: gameEvent } = payloadValidation.data;
     if (!gameEvent) {
       return;
     }
@@ -278,17 +279,17 @@ export const useGame = (
       }, CONFIRMATION_TIMEOUT_MS);
 
       // Emit to server with acknowledgment callback
-      // In dev mode, user may be null
+      const userId = user?.id ?? 'anonymous';
       gameSocket.emitGameEvent(
         {
           type: 'updateCell',
-          user: user?.id || null,
+          user: userId,
           timestamp: Date.now(),
           params: {
             cell: { r: row, c: col },
             value: value,
             autocheck: false,
-            id: user?.id || '',
+            id: userId,
           },
         },
         (response: { success?: boolean; error?: string }) => {
@@ -307,7 +308,7 @@ export const useGame = (
         }
       );
     },
-    [gameId, user, gameUI.isPencilMode, updateCell, cells, gameSocket]
+    [gameId, user, gameUI.isPencilMode, updateCell, cells, gameSocket, isComplete]
   );
 
   // Cell selection handler

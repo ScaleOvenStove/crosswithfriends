@@ -6,7 +6,7 @@
  */
 
 import { API_BASE_URL } from '../config';
-import { getBackendToken } from '../services/authTokenService';
+import { getBackendToken, refreshBackendTokenIfNeeded } from '../services/authTokenService';
 import {
   Configuration,
   CountersApi,
@@ -21,7 +21,14 @@ import {
 // Middleware to automatically add backend JWT token to requests
 const authMiddleware: Middleware = {
   pre: async (context) => {
-    const token = getBackendToken();
+    // Try to get existing token, or refresh if needed
+    let token = await getBackendToken(true); // Refresh if expiring soon
+
+    // If no token, try to refresh it (e.g., if expired or missing)
+    if (!token) {
+      token = await refreshBackendTokenIfNeeded();
+    }
+
     if (token) {
       // Add Authorization header if token exists
       context.init.headers = {
@@ -30,6 +37,39 @@ const authMiddleware: Middleware = {
       };
     }
     return context;
+  },
+  post: async (context) => {
+    // Handle 401 Unauthorized responses by refreshing token and retrying
+    if (context.response.status === 401) {
+      // Force refresh the token
+      const newToken = await refreshBackendTokenIfNeeded(true);
+
+      if (newToken) {
+        // Retry the request with the new token
+        const retryInit = {
+          ...context.init,
+          headers: {
+            ...context.init.headers,
+            Authorization: `Bearer ${newToken}`,
+          },
+        };
+
+        try {
+          const retryResponse = await context.fetch(context.url, retryInit);
+
+          // Only return the retry response if it's successful (not another 401)
+          if (retryResponse.status !== 401) {
+            return retryResponse;
+          }
+        } catch (err) {
+          // If retry fails, return original 401 response
+          console.error('[API Client] Token refresh retry failed:', err);
+        }
+      }
+    }
+
+    // Return original response for non-401 or if refresh failed
+    return context.response;
   },
 };
 

@@ -1,20 +1,172 @@
 /**
  * Global Styles with Tailwind CSS v4
+ * Distinctive design system with bold aesthetic choices
  */
 
 @import 'tailwindcss';
 
-/* Custom theme extensions can be added here */
+/* Custom theme extensions - Editorial Ink palette */
 @theme {
-  --color-primary: #4f46e5;
-  --color-primary-light: #6366f1;
-  --color-primary-dark: #4338ca;
-  --color-secondary: #10b981;
-  --color-secondary-light: #34d399;
-  --color-secondary-dark: #059669;
+  /* Primary: Deep slate blue - like newspaper ink, sophisticated */
+  --color-primary: #2c3e50;
+  --color-primary-light: #34495e;
+  --color-primary-dark: #1a252f;
+  --color-primary-accent: #5d7a9a;
+
+  /* Secondary: Vibrant coral-orange - clean, energetic accent */
+  --color-secondary: #ff6b35;
+  --color-secondary-light: #ff8c5a;
+  --color-secondary-dark: #e55a2b;
+  --color-secondary-accent: #ff8c5a;
+
+  /* Accent: Rich amber - highlights, warmth */
+  --color-accent: #f39c12;
+  --color-accent-light: #f1c40f;
+  --color-accent-dark: #d68910;
+
+  /* Neutrals: Editorial grays with warm undertones */
+  --color-neutral-50: #fefcf8;
+  --color-neutral-100: #faf8f3;
+  --color-neutral-200: #f0ede5;
+  --color-neutral-300: #e0dcd0;
+  --color-neutral-400: #b0b0b0;
+  --color-neutral-500: #8a8a8a;
+  --color-neutral-600: #6a6a6a;
+  --color-neutral-700: #4a4a4a;
+  --color-neutral-800: #252525;
+  --color-neutral-900: #1a1a1a;
+
+  /* Semantic colors */
+  --color-success: #27ae60;
+  --color-warning: #f39c12;
+  --color-error: #c0392b;
+  --color-info: #3498db;
+}
+
+/* Typography - Distinctive font choices */
+:root {
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.display-font {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 /* Dark mode support using Tailwind's dark: prefix */
+
+/* Strategic Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.4s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+/* Staggered reveal for page loads */
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+/* Atmospheric Effects */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-accent) 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(
+    135deg,
+    var(--color-secondary) 0%,
+    var(--color-secondary-accent) 100%
+  );
+}
+
+.gradient-warm {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+}
+
+.shadow-elevated {
+  box-shadow:
+    0 4px 20px rgba(44, 62, 80, 0.15),
+    0 2px 8px rgba(44, 62, 80, 0.1);
+}
+
+.shadow-deep {
+  box-shadow:
+    0 8px 32px rgba(44, 62, 80, 0.2),
+    0 4px 16px rgba(44, 62, 80, 0.15);
+}
 
 /* Custom Skeleton Animations */
 @keyframes skeleton-pulse {
@@ -58,4 +210,20 @@
   to {
     opacity: 1;
   }
+}
+
+/* Global page transitions */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.5s ease-out;
 }

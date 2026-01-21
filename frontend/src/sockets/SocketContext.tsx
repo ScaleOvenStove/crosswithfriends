@@ -47,14 +47,14 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
-  const connect = () => {
+  const connect = async () => {
     if (socketRef.current?.connected) {
       return;
     }
 
     // Socket connection is being established
     // Include backend JWT token if available
-    const backendToken = getBackendToken();
+    const backendToken = await getBackendToken();
 
     const socket = io(config.wsUrl, {
       transports: ['polling', 'websocket'], // Try polling first, then upgrade to websocket

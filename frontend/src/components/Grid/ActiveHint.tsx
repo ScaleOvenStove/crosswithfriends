@@ -11,71 +11,67 @@ interface ActiveHintProps {
 }
 
 const HintContainer = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
-  marginBottom: theme.spacing(2),
+  padding: theme.spacing(3),
   backgroundColor: theme.palette.background.paper,
-  boxShadow: theme.shadows[2],
-  borderRadius: theme.shape.borderRadius,
-  height: '150px',
-  overflowY: 'auto',
-  overflowX: 'hidden',
-  flexShrink: 0,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 1.5,
+  boxShadow:
+    theme.palette.mode === 'light'
+      ? '0 2px 12px rgba(44, 62, 80, 0.06), 0 1px 4px rgba(44, 62, 80, 0.04)'
+      : '0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3)',
+  minHeight: '120px',
   display: 'flex',
   flexDirection: 'column',
-  '&::-webkit-scrollbar': {
-    width: '8px',
-  },
-  '&::-webkit-scrollbar-track': {
-    backgroundColor: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    backgroundColor: theme.palette.divider,
-    borderRadius: '4px',
-    '&:hover': {
-      backgroundColor: theme.palette.action.hover,
-    },
-  },
+  justifyContent: 'center',
+  flexShrink: 0,
 }));
 
 const HintContent = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  gap: theme.spacing(0.5),
+  alignItems: 'flex-start',
+  gap: theme.spacing(1.5),
   width: '100%',
 }));
 
 const HintHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.spacing(1),
-  marginBottom: theme.spacing(0.5),
+  gap: theme.spacing(1.5),
 }));
 
 const ClueNumber = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
-  fontSize: '1.1rem',
+  fontSize: '1.25rem',
   color: theme.palette.primary.main,
+  fontFamily: 'var(--font-display)',
+  letterSpacing: '-0.01em',
 }));
 
 const ClueDirection = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
-  fontSize: '0.9rem',
+  fontSize: '0.875rem',
   color: theme.palette.text.secondary,
-  textTransform: 'capitalize',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  fontFamily: 'var(--font-display)',
 }));
 
 const ClueText = styled(Typography)(({ theme }) => ({
-  fontSize: '1rem',
+  fontSize: '1.125rem',
   color: theme.palette.text.primary,
-  textAlign: 'center',
-  lineHeight: 1.5,
+  textAlign: 'left',
+  lineHeight: 1.6,
+  fontFamily: 'var(--font-display)',
 }));
 
 const EmptyState = styled(Typography)(({ theme }) => ({
-  fontSize: '0.9rem',
+  fontSize: '1rem',
   color: theme.palette.text.secondary,
   fontStyle: 'italic',
+  fontFamily: 'var(--font-display)',
+  textAlign: 'center',
+  width: '100%',
 }));
 
 /**

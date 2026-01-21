@@ -4,8 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import type { User } from 'firebase/auth';
+import type { User } from '@lib/firebase/auth';
 import { auth, isFirebaseConfigured } from '@lib/firebase/config';
 import * as authMethods from '@lib/firebase/auth';
 import {
@@ -26,30 +25,38 @@ export const useFirebaseAuth = () => {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (firebaseUser) => {
+    const unsubscribe = authMethods.onAuthStateChange(
+      async (firebaseUser: User | null) => {
+        // If no user, automatically sign in anonymously
+        if (!firebaseUser) {
+          clearBackendToken();
+          try {
+            const result = await authMethods.signInAnonymousUser();
+            firebaseUser = result.user;
+          } catch (err) {
+            console.error('Failed to sign in anonymously:', err);
+            setError(err instanceof Error ? err.message : 'Anonymous sign in failed');
+            setLoading(false);
+            return;
+          }
+        }
+
         setUser(firebaseUser);
 
-        if (firebaseUser) {
-          // User logged in - exchange Firebase token for backend JWT
-          try {
-            const firebaseToken = await firebaseUser.getIdToken();
-            const backendTokenData = await exchangeFirebaseToken(firebaseToken);
-            setBackendToken(backendTokenData.token, backendTokenData.expiresAt);
-          } catch (err) {
-            console.error('Failed to exchange Firebase token for backend JWT:', err);
-            // Don't set error state here - user is still authenticated with Firebase
-            // Just log the error and continue
-          }
-        } else {
-          // User logged out - clear backend token
-          clearBackendToken();
+        // Exchange Firebase token for backend JWT (works for both anonymous and authenticated users)
+        try {
+          const firebaseToken = await firebaseUser.getIdToken();
+          const backendTokenData = await exchangeFirebaseToken(firebaseToken);
+          setBackendToken(backendTokenData.token, backendTokenData.expiresAt);
+        } catch (err) {
+          console.error('[FirebaseAuth] Failed to exchange Firebase token for backend JWT:', err);
+          // Don't set error state here - user is still authenticated with Firebase
+          // Just log the error and continue
         }
 
         setLoading(false);
       },
-      (err) => {
+      (err: Error) => {
         setError(err.message);
         clearBackendToken();
         setLoading(false);
@@ -116,7 +123,7 @@ export const useFirebaseAuth = () => {
     try {
       setError(null);
       await authMethods.signOutUser();
-      // Backend token will be cleared by onAuthStateChanged
+      // Backend token will be replaced when auth state updates
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sign out failed';
       setError(errorMessage);
