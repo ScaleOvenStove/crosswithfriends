@@ -3,17 +3,23 @@
  * Tests authentication hook behavior and state management
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import useFirebaseAuth from '../firebase/useFirebaseAuth';
 
-// Mock Firebase modules
-vi.mock('../../firebase/config', () => ({
-  auth: {
-    currentUser: null,
-  },
-  isFirebaseConfigured: true,
-}));
+// Mock Firebase modules - use vi.hoisted to define mutable object before vi.mock (which is hoisted)
+const { mockConfig } = vi.hoisted(() => {
+  return {
+    mockConfig: {
+      auth: {
+        currentUser: null,
+      },
+      isFirebaseConfigured: true,
+    },
+  };
+});
+
+vi.mock('../../firebase/config', () => mockConfig);
 
 const mockUnsubscribe = vi.fn();
 
@@ -31,6 +37,13 @@ vi.mock('../../firebase/auth', () => ({
   updateUserProfile: vi.fn(),
   changePassword: vi.fn(),
   getIdToken: vi.fn(),
+  onAuthStateChange: vi.fn(),
+}));
+
+vi.mock('../../services/authTokenService', () => ({
+  exchangeFirebaseToken: vi.fn(),
+  clearBackendToken: vi.fn(),
+  setBackendToken: vi.fn(),
 }));
 
 describe('useFirebaseAuth', () => {
@@ -38,40 +51,96 @@ describe('useFirebaseAuth', () => {
     vi.clearAllMocks();
     mockUnsubscribe.mockClear();
 
-    // Reset onAuthStateChanged to default implementation
-    const { onAuthStateChanged } = await import('firebase/auth');
-    vi.mocked(onAuthStateChanged).mockImplementation((auth, callback) => {
-      // Simulate initial auth state
-      callback(null);
+    // Mock authTokenService
+    const { exchangeFirebaseToken, clearBackendToken, setBackendToken } =
+      await import('../../services/authTokenService');
+    vi.mocked(exchangeFirebaseToken).mockResolvedValue({
+      token: 'mock-backend-token',
+      userId: 'test-uid',
+      expiresAt: Date.now() + 3600000,
+    });
+    vi.mocked(clearBackendToken).mockReturnValue(undefined);
+    vi.mocked(setBackendToken).mockReturnValue(undefined);
+
+    // Mock signInAnonymousUser to return a user when called
+    const { signInAnonymousUser } = await import('../../firebase/auth');
+    vi.mocked(signInAnonymousUser).mockResolvedValue({
+      user: {
+        uid: 'anon-uid',
+        isAnonymous: true,
+        getIdToken: vi.fn().mockResolvedValue('anon-token'),
+      },
+    } as any);
+
+    // Reset onAuthStateChange to default implementation
+    const { onAuthStateChange } = await import('../../firebase/auth');
+    vi.mocked(onAuthStateChange).mockImplementation((onChange) => {
+      // Simulate initial auth state (null triggers anonymous sign-in)
+      // Then simulate Firebase triggering auth state change with anonymous user
+      onChange(null);
+      // Schedule the anonymous user auth state change after sign-in
+      Promise.resolve().then(() => {
+        onChange({
+          uid: 'anon-uid',
+          isAnonymous: true,
+          getIdToken: vi.fn().mockResolvedValue('anon-token'),
+        } as any);
+      });
       return mockUnsubscribe;
     });
   });
 
+  afterEach(() => {
+    // Restore default config values
+    mockConfig.isFirebaseConfigured = true;
+    mockConfig.auth = { currentUser: null };
+  });
+
   describe('Initial State', () => {
-    it('should initialize with correct default state', () => {
+    it('should initialize with correct default state', async () => {
       const { result } = renderHook(() => useFirebaseAuth());
 
-      expect(result.current.user).toBeNull();
-      expect(result.current.loading).toBe(false);
+      // Wait for auth state to be determined (anonymous sign-in completes)
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      // After anonymous sign-in, user should be set
+      expect(result.current.user).toBeTruthy();
+      expect(result.current.isAuthenticated).toBe(true);
       expect(result.current.error).toBeNull();
-      expect(result.current.isAuthenticated).toBe(false);
     });
 
     it('should set loading to false if Firebase is not configured', () => {
-      // This test may need to be adjusted based on actual implementation
+      // Override the config mock for this test to simulate Firebase not configured
+      const originalIsConfigured = mockConfig.isFirebaseConfigured;
+      const originalAuth = mockConfig.auth;
+
+      mockConfig.isFirebaseConfigured = false;
+      mockConfig.auth = null;
+
       const { result } = renderHook(() => useFirebaseAuth());
 
+      // When Firebase is not configured, loading should be false immediately
       expect(result.current.loading).toBe(false);
+
+      // Restore the original values
+      mockConfig.isFirebaseConfigured = originalIsConfigured;
+      mockConfig.auth = originalAuth;
     });
   });
 
   describe('Auth State Changes', () => {
     it('should update user state when auth state changes', async () => {
-      const mockUser = { uid: 'test-uid', email: 'test@example.com' };
-      const { onAuthStateChanged } = await import('firebase/auth');
+      const mockUser = {
+        uid: 'test-uid',
+        email: 'test@example.com',
+        getIdToken: vi.fn().mockResolvedValue('mock-firebase-token'),
+      };
+      const { onAuthStateChange } = await import('../../firebase/auth');
 
-      vi.mocked(onAuthStateChanged).mockImplementation((auth, callback) => {
-        callback(mockUser as any);
+      vi.mocked(onAuthStateChange).mockImplementation((onChange) => {
+        onChange(mockUser as any);
         return vi.fn();
       });
 
@@ -212,13 +281,14 @@ describe('useFirebaseAuth', () => {
       const mockUser = {
         uid: 'test-uid',
         email: 'test@example.com',
+        getIdToken: vi.fn().mockResolvedValue('mock-firebase-token'),
         reload: vi.fn().mockResolvedValue(undefined),
       };
-      const { onAuthStateChanged } = await import('firebase/auth');
+      const { onAuthStateChange } = await import('../../firebase/auth');
       const { updateUserProfile } = await import('../../firebase/auth');
 
-      vi.mocked(onAuthStateChanged).mockImplementation((auth, callback) => {
-        callback(mockUser as any);
+      vi.mocked(onAuthStateChange).mockImplementation((onChange) => {
+        onChange(mockUser as any);
         return vi.fn();
       });
       vi.mocked(updateUserProfile).mockResolvedValue(undefined);
@@ -238,10 +308,26 @@ describe('useFirebaseAuth', () => {
     });
 
     it('should throw error if no user is logged in', async () => {
+      // Override mocks to prevent anonymous sign-in
+      const { onAuthStateChange } = await import('../../firebase/auth');
+      const { signInAnonymousUser } = await import('../../firebase/auth');
+
+      // Mock signInAnonymousUser to reject to prevent automatic sign-in
+      vi.mocked(signInAnonymousUser).mockRejectedValue(new Error('Sign in failed'));
+
+      // Mock onAuthStateChange to only call onChange with null, not trigger anonymous user
+      vi.mocked(onAuthStateChange).mockImplementation((onChange) => {
+        // Call onChange with null - hook will try to sign in anonymously and fail
+        onChange(null);
+        // Don't call onChange again with a user
+        return vi.fn();
+      });
+
       const { result } = renderHook(() => useFirebaseAuth());
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
+        expect(result.current.user).toBeNull();
       });
 
       await expect(result.current.updateProfile({ displayName: 'New Name' })).rejects.toThrow(
@@ -255,13 +341,14 @@ describe('useFirebaseAuth', () => {
       const mockUser = {
         uid: 'test-uid',
         email: 'test@example.com',
+        getIdToken: vi.fn().mockResolvedValue('mock-firebase-token'),
         reload: vi.fn().mockResolvedValue(undefined),
       };
-      const { onAuthStateChanged } = await import('firebase/auth');
+      const { onAuthStateChange } = await import('../../firebase/auth');
       const { changePassword } = await import('../../firebase/auth');
 
-      vi.mocked(onAuthStateChanged).mockImplementation((auth, callback) => {
-        callback(mockUser as any);
+      vi.mocked(onAuthStateChange).mockImplementation((onChange) => {
+        onChange(mockUser as any);
         return vi.fn();
       });
       vi.mocked(changePassword).mockResolvedValue(undefined);
@@ -278,10 +365,26 @@ describe('useFirebaseAuth', () => {
     });
 
     it('should throw error if no user is logged in', async () => {
+      // Override mocks to prevent anonymous sign-in
+      const { onAuthStateChange } = await import('../../firebase/auth');
+      const { signInAnonymousUser } = await import('../../firebase/auth');
+
+      // Mock signInAnonymousUser to reject to prevent automatic sign-in
+      vi.mocked(signInAnonymousUser).mockRejectedValue(new Error('Sign in failed'));
+
+      // Mock onAuthStateChange to only call onChange with null, not trigger anonymous user
+      vi.mocked(onAuthStateChange).mockImplementation((onChange) => {
+        // Call onChange with null - hook will try to sign in anonymously and fail
+        onChange(null);
+        // Don't call onChange again with a user
+        return vi.fn();
+      });
+
       const { result } = renderHook(() => useFirebaseAuth());
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
+        expect(result.current.user).toBeNull();
       });
 
       await expect(result.current.changePassword('oldPassword', 'newPassword')).rejects.toThrow(

@@ -554,14 +554,20 @@ export const useKeyboardNavigation = ({
   );
 
   // Space for direction toggle
+  // Don't trigger in input/textarea fields
   useHotkeys(
     'space',
     (e) => {
       if (!enabled) return;
+      // Don't prevent spacebar in input fields
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
       e.preventDefault();
       onDirectionToggle();
     },
-    { enabled, preventDefault: true, enableOnFormTags: ['INPUT'] },
+    { enabled, preventDefault: false },
     [onDirectionToggle, enabled]
   );
 

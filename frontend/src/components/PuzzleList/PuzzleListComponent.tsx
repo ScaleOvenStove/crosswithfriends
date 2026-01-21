@@ -110,11 +110,25 @@ const PuzzleListComponent = () => {
       <div className="flex-1 min-w-0">
         <div className="flex flex-col gap-4 mb-8">
           <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-gray-800">Available Puzzles</h2>
+            <h2
+              className="text-3xl md:text-4xl font-bold"
+              style={{
+                fontFamily: 'var(--font-display)',
+                letterSpacing: '-0.02em',
+                background:
+                  'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Available Puzzles
+            </h2>
             <button
               type="button"
               onClick={toggleFilterSidebar}
-              className="lg:hidden px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-all"
+              className="lg:hidden px-4 py-2 text-sm font-semibold border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-all"
+              style={{ fontFamily: 'var(--font-display)' }}
             >
               Filters
             </button>
@@ -122,19 +136,23 @@ const PuzzleListComponent = () => {
 
           {/* Search Bar */}
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5" sx={{ color: 'text.secondary' }} />
             </div>
             <input
               type="text"
               placeholder="Search by title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 bg-white text-gray-800 transition-all"
+              className="w-full pl-12 pr-4 py-3.5 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 transition-all shadow-sm hover:shadow-md"
+              style={{ fontFamily: 'var(--font-display)' }}
             />
           </div>
 
-          <p className="text-sm text-gray-600">
+          <p
+            className="text-sm text-neutral-600 dark:text-neutral-400 italic"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
             {puzzles.length} puzzle{puzzles.length !== 1 ? 's' : ''} found
           </p>
         </div>
@@ -165,8 +183,16 @@ const PuzzleListComponent = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-              {puzzles.map((puzzle) => (
-                <PuzzleListItem key={puzzle.id} puzzle={puzzle} />
+              {puzzles.map((puzzle, index) => (
+                <div
+                  key={puzzle.id}
+                  className="animate-fade-in-up"
+                  style={{
+                    animationDelay: `${Math.min(index * 0.1, 1)}s`,
+                  }}
+                >
+                  <PuzzleListItem puzzle={puzzle} />
+                </div>
               ))}
             </div>
 
@@ -177,7 +203,10 @@ const PuzzleListComponent = () => {
                   type="button"
                   onClick={handleLoadMore}
                   disabled={isFetchingNextPage}
-                  className="px-8 py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-primary hover:text-white hover:border-primary hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-8 py-3.5 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold rounded-xl border-2 border-neutral-300 dark:border-neutral-600 hover:bg-primary hover:text-white hover:border-primary hover:shadow-deep transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                  }}
                 >
                   {isFetchingNextPage ? 'Loading...' : 'Load More Puzzles'}
                 </button>

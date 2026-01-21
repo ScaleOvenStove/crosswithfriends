@@ -16,9 +16,12 @@ import {
   updatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
+  onAuthStateChanged,
 } from 'firebase/auth';
 import type { User, UserCredential } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from './config';
+
+export type { User } from 'firebase/auth';
 
 // Check if auth is available
 const ensureAuth = () => {
@@ -145,4 +148,15 @@ export const getIdToken = async (forceRefresh = false): Promise<string | null> =
   if (!user) return null;
 
   return user.getIdToken(forceRefresh);
+};
+
+/**
+ * Listen for authentication state changes
+ */
+export const onAuthStateChange = (
+  onChange: (user: User | null) => void,
+  onError?: (error: Error) => void
+) => {
+  const authInstance = ensureAuth();
+  return onAuthStateChanged(authInstance, onChange, onError);
 };

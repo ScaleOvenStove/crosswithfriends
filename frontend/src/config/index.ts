@@ -13,11 +13,80 @@ const isLocalServer = import.meta.env.VITE_USE_LOCAL_SERVER === '1';
 const isProduction = import.meta.env.VITE_ENV === 'production';
 const serverPort = import.meta.env.VITE_SERVER_PORT || '3021';
 
+const isLocalhostUrl = (url: string): boolean => {
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const hostname = new URL(trimmed).hostname.toLowerCase();
+      return (
+        hostname === 'localhost' ||
+        hostname.endsWith('.localhost') ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1'
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  const hostPort = trimmed.split('/')[0] ?? '';
+  let host: string;
+
+  // Handle bracketed IPv6 addresses (e.g., [::1]:3021)
+  if (hostPort.startsWith('[')) {
+    const bracketEnd = hostPort.indexOf(']');
+    if (bracketEnd !== -1) {
+      // Extract content between brackets as the host
+      host = hostPort.substring(1, bracketEnd).toLowerCase();
+    } else {
+      // Malformed bracketed address, fall back to splitting on last ':'
+      const lastColon = hostPort.lastIndexOf(':');
+      host = (lastColon !== -1 ? hostPort.substring(0, lastColon) : hostPort).toLowerCase();
+    }
+  } else {
+    // For non-bracketed addresses, detect IPv6 addresses
+    const colonCount = (hostPort.match(/:/g) || []).length;
+    if (colonCount >= 2) {
+      // Two or more colons indicates a bare IPv6 address
+      host = hostPort.toLowerCase();
+    } else {
+      // Split on last ':' only if suffix is all digits (port number)
+      const lastColon = hostPort.lastIndexOf(':');
+      if (lastColon !== -1) {
+        const suffix = hostPort.substring(lastColon + 1);
+        if (/^\d+$/.test(suffix)) {
+          // Suffix is all digits, treat as port
+          host = hostPort.substring(0, lastColon).toLowerCase();
+        } else {
+          // Suffix is not all digits, treat whole string as host
+          host = hostPort.toLowerCase();
+        }
+      } else {
+        // No colon found, treat whole string as host
+        host = hostPort.toLowerCase();
+      }
+    }
+  }
+
+  return (
+    host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1' || host === '::1'
+  );
+};
+
+const normalizeUrl = (url: string): string => {
+  if (!/^https?:\/\//i.test(url)) {
+    const scheme = isLocalhostUrl(url) ? 'http' : 'https';
+    return `${scheme}://${url}`;
+  }
+
+  return url;
+};
+
 // Determine API URL with priority: VITE_API_URL > local server > production > staging
 const getApiUrl = (): string => {
   // Explicit API URL takes highest priority
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    return normalizeUrl(import.meta.env.VITE_API_URL);
   }
 
   // Local server mode
@@ -35,12 +104,12 @@ const getApiUrl = (): string => {
 const getWsUrl = (): string => {
   // Explicit WebSocket URL takes highest priority
   if (import.meta.env.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL;
+    return normalizeUrl(import.meta.env.VITE_WS_URL);
   }
 
   // Use API URL if explicitly set
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    return normalizeUrl(import.meta.env.VITE_API_URL);
   }
 
   // Local server mode

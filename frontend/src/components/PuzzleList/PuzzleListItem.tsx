@@ -3,9 +3,11 @@
  * Implements REQ-3.1.4: Display puzzle metadata
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useState } from 'react';
-import { countersApi, gamesApi } from '@api/apiClient';
+import { countersApi, gamesApi, ResponseError } from '@api/apiClient';
+import { extractErrorMessage, extractErrorDetails } from '@services/errorInterceptor';
+import { useUser } from '@hooks/index';
 
 interface DisplayPuzzle {
   id: string;
@@ -25,12 +27,17 @@ interface PuzzleListItemProps {
 
 const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isAuthError, setIsAuthError] = useState(false);
 
   const handlePlayClick = async () => {
     if (isCreating) return;
 
     setIsCreating(true);
+    setError(null);
+    setIsAuthError(false);
     try {
       // Get a new game ID using the generated SDK
       const gidResponse = await countersApi.getNewGameId();
@@ -46,6 +53,48 @@ const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
       navigate(`/game/${result.gid}?new=true&pid=${puzzle.id}`);
     } catch (err) {
       console.error('Failed to create game:', err);
+
+      // Extract detailed error information
+      let errorMessage = 'Failed to create game. Please try again.';
+      if (err instanceof ResponseError) {
+        const errorDetails = extractErrorDetails(err);
+        errorMessage = extractErrorMessage(err);
+        setIsAuthError(errorDetails.status === 401);
+
+        // Try to get error body for more details
+        try {
+          const responseClone = err.response.clone();
+          const errorBody = await responseClone.json();
+          if (errorBody?.message) {
+            errorMessage = errorBody.message;
+          } else if (errorBody?.error) {
+            errorMessage = errorBody.error;
+          }
+        } catch {
+          // If we can't parse the body, use the status-based message
+          if (errorDetails.status === 401) {
+            errorMessage = 'Authentication required. Please log in to play.';
+          } else if (errorDetails.status === 403) {
+            errorMessage = 'You do not have permission to create games.';
+          } else if (errorDetails.status === 404) {
+            errorMessage = 'Puzzle not found.';
+          } else if (errorDetails.status === 500) {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (errorDetails.status) {
+            errorMessage = `Request failed (HTTP ${errorDetails.status}). Please try again.`;
+          }
+        }
+
+        console.error('Error details:', {
+          status: errorDetails.status,
+          statusText: errorDetails.statusText,
+          url: errorDetails.url,
+        });
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
       setIsCreating(false);
       // Don't navigate to /puzzle to avoid showing puzzle in URL
       // User can try again by clicking the Play button
@@ -67,21 +116,55 @@ const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
       onClick={handlePlayClick}
       onKeyDown={handleKeyDown}
       aria-label={`Play ${puzzle.title} by ${puzzle.author}, ${puzzle.dimensions.width} by ${puzzle.dimensions.height} puzzle, ${puzzle.numSolves} ${puzzle.numSolves === 1 ? 'solve' : 'solves'}`}
-      className={`block bg-white border border-gray-200 rounded-lg p-6 hover:-translate-y-1 hover:shadow-xl hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200 ${
-        isCreating ? 'cursor-wait opacity-75' : 'cursor-pointer'
-      }`}
+      className={`group relative block bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl p-6 overflow-hidden transition-all duration-300 ${
+        isCreating
+          ? 'cursor-wait opacity-75'
+          : 'cursor-pointer hover:-translate-y-2 hover:shadow-deep'
+      } focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2`}
+      style={{
+        animation: 'fadeInUp 0.6s ease-out',
+        animationFillMode: 'both',
+      }}
     >
-      <div className="flex flex-col gap-4">
+      {/* Decorative gradient overlay on hover */}
+      <div
+        className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)',
+        }}
+      />
+
+      <div className="relative flex flex-col gap-4">
         <div className="flex-1">
           <div
-            className="inline-block bg-primary text-white px-3 py-1 rounded text-xs font-semibold uppercase mb-3"
+            className="inline-block px-3 py-1.5 rounded-md text-xs font-bold uppercase mb-3 text-white"
+            style={{
+              background:
+                'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)',
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '0.05em',
+            }}
             aria-label={`Puzzle size: ${puzzle.size}`}
           >
             {puzzle.size}
           </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">{puzzle.title}</h3>
-          <p className="text-sm text-gray-600 mb-3">by {puzzle.author}</p>
-          <div className="flex gap-4 text-sm text-gray-500">
+          <h3
+            className="text-xl font-bold mb-2 text-neutral-900 dark:text-neutral-100"
+            style={{
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {puzzle.title}
+          </h3>
+          <p
+            className="text-sm mb-3 text-neutral-600 dark:text-neutral-400 italic"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            by {puzzle.author}
+          </p>
+          <div className="flex gap-4 text-sm text-neutral-500 dark:text-neutral-400">
             <span
               aria-label={`Dimensions: ${puzzle.dimensions.width} by ${puzzle.dimensions.height}`}
             >
@@ -92,9 +175,38 @@ const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
             </span>
           </div>
         </div>
-        <div className="flex justify-end">
+        <div className="flex flex-col gap-2 items-end">
+          {error && (
+            <div
+              className="text-xs text-red-600 dark:text-red-400 px-3 py-1.5 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 max-w-full"
+              role="alert"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {error}
+              {isAuthError && !user && (
+                <div className="mt-2">
+                  <Link
+                    to="/account"
+                    className="text-primary hover:underline font-semibold"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    Log in to play →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
           <span
-            className="px-5 py-2 bg-primary text-white font-semibold rounded-lg text-sm pointer-events-none"
+            className="px-5 py-2.5 text-white font-semibold rounded-lg text-sm pointer-events-none transition-all duration-300 group-hover:scale-105"
+            style={{
+              background:
+                'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)',
+              fontFamily: 'var(--font-display)',
+              boxShadow: '0 2px 8px rgba(44, 62, 80, 0.3)',
+            }}
             aria-hidden="true"
           >
             {isCreating ? 'Creating...' : 'Play'}

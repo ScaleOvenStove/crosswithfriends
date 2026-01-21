@@ -7,7 +7,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '@stores/gameStore';
 import { puzzlesApi, gamesApi, ResponseError } from '@api/apiClient';
-import { API_BASE_URL } from '../../config';
 import {
   transformPuzzleToGrid,
   assignCellNumbers,
@@ -54,13 +53,10 @@ async function resolvePuzzleId(gameId: string): Promise<string> {
     if (error instanceof ResponseError && error.response.status === 404) {
       // Try to get puzzle ID from active game
       try {
-        const response = await fetch(`${API_BASE_URL}/game/${gameId}/pid`);
-        if (response.ok) {
-          const activeGameInfo = await response.json();
-          const validated = validateActiveGameInfo(activeGameInfo);
-          if (validated.pid) {
-            puzzleId = validated.pid;
-          }
+        const activeGameInfo = await gamesApi.getActiveGamePid(gameId);
+        const validated = validateActiveGameInfo(activeGameInfo);
+        if (validated.pid) {
+          puzzleId = validated.pid;
         }
       } catch {
         // Failed to check active game, treat as puzzle ID

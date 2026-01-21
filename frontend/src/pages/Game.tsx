@@ -27,22 +27,24 @@ const GamePageContainer = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   height: '100vh',
   backgroundColor: theme.palette.background.default,
+  position: 'relative',
 }));
 
 const GameContent = styled(Container)(({ theme }) => ({
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2),
-  padding: theme.spacing(2),
+  gap: theme.spacing(2.5),
+  padding: theme.spacing(2.5),
   overflow: 'auto',
   maxWidth: '2000px !important',
-  minHeight: 0, // Critical for flex scrolling
+  minHeight: 0,
+  position: 'relative',
   [theme.breakpoints.up('md')]: {
     flexDirection: 'row',
-    gap: theme.spacing(3),
-    padding: theme.spacing(3),
-    overflow: 'hidden', // Individual sections scroll, not the container
+    gap: theme.spacing(3.5),
+    padding: theme.spacing(3.5),
+    overflow: 'hidden',
     minHeight: 0,
   },
 }));
@@ -51,10 +53,10 @@ const LeftSection = styled(Box)(({ theme }) => ({
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2),
-  minWidth: 0, // Allow flexbox to shrink
-  minHeight: 0, // Critical for flex scrolling
-  overflow: 'hidden', // Individual sections scroll, not this container
+  gap: theme.spacing(2.5),
+  minWidth: 0,
+  minHeight: 0,
+  overflow: 'hidden',
   [theme.breakpoints.up('md')]: {
     flexDirection: 'column',
   },
@@ -75,33 +77,40 @@ const GridSection = styled(Box)(({ theme }) => ({
 const ClueSection = styled(Box)(({ theme }) => ({
   flex: 1,
   minWidth: 0,
-  minHeight: 0, // Critical for flex scrolling
+  minHeight: 0,
   maxWidth: '100%',
   display: 'flex',
   flexDirection: 'column',
-  overflow: 'hidden', // CluePanel handles its own scrolling
+  overflow: 'hidden',
+  borderRadius: theme.shape.borderRadius * 1.5,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  boxShadow:
+    theme.palette.mode === 'light'
+      ? '0 2px 12px rgba(44, 62, 80, 0.06), 0 1px 4px rgba(44, 62, 80, 0.04)'
+      : '0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3)',
   [theme.breakpoints.up('sm')]: {
-    minWidth: 280,
-    maxWidth: 400,
+    minWidth: 300,
+    maxWidth: 420,
   },
   [theme.breakpoints.up('md')]: {
-    minWidth: 300,
+    minWidth: 320,
   },
 }));
 
 const GridAndCluesContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2),
+  gap: theme.spacing(2.5),
   flex: 1,
   minWidth: 0,
-  minHeight: 0, // Critical for flex scrolling
+  minHeight: 0,
   [theme.breakpoints.up('sm')]: {
     flexDirection: 'row',
-    gap: theme.spacing(2),
+    gap: theme.spacing(2.5),
   },
   [theme.breakpoints.up('md')]: {
-    gap: theme.spacing(3),
+    gap: theme.spacing(3.5),
   },
 }));
 
@@ -111,11 +120,19 @@ const ChatSection = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   width: '100%',
   maxHeight: '400px',
+  borderRadius: theme.shape.borderRadius * 1.5,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  boxShadow:
+    theme.palette.mode === 'light'
+      ? '0 2px 12px rgba(44, 62, 80, 0.06), 0 1px 4px rgba(44, 62, 80, 0.04)'
+      : '0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3)',
+  overflow: 'hidden',
   [theme.breakpoints.up('sm')]: {
     maxHeight: 'none',
   },
   [theme.breakpoints.up('md')]: {
-    flex: '0 0 350px',
+    flex: '0 0 360px',
     width: 'auto',
   },
 }));

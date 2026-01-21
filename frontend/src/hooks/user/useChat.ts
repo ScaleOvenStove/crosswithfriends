@@ -11,6 +11,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSocket } from '@sockets/index';
 import { useGameStore } from '@stores/gameStore';
+import { useUserStore } from '@stores/userStore';
 import type { ChatMessageData } from '@components/Chat/ChatMessage';
 
 /**
@@ -43,6 +44,52 @@ interface UseChatResult {
 }
 
 /**
+ * Resolve user display name from various sources
+ */
+const isLikelyUid = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const firebaseUidRegex = /^[A-Za-z0-9]{28}$/;
+
+  return uuidRegex.test(trimmed) || firebaseUidRegex.test(trimmed);
+};
+
+const resolveUserName = (
+  userId: string,
+  gameStoreUsers: Array<{ id: string; displayName?: string }>,
+  currentUser: { id: string; displayName?: string } | null,
+  fallbackName?: string
+): string => {
+  // First, check gameStore users
+  const gameUser = gameStoreUsers.find((u) => u.id === userId);
+  if (gameUser?.displayName) {
+    return gameUser.displayName;
+  }
+
+  // Check if it's the current user
+  if (currentUser?.id === userId && currentUser?.displayName) {
+    return currentUser.displayName;
+  }
+
+  // Use fallback name if provided
+  if (fallbackName && !isLikelyUid(fallbackName)) {
+    return fallbackName;
+  }
+
+  // Generate a readable name from UID (first 8 chars + ...)
+  if (userId.length > 12) {
+    return `User ${userId.substring(0, 8)}...`;
+  }
+
+  // If UID is short, just use it
+  return userId;
+};
+
+/**
  * Hook for managing chat functionality
  */
 export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): UseChatResult => {
@@ -50,6 +97,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
   const [hasSynced, setHasSynced] = useState(false);
   const { socket, isConnected } = useSocket();
   const { users } = useGameStore();
+  const { user: currentUser } = useUserStore();
 
   /**
    * Send a chat message
@@ -165,8 +213,12 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
                   const eventUserId = event.params?.id || event.user || '';
                   // Look up user info from gameStore
                   const senderUser = users.find((u) => u.id === eventUserId);
-                  const senderUserName =
-                    senderUser?.displayName || event.params?.sender || event.user || 'Unknown';
+                  const senderUserName = resolveUserName(
+                    eventUserId,
+                    users,
+                    currentUser,
+                    event.params?.sender
+                  );
                   const senderUserColor = senderUser?.color || '#999';
 
                   const chatMessage: ChatMessageData = {
@@ -191,7 +243,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
         );
       }
     });
-  }, [socket, isConnected, gameId, hasSynced, users]);
+  }, [socket, isConnected, gameId, hasSynced, users, currentUser]);
 
   /**
    * Listen for incoming chat messages via game events
@@ -217,8 +269,12 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
 
         // Look up user info from gameStore
         const senderUser = users.find((u) => u.id === eventUserId);
-        const senderUserName =
-          senderUser?.displayName || event.params.sender || event.user || 'Unknown';
+        const senderUserName = resolveUserName(
+          eventUserId,
+          users,
+          currentUser,
+          event.params.sender
+        );
         const senderUserColor = senderUser?.color || '#999';
 
         setMessages((prev) => {
@@ -266,7 +322,7 @@ export const useChat = ({ gameId, userId, userName, userColor }: UseChatProps): 
     return () => {
       socket.off('game_event', handleGameEvent);
     };
-  }, [socket, userId, users]);
+  }, [socket, userId, users, currentUser]);
 
   return {
     messages,

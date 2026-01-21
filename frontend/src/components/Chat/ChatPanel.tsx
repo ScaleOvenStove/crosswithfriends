@@ -54,7 +54,7 @@ const ChatHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: theme.spacing(2),
+  padding: theme.spacing(2.5),
   borderBottom: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.background.default,
 }));
@@ -152,7 +152,11 @@ export const ChatPanel = ({
       <ChatHeader>
         <Box display="flex" alignItems="center" gap={1}>
           <ChatIcon color="primary" />
-          <Typography variant="h6" fontWeight={600}>
+          <Typography
+            variant="h6"
+            fontWeight={600}
+            sx={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
+          >
             Chat
           </Typography>
           <Typography variant="caption" color="text.secondary">
