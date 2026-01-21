@@ -49,6 +49,10 @@
   --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+.font-display {
+  font-family: var(--font-display);
+}
+
 body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -106,10 +110,10 @@ h6,
 
 @keyframes shimmer {
   0% {
-    background-position: -1000px 0;
+    background-position: -468px 0;
   }
   100% {
-    background-position: 1000px 0;
+    background-position: 468px 0;
   }
 }
 
@@ -126,17 +130,24 @@ h6,
 }
 
 /* Staggered reveal for page loads */
+.stagger,
+.stagger-1,
+.stagger-2,
+.stagger-3,
+.stagger-4 {
+  animation-delay: calc(var(--stagger-index, 0) * 0.1s);
+}
 .stagger-1 {
-  animation-delay: 0.1s;
+  --stagger-index: 1;
 }
 .stagger-2 {
-  animation-delay: 0.2s;
+  --stagger-index: 2;
 }
 .stagger-3 {
-  animation-delay: 0.3s;
+  --stagger-index: 3;
 }
 .stagger-4 {
-  animation-delay: 0.4s;
+  --stagger-index: 4;
 }
 
 /* Atmospheric Effects */

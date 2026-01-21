@@ -20,7 +20,7 @@ import { socketRecoveryService } from '@services/socketRecoveryService';
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
-  connect: () => void;
+  connect: () => Promise<void>;
   disconnect: () => void;
 }
 
@@ -54,7 +54,13 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
     // Socket connection is being established
     // Include backend JWT token if available
-    const backendToken = await getBackendToken();
+    let backendToken: string | undefined;
+    try {
+      const token = await getBackendToken();
+      backendToken = token ?? undefined;
+    } catch (error) {
+      console.warn('[Socket] Failed to fetch backend token:', error);
+    }
 
     const socket = io(config.wsUrl, {
       transports: ['polling', 'websocket'], // Try polling first, then upgrade to websocket

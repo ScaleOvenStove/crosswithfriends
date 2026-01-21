@@ -73,7 +73,6 @@ const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
         } catch {
           // If we can't parse the body, use the status-based message
           if (errorDetails.status === 401) {
-            setIsAuthError(true);
             errorMessage = 'Authentication required. Please log in to play.';
           } else if (errorDetails.status === 403) {
             errorMessage = 'You do not have permission to create games.';

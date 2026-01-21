@@ -76,7 +76,10 @@ if (isFirebaseConfigured) {
         console.log('[Firebase] Analytics initialized');
       } catch (analyticsError) {
         // Analytics may fail in some environments (e.g., SSR, localhost without proper setup)
-        console.warn('[Firebase] Analytics initialization skipped:', analyticsError);
+        console.warn('[Firebase] Analytics initialization skipped');
+        if (import.meta.env.DEV) {
+          console.debug('[Firebase] Analytics error details:', analyticsError);
+        }
       }
     }
 

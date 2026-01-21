@@ -186,6 +186,7 @@ const PuzzleListComponent = () => {
               {puzzles.map((puzzle, index) => (
                 <div
                   key={puzzle.id}
+                  className="animate-fade-in-up"
                   style={{
                     animationDelay: `${Math.min(index * 0.1, 1)}s`,
                   }}

@@ -22,7 +22,7 @@ interface CluePanelProps {
   onClueClick: (clue: Clue) => void;
 }
 
-const CluePanelContainer = styled(Paper)(({ _theme }) => ({
+const CluePanelContainer = styled(Paper)(() => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',

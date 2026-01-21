@@ -4,7 +4,7 @@
  */
 
 import { createTheme } from '@mui/material/styles';
-import type { ThemeOptions } from '@mui/material/styles';
+import type { Shadows, ThemeOptions } from '@mui/material/styles';
 
 /**
  * Shared theme options with distinctive typography
@@ -78,36 +78,64 @@ const baseTheme: ThemeOptions = {
         },
       },
     },
-    MuiTypography: {
-      styleOverrides: {
-        root: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-        h1: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-        h2: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-        h3: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-        h4: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-        h5: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-        h6: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-        button: {
-          fontFamily: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
-        },
-      },
-    },
   },
 };
+
+const lightShadows: Shadows = [
+  'none',
+  '0 2px 8px rgba(44, 62, 80, 0.08)',
+  '0 4px 16px rgba(44, 62, 80, 0.12)',
+  '0 8px 24px rgba(44, 62, 80, 0.16)',
+  '0 12px 32px rgba(44, 62, 80, 0.2)',
+  '0 16px 40px rgba(44, 62, 80, 0.24)',
+  '0 20px 48px rgba(44, 62, 80, 0.28)',
+  '0 24px 56px rgba(44, 62, 80, 0.32)',
+  '0 28px 64px rgba(44, 62, 80, 0.36)',
+  '0 32px 72px rgba(44, 62, 80, 0.4)',
+  '0 36px 80px rgba(44, 62, 80, 0.42)',
+  '0 40px 88px rgba(44, 62, 80, 0.44)',
+  '0 44px 96px rgba(44, 62, 80, 0.46)',
+  '0 48px 104px rgba(44, 62, 80, 0.48)',
+  '0 52px 112px rgba(44, 62, 80, 0.5)',
+  '0 56px 120px rgba(44, 62, 80, 0.5)',
+  '0 60px 128px rgba(44, 62, 80, 0.5)',
+  '0 64px 136px rgba(44, 62, 80, 0.5)',
+  '0 68px 144px rgba(44, 62, 80, 0.5)',
+  '0 72px 152px rgba(44, 62, 80, 0.5)',
+  '0 76px 160px rgba(44, 62, 80, 0.5)',
+  '0 80px 168px rgba(44, 62, 80, 0.5)',
+  '0 84px 176px rgba(44, 62, 80, 0.5)',
+  '0 88px 184px rgba(44, 62, 80, 0.5)',
+  '0 92px 192px rgba(44, 62, 80, 0.5)',
+];
+
+const darkShadows: Shadows = [
+  'none',
+  '0 2px 8px rgba(0, 0, 0, 0.3)',
+  '0 4px 16px rgba(0, 0, 0, 0.34)',
+  '0 8px 24px rgba(0, 0, 0, 0.38)',
+  '0 12px 32px rgba(0, 0, 0, 0.42)',
+  '0 16px 40px rgba(0, 0, 0, 0.46)',
+  '0 20px 48px rgba(0, 0, 0, 0.5)',
+  '0 24px 56px rgba(0, 0, 0, 0.5)',
+  '0 28px 64px rgba(0, 0, 0, 0.5)',
+  '0 32px 72px rgba(0, 0, 0, 0.5)',
+  '0 36px 80px rgba(0, 0, 0, 0.5)',
+  '0 40px 88px rgba(0, 0, 0, 0.5)',
+  '0 44px 96px rgba(0, 0, 0, 0.5)',
+  '0 48px 104px rgba(0, 0, 0, 0.5)',
+  '0 52px 112px rgba(0, 0, 0, 0.5)',
+  '0 56px 120px rgba(0, 0, 0, 0.5)',
+  '0 60px 128px rgba(0, 0, 0, 0.5)',
+  '0 64px 136px rgba(0, 0, 0, 0.5)',
+  '0 68px 144px rgba(0, 0, 0, 0.5)',
+  '0 72px 152px rgba(0, 0, 0, 0.5)',
+  '0 76px 160px rgba(0, 0, 0, 0.5)',
+  '0 80px 168px rgba(0, 0, 0, 0.5)',
+  '0 84px 176px rgba(0, 0, 0, 0.5)',
+  '0 88px 184px rgba(0, 0, 0, 0.5)',
+  '0 92px 192px rgba(0, 0, 0, 0.5)',
+];
 
 /**
  * Light theme - Editorial ink palette: deep slate with warm amber accents
@@ -153,33 +181,7 @@ export const lightTheme = createTheme({
     },
     divider: 'rgba(44, 62, 80, 0.12)',
   },
-  shadows: [
-    'none',
-    '0 2px 8px rgba(44, 62, 80, 0.08)',
-    '0 4px 16px rgba(44, 62, 80, 0.12)',
-    '0 8px 24px rgba(44, 62, 80, 0.16)',
-    '0 12px 32px rgba(44, 62, 80, 0.2)',
-    '0 16px 40px rgba(44, 62, 80, 0.24)',
-    '0 20px 48px rgba(44, 62, 80, 0.28)',
-    '0 24px 56px rgba(44, 62, 80, 0.32)',
-    '0 28px 64px rgba(44, 62, 80, 0.36)',
-    '0 32px 72px rgba(44, 62, 80, 0.4)',
-    '0 36px 80px rgba(44, 62, 80, 0.44)',
-    '0 40px 88px rgba(44, 62, 80, 0.48)',
-    '0 44px 96px rgba(44, 62, 80, 0.52)',
-    '0 48px 104px rgba(44, 62, 80, 0.56)',
-    '0 52px 112px rgba(44, 62, 80, 0.6)',
-    '0 56px 120px rgba(44, 62, 80, 0.64)',
-    '0 60px 128px rgba(44, 62, 80, 0.68)',
-    '0 64px 136px rgba(44, 62, 80, 0.72)',
-    '0 68px 144px rgba(44, 62, 80, 0.76)',
-    '0 72px 152px rgba(44, 62, 80, 0.8)',
-    '0 76px 160px rgba(44, 62, 80, 0.84)',
-    '0 80px 168px rgba(44, 62, 80, 0.88)',
-    '0 84px 176px rgba(44, 62, 80, 0.92)',
-    '0 88px 184px rgba(44, 62, 80, 0.96)',
-    '0 92px 192px rgba(44, 62, 80, 1)',
-  ] as any,
+  shadows: lightShadows,
 });
 
 /**
@@ -226,33 +228,7 @@ export const darkTheme = createTheme({
     },
     divider: 'rgba(255, 255, 255, 0.12)',
   },
-  shadows: [
-    'none',
-    '0 2px 8px rgba(0, 0, 0, 0.3)',
-    '0 4px 16px rgba(0, 0, 0, 0.4)',
-    '0 8px 24px rgba(0, 0, 0, 0.5)',
-    '0 12px 32px rgba(0, 0, 0, 0.6)',
-    '0 16px 40px rgba(0, 0, 0, 0.7)',
-    '0 20px 48px rgba(0, 0, 0, 0.8)',
-    '0 24px 56px rgba(0, 0, 0, 0.9)',
-    '0 28px 64px rgba(0, 0, 0, 1)',
-    '0 32px 72px rgba(0, 0, 0, 1)',
-    '0 36px 80px rgba(0, 0, 0, 1)',
-    '0 40px 88px rgba(0, 0, 0, 1)',
-    '0 44px 96px rgba(0, 0, 0, 1)',
-    '0 48px 104px rgba(0, 0, 0, 1)',
-    '0 52px 112px rgba(0, 0, 0, 1)',
-    '0 56px 120px rgba(0, 0, 0, 1)',
-    '0 60px 128px rgba(0, 0, 0, 1)',
-    '0 64px 136px rgba(0, 0, 0, 1)',
-    '0 68px 144px rgba(0, 0, 0, 1)',
-    '0 72px 152px rgba(0, 0, 0, 1)',
-    '0 76px 160px rgba(0, 0, 0, 1)',
-    '0 80px 168px rgba(0, 0, 0, 1)',
-    '0 84px 176px rgba(0, 0, 0, 1)',
-    '0 88px 184px rgba(0, 0, 0, 1)',
-    '0 92px 192px rgba(0, 0, 0, 1)',
-  ] as any,
+  shadows: darkShadows,
 });
 
 /**

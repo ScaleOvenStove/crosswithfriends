@@ -46,6 +46,18 @@ interface UseChatResult {
 /**
  * Resolve user display name from various sources
  */
+const isLikelyUid = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const firebaseUidRegex = /^[A-Za-z0-9]{28}$/;
+
+  return uuidRegex.test(trimmed) || firebaseUidRegex.test(trimmed);
+};
+
 const resolveUserName = (
   userId: string,
   gameStoreUsers: Array<{ id: string; displayName?: string }>,
@@ -64,7 +76,7 @@ const resolveUserName = (
   }
 
   // Use fallback name if provided
-  if (fallbackName && fallbackName !== userId) {
+  if (fallbackName && !isLikelyUid(fallbackName)) {
     return fallbackName;
   }
 

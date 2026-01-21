@@ -5,6 +5,7 @@
 
 import { Link } from 'react-router-dom';
 import { Box, Container, Typography, Button, useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import Nav from '@components/common/Nav';
 import PuzzleListComponent from '@components/PuzzleList/PuzzleListComponent';
 import { useUser } from '@hooks/index';
@@ -128,11 +129,11 @@ const Welcome = () => {
               textTransform: 'none',
               fontFamily: 'var(--font-display)',
               background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
-              boxShadow: `0 4px 20px rgba(44, 62, 80, 0.3), 0 2px 8px rgba(44, 62, 80, 0.2)`,
+              boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.3)}, 0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}`,
               borderRadius: 2,
               '&:hover': {
                 background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
-                boxShadow: `0 8px 32px rgba(44, 62, 80, 0.4), 0 4px 16px rgba(44, 62, 80, 0.3)`,
+                boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.4)}, 0 4px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
                 transform: 'translateY(-3px) scale(1.02)',
               },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -165,7 +166,7 @@ const Welcome = () => {
                 left: '-100%',
                 width: '100%',
                 height: '100%',
-                background: `linear-gradient(90deg, transparent, rgba(44, 62, 80, 0.1), transparent)`,
+                background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`,
                 transition: 'left 0.5s ease',
               },
               '&:hover': {
@@ -173,7 +174,7 @@ const Welcome = () => {
                 backgroundColor: 'primary.main',
                 color: 'primary.contrastText',
                 transform: 'translateY(-3px) scale(1.02)',
-                boxShadow: `0 8px 32px rgba(44, 62, 80, 0.3), 0 4px 16px rgba(44, 62, 80, 0.2)`,
+                boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}, 0 4px 16px ${alpha(theme.palette.primary.main, 0.2)}`,
                 '&::before': {
                   left: '100%',
                 },

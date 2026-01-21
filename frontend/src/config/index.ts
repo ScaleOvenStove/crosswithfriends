@@ -13,9 +13,37 @@ const isLocalServer = import.meta.env.VITE_USE_LOCAL_SERVER === '1';
 const isProduction = import.meta.env.VITE_ENV === 'production';
 const serverPort = import.meta.env.VITE_SERVER_PORT || '3021';
 
+const isLocalhostUrl = (url: string): boolean => {
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const hostname = new URL(trimmed).hostname.toLowerCase();
+      return (
+        hostname === 'localhost' ||
+        hostname.endsWith('.localhost') ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1'
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  const hostPort = trimmed.split('/')[0] ?? '';
+  const host = (hostPort.split(':')[0] ?? '').toLowerCase();
+  const normalizedHost = host === '[::1]' ? '::1' : host;
+  return (
+    normalizedHost === 'localhost' ||
+    normalizedHost.endsWith('.localhost') ||
+    normalizedHost === '127.0.0.1' ||
+    normalizedHost === '::1'
+  );
+};
+
 const normalizeUrl = (url: string): string => {
   if (!/^https?:\/\//i.test(url)) {
-    return `https://${url}`;
+    const scheme = isLocalhostUrl(url) ? 'http' : 'https';
+    return `${scheme}://${url}`;
   }
 
   return url;

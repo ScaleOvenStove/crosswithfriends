@@ -41,8 +41,7 @@ const FilterSection = ({ title, children, defaultExpanded = true }: FilterSectio
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between w-full text-left font-semibold text-gray-800 dark:text-neutral-200 hover:text-primary transition-colors"
-        style={{ fontFamily: 'var(--font-display)' }}
+        className="flex items-center justify-between w-full text-left font-semibold text-gray-800 dark:text-neutral-200 hover:text-primary transition-colors font-display"
       >
         <span>{title}</span>
         {isExpanded ? (
@@ -71,10 +70,7 @@ const CheckboxFilter = ({ label, checked, onChange }: CheckboxFilterProps) => {
         onChange={(e) => onChange(e.target.checked)}
         className="w-4 h-4 text-primary border-gray-300 dark:border-neutral-600 rounded focus:ring-primary focus:ring-2 cursor-pointer"
       />
-      <span
-        className="text-sm text-gray-700 dark:text-neutral-300 group-hover:text-primary transition-colors select-none"
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
+      <span className="text-sm text-gray-700 dark:text-neutral-300 group-hover:text-primary transition-colors select-none font-display">
         {label}
       </span>
     </label>
@@ -176,10 +172,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <FunnelIcon className="w-5 h-5 text-primary" />
-              <h2
-                className="text-xl font-bold text-gray-800 dark:text-neutral-200"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
+              <h2 className="text-xl font-bold text-gray-800 dark:text-neutral-200 font-display">
                 Filters
               </h2>
             </div>
@@ -198,8 +191,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
             <button
               type="button"
               onClick={handleClearFilters}
-              className="w-full mb-4 px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-all duration-200"
-              style={{ fontFamily: 'var(--font-display)' }}
+              className="w-full mb-4 px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-all duration-200 font-display"
             >
               Clear All Filters
             </button>
@@ -264,8 +256,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
               placeholder="Filter by author..."
               value={filters.author}
               onChange={(e) => handleAuthorChange(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all"
-              style={{ fontFamily: 'var(--font-display)' }}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
             />
           </FilterSection>
 
@@ -275,8 +266,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
               <div>
                 <label
                   htmlFor="filter-date-from"
-                  className="block text-xs text-gray-600 dark:text-neutral-400 mb-1"
-                  style={{ fontFamily: 'var(--font-display)' }}
+                  className="block text-xs text-gray-600 dark:text-neutral-400 mb-1 font-display"
                 >
                   From
                 </label>
@@ -285,15 +275,13 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => handleDateFromChange(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all"
-                  style={{ fontFamily: 'var(--font-display)' }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
                 />
               </div>
               <div>
                 <label
                   htmlFor="filter-date-to"
-                  className="block text-xs text-gray-600 dark:text-neutral-400 mb-1"
-                  style={{ fontFamily: 'var(--font-display)' }}
+                  className="block text-xs text-gray-600 dark:text-neutral-400 mb-1 font-display"
                 >
                   To
                 </label>
@@ -302,8 +290,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => handleDateToChange(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all"
-                  style={{ fontFamily: 'var(--font-display)' }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
                 />
               </div>
             </div>

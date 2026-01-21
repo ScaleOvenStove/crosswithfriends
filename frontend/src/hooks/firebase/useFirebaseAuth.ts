@@ -28,11 +28,12 @@ export const useFirebaseAuth = () => {
     const unsubscribe = authMethods.onAuthStateChange(
       async (firebaseUser: User | null) => {
         // If no user, automatically sign in anonymously
-        if (!firebaseUser) {
+        let currentUser: User | null = firebaseUser;
+        if (!currentUser) {
           clearBackendToken();
           try {
             const result = await authMethods.signInAnonymousUser();
-            firebaseUser = result.user;
+            currentUser = result.user;
           } catch (err) {
             console.error('Failed to sign in anonymously:', err);
             setError(err instanceof Error ? err.message : 'Anonymous sign in failed');
@@ -41,11 +42,11 @@ export const useFirebaseAuth = () => {
           }
         }
 
-        setUser(firebaseUser);
+        setUser(currentUser);
 
         // Exchange Firebase token for backend JWT (works for both anonymous and authenticated users)
         try {
-          const firebaseToken = await firebaseUser.getIdToken();
+          const firebaseToken = await currentUser.getIdToken();
           const backendTokenData = await exchangeFirebaseToken(firebaseToken);
           setBackendToken(backendTokenData.token, backendTokenData.expiresAt);
         } catch (err) {

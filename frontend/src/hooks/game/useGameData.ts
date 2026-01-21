@@ -7,8 +7,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '@stores/gameStore';
 import { puzzlesApi, gamesApi, ResponseError } from '@api/apiClient';
-import { API_BASE_URL } from '../../config';
-import { getBackendToken, refreshBackendTokenIfNeeded } from '@services/authTokenService';
 import {
   transformPuzzleToGrid,
   assignCellNumbers,
@@ -55,27 +53,10 @@ async function resolvePuzzleId(gameId: string): Promise<string> {
     if (error instanceof ResponseError && error.response.status === 404) {
       // Try to get puzzle ID from active game
       try {
-        // Get or refresh token for authenticated request
-        let token = await getBackendToken();
-        if (!token) {
-          token = await refreshBackendTokenIfNeeded();
-        }
-
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        };
-
-        const response = await fetch(`${API_BASE_URL}/game/${gameId}/pid`, {
-          headers,
-        });
-
-        if (response.ok) {
-          const activeGameInfo = await response.json();
-          const validated = validateActiveGameInfo(activeGameInfo);
-          if (validated.pid) {
-            puzzleId = validated.pid;
-          }
+        const activeGameInfo = await gamesApi.getActiveGamePid(gameId);
+        const validated = validateActiveGameInfo(activeGameInfo);
+        if (validated.pid) {
+          puzzleId = validated.pid;
         }
       } catch {
         // Failed to check active game, treat as puzzle ID

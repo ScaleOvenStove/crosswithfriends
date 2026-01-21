@@ -130,10 +130,6 @@ export async function verifyFirebaseToken(idToken: string): Promise<{uid: string
           };
         } catch (error) {
           logger.warn({err: error}, 'Firebase token verification failed');
-          // Log more details for debugging
-          if (error instanceof Error) {
-            logger.debug({errorMessage: error.message, errorName: error.name}, 'Firebase token verification error details');
-          }
           return null;
         }
       }
