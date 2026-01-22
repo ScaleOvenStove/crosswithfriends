@@ -56,14 +56,14 @@ This starts:
 
 ### Common Commands
 
-| Command | Description |
-| --- | --- |
-| `yarn dev` | Start both frontend and backend |
-| `yarn devfrontend` | Start frontend only |
-| `yarn devbackend` | Start backend only |
-| `yarn build` | Build all packages for production |
-| `yarn test` | Run all tests |
-| `yarn lint` | Check code style |
+| Command            | Description                       |
+| ------------------ | --------------------------------- |
+| `yarn dev`         | Start both frontend and backend   |
+| `yarn devfrontend` | Start frontend only               |
+| `yarn devbackend`  | Start backend only                |
+| `yarn build`       | Build all packages for production |
+| `yarn test`        | Run all tests                     |
+| `yarn lint`        | Check code style                  |
 
 ---
 
@@ -83,12 +83,12 @@ crosswithfriends/
 
 ### For Developers
 
-| Guide | Description |
-| --- | --- |
-| [Frontend README](frontend/README.md) | Frontend setup, architecture overview |
-| [Frontend Developer Guide](frontend/DEVELOPER.md) | Deep dive: state management, hooks, components |
-| [Server README](server/README.md) | Backend setup, API reference, WebSocket events |
-| [Server Developer Guide](server/DEVELOPER.md) | Deep dive: event sourcing, authentication, testing |
+| Guide                                             | Description                                        |
+| ------------------------------------------------- | -------------------------------------------------- |
+| [Frontend README](frontend/README.md)             | Frontend setup, architecture overview              |
+| [Frontend Developer Guide](frontend/DEVELOPER.md) | Deep dive: state management, hooks, components     |
+| [Server README](server/README.md)                 | Backend setup, API reference, WebSocket events     |
+| [Server Developer Guide](server/DEVELOPER.md)     | Deep dive: event sourcing, authentication, testing |
 
 ### API Reference
 

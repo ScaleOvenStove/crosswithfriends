@@ -84,10 +84,16 @@ The app wraps components in several providers (see `App.tsx`):
 
 ```tsx
 <ErrorBoundary>
-  <ThemeProvider>           {/* Dark mode context */}
-    <QueryClientProvider>   {/* React Query */}
-      <SocketProvider>      {/* WebSocket connection */}
-        <RouterProvider />  {/* React Router */}
+  <ThemeProvider>
+    {' '}
+    {/* Dark mode context */}
+    <QueryClientProvider>
+      {' '}
+      {/* React Query */}
+      <SocketProvider>
+        {' '}
+        {/* WebSocket connection */}
+        <RouterProvider /> {/* React Router */}
       </SocketProvider>
     </QueryClientProvider>
   </ThemeProvider>
@@ -146,22 +152,23 @@ export const useExampleStore = create<ExampleState>()(
 
 Manages all game-related state including:
 
-| State | Type | Description |
-|-------|------|-------------|
-| `gid` | `string \| null` | Current game ID |
-| `pid` | `string \| null` | Current puzzle ID |
-| `cells` | `Cell[][]` | Grid cell values and states |
-| `solution` | `string[][]` | Correct answers |
-| `clues` | `{ across: Clue[], down: Clue[] }` | All clues |
-| `activeUsers` | `Map<string, UserCursor>` | Connected users |
-| `selectedCell` | `{ row: number, col: number }` | Current selection |
-| `direction` | `'across' \| 'down'` | Current typing direction |
-| `isPencil` | `boolean` | Pencil mode enabled |
-| `isAutoCheck` | `boolean` | Auto-check mode |
-| `clockRunning` | `boolean` | Timer state |
-| `elapsedTime` | `number` | Seconds elapsed |
+| State          | Type                               | Description                 |
+| -------------- | ---------------------------------- | --------------------------- |
+| `gid`          | `string \| null`                   | Current game ID             |
+| `pid`          | `string \| null`                   | Current puzzle ID           |
+| `cells`        | `Cell[][]`                         | Grid cell values and states |
+| `solution`     | `string[][]`                       | Correct answers             |
+| `clues`        | `{ across: Clue[], down: Clue[] }` | All clues                   |
+| `activeUsers`  | `Map<string, UserCursor>`          | Connected users             |
+| `selectedCell` | `{ row: number, col: number }`     | Current selection           |
+| `direction`    | `'across' \| 'down'`               | Current typing direction    |
+| `isPencil`     | `boolean`                          | Pencil mode enabled         |
+| `isAutoCheck`  | `boolean`                          | Auto-check mode             |
+| `clockRunning` | `boolean`                          | Timer state                 |
+| `elapsedTime`  | `number`                           | Seconds elapsed             |
 
 **Key Actions:**
+
 - `setCell(row, col, value)` - Update cell value
 - `toggleDirection()` - Switch across/down
 - `checkCell()`, `checkWord()`, `checkPuzzle()` - Validation
@@ -172,31 +179,31 @@ Manages all game-related state including:
 
 Persisted to localStorage for offline access:
 
-| State | Type | Description |
-|-------|------|-------------|
-| `user` | `User \| null` | Current user profile |
-| `isAuthenticated` | `boolean` | Auth state |
-| `darkMode` | `'light' \| 'dark' \| 'system'` | Theme preference |
-| `solvedPuzzles` | `string[]` | History of solved PIDs |
+| State             | Type                            | Description            |
+| ----------------- | ------------------------------- | ---------------------- |
+| `user`            | `User \| null`                  | Current user profile   |
+| `isAuthenticated` | `boolean`                       | Auth state             |
+| `darkMode`        | `'light' \| 'dark' \| 'system'` | Theme preference       |
+| `solvedPuzzles`   | `string[]`                      | History of solved PIDs |
 
 #### `puzzleStore` - Puzzle Data
 
-| State | Type | Description |
-|-------|------|-------------|
-| `puzzle` | `Puzzle \| null` | Current puzzle data |
-| `dimensions` | `{ rows: number, cols: number }` | Grid size |
-| `title` | `string` | Puzzle title |
-| `author` | `string` | Puzzle author |
+| State        | Type                             | Description         |
+| ------------ | -------------------------------- | ------------------- |
+| `puzzle`     | `Puzzle \| null`                 | Current puzzle data |
+| `dimensions` | `{ rows: number, cols: number }` | Grid size           |
+| `title`      | `string`                         | Puzzle title        |
+| `author`     | `string`                         | Puzzle author       |
 
 #### `battleStore` - Battle Mode
 
-| State | Type | Description |
-|-------|------|-------------|
-| `battleId` | `string \| null` | Current battle ID |
-| `teams` | `Team[]` | Team information |
-| `powerUps` | `PowerUp[]` | Available power-ups |
-| `currentTeam` | `string` | Active team |
-| `winner` | `string \| null` | Winning team |
+| State         | Type             | Description         |
+| ------------- | ---------------- | ------------------- |
+| `battleId`    | `string \| null` | Current battle ID   |
+| `teams`       | `Team[]`         | Team information    |
+| `powerUps`    | `PowerUp[]`      | Available power-ups |
+| `currentTeam` | `string`         | Active team         |
+| `winner`      | `string \| null` | Winning team        |
 
 #### `compositionStore` - Puzzle Creation
 
@@ -296,10 +303,13 @@ function useGamePage(gid: string) {
 
   const loading = gameLoading || puzzleLoading;
 
-  const handleCellInput = useCallback((row: number, col: number, value: string) => {
-    useGameStore.getState().setCell(row, col, value);
-    emitCellUpdate({ row, col, value });
-  }, [emitCellUpdate]);
+  const handleCellInput = useCallback(
+    (row: number, col: number, value: string) => {
+      useGameStore.getState().setCell(row, col, value);
+      emitCellUpdate({ row, col, value });
+    },
+    [emitCellUpdate]
+  );
 
   return { game, puzzle, loading, handleCellInput, handleKeyDown };
 }
@@ -331,37 +341,37 @@ useEffect(() => {
 
 #### Client → Server
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `join_game` | `{ gid: string }` | Join game room |
-| `leave_game` | `{ gid: string }` | Leave game room |
-| `game_event` | `GameEvent` | Emit game update |
-| `sync_all_game_events` | `{ gid: string }` | Request event history |
-| `join_room` | `{ rid: string }` | Join lobby room |
-| `room_event` | `RoomEvent` | Emit room update |
-| `latency_ping` | `{ timestamp: number }` | Measure latency |
+| Event                  | Payload                 | Description           |
+| ---------------------- | ----------------------- | --------------------- |
+| `join_game`            | `{ gid: string }`       | Join game room        |
+| `leave_game`           | `{ gid: string }`       | Leave game room       |
+| `game_event`           | `GameEvent`             | Emit game update      |
+| `sync_all_game_events` | `{ gid: string }`       | Request event history |
+| `join_room`            | `{ rid: string }`       | Join lobby room       |
+| `room_event`           | `RoomEvent`             | Emit room update      |
+| `latency_ping`         | `{ timestamp: number }` | Measure latency       |
 
 #### Server → Client
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `game_event` | `GameEvent` | Game update broadcast |
-| `room_event` | `RoomEvent` | Room update broadcast |
-| `latency_pong` | `{ timestamp: number }` | Latency response |
+| Event          | Payload                 | Description           |
+| -------------- | ----------------------- | --------------------- |
+| `game_event`   | `GameEvent`             | Game update broadcast |
+| `room_event`   | `RoomEvent`             | Room update broadcast |
+| `latency_pong` | `{ timestamp: number }` | Latency response      |
 
 ### Game Event Types
 
 ```typescript
 type GameEventType =
-  | 'cell_update'      // Cell value changed
-  | 'cursor_move'      // User cursor moved
-  | 'user_join'        // User joined game
-  | 'user_leave'       // User left game
-  | 'check_cell'       // Cell checked
-  | 'reveal_cell'      // Cell revealed
-  | 'clock_start'      // Timer started
-  | 'clock_stop'       // Timer stopped
-  | 'game_complete';   // Puzzle solved
+  | 'cell_update' // Cell value changed
+  | 'cursor_move' // User cursor moved
+  | 'user_join' // User joined game
+  | 'user_leave' // User left game
+  | 'check_cell' // Cell checked
+  | 'reveal_cell' // Cell revealed
+  | 'clock_start' // Timer started
+  | 'clock_stop' // Timer stopped
+  | 'game_complete'; // Puzzle solved
 ```
 
 ### Connection Recovery
@@ -425,11 +435,11 @@ interface GridCellProps {
   onClick: () => void;
 }
 
-const GridCell: React.FC<GridCellProps> = memo(({
-  row, col, value, isBlack, isSelected, ...props
-}) => {
-  // Render logic
-});
+const GridCell: React.FC<GridCellProps> = memo(
+  ({ row, col, value, isBlack, isSelected, ...props }) => {
+    // Render logic
+  }
+);
 ```
 
 ### Error Boundaries
@@ -532,8 +542,7 @@ const firebaseConfig = {
 export const signInWithEmail = (email: string, password: string) =>
   signInWithEmailAndPassword(auth, email, password);
 
-export const signInWithGoogle = () =>
-  signInWithPopup(auth, googleProvider);
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 
 export const signOut = () => auth.signOut();
 ```
@@ -721,20 +730,20 @@ export function useNewMode(modeId: string) {
 
 ## Environment Variables Reference
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | Auto-detected |
-| `VITE_WS_URL` | WebSocket URL | Auto-detected |
-| `VITE_USE_LOCAL_SERVER` | Use localhost | `0` |
-| `VITE_SERVER_PORT` | Backend port | `3021` |
-| `VITE_ENV` | Environment | `development` |
-| `VITE_FIREBASE_API_KEY` | Firebase API key | Required |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | Required |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID | Required |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase storage | Required |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging | Required |
-| `VITE_FIREBASE_APP_ID` | Firebase app ID | Required |
-| `VITE_SENTRY_DSN` | Sentry error tracking | Optional |
+| Variable                            | Description           | Default       |
+| ----------------------------------- | --------------------- | ------------- |
+| `VITE_API_URL`                      | Backend API URL       | Auto-detected |
+| `VITE_WS_URL`                       | WebSocket URL         | Auto-detected |
+| `VITE_USE_LOCAL_SERVER`             | Use localhost         | `0`           |
+| `VITE_SERVER_PORT`                  | Backend port          | `3021`        |
+| `VITE_ENV`                          | Environment           | `development` |
+| `VITE_FIREBASE_API_KEY`             | Firebase API key      | Required      |
+| `VITE_FIREBASE_AUTH_DOMAIN`         | Firebase auth domain  | Required      |
+| `VITE_FIREBASE_PROJECT_ID`          | Firebase project ID   | Required      |
+| `VITE_FIREBASE_STORAGE_BUCKET`      | Firebase storage      | Required      |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging    | Required      |
+| `VITE_FIREBASE_APP_ID`              | Firebase app ID       | Required      |
+| `VITE_SENTRY_DSN`                   | Sentry error tracking | Optional      |
 
 ---
 
@@ -743,21 +752,25 @@ export function useNewMode(modeId: string) {
 ### Common Issues
 
 **Socket connection fails**
+
 - Check `VITE_WS_URL` is correct
 - Verify backend is running
 - Check browser console for CORS errors
 
 **State not updating**
+
 - Ensure using selectors correctly
 - Check DevTools for state changes
 - Verify actions are being called
 
 **Build fails with type errors**
+
 - Run `yarn api:generate` to sync types
 - Check `tsconfig.json` paths
 - Clear `.vite` cache: `rm -rf node_modules/.vite`
 
 **Tests failing**
+
 - Run `yarn test --clearCache`
 - Check mock setup in `tests/setup.ts`
 - Ensure providers are wrapped in test utils

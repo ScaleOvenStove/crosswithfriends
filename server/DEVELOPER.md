@@ -156,26 +156,26 @@ The server uses event sourcing for game state, providing complete history and re
 
 ```typescript
 interface GameEvent {
-  gid: string;        // Game ID
-  uid: string;        // User ID who triggered event
-  ts: number;         // Timestamp (milliseconds)
-  type: string;       // Event type
-  params: object;     // Event-specific data
+  gid: string; // Game ID
+  uid: string; // User ID who triggered event
+  ts: number; // Timestamp (milliseconds)
+  type: string; // Event type
+  params: object; // Event-specific data
 }
 ```
 
 ### Event Types
 
-| Type | Params | Description |
-|------|--------|-------------|
-| `create` | `{ pid }` | Game created |
-| `updateCell` | `{ cell: {r, c}, value, pencil? }` | Cell value changed |
-| `updateCursor` | `{ cell: {r, c}, timestamp }` | Cursor moved |
-| `check` | `{ scope, cells? }` | Check operation |
-| `reveal` | `{ scope, cells? }` | Reveal operation |
-| `reset` | `{ scope }` | Reset operation |
-| `updateClock` | `{ action, timestamp }` | Clock start/stop |
-| `chat` | `{ text, senderId }` | Chat message |
+| Type           | Params                             | Description        |
+| -------------- | ---------------------------------- | ------------------ |
+| `create`       | `{ pid }`                          | Game created       |
+| `updateCell`   | `{ cell: {r, c}, value, pencil? }` | Cell value changed |
+| `updateCursor` | `{ cell: {r, c}, timestamp }`      | Cursor moved       |
+| `check`        | `{ scope, cells? }`                | Check operation    |
+| `reveal`       | `{ scope, cells? }`                | Reveal operation   |
+| `reset`        | `{ scope }`                        | Reset operation    |
+| `updateClock`  | `{ action, timestamp }`            | Clock start/stop   |
+| `chat`         | `{ text, senderId }`               | Chat message       |
 
 ### Event Storage
 
@@ -198,10 +198,7 @@ CREATE INDEX idx_game_events_gid_ts ON game_events(gid, ts);
 ```typescript
 // model/game.ts
 export async function getGameEvents(gid: string): Promise<GameEvent[]> {
-  const result = await pool.query(
-    'SELECT * FROM game_events WHERE gid = $1 ORDER BY ts ASC',
-    [gid]
-  );
+  const result = await pool.query('SELECT * FROM game_events WHERE gid = $1 ORDER BY ts ASC', [gid]);
   return result.rows.map(rowToEvent);
 }
 
@@ -256,7 +253,7 @@ export class SocketManager {
 
   constructor(httpServer: HttpServer) {
     this.io = new Server(httpServer, {
-      cors: { origin: config.corsOrigins },
+      cors: {origin: config.corsOrigins},
       path: '/ws',
     });
 
@@ -355,7 +352,7 @@ Per-socket rate limiting prevents abuse:
 ```typescript
 // utils/websocketRateLimit.ts
 export class WebSocketRateLimiter {
-  private counts: Map<string, { count: number; resetAt: number }>;
+  private counts: Map<string, {count: number; resetAt: number}>;
 
   constructor(
     private maxRequests: number = 100,
@@ -367,7 +364,7 @@ export class WebSocketRateLimiter {
     const entry = this.counts.get(socketId);
 
     if (!entry || now > entry.resetAt) {
-      this.counts.set(socketId, { count: 1, resetAt: now + this.windowMs });
+      this.counts.set(socketId, {count: 1, resetAt: now + this.windowMs});
       return false;
     }
 
@@ -385,16 +382,16 @@ export class WebSocketRateLimiter {
 
 ```typescript
 // model/pool.ts
-import { Pool } from 'pg';
-import { config } from '../config';
+import {Pool} from 'pg';
+import {config} from '../config';
 
 export const pool = new Pool({
   connectionString: config.databaseUrl,
-  max: config.dbPoolMax,        // Default: 20
-  min: config.dbPoolMin,        // Default: 5
+  max: config.dbPoolMax, // Default: 20
+  min: config.dbPoolMin, // Default: 5
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  ssl: config.isProduction ? { rejectUnauthorized: true } : false,
+  ssl: config.isProduction ? {rejectUnauthorized: true} : false,
 });
 
 // Health check
@@ -428,15 +425,13 @@ export async function createGameWithPuzzle(gid: string, puzzle: Puzzle) {
   try {
     await client.query('BEGIN');
 
-    await client.query(
-      'INSERT INTO puzzles (pid, content) VALUES ($1, $2)',
-      [puzzle.pid, puzzle.content]
-    );
+    await client.query('INSERT INTO puzzles (pid, content) VALUES ($1, $2)', [puzzle.pid, puzzle.content]);
 
-    await client.query(
-      'INSERT INTO game_events (gid, event_type, event_payload) VALUES ($1, $2, $3)',
-      [gid, 'create', { pid: puzzle.pid }]
-    );
+    await client.query('INSERT INTO game_events (gid, event_type, event_payload) VALUES ($1, $2, $3)', [
+      gid,
+      'create',
+      {pid: puzzle.pid},
+    ]);
 
     await client.query('COMMIT');
   } catch (e) {
@@ -517,13 +512,10 @@ import jwt from '@fastify/jwt';
 export const TOKEN_EXPIRY_SECONDS = 86400; // 24 hours
 
 export function generateToken(fastify: FastifyInstance, userId: string): string {
-  return fastify.jwt.sign(
-    { userId },
-    { expiresIn: TOKEN_EXPIRY_SECONDS }
-  );
+  return fastify.jwt.sign({userId}, {expiresIn: TOKEN_EXPIRY_SECONDS});
 }
 
-export function verifyToken(fastify: FastifyInstance, token: string): { userId: string } {
+export function verifyToken(fastify: FastifyInstance, token: string): {userId: string} {
   return fastify.jwt.verify(token);
 }
 ```
@@ -539,7 +531,7 @@ export function extractUserFromRequest(request: FastifyRequest): User | null {
     const token = authHeader.slice(7);
     try {
       const decoded = request.server.jwt.verify(token);
-      return { id: decoded.userId };
+      return {id: decoded.userId};
     } catch {
       return null;
     }
@@ -547,7 +539,7 @@ export function extractUserFromRequest(request: FastifyRequest): User | null {
 
   // Fallback for development
   if (!config.requireAuth) {
-    return { id: generateSecureUserId() };
+    return {id: generateSecureUserId()};
   }
 
   return null;
@@ -558,8 +550,8 @@ export function extractUserFromRequest(request: FastifyRequest): User | null {
 
 ```typescript
 // utils/firebaseAdmin.ts
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import {initializeApp, cert} from 'firebase-admin/app';
+import {getAuth} from 'firebase-admin/auth';
 
 let firebaseApp: FirebaseApp | null = null;
 
@@ -596,7 +588,7 @@ All request validation uses Zod:
 
 ```typescript
 // validation/puzzleSchema.ts
-import { z } from 'zod';
+import {z} from 'zod';
 
 export const puzzleContentSchema = z.object({
   grid: z.array(z.array(z.string())),
@@ -635,7 +627,7 @@ async function createPuzzle(request: FastifyRequest, reply: FastifyReply) {
     });
   }
 
-  const { puzzle, pid, isPublic } = result.data;
+  const {puzzle, pid, isPublic} = result.data;
   // Process validated data
 }
 ```
@@ -672,7 +664,7 @@ export function escapeHtml(text: string): string {
 All configuration in `config/index.ts`:
 
 ```typescript
-import { z } from 'zod';
+import {z} from 'zod';
 
 const configSchema = z.object({
   // Server
@@ -728,22 +720,22 @@ export const isDevelopment = config.nodeEnv === 'development';
 
 ### Environment Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `PORT` | Server port | `3000` | No |
-| `NODE_ENV` | Environment | `development` | No |
-| `DATABASE_URL` | Full DB connection string | - | Either this or PG* vars |
-| `PGHOST` | PostgreSQL host | `localhost` | No |
-| `PGPORT` | PostgreSQL port | `5432` | No |
-| `PGUSER` | PostgreSQL user | - | Yes |
-| `PGPASSWORD` | PostgreSQL password | - | Yes |
-| `PGDATABASE` | PostgreSQL database | - | Yes |
-| `AUTH_TOKEN_SECRET` | JWT signing secret | - | Yes (prod) |
-| `REQUIRE_AUTH` | Enforce authentication | `true` | No |
-| `FIREBASE_CREDENTIALS_JSON` | Firebase service account | - | No |
-| `CORS_ORIGINS` | Allowed CORS origins | `*` | No |
-| `RATE_LIMIT_MAX` | Max requests per window | `100` | No |
-| `RATE_LIMIT_WINDOW_MS` | Rate limit window | `60000` | No |
+| Variable                    | Description               | Default       | Required                 |
+| --------------------------- | ------------------------- | ------------- | ------------------------ |
+| `PORT`                      | Server port               | `3000`        | No                       |
+| `NODE_ENV`                  | Environment               | `development` | No                       |
+| `DATABASE_URL`              | Full DB connection string | -             | Either this or PG\* vars |
+| `PGHOST`                    | PostgreSQL host           | `localhost`   | No                       |
+| `PGPORT`                    | PostgreSQL port           | `5432`        | No                       |
+| `PGUSER`                    | PostgreSQL user           | -             | Yes                      |
+| `PGPASSWORD`                | PostgreSQL password       | -             | Yes                      |
+| `PGDATABASE`                | PostgreSQL database       | -             | Yes                      |
+| `AUTH_TOKEN_SECRET`         | JWT signing secret        | -             | Yes (prod)               |
+| `REQUIRE_AUTH`              | Enforce authentication    | `true`        | No                       |
+| `FIREBASE_CREDENTIALS_JSON` | Firebase service account  | -             | No                       |
+| `CORS_ORIGINS`              | Allowed CORS origins      | `*`           | No                       |
+| `RATE_LIMIT_MAX`            | Max requests per window   | `100`         | No                       |
+| `RATE_LIMIT_WINDOW_MS`      | Rate limit window         | `60000`       | No                       |
 
 ---
 
@@ -794,9 +786,7 @@ fastify.setErrorHandler((error, request, reply) => {
   });
 
   // Sanitize error for production
-  const response = isProduction
-    ? sanitizeError(error)
-    : { ...error, stack: error.stack };
+  const response = isProduction ? sanitizeError(error) : {...error, stack: error.stack};
 
   reply.status(error.statusCode || 500).send(response);
 });
@@ -811,9 +801,7 @@ export function sanitizeError(error: Error): SafeError {
   return {
     statusCode: error.statusCode || 500,
     error: error.statusCode ? error.name : 'Internal Server Error',
-    message: error.statusCode
-      ? error.message
-      : 'An unexpected error occurred',
+    message: error.statusCode ? error.message : 'An unexpected error occurred',
   };
 }
 ```
@@ -826,7 +814,7 @@ export function sanitizeError(error: Error): SafeError {
 
 ```typescript
 // __tests__/setup.ts
-import { vi } from 'vitest';
+import {vi} from 'vitest';
 
 // Mock database
 vi.mock('../model/pool', () => ({
@@ -854,11 +842,11 @@ vi.mock('../config', () => ({
 import Fastify from 'fastify';
 
 export async function buildTestApp() {
-  const app = Fastify({ logger: false });
+  const app = Fastify({logger: false});
 
   // Register plugins
   await app.register(cors);
-  await app.register(jwt, { secret: 'test-secret' });
+  await app.register(jwt, {secret: 'test-secret'});
   await app.register(routes);
 
   await app.ready();
@@ -874,8 +862,8 @@ export async function closeApp(app: FastifyInstance) {
 
 ```typescript
 // __tests__/api/puzzle.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildTestApp, closeApp } from '../helpers';
+import {describe, it, expect, vi, beforeEach} from 'vitest';
+import {buildTestApp, closeApp} from '../helpers';
 import * as puzzleModel from '../../model/puzzle';
 
 vi.mock('../../model/puzzle');
@@ -893,26 +881,28 @@ describe('POST /api/puzzle', () => {
   });
 
   it('should create a puzzle', async () => {
-    vi.mocked(puzzleModel.createPuzzle).mockResolvedValue({ pid: '123' });
+    vi.mocked(puzzleModel.createPuzzle).mockResolvedValue({pid: '123'});
 
     const response = await app.inject({
       method: 'POST',
       url: '/api/puzzle',
       payload: {
-        puzzle: { /* valid puzzle data */ },
+        puzzle: {
+          /* valid puzzle data */
+        },
         isPublic: true,
       },
     });
 
     expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.body)).toEqual({ pid: '123' });
+    expect(JSON.parse(response.body)).toEqual({pid: '123'});
   });
 
   it('should return 400 for invalid puzzle', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/puzzle',
-      payload: { puzzle: {} },
+      payload: {puzzle: {}},
     });
 
     expect(response.statusCode).toBe(400);
@@ -931,7 +921,7 @@ describe('Server Integration', () => {
     const response = await app.inject({
       method: 'OPTIONS',
       url: '/api/health',
-      headers: { origin: 'http://localhost:3020' },
+      headers: {origin: 'http://localhost:3020'},
     });
 
     expect(response.headers['access-control-allow-origin']).toBeDefined();
@@ -994,7 +984,7 @@ yarn test:backend -- <file>    # Specific file
       "NewResponse": {
         "type": "object",
         "properties": {
-          "data": { "type": "string" }
+          "data": {"type": "string"}
         }
       }
     }
@@ -1017,7 +1007,7 @@ export function createHandlers(fastify: AppInstance) {
 
     getNewEndpoint: async (request, reply) => {
       // Implementation
-      return { data: 'result' };
+      return {data: 'result'};
     },
   };
 }
@@ -1128,7 +1118,7 @@ const debouncedCursorUpdate = debounce((socket, data) => {
 For high-traffic puzzles:
 
 ```typescript
-import { LRUCache } from 'lru-cache';
+import {LRUCache} from 'lru-cache';
 
 const puzzleCache = new LRUCache<string, Puzzle>({
   max: 1000,
