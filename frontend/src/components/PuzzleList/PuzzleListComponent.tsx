@@ -144,7 +144,7 @@ const PuzzleListComponent = () => {
               placeholder="Search by title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 transition-all shadow-sm hover:shadow-md"
+              className="w-full pl-12 pr-4 py-3.5 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 transition-all shadow-sm hover:shadow-md"
               style={{ fontFamily: 'var(--font-display)' }}
             />
           </div>

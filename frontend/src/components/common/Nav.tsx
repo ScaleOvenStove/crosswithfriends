@@ -28,7 +28,7 @@ const Nav = () => {
         backdropFilter: 'blur(10px)',
         backgroundImage:
           theme.palette.mode === 'light'
-            ? 'linear-gradient(to bottom, rgba(250, 249, 247, 0.95), rgba(250, 249, 247, 0.98))'
+            ? 'linear-gradient(to bottom, rgba(248, 246, 242, 0.95), rgba(248, 246, 242, 0.98))'
             : 'linear-gradient(to bottom, rgba(26, 23, 20, 0.95), rgba(26, 23, 20, 0.98))',
       }}
     >

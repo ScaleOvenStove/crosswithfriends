@@ -37,11 +37,11 @@ const FilterSection = ({ title, children, defaultExpanded = true }: FilterSectio
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="border-b border-gray-200 dark:border-neutral-700 pb-4 mb-4">
+    <div className="border-b border-neutral-200 dark:border-neutral-700 pb-4 mb-4">
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between w-full text-left font-semibold text-gray-800 dark:text-neutral-200 hover:text-primary transition-colors font-display"
+        className="flex items-center justify-between w-full text-left font-semibold text-neutral-800 dark:text-neutral-200 hover:text-primary transition-colors font-display"
       >
         <span>{title}</span>
         {isExpanded ? (
@@ -68,9 +68,9 @@ const CheckboxFilter = ({ label, checked, onChange }: CheckboxFilterProps) => {
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-4 h-4 text-primary border-gray-300 dark:border-neutral-600 rounded focus:ring-primary focus:ring-2 cursor-pointer"
+        className="w-4 h-4 text-primary border-neutral-300 dark:border-neutral-600 rounded focus:ring-primary focus:ring-2 cursor-pointer"
       />
-      <span className="text-sm text-gray-700 dark:text-neutral-300 group-hover:text-primary transition-colors select-none font-display">
+      <span className="text-sm text-neutral-700 dark:text-neutral-300 group-hover:text-primary transition-colors select-none font-display">
         {label}
       </span>
     </label>
@@ -160,7 +160,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
       <aside
         className={`
           fixed lg:sticky top-0 left-0 h-screen lg:h-auto
-          w-80 bg-gray-50 dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-700 shadow-lg lg:shadow-none
+          w-80 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-700 shadow-lg lg:shadow-sm
           overflow-y-auto z-50 lg:z-0
           transform transition-transform duration-300 ease-in-out
           rounded-r-lg lg:rounded-lg
@@ -172,14 +172,14 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <FunnelIcon className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-bold text-gray-800 dark:text-neutral-200 font-display">
-                Filters
-              </h2>
+            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200 font-display">
+              Filters
+            </h2>
             </div>
             <button
               type="button"
               onClick={onToggle}
-              className="lg:hidden text-gray-500 hover:text-gray-700 transition-colors"
+              className="lg:hidden text-neutral-500 hover:text-neutral-700 transition-colors"
               aria-label="Close filters"
             >
               <XMarkIcon className="w-6 h-6" />
@@ -256,7 +256,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
               placeholder="Filter by author..."
               value={filters.author}
               onChange={(e) => handleAuthorChange(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
+              className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-600 rounded-lg bg-neutral-50 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
             />
           </FilterSection>
 
@@ -266,7 +266,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
               <div>
                 <label
                   htmlFor="filter-date-from"
-                  className="block text-xs text-gray-600 dark:text-neutral-400 mb-1 font-display"
+                  className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-display"
                 >
                   From
                 </label>
@@ -275,13 +275,13 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => handleDateFromChange(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
+                  className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-600 rounded-lg bg-neutral-50 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
                 />
               </div>
               <div>
                 <label
                   htmlFor="filter-date-to"
-                  className="block text-xs text-gray-600 dark:text-neutral-400 mb-1 font-display"
+                  className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1 font-display"
                 >
                   To
                 </label>
@@ -290,7 +290,7 @@ const FilterSidebar = ({ filters, onFilterChange, isOpen, onToggle }: FilterSide
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => handleDateToChange(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg bg-white/60 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
+                  className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-600 rounded-lg bg-neutral-50 dark:bg-neutral-800/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20 focus:bg-white dark:focus:bg-neutral-800 transition-all font-display"
                 />
               </div>
             </div>

@@ -172,12 +172,12 @@ export const lightTheme = createTheme({
       dark: '#922b21',
     },
     background: {
-      default: '#fefcf8',
+      default: '#f8f6f2',
       paper: '#ffffff',
     },
     text: {
-      primary: '#1a1a1a',
-      secondary: '#4a4a4a',
+      primary: '#2c3e50',
+      secondary: '#5a6c7d',
     },
     divider: 'rgba(44, 62, 80, 0.12)',
   },

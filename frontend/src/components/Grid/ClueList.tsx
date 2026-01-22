@@ -29,7 +29,7 @@ const ClueListContainer = styled(Box)(({ _theme }) => ({
 }));
 
 const ClueListHeader = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
+  padding: theme.spacing(1.5),
   backgroundColor: theme.palette.background.default,
   borderBottom: `1px solid ${theme.palette.divider}`,
   position: 'sticky',
@@ -86,8 +86,8 @@ export const ClueList = ({
         <ClueListHeader>
           <Typography variant="h6">{title}</Typography>
         </ClueListHeader>
-        <Box p={2}>
-          <Typography variant="body2" color="text.secondary">
+        <Box p={1.5}>
+          <Typography variant="body2" color="text.secondary" fontSize="0.875rem">
             No clues available
           </Typography>
         </Box>

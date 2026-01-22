@@ -4,7 +4,11 @@
 
 .account-page {
   min-height: 100vh;
-  background-color: var(--background-color, #f9fafb);
+  background-color: #f8f6f2;
+}
+
+.dark .account-page {
+  background-color: #1a1a1a;
 }
 
 .account-page .container {
@@ -17,20 +21,34 @@
 .account-header {
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #ede9e1;
+}
+
+.dark .account-header {
+  border-bottom-color: #374151;
 }
 
 .account-header h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #111827;
+  color: #2c3e50;
   margin: 0 0 0.5rem 0;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.dark .account-header h1 {
+  color: #f5f5f5;
 }
 
 .account-subtitle {
   font-size: 1.125rem;
-  color: #6b7280;
+  color: #5a6c7d;
   margin: 0;
+}
+
+.dark .account-subtitle {
+  color: #b0b0b0;
 }
 
 /* Account Sections Grid */
@@ -46,16 +64,34 @@
   border-radius: 0.75rem;
   padding: 1.5rem;
   box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  border: 1px solid #e5e7eb;
+    0 2px 8px rgba(44, 62, 80, 0.08),
+    0 1px 3px rgba(44, 62, 80, 0.06);
+  border: 1px solid #ede9e1;
+  transition: box-shadow 0.2s ease;
+}
+
+.account-card:hover {
+  box-shadow:
+    0 4px 16px rgba(44, 62, 80, 0.12),
+    0 2px 8px rgba(44, 62, 80, 0.08);
+}
+
+.dark .account-card {
+  background: #252525;
+  border-color: #374151;
 }
 
 .account-card h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: #2c3e50;
   margin: 0 0 1rem 0;
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.dark .account-card h2 {
+  color: #f5f5f5;
 }
 
 /* Section Header */
@@ -92,26 +128,41 @@
 .profile-field label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
+  color: #5a6c7d;
   text-transform: uppercase;
   letter-spacing: 0.025em;
+  font-family: var(--font-display);
+}
+
+.dark .profile-field label {
+  color: #e5e7eb;
 }
 
 .user-id {
   font-family: 'Monaco', 'Courier New', monospace;
   font-size: 0.875rem;
-  color: #6b7280;
-  background: #f3f4f6;
+  color: #5a6c7d;
+  background: #f5f3ef;
   padding: 0.5rem;
   border-radius: 0.375rem;
   word-break: break-all;
 }
 
+.dark .user-id {
+  color: #d1d5db;
+  background: #374151;
+}
+
 .display-name {
   font-size: 1.125rem;
   font-weight: 500;
-  color: #111827;
+  color: #2c3e50;
   margin: 0;
+  font-family: var(--font-display);
+}
+
+.dark .display-name {
+  color: #f5f5f5;
 }
 
 /* Color Display */
@@ -125,15 +176,23 @@
   width: 3rem;
   height: 3rem;
   border-radius: 0.5rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #ede9e1;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.dark .color-preview {
+  border-color: #4b5563;
 }
 
 .color-value {
   font-family: 'Monaco', 'Courier New', monospace;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #5a6c7d;
   text-transform: uppercase;
+}
+
+.dark .color-value {
+  color: #d1d5db;
 }
 
 /* Profile Editor */
@@ -153,22 +212,40 @@
 .form-group label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
+  color: #5a6c7d;
+  font-family: var(--font-display);
+}
+
+.dark .form-group label {
+  color: #e5e7eb;
 }
 
 .input-text {
   padding: 0.75rem 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #ddd9d0;
   border-radius: 0.5rem;
   font-size: 1rem;
-  color: #111827;
+  color: #2c3e50;
+  background: white;
   transition: all 0.2s;
+  font-family: var(--font-body);
+}
+
+.dark .input-text {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f5f5f5;
 }
 
 .input-text:focus {
   outline: none;
-  border-color: var(--color-primary, #4f46e5);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--color-primary, #2c3e50);
+  box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+}
+
+.dark .input-text:focus {
+  border-color: var(--color-primary, #5d7a9a);
+  box-shadow: 0 0 0 3px rgba(93, 122, 154, 0.2);
 }
 
 .char-count {
@@ -189,17 +266,25 @@
 .color-input {
   width: 4rem;
   height: 4rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #ede9e1;
   border-radius: 0.5rem;
   cursor: pointer;
+}
+
+.dark .color-input {
+  border-color: #4b5563;
 }
 
 .color-preview-large {
   width: 4rem;
   height: 4rem;
   border-radius: 0.5rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #ede9e1;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.dark .color-preview-large {
+  border-color: #4b5563;
 }
 
 /* Form Actions */
@@ -223,22 +308,42 @@
   align-items: center;
   text-align: center;
   padding: 1rem;
-  background: #f9fafb;
+  background: #f5f3ef;
   border-radius: 0.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.1);
+}
+
+.dark .stat-item {
+  background: #374151;
 }
 
 .stat-value {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--color-primary, #4f46e5);
+  color: var(--color-primary, #2c3e50);
   margin-bottom: 0.5rem;
+  font-family: var(--font-display);
+}
+
+.dark .stat-value {
+  color: var(--color-primary, #5d7a9a);
 }
 
 .stat-label {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #5a6c7d;
   text-transform: uppercase;
   letter-spacing: 0.025em;
+  font-family: var(--font-display);
+}
+
+.dark .stat-label {
+  color: #d1d5db;
 }
 
 /* Preferences */
@@ -252,14 +357,28 @@
   gap: 0.75rem;
   cursor: pointer;
   font-size: 1rem;
-  color: #374151;
+  color: #2c3e50;
+  font-family: var(--font-display);
+  transition: color 0.2s ease;
+}
+
+.preference-label:hover {
+  color: var(--color-primary, #2c3e50);
+}
+
+.dark .preference-label {
+  color: #e5e7eb;
+}
+
+.dark .preference-label:hover {
+  color: var(--color-primary, #5d7a9a);
 }
 
 .preference-label input[type='checkbox'] {
   width: 1.25rem;
   height: 1.25rem;
   cursor: pointer;
-  accent-color: var(--color-primary, #4f46e5);
+  accent-color: var(--color-primary, #2c3e50);
 }
 
 /* Data Management */
@@ -272,12 +391,19 @@
 
 .data-notice {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #5a6c7d;
   line-height: 1.5;
   padding: 1rem;
   background: #fef3c7;
   border-left: 4px solid #f59e0b;
   border-radius: 0.375rem;
+  font-family: var(--font-body);
+}
+
+.dark .data-notice {
+  color: #d1d5db;
+  background: #78350f;
+  border-left-color: #f59e0b;
 }
 
 /* Avatar Section */
@@ -305,20 +431,30 @@
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
-  border: 3px solid #e5e7eb;
+  border: 3px solid #ede9e1;
+}
+
+.dark .avatar-preview {
+  border-color: #4b5563;
 }
 
 .avatar-placeholder {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 3px dashed #d1d5db;
+  border: 3px dashed #ddd9d0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f9fafb;
-  color: #9ca3af;
+  background: #f5f3ef;
+  color: #8a8a8a;
   font-size: 0.875rem;
+}
+
+.dark .avatar-placeholder {
+  background: #374151;
+  border-color: #4b5563;
+  color: #9ca3af;
 }
 
 .avatar-input-hidden {
@@ -336,16 +472,24 @@
 .upload-progress {
   width: 100%;
   height: 1.5rem;
-  background: #f3f4f6;
+  background: #f5f3ef;
   border-radius: 0.375rem;
   overflow: hidden;
   position: relative;
 }
 
+.dark .upload-progress {
+  background: #374151;
+}
+
 .progress-bar {
   height: 100%;
-  background: var(--color-primary, #4f46e5);
+  background: var(--color-primary, #2c3e50);
   transition: width 0.3s ease;
+}
+
+.dark .progress-bar {
+  background: var(--color-primary, #5d7a9a);
 }
 
 .progress-text {
@@ -355,7 +499,12 @@
   transform: translate(-50%, -50%);
   font-size: 0.75rem;
   font-weight: 600;
-  color: #374151;
+  color: #2c3e50;
+  font-family: var(--font-display);
+}
+
+.dark .progress-text {
+  color: #e5e7eb;
 }
 
 .avatar-guidelines {
@@ -364,9 +513,14 @@
 
 .guidelines-text {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #8a8a8a;
   line-height: 1.5;
   margin: 0;
+  font-family: var(--font-body);
+}
+
+.dark .guidelines-text {
+  color: #9ca3af;
 }
 
 /* Buttons */
@@ -386,14 +540,23 @@
 }
 
 .btn-primary {
-  background: var(--color-primary, #4f46e5);
+  background: var(--color-primary, #2c3e50);
   color: white;
+  font-family: var(--font-display);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-dark, #4338ca);
+  background: var(--color-primary-dark, #1a252f);
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.dark .btn-primary {
+  background: var(--color-primary, #5d7a9a);
+}
+
+.dark .btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark, #4a6380);
 }
 
 .btn-primary:disabled {
@@ -403,14 +566,25 @@
 
 .btn-secondary {
   background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  color: #2c3e50;
+  border: 1px solid #ddd9d0;
+  font-family: var(--font-display);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: #f5f3ef;
+  border-color: #8a8a8a;
   transform: translateY(-1px);
+}
+
+.dark .btn-secondary {
+  background: #374151;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+.dark .btn-secondary:hover:not(:disabled) {
+  background: #4b5563;
 }
 
 .btn-secondary:disabled {
@@ -445,78 +619,7 @@
   margin-top: 0.5rem;
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .account-page {
-    background-color: #111827;
-  }
-
-  .account-card {
-    background: #1f2937;
-    border-color: #374151;
-  }
-
-  .account-header {
-    border-bottom-color: #374151;
-  }
-
-  .account-header h1,
-  .account-card h2,
-  .display-name {
-    color: #f9fafb;
-  }
-
-  .account-subtitle,
-  .user-id,
-  .color-value,
-  .stat-label,
-  .data-notice,
-  .guidelines-text {
-    color: #d1d5db;
-  }
-
-  .profile-field label {
-    color: #e5e7eb;
-  }
-
-  .user-id {
-    background: #374151;
-  }
-
-  .input-text {
-    background: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  .stat-item {
-    background: #374151;
-  }
-
-  .preference-label {
-    color: #e5e7eb;
-  }
-
-  .btn-secondary {
-    background: #374151;
-    color: #e5e7eb;
-    border-color: #4b5563;
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: #4b5563;
-  }
-
-  .avatar-placeholder {
-    background: #374151;
-    border-color: #4b5563;
-    color: #9ca3af;
-  }
-
-  .upload-progress {
-    background: #374151;
-  }
-}
+/* Dark mode styles are now handled with .dark class selectors above */
 
 /* Responsive Design */
 @media (max-width: 768px) {

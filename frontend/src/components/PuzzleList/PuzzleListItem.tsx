@@ -116,10 +116,10 @@ const PuzzleListItem = ({ puzzle }: PuzzleListItemProps) => {
       onClick={handlePlayClick}
       onKeyDown={handleKeyDown}
       aria-label={`Play ${puzzle.title} by ${puzzle.author}, ${puzzle.dimensions.width} by ${puzzle.dimensions.height} puzzle, ${puzzle.numSolves} ${puzzle.numSolves === 1 ? 'solve' : 'solves'}`}
-      className={`group relative block bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl p-6 overflow-hidden transition-all duration-300 ${
+      className={`group relative block bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl p-6 overflow-hidden transition-all duration-300 shadow-sm hover:shadow-lg ${
         isCreating
           ? 'cursor-wait opacity-75'
-          : 'cursor-pointer hover:-translate-y-2 hover:shadow-deep'
+          : 'cursor-pointer hover:-translate-y-1'
       } focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2`}
       style={{
         animation: 'fadeInUp 0.6s ease-out',

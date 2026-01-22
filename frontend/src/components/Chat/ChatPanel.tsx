@@ -44,8 +44,8 @@ const ChatContainer = styled(Paper, {
 })<{ isMobile?: boolean }>(({ theme, isMobile }) => ({
   display: 'flex',
   flexDirection: 'column',
-  height: isMobile ? '100%' : 500,
-  width: isMobile ? '100%' : 350,
+  height: isMobile ? '100%' : '100%',
+  width: isMobile ? '100%' : '100%',
   backgroundColor: theme.palette.background.paper,
   overflow: 'hidden',
 }));
@@ -85,8 +85,9 @@ const EmptyState = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: theme.spacing(4),
+  padding: theme.spacing(2),
   color: theme.palette.text.secondary,
+  minHeight: '120px',
 }));
 
 /**
