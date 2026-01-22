@@ -2,252 +2,144 @@
 
 # Cross with Friends
 
-Cross with Friends is an online platform for sharing crosswords and playing collaboratively with friends in real time. The application features a modern web interface built with React and a real-time backend powered by Fastify and Socket.io.
+**Solve crossword puzzles together, in real time.**
 
-**Live Site**: <https://crosswithfriends.com/>
+Cross with Friends is a free, open-source platform for sharing crossword puzzles and solving them collaboratively with friends. Whether you're racing against the clock on a daily mini or tackling a Sunday-sized challenge with a group, Cross with Friends makes it easy and fun.
 
-## Tech Stack
+**Play now**: [crosswithfriends.com](https://crosswithfriends.com/)
 
-### Frontend
+**Join the community**: [Discord](https://discord.gg/RmjCV8EZ73)
 
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-- **Material-UI (MUI)** - Component library
-- **React Router** - Client-side routing
-- **Socket.io Client** - Real-time communication
-- **Firebase** - Authentication and real-time database
-- **Zustand** - State management
-- **React Query** - Data fetching and caching
+---
 
-### Backend
+## Features
 
-- **Fastify** - HTTP server framework
-- **TypeScript** - Type safety
-- **Socket.io** - WebSocket server
-- **PostgreSQL** - Database
-- **Joi** - Schema validation
+- **Real-time collaboration** - Solve puzzles with friends, seeing their cursors and inputs live
+- **Extensive puzzle library** - Access thousands of puzzles or upload your own
+- **Multiple game modes** - Solo, collaborative, and competitive battle modes
+- **Cross-platform** - Works on desktop and mobile browsers
+- **Dark mode** - Easy on the eyes for late-night solving
+- **Game replay** - Watch completed games and learn from your solves
+- **Statistics** - Track your solving times and improvement over time
 
-### Infrastructure
+---
 
-- **Yarn Workspaces** - Monorepo management
-- **Turbo** - Build system and task runner
-- **Docker** - Containerization
-- **Firebase** - Hosting and services
-
-## Project Structure
-
-This is a monorepo managed with Yarn workspaces and Turbo:
-
-```text
-crosswithfriends/
-├── frontend/          # React frontend application
-├── server/            # Fastify backend server
-├── shared/            # Shared TypeScript types and utilities
-├── package.json       # Root workspace configuration
-└── turbo.json         # Turbo build configuration
-```
-
-## Getting Started
+## Quick Start for Developers
 
 ### Prerequisites
 
-- **Node.js** v20 or higher
-- **Yarn** v4.11.0 (managed via packageManager)
-- **nvm** (recommended for Node.js version management)
-- **PostgreSQL** (for local backend development)
+- **Node.js** 20 or higher ([install with nvm](https://github.com/nvm-sh/nvm))
+- **Yarn** 4.11.0 (enabled via corepack)
+- **PostgreSQL** (for backend development)
 
-### Installation
-
-1. **Install Node.js v20** (using nvm):
-
-   ```bash
-   nvm install 20
-   nvm use 20
-   nvm alias default 20  # optional
-   ```
-
-2. **Clone the repository**:
-
-   ```bash
-   git clone https://github.com/ScaleOvenStove/crosswithfriends.git
-   cd crosswithfriends
-   ```
-
-3. **Install dependencies**:
-
-   ```bash
-   corepack enable
-   yarn
-   ```
-
-### Development
-
-#### Run Both Frontend and Backend
-
-Start both the frontend and backend servers concurrently:
+### Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/ScaleOvenStove/crosswithfriends.git
+cd crosswithfriends
+
+# Enable yarn via corepack
+corepack enable
+
+# Install dependencies
+yarn
+
+# Start development servers (frontend + backend)
 yarn dev
 ```
 
-This will start:
+This starts:
 
-- Frontend dev server on `http://localhost:3020`
-- Backend server on `http://localhost:3021`
+- Frontend at `http://localhost:5173`
+- Backend at `http://localhost:3021`
 
-#### Run Frontend Only
+### Common Commands
 
-```bash
-yarn devfrontend
-# or with local server connection
-yarn devfrontend  # Uses VITE_USE_LOCAL_SERVER=1
+| Command | Description |
+| --- | --- |
+| `yarn dev` | Start both frontend and backend |
+| `yarn devfrontend` | Start frontend only |
+| `yarn devbackend` | Start backend only |
+| `yarn build` | Build all packages for production |
+| `yarn test` | Run all tests |
+| `yarn lint` | Check code style |
+
+---
+
+## Project Structure
+
+```
+crosswithfriends/
+├── frontend/          # React web application
+├── server/            # Fastify API server
+├── shared/            # Shared TypeScript types
+└── docs/              # Additional documentation
 ```
 
-#### Run Backend Only
+---
 
-```bash
-yarn devbackend
-```
+## Documentation
 
-The backend server runs on `http://localhost:3021` by default.
+### For Developers
 
-### Building
+| Guide | Description |
+| --- | --- |
+| [Frontend README](frontend/README.md) | Frontend setup, architecture overview |
+| [Frontend Developer Guide](frontend/DEVELOPER.md) | Deep dive: state management, hooks, components |
+| [Server README](server/README.md) | Backend setup, API reference, WebSocket events |
+| [Server Developer Guide](server/DEVELOPER.md) | Deep dive: event sourcing, authentication, testing |
 
-Build all packages:
+### API Reference
 
-```bash
-yarn build
-```
-
-Build specific packages:
-
-```bash
-yarn build:frontend
-yarn build:backend
-yarn build:shared
-```
-
-### Testing
-
-Run all tests:
-
-```bash
-yarn test
-```
-
-Run backend tests:
-
-```bash
-yarn test:backend
-yarn test:backend:watch      # Watch mode
-yarn test:backend:coverage   # With coverage
-```
-
-Frontend tests (from frontend directory):
-
-```bash
-cd frontend
-yarn test                    # Unit tests (Vitest)
-yarn test:component          # Component tests (Playwright)
-yarn test:e2e                # E2E tests (Playwright)
-```
-
-### Linting and Formatting
-
-Lint all code:
-
-```bash
-yarn lint
-yarn lint:fix                # Auto-fix issues
-```
-
-Format all code:
-
-```bash
-yarn format
-yarn format:check            # Check without fixing
-```
-
-## Docker Development
-
-The project includes Docker support for easy development and deployment:
-
-```bash
-# Start PostgreSQL and backend services
-docker compose up -d
-
-# View logs
-docker compose logs -f backend
-
-# Stop services
-docker compose down
-```
-
-See `docker-compose.yaml` for configuration details.
-
-## Environment Variables
-
-The project uses environment variables for configuration. Create `.env.local` files as needed:
-
-- Frontend: `frontend/.env.local`
-- Backend: `.env.prod`, `.env.staging` (for production/staging)
-
-Key variables:
-
-- `VITE_USE_LOCAL_SERVER` - Connect frontend to local backend
-- `DATABASE_URL` - PostgreSQL connection string
-- `PORT` - Server port (default: 3021)
-
-## API Documentation
-
-The backend API is documented in `server/README.md`. Key endpoints:
+The backend API is fully documented in the [OpenAPI specification](server/openapi.json). Key endpoints:
 
 - `POST /api/game` - Create a new game
 - `GET /api/game/:gid` - Get game information
-- `POST /api/puzzle` - Add a new puzzle
-- `GET /api/puzzle_list` - List puzzles
+- `POST /api/puzzle` - Upload a puzzle
+- `GET /api/puzzle_list` - Browse puzzles
 
-WebSocket events are handled via Socket.io for real-time game updates.
+WebSocket events enable real-time gameplay via Socket.io.
+
+---
 
 ## Contributing
 
-Cross with Friends is open to contributions from developers of any level or experience.
+Contributions are welcome from developers of all experience levels!
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests and linting (`yarn test && yarn lint`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+1. **Fork** the repository
+2. **Create a branch** (`git checkout -b feature/my-feature`)
+3. **Make changes** and add tests
+4. **Run checks** (`yarn test && yarn lint`)
+5. **Commit** (`git commit -m 'Add my feature'`)
+6. **Push** (`git push origin feature/my-feature`)
+7. **Open a Pull Request**
 
-If you notice a bug or have a feature request, feel free to open an issue.
+Found a bug or have a feature idea? [Open an issue](https://github.com/ScaleOvenStove/crosswithfriends/issues).
 
-**Join the [Discord](https://discord.gg/RmjCV8EZ73) for discussion.**
+Questions? Join us on [Discord](https://discord.gg/RmjCV8EZ73).
 
-## Development Tips
+---
 
-### Mobile Web Development
+## Tech Stack
 
-- **Mobile device emulator**: <https://appetize.io/demo?device=nexus7&scale=50&orientation=portrait&osVersion=9.0>
-- **Public URLs for local server**: [ngrok](https://ngrok.com/)
-- **Remote debugging tips**: <https://support.brightcove.com/debugging-mobile-devices>
+**Frontend**: React 19, TypeScript, Vite, Material-UI, Zustand, Socket.io Client, Firebase
 
-### Code Quality
+**Backend**: Fastify, TypeScript, PostgreSQL, Socket.io, Firebase Admin
 
-- ESLint and Prettier are configured for consistent code style
-- TypeScript provides type safety across the codebase
+**Infrastructure**: Yarn Workspaces, Turbo, Docker
+
+---
 
 ## Resources
 
-- [Firebase Realtime Database](https://firebase.google.com/docs/database/web/start) - Introduction to Firebase Realtime Database
-- [React Tutorial](https://reactjs.org/tutorial/tutorial.html) - Introduction to React
-- [Fastify Documentation](https://www.fastify.io/) - Fastify framework docs
-- [Socket.io Documentation](https://socket.io/docs/) - Real-time communication
-- [Turbo Documentation](https://turbo.build/repo/docs) - Monorepo build system
-- [Community Discord](https://discord.gg/RmjCV8EZ73)
+- [React Documentation](https://react.dev/)
+- [Fastify Documentation](https://www.fastify.io/)
+- [Socket.io Documentation](https://socket.io/docs/)
+- [Firebase Documentation](https://firebase.google.com/docs/)
+
+---
 
 ## License
 
-See [LICENSE](LICENSE) file for details.
+See [LICENSE](LICENSE) for details.
