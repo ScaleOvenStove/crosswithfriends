@@ -65,14 +65,16 @@ export default class GridControls extends Component {
 
     trySelectNextClue();
     safe_while(() => !hasSelectableCells(), trySelectNextClue);
-    this.selectClue(currentDirection, currentClueNumber);
+    this.selectClue(currentDirection, currentClueNumber, skipFilledSquares);
   }
 
-  selectClue(direction, number) {
+  selectClue(direction, number, skipFilledSquares) {
     const clueRoot = this.grid.getCellByNumber(number);
     if (clueRoot) {
       this.setDirection(direction);
-      const firstEmptyCell = this.grid.getNextEmptyCell(clueRoot.r, clueRoot.c, direction);
+      const firstEmptyCell = this.grid.getNextEmptyCell(clueRoot.r, clueRoot.c, direction, {
+        skipFilledSquares,
+      });
       let targetCell = firstEmptyCell || clueRoot;
       // if not selectable
       while (targetCell && !this.isSelectable(targetCell.r, targetCell.c)) {

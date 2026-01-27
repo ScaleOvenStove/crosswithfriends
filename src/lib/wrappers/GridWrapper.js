@@ -169,7 +169,7 @@ export default class GridWrapper {
       // recurse but not infinitely
       const result = this.getNextEmptyCell(r, c, direction, {
         noWraparound: true,
-        skipFilledSquares: skipFilledSquares,
+        skipFilledSquares,
       });
       if (!result || (result.r === _r && result.c === _c)) return undefined;
       return result;
