@@ -7,6 +7,33 @@ Crosswithfriends is an online website for sharing crosswords and playing collabo
 
 It is hosted at https://crosswithfriends.com/.
 
+# 🚨 Repository Status & Branching Strategy
+
+**Important:** This repository is currently in a transition phase between the Legacy Production app and the V2 Rewrite. Please ensure you are working on the correct branch.
+
+| Environment | Branch | Status | URL |
+| :--- | :--- | :--- | :--- |
+| **Production** | `master` | 🔒 **Maintenance Only**<br>Critical hotfixes for the live app. | [crosswithfriends.com](https://www.crosswithfriends.com) |
+| **V2** | `v2-rewrite` | 🚀 **Active Development**<br>All new features and the rewrite codebase. | [v2.crosswithfriends.com](https://v2.crosswithfriends.com) |
+
+---
+
+## 🛠️ Which branch should I use?
+
+### 1. Working on the New App (Default)
+Most development should happen here. This is the new codebase (React/Vite/Node).
+   `git checkout v2-rewrite`
+   `git pull origin v2-rewrite`
+
+### 2. Fixing a Bug in Production (Legacy)
+Only check this out if you need to patch the currently live application.
+
+    `git checkout master`
+    `git pull origin master`
+    
+# ⚠️ Do not merge v2-rewrite into master!
+
+
 ## Contributing
 
 If you notice a bug or have a feature request, feel free to open an issue.
