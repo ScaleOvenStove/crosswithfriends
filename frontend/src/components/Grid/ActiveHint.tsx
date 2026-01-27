@@ -11,7 +11,7 @@ interface ActiveHintProps {
 }
 
 const HintContainer = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
+  padding: theme.spacing(1.5, 2),
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.shape.borderRadius * 1.5,
@@ -19,7 +19,7 @@ const HintContainer = styled(Paper)(({ theme }) => ({
     theme.palette.mode === 'light'
       ? '0 2px 12px rgba(44, 62, 80, 0.06), 0 1px 4px rgba(44, 62, 80, 0.04)'
       : '0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3)',
-  minHeight: '120px',
+  minHeight: '60px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
@@ -30,7 +30,7 @@ const HintContent = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'flex-start',
-  gap: theme.spacing(1.5),
+  gap: theme.spacing(0.75),
   width: '100%',
 }));
 
@@ -42,7 +42,7 @@ const HintHeader = styled(Box)(({ theme }) => ({
 
 const ClueNumber = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
-  fontSize: '1.25rem',
+  fontSize: '1rem',
   color: theme.palette.primary.main,
   fontFamily: 'var(--font-display)',
   letterSpacing: '-0.01em',
@@ -58,15 +58,15 @@ const ClueDirection = styled(Typography)(({ theme }) => ({
 }));
 
 const ClueText = styled(Typography)(({ theme }) => ({
-  fontSize: '1.125rem',
+  fontSize: '0.9375rem',
   color: theme.palette.text.primary,
   textAlign: 'left',
-  lineHeight: 1.6,
+  lineHeight: 1.5,
   fontFamily: 'var(--font-display)',
 }));
 
 const EmptyState = styled(Typography)(({ theme }) => ({
-  fontSize: '1rem',
+  fontSize: '0.875rem',
   color: theme.palette.text.secondary,
   fontStyle: 'italic',
   fontFamily: 'var(--font-display)',

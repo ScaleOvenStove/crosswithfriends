@@ -34,16 +34,16 @@ const GameContent = styled(Container)(({ theme }) => ({
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2.5),
-  padding: theme.spacing(2.5),
+  gap: theme.spacing(1.5),
+  padding: theme.spacing(1.5),
   overflow: 'auto',
   maxWidth: '2000px !important',
   minHeight: 0,
   position: 'relative',
   [theme.breakpoints.up('md')]: {
     flexDirection: 'row',
-    gap: theme.spacing(3.5),
-    padding: theme.spacing(3.5),
+    gap: theme.spacing(2),
+    padding: theme.spacing(2),
     overflow: 'hidden',
     minHeight: 0,
   },
@@ -53,7 +53,7 @@ const LeftSection = styled(Box)(({ theme }) => ({
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2.5),
+  gap: theme.spacing(1.5),
   minWidth: 0,
   minHeight: 0,
   overflow: 'hidden',
@@ -101,16 +101,16 @@ const ClueSection = styled(Box)(({ theme }) => ({
 const GridAndCluesContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2.5),
+  gap: theme.spacing(1.5),
   flex: 1,
   minWidth: 0,
   minHeight: 0,
   [theme.breakpoints.up('sm')]: {
     flexDirection: 'row',
-    gap: theme.spacing(2.5),
+    gap: theme.spacing(2),
   },
   [theme.breakpoints.up('md')]: {
-    gap: theme.spacing(3.5),
+    gap: theme.spacing(2),
   },
 }));
 
@@ -119,7 +119,7 @@ const ChatSection = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   width: '100%',
-  maxHeight: '400px',
+  maxHeight: '350px',
   borderRadius: theme.shape.borderRadius * 1.5,
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
@@ -132,7 +132,7 @@ const ChatSection = styled(Box)(({ theme }) => ({
     maxHeight: 'none',
   },
   [theme.breakpoints.up('md')]: {
-    flex: '0 0 360px',
+    flex: '0 0 320px',
     width: 'auto',
   },
 }));

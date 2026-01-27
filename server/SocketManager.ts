@@ -109,7 +109,11 @@ class SocketManager {
       return;
     }
     await addGameEvent(this.db, gid, validation.validatedEvent);
-    this.io.to(`game-${gid}`).emit('game_event', validation.validatedEvent);
+    // Broadcast with wrapper to match client's socketGameEventSchema
+    this.io.to(`game-${gid}`).emit('game_event', {
+      gid,
+      event: validation.validatedEvent,
+    });
   }
 
   async addRoomEvent(rid: string, event: SocketEvent | RoomEvent): Promise<void> {

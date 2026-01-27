@@ -110,7 +110,10 @@ describe('SocketManager', () => {
         expect.objectContaining({type: 'updateCell'})
       );
       expect(mockIo.to).toHaveBeenCalledWith(`game-${mockGid}`);
-      expect(mockIo.emit).toHaveBeenCalledWith('game_event', expect.objectContaining({type: 'updateCell'}));
+      expect(mockIo.emit).toHaveBeenCalledWith('game_event', {
+        gid: mockGid,
+        event: expect.objectContaining({type: 'updateCell'}),
+      });
     });
 
     it('should assign timestamp for Firebase-style server timestamp', async () => {
