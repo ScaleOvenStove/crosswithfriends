@@ -25,6 +25,7 @@ export default class Game extends Component {
       vimMode: false,
       vimInsert: false,
       vimCommand: false,
+      skipFilledSquares: true,
       colorAttributionMode: false,
       expandMenu: false,
     };
@@ -180,6 +181,12 @@ export default class Game extends Component {
     });
   };
 
+  handleToggleSkipFilledSquares = () => {
+    this.setState((prevState) => ({
+      skipFilledSquares: !prevState.skipFilledSquares,
+    }));
+  };
+
   handleTogglePencil = () => {
     this.setState((prevState) => ({
       pencilMode: !prevState.pencilMode,
@@ -324,6 +331,8 @@ export default class Game extends Component {
         onVimCommand={this.handleVimCommand}
         onVimCommandPressEnter={this.handleVimCommandPressEnter}
         onVimCommandPressEscape={this.handleRefocus}
+        skipFilledSquares={this.state.skipFilledSquares}
+        onToggleSkipFilledSquares={this.handleToggleSkipFilledSquares}
         colorAttributionMode={this.state.colorAttributionMode}
         mobile={mobile}
         pickups={this.props.pickups}
@@ -339,7 +348,16 @@ export default class Game extends Component {
     if (!this.game) return;
     const {clock, solved} = this.game;
     const {mobile} = this.props;
-    const {pencilMode, autocheckMode, vimMode, vimInsert, vimCommand, listMode, expandMenu} = this.state;
+    const {
+      pencilMode,
+      autocheckMode,
+      vimMode,
+      vimInsert,
+      vimCommand,
+      skipFilledSquares,
+      listMode,
+      expandMenu,
+    } = this.state;
     const {lastUpdated: startTime, totalTime: pausedTime, paused: isPaused} = clock;
     return (
       <Toolbar
@@ -355,6 +373,7 @@ export default class Game extends Component {
         pencilMode={pencilMode}
         autocheckMode={autocheckMode}
         vimMode={vimMode}
+        skipFilledSquares={skipFilledSquares}
         solved={solved}
         vimInsert={vimInsert}
         vimCommand={vimCommand}
@@ -367,6 +386,7 @@ export default class Game extends Component {
         onKeybind={this.handleKeybind}
         onTogglePencil={this.handleTogglePencil}
         onToggleVimMode={this.handleToggleVimMode}
+        onToggleSkipFilledSquares={this.handleToggleSkipFilledSquares}
         onToggleAutocheck={this.handleToggleAutocheck}
         onToggleListView={this.handleToggleListView}
         onToggleChat={this.handleToggleChat}

@@ -357,6 +357,8 @@ export default class Player extends Component {
       onVimNormal,
       onVimInsert,
       onVimCommand,
+      skipFilledSquares,
+      onToggleSkipFilledSquares,
       grid,
       clues,
       circles,
@@ -552,6 +554,8 @@ export default class Player extends Component {
           onVimInsert={onVimInsert}
           onVimNormal={onVimNormal}
           onVimCommand={onVimCommand}
+          skipFilledSquares={skipFilledSquares}
+          onToggleSkipFilledSquares={onToggleSkipFilledSquares}
           selected={selected}
           direction={direction}
           onSetDirection={this._setDirection}

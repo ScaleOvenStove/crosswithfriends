@@ -152,15 +152,21 @@ export default class Toolbar extends Component {
     this.props.onToggleVimMode();
   };
 
+  handleSkipFilledSquaresClick = (e) => {
+    this.props.onToggleSkipFilledSquares();
+  };
+
   renderExtrasMenu() {
-    const {vimMode, onToggleColorAttributionMode} = this.props;
+    const {vimMode, onToggleColorAttributionMode, skipFilledSquares} = this.props;
     const vimModeLabel = vimMode ? 'Disable Vim Mode' : 'Enable Vim Mode';
+    const skipFilledSquaresLabel = skipFilledSquares ? "Don't skip filled squares" : 'Skip filled squares';
     return (
       <ActionMenu
         label="Extras"
         onBlur={this.handleBlur}
         actions={{
           [vimModeLabel]: this.handleVimModeClick,
+          [skipFilledSquaresLabel]: this.handleSkipFilledSquaresClick,
           'Color Attribution': onToggleColorAttributionMode,
           'List View': this.props.onToggleListView,
           Pencil: this.props.onTogglePencil,
@@ -332,9 +338,7 @@ export default class Toolbar extends Component {
               </tr>
               <tr>
                 <td>Letter / Number</td>
-                <td>
-                  Fill in current cell and advance cursor to next unfilled cell in the same word, if any
-                </td>
+                <td>Fill in current cell and advance cursor to the next cell in the same word, if any</td>
               </tr>
               <tr>
                 <td>
@@ -389,7 +393,7 @@ export default class Toolbar extends Component {
                 <td>
                   <code>Tab</code> and <code>Shift+Tab</code>
                 </td>
-                <td>Move cursor to first unfilled square of next or previous unfilled clue</td>
+                <td>Move cursor to the next or previous clue</td>
               </tr>
               <tr>
                 <td>

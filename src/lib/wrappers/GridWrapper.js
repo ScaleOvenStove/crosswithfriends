@@ -147,10 +147,10 @@ export default class GridWrapper {
   getNextEmptyCell(r, c, direction, options = {}) {
     const _r = r;
     const _c = c;
-    let {noWraparound = false, skipFirst = false} = options;
+    let {noWraparound = false, skipFirst = false, skipFilledSquares = true} = options;
 
     while (this.isWriteable(r, c)) {
-      if (!this.isFilled(r, c)) {
+      if (skipFilledSquares && !this.isFilled(r, c)) {
         if (!skipFirst) {
           return {r, c};
         }
@@ -169,6 +169,7 @@ export default class GridWrapper {
       // recurse but not infinitely
       const result = this.getNextEmptyCell(r, c, direction, {
         noWraparound: true,
+        skipFilledSquares: skipFilledSquares,
       });
       if (!result || (result.r === _r && result.c === _c)) return undefined;
       return result;
@@ -185,7 +186,7 @@ export default class GridWrapper {
     return !this.hasEmptyCells(clueRoot.r, clueRoot.c, direction);
   }
 
-  getNextClue(clueNumber, direction, clues, backwards, parallel) {
+  getNextClue(clueNumber, direction, clues, backwards, parallel, skipFilledSquares) {
     clueNumber = parallel ? this.parallelMap[direction][clueNumber] : clueNumber;
     const add = backwards ? -1 : 1;
     const start = () => (backwards ? clues[direction].length - 1 : 1);
@@ -201,7 +202,7 @@ export default class GridWrapper {
       const number = parallel ? this.parallelMapInverse[direction][clueNumber] : clueNumber;
       return (
         clues[direction][number] !== undefined &&
-        (this.isGridFilled() || !this.isWordFilled(direction, number))
+        (this.isGridFilled() || !skipFilledSquares || !this.isWordFilled(direction, number))
       );
     };
     step();
