@@ -58,6 +58,9 @@ If you notice a bug or have a feature request, feel free to open an issue.
 5. Run frontend server
    `yarn start`
 
+   Or if you just want to do frontend development against the remote server
+   `REACT_APP_STAGING_API_URL="downforacross-com.onrender.com" yarn start`
+
 ### Contributing
 
 Cross with Friends is open to contributions from developers of any level or experience.
