@@ -1,15 +1,16 @@
 import './css/nav.css';
 
-import {Link} from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import ReactDOMServer from 'react-dom/server';
-import React, {useContext} from 'react';
+import React, { useContext } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
 import swal from '@sweetalert/with-react';
 import GlobalContext from '../../lib/GlobalContext';
-import {getUser} from '../../store/user';
+import { getUser } from '../../store/user';
+import { FaSun, FaMoon, FaDesktop } from 'react-icons/fa';
 
-function LogIn({user, style}) {
+function LogIn({ user, style }) {
   if (!user.attached) {
     return null;
   }
@@ -85,23 +86,25 @@ function darkModePreferenceText(darkModePreference) {
   }
 }
 
-export default function Nav({hidden, v2, canLogin, mobile, linkStyle, divRef}) {
-  const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
+export default function Nav({ hidden, v2, canLogin, mobile, linkStyle, divRef }) {
+  const { darkModePreference, toggleMolesterMoons } = useContext(GlobalContext);
   if (hidden) return null; // no nav for mobile
   const user = getUser();
   const fencing = window.location.href.includes('fencing');
   return (
-    <div className={classnames('nav', {mobile})} ref={divRef}>
+    <div className={classnames('nav', { mobile })} ref={divRef}>
       <div className="nav--left" style={linkStyle}>
         <Link to={fencing ? '/fencing' : '/'}>Cross with Friends</Link>
       </div>
       <div className="nav--right">
         <div
-          className="molester-moon"
-          style={darkModePreference !== '0' ? {opacity: 1} : {}}
+          className="dark-mode-toggle"
           onClick={toggleMolesterMoons}
+          title={`Dark Mode: ${darkModePreferenceText(darkModePreference)}`}
         >
-          Dark Mode (beta): {darkModePreferenceText(darkModePreference)}
+          {darkModePreference === '0' && <FaSun />}
+          {darkModePreference === '1' && <FaMoon />}
+          {darkModePreference === '2' && <FaDesktop />}
         </div>
         {/* <div className="nav--right stats">
           <a href="/stats">Your stats</a>
