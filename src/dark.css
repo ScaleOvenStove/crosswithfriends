@@ -1,17 +1,16 @@
 /* Nav Bar */
 
-.molester-moon {
-  font-family: courier;
-  opacity: 0;
+.dark-mode-toggle {
   cursor: pointer;
   text-align: right;
-  margin-top: -10px; /* Ignore padding from parent so dark mode setting doesn't expand Nav bar */
-  margin-bottom: -10px; /* Can remove these if there's a more compact dark mode switching UI */
+  margin-top: -10px;
+  /* Ignore padding from parent so dark mode setting doesn't expand Nav bar */
+  margin-bottom: -10px;
+  /* Can remove these if there's a more compact dark mode switching UI */
 }
 
-.molester-moon:hover {
+.dark-mode-toggle:hover {
   opacity: 1;
-  transition: 3s all;
 }
 
 .dark {
@@ -49,6 +48,7 @@
   background-color: var(--dark-background-2);
   color: var(--dark-primary-text);
 }
+
 .dark .cell.black {
   background-color: var(--dark-background);
 }
@@ -67,7 +67,7 @@
   color: white;
 }
 
-.dark .cell.referenced .cell--value{
+.dark .cell.referenced .cell--value {
   color: white !important;
 }
 
@@ -99,6 +99,7 @@
 .dark .clues--list--scroll {
   border-top-color: #555;
 }
+
 .dark .clues--list--scroll--clue.complete {
   color: rgba(255, 255, 255, 0.47);
 }
@@ -143,8 +144,9 @@
   border-right: none !important;
   border-top: none !important;
 }
-.dark .cell.selected .cell--wrapper{
-  background-color: rgba(0,0,0,0.1);
+
+.dark .cell.selected .cell--wrapper {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .dark .cell.good .cell--value {
@@ -168,13 +170,14 @@
 }
 
 .dark ::selection {
-  background-color: #555; /* WebKit/Blink Browsers */
+  background-color: #555;
+  /* WebKit/Blink Browsers */
 }
 
 /* Welcome Page */
 .dark .welcome {
-  background-color: var(--dark-background);
-  color: var(--dark-primary-text);
+  background-color: var(--dark-background) !important;
+  color: var(--dark-primary-text) !important;
 }
 
 .dark .welcome--sidebar {
@@ -204,7 +207,7 @@
 
 .dark .entry {
   background-color: var(--dark-background-1);
-  border-color: rgba(255,255,255,0.3);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 :root {

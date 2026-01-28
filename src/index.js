@@ -2,10 +2,9 @@
 import classnames from 'classnames';
 import ReactDOM from 'react-dom';
 import React from 'react';
-import useMediaQuery from '@material-ui/core/useMediaQuery';
 
-import {BrowserRouter as Router, Route, Switch} from 'react-router-dom';
-import {isMobile} from './lib/jsUtils';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { isMobile } from './lib/jsUtils';
 import {
   Account,
   Battle,
@@ -50,13 +49,36 @@ const Root = () => {
     setDarkModePreference(newDarkModePreference);
   };
 
-  const systemDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
+  // Custom hook for system dark mode detection
+  const [systemDarkMode, setSystemDarkMode] = React.useState(
+    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+  React.useEffect(() => {
+    const matcher = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e) => setSystemDarkMode(e.matches);
+
+    // Support both modern addEventListener and legacy addListener
+    if (matcher.addEventListener) {
+      matcher.addEventListener('change', onChange);
+    } else {
+      matcher.addListener(onChange);
+    }
+
+    return () => {
+      if (matcher.removeEventListener) {
+        matcher.removeEventListener('change', onChange);
+      } else {
+        matcher.removeListener(onChange);
+      }
+    };
+  }, []);
+
   const darkMode = darkModePreference === '2' ? systemDarkMode : darkModePreference === '1';
 
   return (
     <Router>
-      <GlobalContext.Provider value={{toggleMolesterMoons, darkModePreference}}>
-        <div className={classnames('router-wrapper', {mobile: isMobile(), dark: darkMode})}>
+      <GlobalContext.Provider value={{ toggleMolesterMoons, darkModePreference }}>
+        <div className={classnames('router-wrapper', { mobile: isMobile(), dark: darkMode })}>
           <Switch>
             <Route exact path="/" component={WrappedWelcome} />
             <Route exact path="/fencing">
