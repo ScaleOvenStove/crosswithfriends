@@ -447,6 +447,8 @@ export default class Player extends Component {
               ref="mobileGridControls"
               onPressEnter={onPressEnter}
               onPressPeriod={onPressPeriod}
+              skipFilledSquares={skipFilledSquares}
+              onToggleSkipFilledSquares={onToggleSkipFilledSquares}
               selected={selected}
               direction={direction}
               onSetDirection={this._setDirection}
@@ -477,6 +479,8 @@ export default class Player extends Component {
             ref="mobileGridControls"
             onPressEnter={onPressEnter}
             onPressPeriod={onPressPeriod}
+            skipFilledSquares={skipFilledSquares}
+            onToggleSkipFilledSquares={onToggleSkipFilledSquares}
             selected={selected}
             direction={direction}
             onSetDirection={this._setDirection}
@@ -519,6 +523,8 @@ export default class Player extends Component {
             onVimInsert={onVimInsert}
             onVimNormal={onVimNormal}
             onVimCommand={onVimCommand}
+            skipFilledSquares={skipFilledSquares}
+            onToggleSkipFilledSquares={onToggleSkipFilledSquares}
             selected={selected}
             direction={direction}
             onSetDirection={this._setDirection}
