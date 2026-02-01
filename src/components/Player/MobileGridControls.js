@@ -102,17 +102,28 @@ export default class MobileGridControls extends GridControls {
   }
 
   handleClueBarTouchEnd = (e) => {
-    const countAsTapBuffer = 6; // px
-    const touchTravelDist = Math.abs(e.pageY - this.touchingClueBarStart.pageY);
+    const countAsTapBuffer = 4; // px
+    const touch = e.changedTouches ? e.changedTouches[0] : e;
+    const touchTravelDist = Math.abs(touch.pageY - this.touchingClueBarStart.pageY);
+    const maxTravelDist = this.touchingClueBarMaxTravelDist || 0;
     this.touchingClueBarStart = null;
-    if (touchTravelDist <= countAsTapBuffer) {
+    this.touchingClueBarMaxTravelDist = 0;
+    if (touchTravelDist <= countAsTapBuffer && maxTravelDist <= countAsTapBuffer) {
       this.flipDirection();
       this.keepFocus();
     }
   };
 
+  handleClueBarTouchMove = (e) => {
+    if (!this.touchingClueBarStart) return;
+    const touch = e.touches[0];
+    const travelDist = Math.abs(touch.pageY - this.touchingClueBarStart.pageY);
+    this.touchingClueBarMaxTravelDist = Math.max(this.touchingClueBarMaxTravelDist || 0, travelDist);
+  };
+
   handleClueBarTouchStart = (e) => {
     this.touchingClueBarStart = e.touches[0];
+    this.touchingClueBarMaxTravelDist = 0;
   };
 
   handleTouchStart = (e) => {
@@ -312,6 +323,7 @@ export default class MobileGridControls extends GridControls {
           ref={(e) => {
             if (!e) return;
             e.addEventListener('touchstart', this.handleClueBarTouchStart, {passive: false});
+            e.addEventListener('touchmove', this.handleClueBarTouchMove, {passive: false});
             e.addEventListener('touchend', this.handleClueBarTouchEnd, {passive: false});
           }}
           onClick={this.keepFocus}

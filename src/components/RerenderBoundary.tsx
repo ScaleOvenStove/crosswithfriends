@@ -6,7 +6,6 @@ const RerenderBoundary: React.FC<{name: string; hash: string}> = (props) => {
   const prevHash = usePrevious(props.hash);
   if (prevHash !== props.hash) {
     prevChildren.current = props.children;
-    console.debug('rerendering', props.name);
   }
 
   return <>{prevChildren.current}</>;

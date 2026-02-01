@@ -56,15 +56,9 @@ export default class Cell extends React.Component<Props> {
   shouldComponentUpdate(nextProps: Props) {
     const pathsToOmit = ['cursors', 'pings', 'cellStyle'] as const;
     if (!_.isEqual(_.omit(nextProps, ...pathsToOmit), _.omit(this.props, pathsToOmit))) {
-      console.debug(
-        'cell update',
-        // @ts-ignore
-        _.filter(_.keys(this.props), (k) => this.props[k] !== nextProps[k])
-      );
       return true;
     }
     if (_.some(pathsToOmit, (p) => JSON.stringify(nextProps[p]) !== JSON.stringify(this.props[p]))) {
-      console.debug('cell update for array');
       return true;
     }
 
