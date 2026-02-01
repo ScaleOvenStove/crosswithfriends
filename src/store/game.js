@@ -76,7 +76,6 @@ export default class Game extends EventEmitter {
   emitWSEvent(event) {
     if (event.type === 'create') {
       this.emit('wsCreateEvent', event);
-      console.log('Connected!');
     } else {
       this.emit('wsEvent', event);
     }
@@ -161,8 +160,6 @@ export default class Game extends EventEmitter {
     this.ref.child('battleData').on('value', (snapshot) => {
       this.emit('battleData', snapshot.val());
     });
-
-    console.log('subscribed');
 
     const websocketPromise = this.connectToWebsocket().then(() => this.subscribeToWebsocketEvents());
     await websocketPromise;
