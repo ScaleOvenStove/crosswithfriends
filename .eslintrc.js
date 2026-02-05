@@ -4,7 +4,7 @@ module.exports = {
     es6: true,
     node: true,
   },
-  extends: ['plugin:react/recommended', 'airbnb-typescript', 'prettier', 'prettier/@typescript-eslint'],
+  extends: ['plugin:react/recommended', 'plugin:jsx-a11y/recommended', 'airbnb-typescript', 'prettier'],
   globals: {
     Atomics: 'readonly',
     SharedArrayBuffer: 'readonly',
@@ -19,7 +19,7 @@ module.exports = {
     project: ['tsconfig.json', 'server/tsconfig.json'],
     tsconfigRootDir: __dirname,
   },
-  plugins: ['react', '@typescript-eslint', 'import'],
+  plugins: ['react', '@typescript-eslint', 'import', 'jsx-a11y'],
   settings: {
     'import/parsers': {
       '@typescript-eslint/parser': ['.ts', '.tsx'],
