@@ -3,7 +3,7 @@ import './css/welcome.css';
 import React, {Component} from 'react';
 import {Helmet} from 'react-helmet';
 import Flex from 'react-flexview';
-import {MdSearch, MdCheckBoxOutlineBlank, MdCheckBox} from 'react-icons/md';
+import {MdSearch, MdCheckBoxOutlineBlank, MdCheckBox, MdExpandMore, MdExpandLess, MdFilterList, MdClose} from 'react-icons/md';
 import _ from 'lodash';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
@@ -22,6 +22,8 @@ export default class Welcome extends Component {
     super(props);
     this.state = {
       userHistory: {},
+      collapsedFilters: {Day: true, Type: true, Status: true},
+      mobileSidebarOpen: false,
     };
     this.loading = false;
     this.mobile = isMobile();
@@ -108,6 +110,8 @@ export default class Welcome extends Component {
         userHistory={userHistory}
         sizeFilter={this.props.sizeFilter}
         statusFilter={this.props.statusFilter}
+        typeFilter={this.props.typeFilter}
+        dayOfWeekFilter={this.props.dayOfWeekFilter}
         search={this.props.search}
         onScroll={this.handleScroll}
       />
@@ -127,6 +131,16 @@ export default class Welcome extends Component {
     } else if (header === 'Status') {
       this.props.setStatusFilter({
         ...this.props.statusFilter,
+        [name]: on,
+      });
+    } else if (header === 'Type') {
+      this.props.setTypeFilter({
+        ...this.props.typeFilter,
+        [name]: on,
+      });
+    } else if (header === 'Day') {
+      this.props.setDayOfWeekFilter({
+        ...this.props.dayOfWeekFilter,
         [name]: on,
       });
     }
@@ -149,54 +163,90 @@ export default class Welcome extends Component {
     this.setState({searchFocused: false});
   };
 
+  toggleFilterGroup = (header) => {
+    this.setState((prev) => ({
+      collapsedFilters: {
+        ...prev.collapsedFilters,
+        [header]: !prev.collapsedFilters[header],
+      },
+    }));
+  };
+
+  toggleMobileSidebar = () => {
+    this.setState((prev) => ({mobileSidebarOpen: !prev.mobileSidebarOpen}));
+  };
+
+  closeMobileSidebar = () => {
+    this.setState({mobileSidebarOpen: false});
+  };
+
   renderFilters() {
     const sizeFilter = this.props.sizeFilter;
     const statusFilter = this.props.statusFilter;
+    const typeFilter = this.props.typeFilter;
+    const dayOfWeekFilter = this.props.dayOfWeekFilter;
+    const {collapsedFilters} = this.state;
 
     const headerStyle = {
       fontWeight: 600,
-      marginTop: 10,
-      marginBottom: 10,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      userSelect: 'none',
     };
     const groupStyle = {
-      padding: 20,
+      padding: '8px 20px',
     };
     const inputStyle = {
       margin: 'unset',
     };
 
-    const checkboxGroup = (header, items, handleChange) => (
-      <Flex column style={groupStyle} className="checkbox-group">
-        <span style={headerStyle}>{header}</span>
-        {_.keys(items).map((name, i) => (
-          <label
-            key={i}
-            onMouseDown={(e) => {
-              e.preventDefault();
-            }}
-          >
-            <input
-              type="checkbox"
-              style={inputStyle}
-              checked={items[name]}
-              onChange={(e) => {
-                handleChange(header, name, e.target.checked);
-              }}
-            />
-            {items[name] ? (
-              <MdCheckBox className="checkbox-icon" />
+    const checkboxGroup = (header, items, handleChange) => {
+      const collapsed = collapsedFilters[header];
+      return (
+        <Flex column style={groupStyle} className="checkbox-group">
+          <span style={headerStyle} onClick={() => this.toggleFilterGroup(header)}>
+            {header}
+            {collapsed ? (
+              <MdExpandMore style={{width: 20, height: 20}} />
             ) : (
-              <MdCheckBoxOutlineBlank className="checkbox-icon" />
+              <MdExpandLess style={{width: 20, height: 20}} />
             )}
-            <span>{name}</span>
-          </label>
-        ))}
-      </Flex>
-    );
+          </span>
+          {!collapsed &&
+            _.keys(items).map((name, i) => (
+              <label
+                key={i}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                }}
+              >
+                <input
+                  type="checkbox"
+                  style={inputStyle}
+                  checked={items[name]}
+                  onChange={(e) => {
+                    handleChange(header, name, e.target.checked);
+                  }}
+                />
+                {items[name] ? (
+                  <MdCheckBox className="checkbox-icon" />
+                ) : (
+                  <MdCheckBoxOutlineBlank className="checkbox-icon" />
+                )}
+                <span>{name}</span>
+              </label>
+            ))}
+        </Flex>
+      );
+    };
 
     return (
       <Flex className="filters" column hAlignContent="left" shrink={0}>
         {checkboxGroup('Size', sizeFilter, this.handleFilterChange)}
+        {checkboxGroup('Type', typeFilter, this.handleFilterChange)}
+        {checkboxGroup('Day', dayOfWeekFilter, this.handleFilterChange)}
         {checkboxGroup('Status', statusFilter, this.handleFilterChange)}
       </Flex>
     );
@@ -294,6 +344,37 @@ export default class Welcome extends Component {
     );
   }
 
+  renderMobileSidebar() {
+    const {mobileSidebarOpen} = this.state;
+    return (
+      <>
+        <div
+          className={classnames('mobile-sidebar-overlay', {open: mobileSidebarOpen})}
+          onClick={this.closeMobileSidebar}
+        />
+        <Flex
+          className={classnames('mobile-sidebar', {open: mobileSidebarOpen})}
+          column
+        >
+          <Flex className="mobile-sidebar--header" vAlignContent="center">
+            <span>Filters</span>
+            <MdClose
+              className="mobile-sidebar--close"
+              onClick={this.closeMobileSidebar}
+            />
+          </Flex>
+          <Flex column grow={1} style={{overflowY: 'auto'}}>
+            {this.renderFilters()}
+            <WelcomeVariantsControl fencing={this.props.fencing} />
+          </Flex>
+          <Flex className="quickplay" style={{width: '100%'}}>
+            <Upload v2 fencing={this.props.fencing} onCreate={this.handleCreatePuzzle} />
+          </Flex>
+        </Flex>
+      </>
+    );
+  }
+
   render() {
     return (
       <Flex className={classnames('welcome', {mobile: this.mobile})} column grow={1}>
@@ -322,6 +403,18 @@ export default class Welcome extends Component {
             {this.renderPuzzles()}
           </Flex>
         </Flex>
+        {this.mobile && (
+          <>
+            {this.renderMobileSidebar()}
+            <button
+              className="mobile-filter-button"
+              onClick={this.toggleMobileSidebar}
+              aria-label="Open filters"
+            >
+              <MdFilterList />
+            </button>
+          </>
+        )}
       </Flex>
     );
   }

@@ -180,6 +180,11 @@
 
 .dark .welcome--sidebar {
   background-color: var(--dark-background-2);
+  border-right-color: #555;
+}
+
+.dark .quickplay {
+  border-top-color: #555;
 }
 
 .dark .welcome.mobile .welcome--searchbar--container {
@@ -206,6 +211,23 @@
 .dark .entry {
   background-color: var(--dark-background-1);
   border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .mobile-sidebar {
+  background-color: var(--dark-background);
+  color: var(--dark-primary-text);
+}
+
+.dark .mobile-sidebar--header {
+  border-bottom-color: #555;
+}
+
+.dark .mobile-sidebar--close {
+  color: var(--dark-primary-text);
+}
+
+.dark .mobile-filter-button {
+  background-color: var(--dark-blue-1);
 }
 
 :root {

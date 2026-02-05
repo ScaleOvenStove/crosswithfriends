@@ -9,6 +9,7 @@ export interface EntryProps {
   info: {
     type: string;
   };
+  grid?: string[][];
   title: string;
   author: string;
   pid: string;
@@ -33,14 +34,19 @@ export default class Entry extends Component<EntryProps> {
   handleMouseLeave = () => {};
 
   get size() {
+    const {grid} = this.props;
+    if (grid) {
+      const maxDim = Math.max(grid.length, grid[0]?.length ?? 0);
+      if (maxDim <= 7) return 'Mini';
+      if (maxDim <= 12) return 'Midi';
+      if (maxDim <= 16) return 'Standard';
+      return 'Large';
+    }
+    // Fallback to type field if grid not available
     const {type} = this.props.info;
-    if (type === 'Daily Puzzle') {
-      return 'Standard';
-    }
-    if (type === 'Mini Puzzle') {
-      return 'Mini';
-    }
-    return 'Puzzle'; // shouldn't get here???
+    if (type === 'Daily Puzzle') return 'Standard';
+    if (type === 'Mini Puzzle') return 'Mini';
+    return 'Puzzle';
   }
 
   render() {

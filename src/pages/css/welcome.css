@@ -35,6 +35,7 @@
 .welcome--sidebar {
   padding-bottom: 40px;
   border-right: 2px solid var(--main-blue);
+  overflow-y: auto;
 }
 
 .welcome--sidebar > div {
@@ -84,30 +85,34 @@
   position: absolute;
 }
 
+.filters {
+  font-size: 13px;
+}
+
 .filters label {
   position: relative;
   cursor: pointer;
-  line-height: 24px;
-  margin: 4px 0;
+  line-height: 20px;
+  margin: 2px 0;
 }
 
 .checkbox-icon {
   float: left;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   fill: #6aa9f4;
-  margin-right: 8px;
+  margin-right: 6px;
 }
 
 .filters input {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   position: absolute;
   opacity: 0;
 }
 
 .quickplay {
-  padding-top: 10px;
+  padding: 5px;
   border-top: 2px solid #6aa9f4;
 }
 
@@ -260,4 +265,87 @@ input::placeholder {
 p {
   margin-top: unset;
   margin-bottom: unset;
+}
+
+/* Mobile sidebar */
+.mobile-filter-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--main-blue);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+}
+
+.mobile-filter-button svg {
+  width: 28px;
+  height: 28px;
+}
+
+.mobile-sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  z-index: 200;
+}
+
+.mobile-sidebar-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 80vw;
+  background-color: #ffffff;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 300;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-sidebar.open {
+  transform: translateX(0);
+}
+
+.mobile-sidebar--header {
+  padding: 15px 20px;
+  border-bottom: 2px solid var(--main-blue);
+  font-weight: 600;
+  font-size: 18px;
+  justify-content: space-between;
+}
+
+.mobile-sidebar--close {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: var(--main-gray-1);
+}
+
+.mobile-sidebar .filters {
+  padding-top: 10px;
+}
+
+.mobile-sidebar .quickplay {
+  border-top: 2px solid var(--main-blue);
 }

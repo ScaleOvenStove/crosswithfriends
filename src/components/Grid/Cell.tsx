@@ -116,7 +116,7 @@ export default class Cell extends React.Component<Props> {
           className="cell--flip fa fa-small fa-sticky-note"
           onClick={(e) => {
             e.stopPropagation();
-            onFlipColor?.(this.props.r, this.props.c);
+            if (onFlipColor) onFlipColor(this.props.r, this.props.c);
           }}
         />
       );
@@ -178,12 +178,12 @@ export default class Cell extends React.Component<Props> {
   }
 
   handleClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault?.();
+    e.preventDefault();
     this.props.onClick(this.props.r, this.props.c);
   };
 
   handleRightClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault?.();
+    e.preventDefault();
     this.props.onContextMenu(this.props.r, this.props.c);
   };
 

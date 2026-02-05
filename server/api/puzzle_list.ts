@@ -14,9 +14,25 @@ router.get<{}, ListPuzzleResponse>('/', async (req, res, next) => {
     const filters: ListPuzzleRequestFilters = {
       sizeFilter: {
         Mini: rawFilters?.sizeFilter?.Mini === 'true',
+        Midi: rawFilters?.sizeFilter?.Midi !== 'false',
         Standard: rawFilters?.sizeFilter?.Standard === 'true',
+        Large: rawFilters?.sizeFilter?.Large !== 'false',
       },
       nameOrTitleFilter: (rawFilters?.nameOrTitleFilter as string) || '',
+      typeFilter: {
+        Standard: rawFilters?.typeFilter?.Standard !== 'false',
+        Cryptic: rawFilters?.typeFilter?.Cryptic !== 'false',
+      },
+      dayOfWeekFilter: {
+        Mon: rawFilters?.dayOfWeekFilter?.Mon !== 'false',
+        Tue: rawFilters?.dayOfWeekFilter?.Tue !== 'false',
+        Wed: rawFilters?.dayOfWeekFilter?.Wed !== 'false',
+        Thu: rawFilters?.dayOfWeekFilter?.Thu !== 'false',
+        Fri: rawFilters?.dayOfWeekFilter?.Fri !== 'false',
+        Sat: rawFilters?.dayOfWeekFilter?.Sat !== 'false',
+        Sun: rawFilters?.dayOfWeekFilter?.Sun !== 'false',
+        Unknown: rawFilters?.dayOfWeekFilter?.Unknown !== 'false',
+      },
     };
     if (!(Number.isFinite(page) && Number.isFinite(pageSize))) {
       return next(_.assign(new Error('page and pageSize should be integers'), {statusCode: 400}));

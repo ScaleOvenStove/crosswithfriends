@@ -21,15 +21,61 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   return _.first(rows)!.content;
 }
 
-const mapSizeFilterForDB = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string[] => {
-  const ret = [];
-  if (sizeFilter.Mini) {
-    ret.push('Mini Puzzle');
+const GRID_MAX_DIM = `GREATEST(jsonb_array_length(content->'grid'), jsonb_array_length(content->'grid'->0))`;
+
+const buildSizeFilterClause = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string => {
+  const allSelected = sizeFilter.Mini && sizeFilter.Midi && sizeFilter.Standard && sizeFilter.Large;
+  const noneSelected = !sizeFilter.Mini && !sizeFilter.Midi && !sizeFilter.Standard && !sizeFilter.Large;
+  if (allSelected || noneSelected) return '';
+
+  const conditions: string[] = [];
+  if (sizeFilter.Mini) conditions.push(`${GRID_MAX_DIM} <= 7`);
+  if (sizeFilter.Midi) conditions.push(`${GRID_MAX_DIM} BETWEEN 8 AND 12`);
+  if (sizeFilter.Standard) conditions.push(`${GRID_MAX_DIM} BETWEEN 13 AND 16`);
+  if (sizeFilter.Large) conditions.push(`${GRID_MAX_DIM} >= 17`);
+
+  return `AND (${conditions.join(' OR ')})`;
+};
+
+const buildTypeFilterClause = (typeFilter: ListPuzzleRequestFilters['typeFilter']): string => {
+  if ((typeFilter.Standard && typeFilter.Cryptic) || (!typeFilter.Standard && !typeFilter.Cryptic)) {
+    return '';
   }
-  if (sizeFilter.Standard) {
-    ret.push('Daily Puzzle');
+  if (typeFilter.Cryptic && !typeFilter.Standard) {
+    return `AND (content->'info'->>'title') ~* '(cryptic|quiptic)'`;
   }
-  return ret;
+  return `AND NOT ((content->'info'->>'title') ~* '(cryptic|quiptic)')`;
+};
+
+const DAY_EXTRACT = `left(substring((content->'info'->>'title') from '\\m(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\M'), 3)`;
+
+const buildDayOfWeekFilterClause = (
+  dayFilter: ListPuzzleRequestFilters['dayOfWeekFilter'],
+  paramOffset: number
+): {clause: string; params: string[]} => {
+  const dayKeys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+  const selectedDays = dayKeys.filter((k) => dayFilter[k]);
+  const includeUnknown = dayFilter.Unknown;
+
+  const allSelected = selectedDays.length === 7 && includeUnknown;
+  const noneSelected = selectedDays.length === 0 && !includeUnknown;
+  if (allSelected || noneSelected) return {clause: '', params: []};
+
+  const conditions: string[] = [];
+
+  if (selectedDays.length > 0) {
+    const dayList = selectedDays.map((_, i) => `$${paramOffset + i}`);
+    conditions.push(`${DAY_EXTRACT} IN (${dayList.join(', ')})`);
+  }
+
+  if (includeUnknown) {
+    conditions.push(`${DAY_EXTRACT} IS NULL`);
+  }
+
+  return {
+    clause: `AND (${conditions.join(' OR ')})`,
+    params: [...selectedDays],
+  };
 };
 
 export async function listPuzzles(
@@ -45,13 +91,10 @@ export async function listPuzzles(
 > {
   const startTime = Date.now();
   const parametersForTitleAuthorFilter = filter.nameOrTitleFilter.split(/\s/).map((s) => `%${s}%`);
-  const parameterOffset = 4;
-  // see https://github.com/brianc/node-postgres/wiki/FAQ#11-how-do-i-build-a-where-foo-in--query-to-find-rows-matching-an-array-of-values
-  // for why this is okay.
-  // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL cause, but will for multiple ands
+  const parameterOffset = 3;
+  // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL clause, but will for multiple ANDs
   // note this is not vulnerable to SQL injection because this string is just dynamically constructing params of the form $#
-  // which we fully control.
-  const parameterizedTileAuthorFilter = parametersForTitleAuthorFilter
+  const parameterizedTitleAuthorFilter = parametersForTitleAuthorFilter
     .map(
       (_s, idx) =>
         `AND ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${
@@ -59,18 +102,29 @@ export async function listPuzzles(
         }`
     )
     .join('\n');
+
+  const sizeClause = buildSizeFilterClause(filter.sizeFilter);
+  const typeClause = buildTypeFilterClause(filter.typeFilter);
+  const dayParamOffset = parameterOffset + parametersForTitleAuthorFilter.length;
+  const {clause: dayClause, params: dayParams} = buildDayOfWeekFilterClause(
+    filter.dayOfWeekFilter,
+    dayParamOffset
+  );
+
   const {rows} = await pool.query(
     `
       SELECT pid, uploaded_at, content, times_solved
       FROM puzzles
       WHERE is_public = true
-      AND (content->'info'->>'type') = ANY($1)
-      ${parameterizedTileAuthorFilter}
-      ORDER BY pid_numeric DESC 
-      LIMIT $2
-      OFFSET $3
+      ${sizeClause}
+      ${typeClause}
+      ${parameterizedTitleAuthorFilter}
+      ${dayClause}
+      ORDER BY pid_numeric DESC
+      LIMIT $1
+      OFFSET $2
     `,
-    [mapSizeFilterForDB(filter.sizeFilter), limit, offset, ...parametersForTitleAuthorFilter]
+    [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams]
   );
   const puzzles = rows.map(
     (row: {

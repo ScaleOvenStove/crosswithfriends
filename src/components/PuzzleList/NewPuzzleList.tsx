@@ -88,6 +88,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         info: {
           type: puzzle.content.info.type!, // XXX not the best form
         },
+        grid: puzzle.content.grid,
         title: puzzle.content.info.title,
         author: puzzle.content.info.author,
         pid: puzzle.pid,

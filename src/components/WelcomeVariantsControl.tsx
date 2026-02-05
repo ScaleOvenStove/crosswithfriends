@@ -69,13 +69,15 @@ const useStyles = makeStyles({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    padding: '20px !important',
+    padding: '8px 20px !important',
+    fontSize: '13px',
     '& a': {
       textDecoration: 'none',
     },
   },
   title: {
-    fontSize: '200%',
+    fontSize: '110%',
+    fontWeight: 600,
   },
   option: {
     color: 'gray',

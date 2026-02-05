@@ -33,3 +33,6 @@ backfills/*.json
 .env.staging
 
 .vercel
+
+# Claude Code
+.claude/

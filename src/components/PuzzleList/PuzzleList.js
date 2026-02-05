@@ -56,16 +56,17 @@ export default class PuzzleList extends PureComponent {
   };
 
   get isEmpty() {
-    const {sizeFilter, statusFilter} = this.props;
-    return !(_.some(_.values(sizeFilter)) && _.some(_.values(statusFilter)));
+    const {sizeFilter, statusFilter, typeFilter, dayOfWeekFilter} = this.props;
+    return !(
+      _.some(_.values(sizeFilter)) &&
+      _.some(_.values(statusFilter)) &&
+      _.some(_.values(typeFilter || {})) &&
+      _.some(_.values(dayOfWeekFilter || {}))
+    );
   }
 
   accept = (entry) => {
-    const {sizeFilter, statusFilter, search} = this.props;
-    const size = {
-      'Daily Puzzle': 'Standard',
-      'Mini Puzzle': 'Mini',
-    }[entry.info.type];
+    const {statusFilter, search} = this.props;
     const status = {
       undefined: 'New',
       solved: 'Complete',
@@ -85,7 +86,7 @@ export default class PuzzleList extends PureComponent {
           author.includes(token) || title.includes(token)
       );
 
-    return statusFilter[status] && sizeFilter[size] && searchMatches;
+    return statusFilter[status] && searchMatches;
   };
 
   get puzzles() {
@@ -133,6 +134,8 @@ export default class PuzzleList extends PureComponent {
     const filter = {
       nameOrTitleFilter: this.props.search,
       sizeFilter: this.props.sizeFilter,
+      typeFilter: this.props.typeFilter,
+      dayOfWeekFilter: this.props.dayOfWeekFilter,
     };
     return (
       <NewPuzzleList

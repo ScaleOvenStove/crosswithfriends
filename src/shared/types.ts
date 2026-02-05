@@ -114,9 +114,25 @@ export interface ListPuzzleRequest {
 export interface ListPuzzleRequestFilters {
   sizeFilter: {
     Mini: boolean;
+    Midi: boolean;
     Standard: boolean;
+    Large: boolean;
   };
   nameOrTitleFilter: string;
+  typeFilter: {
+    Standard: boolean;
+    Cryptic: boolean;
+  };
+  dayOfWeekFilter: {
+    Mon: boolean;
+    Tue: boolean;
+    Wed: boolean;
+    Thu: boolean;
+    Fri: boolean;
+    Sat: boolean;
+    Sun: boolean;
+    Unknown: boolean;
+  };
 }
 
 export interface ListPuzzleResponse {
