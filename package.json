@@ -97,7 +97,7 @@
     "start": "NODE_OPTIONS=--openssl-legacy-provider cross-env PORT=3020 react-scripts start",
     "devfrontend": "NODE_OPTIONS=--openssl-legacy-provider cross-env REACT_APP_USE_LOCAL_SERVER=1 PORT=3020 react-scripts start",
     "devfrontendprod": "NODE_OPTIONS=--openssl-legacy-provider REACT_APP_ENV=production REACT_APP_USE_LOCAL_SERVER=1 PORT=3020 react-scripts start",
-    "devbackend": "cross-env PORT=3021 nodemon --watch server -e \"ts\" --exec \"npx ts-node -P server/tsconfig.json server/server.ts\"",
+    "devbackend": "env $(cat server/.env.local | xargs) cross-env PORT=3021 nodemon --watch server -e \"ts\" --exec \"npx ts-node -P server/tsconfig.json server/server.ts\"",
     "devbackendprod": "source .env.prod; PORT=3021 nodemon --watch server -e \"ts\" --exec \"npx ts-node -P server/tsconfig.json server/server.ts\"",
     "servebackendprod": "while true; do env $(cat .env.prod | xargs)  NODE_ENV=production PORT=3021 ts-node -P server/tsconfig.json server/server.ts || true; done",
     "servebackendstaging": "while true; do env $(cat .env.staging | xargs)  NODE_ENV=production PORT=4021 ts-node -P server/tsconfig.json server/server.ts || true; done",

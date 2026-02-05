@@ -13,3 +13,9 @@ export const SERVER_URL = process.env.REACT_APP_USE_LOCAL_SERVER
 
 // socket.io server is same as api server
 export const SOCKET_HOST = SERVER_URL;
+
+console.log('--------------------------------------------------------------------------------');
+console.log('Frontend API Protocol:', window.location.protocol);
+console.log('Frontend Connecting to API/Socket at:', SERVER_URL);
+console.log('--------------------------------------------------------------------------------');
+
