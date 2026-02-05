@@ -111,6 +111,26 @@
   opacity: 0;
 }
 
+.filter-quick-toggle {
+  font-size: 11px;
+  margin: 4px 0 2px 0;
+  color: #666;
+}
+
+.filter-quick-toggle--link {
+  color: #6aa9f4;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.filter-quick-toggle--link:hover {
+  color: #4a89d4;
+}
+
+.filter-quick-toggle--separator {
+  margin: 0 4px;
+}
+
 .quickplay {
   padding: 5px;
   border-top: 2px solid #6aa9f4;

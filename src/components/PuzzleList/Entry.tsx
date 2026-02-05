@@ -34,10 +34,18 @@ export default class Entry extends Component<EntryProps> {
   handleMouseLeave = () => {};
 
   get size() {
-    const {grid} = this.props;
+    const {grid, title} = this.props;
+    const titleLower = (title || '').toLowerCase();
+    const titleHasMini = /\bmini\b/.test(titleLower);
+    const titleHasMidi = /\bmidi\b/.test(titleLower);
+
     if (grid) {
       const maxDim = Math.max(grid.length, grid[0]?.length ?? 0);
-      if (maxDim <= 7) return 'Mini';
+      // Title-based override: "mini" in title → Mini, "midi" in title → Midi
+      if (titleHasMini && !titleHasMidi) return 'Mini';
+      if (titleHasMidi) return 'Midi';
+      // Size-based classification
+      if (maxDim <= 8) return 'Mini';
       if (maxDim <= 12) return 'Midi';
       if (maxDim <= 16) return 'Standard';
       return 'Large';

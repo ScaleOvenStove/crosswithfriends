@@ -22,15 +22,26 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
 }
 
 const GRID_MAX_DIM = `GREATEST(jsonb_array_length(content->'grid'), jsonb_array_length(content->'grid'->0))`;
+const TITLE_HAS_MINI = `(content->'info'->>'title') ~* '\\mmini\\M'`;
+const TITLE_HAS_MIDI = `(content->'info'->>'title') ~* '\\mmidi\\M'`;
 
 const buildSizeFilterClause = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string => {
   const allSelected = sizeFilter.Mini && sizeFilter.Midi && sizeFilter.Standard && sizeFilter.Large;
   const noneSelected = !sizeFilter.Mini && !sizeFilter.Midi && !sizeFilter.Standard && !sizeFilter.Large;
   if (allSelected || noneSelected) return '';
 
+  // Size classification: grid size takes precedence, but title can override
+  // Mini: ≤8 OR title contains "mini" (unless title contains "midi")
+  // Midi: 9-12 OR title contains "midi", OR 8 without "mini" in title
+  // Standard: 13-16
+  // Large: ≥17
   const conditions: string[] = [];
-  if (sizeFilter.Mini) conditions.push(`${GRID_MAX_DIM} <= 7`);
-  if (sizeFilter.Midi) conditions.push(`${GRID_MAX_DIM} BETWEEN 8 AND 12`);
+  if (sizeFilter.Mini) {
+    conditions.push(`(${GRID_MAX_DIM} <= 8 OR (${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}))`);
+  }
+  if (sizeFilter.Midi) {
+    conditions.push(`((${GRID_MAX_DIM} BETWEEN 9 AND 12) OR ${TITLE_HAS_MIDI} OR (${GRID_MAX_DIM} = 8 AND NOT ${TITLE_HAS_MINI}))`);
+  }
   if (sizeFilter.Standard) conditions.push(`${GRID_MAX_DIM} BETWEEN 13 AND 16`);
   if (sizeFilter.Large) conditions.push(`${GRID_MAX_DIM} >= 17`);
 
@@ -47,7 +58,19 @@ const buildTypeFilterClause = (typeFilter: ListPuzzleRequestFilters['typeFilter'
   return `AND NOT ((content->'info'->>'title') ~* '(cryptic|quiptic)')`;
 };
 
-const DAY_EXTRACT = `left(substring((content->'info'->>'title') from '\\m(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\M'), 3)`;
+// Case-insensitive day extraction with support for various abbreviations (Mon, Tues, Weds, Thurs, etc.)
+const DAY_EXTRACT = `
+  CASE
+    WHEN UPPER(content->'info'->>'title') ~ '\\m(MONDAY|MON)\\M' THEN 'Mon'
+    WHEN UPPER(content->'info'->>'title') ~ '\\m(TUESDAY|TUE|TUES)\\M' THEN 'Tue'
+    WHEN UPPER(content->'info'->>'title') ~ '\\m(WEDNESDAY|WED|WEDS)\\M' THEN 'Wed'
+    WHEN UPPER(content->'info'->>'title') ~ '\\m(THURSDAY|THU|THURS)\\M' THEN 'Thu'
+    WHEN UPPER(content->'info'->>'title') ~ '\\m(FRIDAY|FRI)\\M' THEN 'Fri'
+    WHEN UPPER(content->'info'->>'title') ~ '\\m(SATURDAY|SAT)\\M' THEN 'Sat'
+    WHEN UPPER(content->'info'->>'title') ~ '\\m(SUNDAY|SUN)\\M' THEN 'Sun'
+    ELSE NULL
+  END
+`;
 
 const buildDayOfWeekFilterClause = (
   dayFilter: ListPuzzleRequestFilters['dayOfWeekFilter'],

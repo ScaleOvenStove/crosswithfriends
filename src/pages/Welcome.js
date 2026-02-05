@@ -22,7 +22,7 @@ export default class Welcome extends Component {
     super(props);
     this.state = {
       userHistory: {},
-      collapsedFilters: {Day: true, Type: true, Status: true},
+      collapsedFilters: {},
       mobileSidebarOpen: false,
     };
     this.loading = false;
@@ -146,6 +146,36 @@ export default class Welcome extends Component {
     }
   };
 
+  handleSelectAll = (header) => {
+    if (header === 'Day') {
+      this.props.setDayOfWeekFilter({
+        Mon: true,
+        Tue: true,
+        Wed: true,
+        Thu: true,
+        Fri: true,
+        Sat: true,
+        Sun: true,
+        Unknown: true,
+      });
+    }
+  };
+
+  handleSelectNone = (header) => {
+    if (header === 'Day') {
+      this.props.setDayOfWeekFilter({
+        Mon: false,
+        Tue: false,
+        Wed: false,
+        Thu: false,
+        Fri: false,
+        Sat: false,
+        Sun: false,
+        Unknown: false,
+      });
+    }
+  };
+
   updateSearch = _.debounce((search) => {
     this.props.setSearch(search);
   }, 250);
@@ -202,7 +232,7 @@ export default class Welcome extends Component {
       margin: 'unset',
     };
 
-    const checkboxGroup = (header, items, handleChange) => {
+    const checkboxGroup = (header, items, handleChange, showQuickToggle = false) => {
       const collapsed = collapsedFilters[header];
       return (
         <Flex column style={groupStyle} className="checkbox-group">
@@ -214,6 +244,23 @@ export default class Welcome extends Component {
               <MdExpandLess style={{width: 20, height: 20}} />
             )}
           </span>
+          {!collapsed && showQuickToggle && (
+            <div className="filter-quick-toggle">
+              <span
+                className="filter-quick-toggle--link"
+                onClick={() => this.handleSelectAll(header)}
+              >
+                All
+              </span>
+              <span className="filter-quick-toggle--separator">/</span>
+              <span
+                className="filter-quick-toggle--link"
+                onClick={() => this.handleSelectNone(header)}
+              >
+                None
+              </span>
+            </div>
+          )}
           {!collapsed &&
             _.keys(items).map((name, i) => (
               <label
@@ -246,7 +293,7 @@ export default class Welcome extends Component {
       <Flex className="filters" column hAlignContent="left" shrink={0}>
         {checkboxGroup('Size', sizeFilter, this.handleFilterChange)}
         {checkboxGroup('Type', typeFilter, this.handleFilterChange)}
-        {checkboxGroup('Day', dayOfWeekFilter, this.handleFilterChange)}
+        {checkboxGroup('Day', dayOfWeekFilter, this.handleFilterChange, true)}
         {checkboxGroup('Status', statusFilter, this.handleFilterChange)}
       </Flex>
     );

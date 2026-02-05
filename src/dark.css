@@ -230,6 +230,18 @@
   background-color: var(--dark-blue-1);
 }
 
+.dark .filter-quick-toggle {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .filter-quick-toggle--link {
+  color: #6aa9f4;
+}
+
+.dark .filter-quick-toggle--link:hover {
+  color: #8bc4ff;
+}
+
 :root {
   --dark-blue-1: rgb(36, 79, 115);
   --dark-blue-2: #183a60;
