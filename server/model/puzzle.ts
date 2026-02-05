@@ -30,20 +30,20 @@ const buildSizeFilterClause = (sizeFilter: ListPuzzleRequestFilters['sizeFilter'
   const noneSelected = !sizeFilter.Mini && !sizeFilter.Midi && !sizeFilter.Standard && !sizeFilter.Large;
   if (allSelected || noneSelected) return '';
 
-  // Size classification: grid size takes precedence, but title can override
-  // Mini: ≤8 OR title contains "mini" (unless title contains "midi")
-  // Midi: 9-12 OR title contains "midi", OR 8 without "mini" in title
-  // Standard: 13-16
-  // Large: ≥17
+  // Size classification: title takes priority over grid size
+  // Mini: title contains "mini" (not "midi"), OR grid ≤8 without "midi" in title
+  // Midi: title contains "midi", OR grid 9-12 without "mini" in title
+  // Standard: 13-16 without mini/midi in title
+  // Large: ≥17 without mini/midi in title
   const conditions: string[] = [];
   if (sizeFilter.Mini) {
-    conditions.push(`(${GRID_MAX_DIM} <= 8 OR (${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}))`);
+    conditions.push(`(${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}) OR (${GRID_MAX_DIM} <= 8 AND NOT ${TITLE_HAS_MIDI})`);
   }
   if (sizeFilter.Midi) {
-    conditions.push(`((${GRID_MAX_DIM} BETWEEN 9 AND 12) OR ${TITLE_HAS_MIDI} OR (${GRID_MAX_DIM} = 8 AND NOT ${TITLE_HAS_MINI}))`);
+    conditions.push(`${TITLE_HAS_MIDI} OR (${GRID_MAX_DIM} BETWEEN 9 AND 12 AND NOT ${TITLE_HAS_MINI})`);
   }
-  if (sizeFilter.Standard) conditions.push(`${GRID_MAX_DIM} BETWEEN 13 AND 16`);
-  if (sizeFilter.Large) conditions.push(`${GRID_MAX_DIM} >= 17`);
+  if (sizeFilter.Standard) conditions.push(`${GRID_MAX_DIM} BETWEEN 13 AND 16 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
+  if (sizeFilter.Large) conditions.push(`${GRID_MAX_DIM} >= 17 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
 
   return `AND (${conditions.join(' OR ')})`;
 };

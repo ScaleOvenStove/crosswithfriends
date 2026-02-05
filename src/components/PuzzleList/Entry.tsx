@@ -39,12 +39,13 @@ export default class Entry extends Component<EntryProps> {
     const titleHasMini = /\bmini\b/.test(titleLower);
     const titleHasMidi = /\bmidi\b/.test(titleLower);
 
+    // Title-based classification takes priority
+    if (titleHasMidi) return 'Midi';
+    if (titleHasMini) return 'Mini';
+
+    // Fall back to grid size
     if (grid) {
       const maxDim = Math.max(grid.length, grid[0]?.length ?? 0);
-      // Title-based override: "mini" in title → Mini, "midi" in title → Midi
-      if (titleHasMini && !titleHasMidi) return 'Mini';
-      if (titleHasMidi) return 'Midi';
-      // Size-based classification
       if (maxDim <= 8) return 'Mini';
       if (maxDim <= 12) return 'Midi';
       if (maxDim <= 16) return 'Standard';
