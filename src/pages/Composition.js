@@ -303,7 +303,7 @@ export default class Composition extends Component {
         <Helmet>
           <title>{this.title}</title>
         </Helmet>
-        <Nav v2 hidden={this.state.mobile} />
+        <Nav hidden={this.state.mobile} />
         <Flex style={style} grow={1}>
           <Flex column shrink={0}>
             {this.renderChatHeader()}

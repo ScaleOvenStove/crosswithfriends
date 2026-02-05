@@ -46,6 +46,12 @@ const TimelineBars = pure(({history, begin, units}) => (
 ));
 
 class Timeline extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.cursorRef = React.createRef();
+    this.timelineRef = React.createRef();
+  }
+
   get begin() {
     const {history} = this.props;
     return history[0].gameTimestamp;
@@ -77,7 +83,7 @@ class Timeline extends React.PureComponent {
     const {position} = this.props;
     return (
       <div
-        ref="cursor"
+        ref={this.cursorRef}
         className="timeline--cursor"
         style={{
           position: 'absolute',
@@ -89,11 +95,11 @@ class Timeline extends React.PureComponent {
 
   handleMouse = (e) => {
     const {onSetPosition} = this.props;
-    if (!this.refs.timeline) return;
+    if (!this.timelineRef.current) return;
     e = e.nativeEvent;
     let x = e.offsetX;
     let node = e.target;
-    while (node !== this.refs.timeline) {
+    while (node !== this.timelineRef.current) {
       x += node.offsetLeft;
       node = node.parentElement;
     }
@@ -112,7 +118,7 @@ class Timeline extends React.PureComponent {
   };
 
   handleMouseOut = (e) => {
-    if (!isAncestor(this.refs.timeline, e.nativeEvent.relatedTarget)) {
+    if (!isAncestor(this.timelineRef.current, e.nativeEvent.relatedTarget)) {
       // this.down = false;
     }
   };
@@ -131,22 +137,22 @@ class Timeline extends React.PureComponent {
   };
 
   updateScroll = _.throttle(() => {
-    if (!this.refs.scrollContainer || !this.refs.cursor || !this.refs.timeline) {
+    if (!this.cursorRef.current || !this.timelineRef.current) {
       return;
     }
-    const center = this.refs.cursor.offsetLeft;
+    const center = this.cursorRef.current.offsetLeft;
 
     // scroll minimally so that the center is visible with 5px padding
     const padding = 5;
     const lo = Math.min(
-      this.refs.timeline.clientWidth - this.refs.scrollContainer.clientWidth,
-      center - this.refs.scrollContainer.clientWidth + padding
+      this.timelineRef.current.clientWidth - this.timelineRef.current.parentElement.clientWidth,
+      center - this.timelineRef.current.parentElement.clientWidth + padding
     );
     const hi = Math.max(0, center - padding);
 
-    let scrollLeft = this.refs.scrollContainer.scrollLeft;
+    let scrollLeft = this.timelineRef.current.parentElement.scrollLeft;
     scrollLeft = Math.max(lo, Math.min(hi, scrollLeft));
-    this.refs.scrollContainer.scrollLeft = scrollLeft;
+    this.timelineRef.current.parentElement.scrollLeft = scrollLeft;
   }, 50);
 
   render() {
@@ -154,7 +160,7 @@ class Timeline extends React.PureComponent {
 
     return (
       <div
-        ref="timeline"
+        ref={this.timelineRef}
         className="timeline"
         style={{
           position: 'relative',
@@ -169,13 +175,13 @@ class Timeline extends React.PureComponent {
       >
         <TimelineBars history={history} begin={this.begin} units={this.units} />
         {this.renderCursor()}
-        {this.down && this.refs.timeline && (
+        {this.down && this.timelineRef.current && (
           <div
             className="mouse--target"
             style={{
               position: 'absolute',
-              left: -this.refs.timeline.getBoundingClientRect().left,
-              top: -this.refs.timeline.getBoundingClientRect().top,
+              left: -this.timelineRef.current.getBoundingClientRect().left,
+              top: -this.timelineRef.current.getBoundingClientRect().top,
             }}
           ></div>
         )}

@@ -58,7 +58,7 @@ export default class Compose extends Component {
     const {limit, compositions} = this.state;
     return (
       <Flex column className="compositions">
-        <Nav v2 composeEnabled />
+        <Nav />
         <Helmet>
           <title>Cross with Friends: Compose</title>
         </Helmet>
@@ -93,7 +93,7 @@ export default class Compose extends Component {
           <Flex column>
             {_.keys(compositions).length === 0 && 'Nothing found'}
             {_.keys(compositions).map((cid) => (
-              <div>{this.linkToComposition(cid, compositions[cid])}</div>
+              <div key={cid}>{this.linkToComposition(cid, compositions[cid])}</div>
             ))}
           </Flex>
           <br />

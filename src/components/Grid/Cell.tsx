@@ -200,7 +200,6 @@ export default class Cell extends React.Component<Props> {
       pencil,
       value,
       myColor,
-      onClick,
       number,
       referenced,
       frozen,

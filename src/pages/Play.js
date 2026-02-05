@@ -147,7 +147,7 @@ export default class Play extends Component {
   render() {
     return (
       <div>
-        <Nav v2 />
+        <Nav />
         {this.renderMain()}
       </div>
     );

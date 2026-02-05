@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import Confetti from 'react-confetti';
 
-export default class extends Component {
+export default class ConfettiWrapper extends Component {
   constructor() {
     super();
     this.state = {

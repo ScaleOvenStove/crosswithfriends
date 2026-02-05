@@ -2,7 +2,7 @@ function convertCluesArray(initialCluesArray) {
   const finalCluesArray = [];
 
   for (let i = 0; i < initialCluesArray.length; i++) {
-    let item = initialCluesArray[i];
+    const item = initialCluesArray[i];
     let number, stringClue;
     if (Array.isArray(item)) {
       number = parseInt(item[0]);

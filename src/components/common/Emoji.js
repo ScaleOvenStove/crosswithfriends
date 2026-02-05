@@ -1,7 +1,7 @@
 import React from 'react';
 import * as emojiLib from '../../lib/emoji';
 
-export default ({emoji, big}) => {
+export default function Emoji({emoji, big}) {
   const data = emojiLib.get(emoji);
   if (!data) return null;
 

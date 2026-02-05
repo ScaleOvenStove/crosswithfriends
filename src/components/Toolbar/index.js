@@ -148,11 +148,11 @@ export default class Toolbar extends Component {
     );
   }
 
-  handleVimModeClick = (e) => {
+  handleVimModeClick = () => {
     this.props.onToggleVimMode();
   };
 
-  handleSkipFilledSquaresClick = (e) => {
+  handleSkipFilledSquaresClick = () => {
     this.props.onToggleSkipFilledSquares();
   };
 

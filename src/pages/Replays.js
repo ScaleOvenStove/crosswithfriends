@@ -206,7 +206,7 @@ export default class Replays extends Component {
     );
     const players = this.state.soloPlayers;
     const list2Items = players.map(({id, solved, time}) => (
-      <tr>
+      <tr key={id}>
         <td>
           <a href={`/replay/solo/${id}/${this.pid}`}>Play by player #{id}</a>
         </td>
@@ -250,7 +250,7 @@ export default class Replays extends Component {
     const {limit} = this.state;
     return (
       <Flex column className="replays">
-        <Nav v2 />
+        <Nav />
         <Helmet>
           <title>{this.pid ? `Replays ${this.pid}: ${this.getPuzzleTitle()}` : `Last ${limit} games`}</title>
         </Helmet>

@@ -48,7 +48,7 @@ export default class GridControls extends Component {
   selectNextClue(backwards, parallel = false) {
     let currentClueNumber = this.getSelectedClueNumber();
     let currentDirection = this.props.direction;
-    let skipFilledSquares = this.props.skipFilledSquares;
+    const skipFilledSquares = this.props.skipFilledSquares;
     const trySelectNextClue = () => {
       const {direction, clueNumber} = this.grid.getNextClue(
         currentClueNumber,

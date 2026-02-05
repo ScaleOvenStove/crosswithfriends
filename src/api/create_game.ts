@@ -12,5 +12,5 @@ export async function createGame(data: CreateGameRequest): Promise<CreateGameRes
     },
     body: JSON.stringify(data),
   });
-  return await resp.json();
+  return resp.json();
 }

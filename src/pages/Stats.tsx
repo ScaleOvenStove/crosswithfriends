@@ -36,7 +36,7 @@ const Stats: React.FC<{}> = () => {
 
   return (
     <Flex column className="replays">
-      <Nav hidden={false} v2 canLogin={false} divRef={null} linkStyle={null} mobile={null} />
+      <Nav hidden={false} canLogin={false} divRef={null} linkStyle={null} mobile={null} />
       <Helmet>
         <title>Stats</title>
       </Helmet>

@@ -98,32 +98,32 @@ const WrappedWelcome = (props: UseFencing) => {
   );
 
   function setStatusFilter(statusFilter: StatusFilter) {
-    setIncludeComplete(statusFilter['Complete']);
+    setIncludeComplete(statusFilter.Complete);
     setIncludeInProgress(statusFilter['In progress']);
-    setIncludeNew(statusFilter['New']);
+    setIncludeNew(statusFilter.New);
   }
 
   function setSizeFilter(sizeFilter: SizeFilter) {
-    setIncludeMini(sizeFilter['Mini']);
-    setIncludeMidi(sizeFilter['Midi']);
-    setIncludeStandard(sizeFilter['Standard']);
-    setIncludeLarge(sizeFilter['Large']);
+    setIncludeMini(sizeFilter.Mini);
+    setIncludeMidi(sizeFilter.Midi);
+    setIncludeStandard(sizeFilter.Standard);
+    setIncludeLarge(sizeFilter.Large);
   }
 
   function setTypeFilter(typeFilter: TypeFilter) {
-    setIncludeStandardType(typeFilter['Standard']);
-    setIncludeCryptic(typeFilter['Cryptic']);
+    setIncludeStandardType(typeFilter.Standard);
+    setIncludeCryptic(typeFilter.Cryptic);
   }
 
   function setDayOfWeekFilter(dayFilter: DayOfWeekFilter) {
-    setIncludeMon(dayFilter['Mon']);
-    setIncludeTue(dayFilter['Tue']);
-    setIncludeWed(dayFilter['Wed']);
-    setIncludeThu(dayFilter['Thu']);
-    setIncludeFri(dayFilter['Fri']);
-    setIncludeSat(dayFilter['Sat']);
-    setIncludeSun(dayFilter['Sun']);
-    setIncludeUnknownDay(dayFilter['Unknown']);
+    setIncludeMon(dayFilter.Mon);
+    setIncludeTue(dayFilter.Tue);
+    setIncludeWed(dayFilter.Wed);
+    setIncludeThu(dayFilter.Thu);
+    setIncludeFri(dayFilter.Fri);
+    setIncludeSat(dayFilter.Sat);
+    setIncludeSun(dayFilter.Sun);
+    setIncludeUnknownDay(dayFilter.Unknown);
   }
 
   const welcomeProps = {

@@ -1,4 +1,3 @@
-import {Brand} from 'utility-types';
 import {CellData, Cursor} from '../../shared/types';
 import {EnhancedCellData} from './Cell';
 

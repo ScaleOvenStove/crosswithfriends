@@ -103,7 +103,7 @@ export default class Chat extends Component {
   handleCopyClick = () => {
     navigator.clipboard.writeText(this.url);
     // `${window.location.host}/beta${this.props.path}`);
-    let link = document.getElementById('pathText');
+    const link = document.getElementById('pathText');
     link.classList.remove('flashBlue');
     void link.offsetWidth;
     link.classList.add('flashBlue');
@@ -116,7 +116,7 @@ export default class Chat extends Component {
       this.props.game.pid
     }`;
     navigator.clipboard.writeText(text);
-    let link = document.getElementById('shareText');
+    const link = document.getElementById('shareText');
     link.classList.remove('flashBlue');
     void link.offsetWidth;
     link.classList.add('flashBlue');
@@ -299,8 +299,8 @@ export default class Chat extends Component {
       }
 
       if (word.startsWith('@')) {
-        let pattern = word;
-        let clueref = pattern.match(/^@(\d+)-?\s?(a(?:cross)?|d(?:own)?)$/i);
+        const pattern = word;
+        const clueref = pattern.match(/^@(\d+)-?\s?(a(?:cross)?|d(?:own)?)$/i);
         if (clueref) {
           tokens.push({
             type: 'clueref',
@@ -353,7 +353,7 @@ export default class Chat extends Component {
 
     const directionFirstChar = clueref[2][0];
     const isAcross = directionFirstChar == 'a' || directionFirstChar == 'A';
-    const clues = isAcross ? this.props.game.clues['across'] : this.props.game.clues['down'];
+    const clues = isAcross ? this.props.game.clues.across : this.props.game.clues.down;
 
     if (clueNumber >= 0 && clueNumber < clues.length && clues[clueNumber] !== undefined) {
       const handleClick = () => {

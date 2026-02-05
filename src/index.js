@@ -100,4 +100,5 @@ ReactDOM.render(
   document.getElementById('root')
 );
 */
+// eslint-disable-next-line react/no-deprecated -- React 16 doesn't support createRoot
 ReactDOM.render(<Root />, document.getElementById('root'));

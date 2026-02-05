@@ -271,7 +271,7 @@ export default class Replay extends Component {
 
   renderToolbar() {
     if (!this.game) return;
-    const {clock, solved} = this.game;
+    const {clock} = this.game;
     const {totalTime} = clock;
     return (
       <Toolbar
@@ -433,7 +433,7 @@ export default class Replay extends Component {
   render() {
     return (
       <Flex column className="replay">
-        {!isMobile() && <Nav v2 />}
+        {!isMobile() && <Nav />}
         <Helmet>
           <title>{`Replay ${this.gid}: ${this.getPuzzleTitle()}`}</title>
         </Helmet>

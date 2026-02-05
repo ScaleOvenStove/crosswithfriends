@@ -136,7 +136,7 @@ export default class Player extends Component {
   getInitialSelected() {
     let r = 0;
     let c = 0;
-    let direction = this.props.clues.across.length ? 'across' : 'down';
+    const direction = this.props.clues.across.length ? 'across' : 'down';
     while (!this.grid.isWhite(r, c) || !this.props.clues[direction][this.grid.getParent(r, c, direction)]) {
       if (c + 1 < this.props.grid[0].length) {
         c += 1;
@@ -337,7 +337,7 @@ export default class Player extends Component {
         {Object.entries(counts)
           .sort(([, countA], [, countB]) => countB - countA) // descending
           .map(([userId, count]) => (
-            <div style={{color: this.props.users[userId]?.color}}>
+            <div key={userId} style={{color: this.props.users[userId]?.color}}>
               {this.props.users[userId]?.displayName} - {count}
             </div>
           ))}

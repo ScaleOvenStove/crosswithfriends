@@ -59,7 +59,7 @@ const simpleRender = (tree: Tree, allowed: string[]): ReactNode => {
   }
 }
 
-export default ({ text = '' }): JSX.Element => {
+export default function ClueText({ text = '' }): JSX.Element {
   // case where we should italicize the whole clue
   if (text.startsWith('""') && text.endsWith('""')) {
     return createElement('i', {}, text.slice(1, -1))

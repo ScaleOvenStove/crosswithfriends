@@ -1,7 +1,6 @@
 import './css/nav.css';
 
 import { Link } from 'react-router-dom';
-import ReactDOMServer from 'react-dom/server';
 import React, { useContext } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
@@ -86,7 +85,7 @@ function darkModePreferenceText(darkModePreference) {
   }
 }
 
-export default function Nav({ hidden, v2, canLogin, mobile, linkStyle, divRef }) {
+export default function Nav({ hidden, canLogin, mobile, linkStyle, divRef }) {
   const { darkModePreference, toggleMolesterMoons } = useContext(GlobalContext);
   if (hidden) return null; // no nav for mobile
   const user = getUser();
