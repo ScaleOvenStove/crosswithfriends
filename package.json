@@ -89,7 +89,7 @@
     "eslint-plugin-jsx-a11y": "^6.3.1",
     "eslint-plugin-react": "^7.20.3",
     "eslint-plugin-react-hooks": "^4.0.8",
-    "husky": "^1.0.0-rc.15",
+    "husky": "^9",
     "lint-staged": "^10.5.3",
     "prettier": "^2.0.5",
     "ts-node": "^9.1.1"
@@ -104,17 +104,14 @@
     "servebackendstaging": "while true; do env $(cat .env.staging | xargs)  NODE_ENV=production PORT=4021 ts-node -P server/tsconfig.json server/server.ts || true; done",
     "build": "NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx, ts,tsx}": [
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --max-warnings=0",
       "prettier --write"
     ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
   },
   "browserslist": {
     "production": [
