@@ -3,10 +3,8 @@
 .dark-mode-toggle {
   cursor: pointer;
   text-align: right;
-  margin-top: -10px;
-  /* Ignore padding from parent so dark mode setting doesn't expand Nav bar */
-  margin-bottom: -10px;
-  /* Can remove these if there's a more compact dark mode switching UI */
+  display: flex;
+  align-items: center;
 }
 
 .dark-mode-toggle:hover {
