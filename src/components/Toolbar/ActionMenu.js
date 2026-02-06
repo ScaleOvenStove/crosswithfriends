@@ -96,11 +96,7 @@ export default class ActionMenu extends Component {
                 this.setState({active: false});
               }}
             >
-              <span> 
-                {' '}
-                {key}
-                {' '}
-              </span>
+              <span> {key} </span>
             </div>
           ))}
         </div>

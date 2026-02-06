@@ -44,7 +44,7 @@ app.use((err: any, req: express.Request, res: express.Response, _next: express.N
 function logAllEvents(log: typeof console.log) {
   io.on('*', (event: any, ...args: any) => {
     try {
-      log(`[${event}]`, _.truncate(JSON.stringify(args), { length: 100 }));
+      log(`[${event}]`, _.truncate(JSON.stringify(args), {length: 100}));
     } catch (e) {
       log(`[${event}]`, args);
     }

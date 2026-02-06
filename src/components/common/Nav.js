@@ -1,15 +1,15 @@
 import './css/nav.css';
 
-import { Link } from 'react-router-dom';
-import React, { useContext } from 'react';
+import {Link} from 'react-router-dom';
+import React, {useContext} from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
 import swal from '@sweetalert/with-react';
-import { FaSun, FaMoon, FaDesktop } from 'react-icons/fa';
+import {FaSun, FaMoon, FaDesktop} from 'react-icons/fa';
 import GlobalContext from '../../lib/GlobalContext';
-import { getUser } from '../../store/user';
+import {getUser} from '../../store/user';
 
-function LogIn({ user, style }) {
+function LogIn({user, style}) {
   if (!user.attached) {
     return null;
   }
@@ -85,13 +85,13 @@ function darkModePreferenceText(darkModePreference) {
   }
 }
 
-export default function Nav({ hidden, canLogin, mobile, linkStyle, divRef }) {
-  const { darkModePreference, toggleMolesterMoons } = useContext(GlobalContext);
+export default function Nav({hidden, canLogin, mobile, linkStyle, divRef}) {
+  const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
   if (hidden) return null; // no nav for mobile
   const user = getUser();
   const fencing = window.location.href.includes('fencing');
   return (
-    <div className={classnames('nav', { mobile })} ref={divRef}>
+    <div className={classnames('nav', {mobile})} ref={divRef}>
       <div className="nav--left" style={linkStyle}>
         <Link to={fencing ? '/fencing' : '/'}>Cross with Friends</Link>
       </div>

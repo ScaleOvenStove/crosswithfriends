@@ -73,13 +73,13 @@ export default class Upload extends Component {
           <p>
             You are about to upload the puzzle &quot;
             {puzzleTitle}
-            &quot;. This will create a shareable game link, and anyone with the link will be able to
-            solve it. Continue?
+            &quot;. This will create a shareable game link, and anyone with the link will be able to solve it.
+            Continue?
           </p>
           <div id="unlistedRow">
             <label>
-              <input type="checkbox" onChange={this.handleChangePublicCheckbox} /> Also post this
-              puzzle on the public site homepage
+              <input type="checkbox" onChange={this.handleChangePublicCheckbox} /> Also post this puzzle on
+              the public site homepage
             </label>
           </div>
         </div>

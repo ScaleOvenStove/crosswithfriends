@@ -3,7 +3,15 @@ import './css/welcome.css';
 import React, {Component} from 'react';
 import {Helmet} from 'react-helmet';
 import Flex from 'react-flexview';
-import {MdSearch, MdCheckBoxOutlineBlank, MdCheckBox, MdExpandMore, MdExpandLess, MdFilterList, MdClose} from 'react-icons/md';
+import {
+  MdSearch,
+  MdCheckBoxOutlineBlank,
+  MdCheckBox,
+  MdExpandMore,
+  MdExpandLess,
+  MdFilterList,
+  MdClose,
+} from 'react-icons/md';
 import _ from 'lodash';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
@@ -246,17 +254,11 @@ export default class Welcome extends Component {
           </span>
           {!collapsed && showQuickToggle && (
             <div className="filter-quick-toggle">
-              <span
-                className="filter-quick-toggle--link"
-                onClick={() => this.handleSelectAll(header)}
-              >
+              <span className="filter-quick-toggle--link" onClick={() => this.handleSelectAll(header)}>
                 All
               </span>
               <span className="filter-quick-toggle--separator">/</span>
-              <span
-                className="filter-quick-toggle--link"
-                onClick={() => this.handleSelectNone(header)}
-              >
+              <span className="filter-quick-toggle--link" onClick={() => this.handleSelectNone(header)}>
                 None
               </span>
             </div>
@@ -399,16 +401,10 @@ export default class Welcome extends Component {
           className={classnames('mobile-sidebar-overlay', {open: mobileSidebarOpen})}
           onClick={this.closeMobileSidebar}
         />
-        <Flex
-          className={classnames('mobile-sidebar', {open: mobileSidebarOpen})}
-          column
-        >
+        <Flex className={classnames('mobile-sidebar', {open: mobileSidebarOpen})} column>
           <Flex className="mobile-sidebar--header" vAlignContent="center">
             <span>Filters</span>
-            <MdClose
-              className="mobile-sidebar--close"
-              onClick={this.closeMobileSidebar}
-            />
+            <MdClose className="mobile-sidebar--close" onClick={this.closeMobileSidebar} />
           </Flex>
           <Flex column grow={1} style={{overflowY: 'auto'}}>
             {this.renderFilters()}

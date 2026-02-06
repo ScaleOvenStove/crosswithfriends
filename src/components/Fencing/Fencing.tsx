@@ -25,11 +25,7 @@ import Chat from '../Chat';
 import {FencingCountdown} from './FencingCountdown';
 import Confetti from '../Game/Confetti.js';
 
-function subscribeToGameEvents(
-  socket: Socket | undefined,
-  gid: string,
-  eventsHook: GameEventsHook
-) {
+function subscribeToGameEvents(socket: Socket | undefined, gid: string, eventsHook: GameEventsHook) {
   let connected = false;
   async function joinAndSync() {
     if (!socket) return;

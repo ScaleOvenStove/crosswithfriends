@@ -93,9 +93,11 @@ export default class FileUploader extends Component {
   attemptPuzzleConversion(readerResult, fileType) {
     if (fileType === 'puz') {
       return this.convertPUZ(readerResult);
-    } if (fileType === 'ipuz') {
+    }
+    if (fileType === 'ipuz') {
       return this.convertIPUZ(readerResult);
-    } if (fileType === 'jpz') {
+    }
+    if (fileType === 'jpz') {
       throw new UnsupportedFileTypeError(fileType);
     } else {
       const guessedFileType = fileTypeGuesser(readerResult);

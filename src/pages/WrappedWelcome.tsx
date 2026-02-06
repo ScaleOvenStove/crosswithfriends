@@ -77,7 +77,12 @@ const WrappedWelcome = (props: UseFencing) => {
   const [includeLarge, setIncludeLarge] = useStateParams(true, 'large', boolToStr, strToBool);
 
   // Type filter
-  const [includeStandardType, setIncludeStandardType] = useStateParams(true, 'type_standard', boolToStr, strToBool);
+  const [includeStandardType, setIncludeStandardType] = useStateParams(
+    true,
+    'type_standard',
+    boolToStr,
+    strToBool
+  );
   const [includeCryptic, setIncludeCryptic] = useStateParams(true, 'type_cryptic', boolToStr, strToBool);
 
   // Day of week filter
@@ -134,8 +139,14 @@ const WrappedWelcome = (props: UseFencing) => {
     typeFilter: makeTypeFilter(includeStandardType, includeCryptic),
     setTypeFilter,
     dayOfWeekFilter: makeDayOfWeekFilter(
-      includeMon, includeTue, includeWed, includeThu,
-      includeFri, includeSat, includeSun, includeUnknownDay
+      includeMon,
+      includeTue,
+      includeWed,
+      includeThu,
+      includeFri,
+      includeSat,
+      includeSun,
+      includeUnknownDay
     ),
     setDayOfWeekFilter,
     search,

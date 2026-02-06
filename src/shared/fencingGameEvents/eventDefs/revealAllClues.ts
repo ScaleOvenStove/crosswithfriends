@@ -21,9 +21,7 @@ const revealAllClues: EventDef<RevealAllCluesEvent> = {
       ...state,
       game: {
         ...state.game,
-        teamClueVisibility: _.fromPairs(
-          TEAM_IDS.map(teamId => [teamId, allCluesVisible])
-        ),
+        teamClueVisibility: _.fromPairs(TEAM_IDS.map((teamId) => [teamId, allCluesVisible])),
       },
     };
   },

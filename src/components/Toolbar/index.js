@@ -46,7 +46,7 @@ export default class Toolbar extends Component {
         .map((hex) => hex + hex)
         .join('');
     }
-    this.pencilColorPicker.value = `#${  hexColor}`;
+    this.pencilColorPicker.value = `#${hexColor}`;
     this.pencilColorPicker.click();
   };
 
@@ -288,7 +288,9 @@ export default class Toolbar extends Component {
             <div className="toolbar--pencil-color-picker" onClick={this.handlePencilColorPickerClick} />
             <input
               type="color"
-              ref={(input) => { this.pencilColorPicker = input; }}
+              ref={(input) => {
+                this.pencilColorPicker = input;
+              }}
               onClick={(e) => e.stopPropagation()}
               onChange={this.handlePencilColorPickerChange}
             />

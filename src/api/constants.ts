@@ -1,7 +1,7 @@
-const DEV_REMOTE_SERVER_URL = process.env.REACT_APP_STAGING_API_URL || 'staging-downforacross-com.onrender.com';
+const DEV_REMOTE_SERVER_URL =
+  process.env.REACT_APP_STAGING_API_URL || 'staging-downforacross-com.onrender.com';
 const PROD_REMOTE_SERVER_URL = process.env.REACT_APP_API_URL || 'downforacross-com.onrender.com';
-const REMOTE_SERVER =
-  process.env.NODE_ENV === 'development' ? DEV_REMOTE_SERVER_URL : PROD_REMOTE_SERVER_URL;
+const REMOTE_SERVER = process.env.NODE_ENV === 'development' ? DEV_REMOTE_SERVER_URL : PROD_REMOTE_SERVER_URL;
 const REMOTE_SERVER_URL = `https://${REMOTE_SERVER}`;
 if (window.location.protocol === 'https' && process.env.NODE_ENV === 'development') {
   throw new Error('Please use http in development');
@@ -18,4 +18,3 @@ console.log('-------------------------------------------------------------------
 console.log('Frontend API Protocol:', window.location.protocol);
 console.log('Frontend Connecting to API/Socket at:', SERVER_URL);
 console.log('--------------------------------------------------------------------------------');
-

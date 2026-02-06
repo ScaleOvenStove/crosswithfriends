@@ -2,8 +2,8 @@ import express from 'express';
 import {CreateGameResponse, CreateGameRequest, InfoJson, GetGameResponse} from '../../src/shared/types';
 
 import {addInitialGameEvent} from '../model/game';
-import { getPuzzleSolves } from '../model/puzzle_solve';
-import { getPuzzleInfo } from '../model/puzzle';
+import {getPuzzleSolves} from '../model/puzzle_solve';
+import {getPuzzleInfo} from '../model/puzzle';
 
 const router = express.Router();
 
@@ -27,14 +27,14 @@ router.get<{gid: string}, GetGameResponse>('/:gid', async (req, res) => {
     }
 
     const gameState = puzzleSolves[0];
-    const puzzleInfo = await getPuzzleInfo(gameState.pid) as InfoJson;
+    const puzzleInfo = (await getPuzzleInfo(gameState.pid)) as InfoJson;
 
     res.json({
       gid,
       title: gameState.title,
       author: puzzleInfo?.author || 'Unknown',
       duration: gameState.time_taken_to_solve,
-      size: gameState.size
+      size: gameState.size,
     });
   } catch (error) {
     console.error('Error fetching game state:', error);

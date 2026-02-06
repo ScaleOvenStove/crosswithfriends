@@ -6,7 +6,10 @@ export const pool = new pg.Pool({
   user: process.env.PGUSER || process.env.USER,
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: false,
-  } : undefined
+  ssl:
+    process.env.NODE_ENV === 'production'
+      ? {
+          rejectUnauthorized: false,
+        }
+      : undefined,
 });

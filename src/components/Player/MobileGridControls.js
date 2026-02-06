@@ -398,7 +398,9 @@ export default class MobileGridControls extends GridControls {
       // On some devices, the cursor gets stuck at position 0, even after the input box resets its value to "$".
       // To counter that, wait until after the render and then set it to the end. Use a direct reference to the
       // input in the timeout closure; the event is not reliable, nor is this.inputRef.
-      setTimeout(() => { textArea.selectionStart = textArea.value.length; });
+      setTimeout(() => {
+        textArea.selectionStart = textArea.value.length;
+      });
       return;
     }
 

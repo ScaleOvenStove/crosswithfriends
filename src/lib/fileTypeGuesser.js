@@ -42,7 +42,6 @@ export default function fileTypeGuesser(readerResult) {
 
   if (foundPuzHeader === puzMagicHeader) {
     return 'puz';
-  } 
-    return otherMagicHeaders[magicHeader]?.fileTypeGuess;
-  
+  }
+  return otherMagicHeaders[magicHeader]?.fileTypeGuess;
 }

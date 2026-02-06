@@ -364,9 +364,8 @@ export default class Chat extends Component {
       };
 
       return <button onClick={handleClick}> {defaultPattern} </button>;
-    } 
-      return defaultPattern;
-    
+    }
+    return defaultPattern;
   }
 
   renderMessage(message) {

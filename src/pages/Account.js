@@ -36,7 +36,11 @@ export default class Account extends Component {
         {Object.keys(this.panels).map((panelKey) => {
           const selected = panelKey === selectedPanel;
           const {name} = this.panels[panelKey];
-          return <div key={panelKey} className={`account--sidebar--entry ${selected ? ' selected' : ''}`}>{name}</div>;
+          return (
+            <div key={panelKey} className={`account--sidebar--entry ${selected ? ' selected' : ''}`}>
+              {name}
+            </div>
+          );
         })}
       </div>
     );

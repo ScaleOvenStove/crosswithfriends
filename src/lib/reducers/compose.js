@@ -56,15 +56,17 @@ const reducers = {
       color,
     } = params;
 
-    cursors = cursors.filter((cursor) => cursor.id !== id).concat([
-      {
-        r,
-        c,
-        id,
-        timestamp,
-        color,
-      },
-    ]);
+    cursors = cursors
+      .filter((cursor) => cursor.id !== id)
+      .concat([
+        {
+          r,
+          c,
+          id,
+          timestamp,
+          color,
+        },
+      ]);
 
     return {
       ...composition,

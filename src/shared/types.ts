@@ -172,7 +172,7 @@ export interface CreateGameRequest {
   pid: string;
 }
 
-export interface GetGameResponse{
+export interface GetGameResponse {
   gid: string;
   title: string;
   author: string;

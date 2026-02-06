@@ -37,13 +37,17 @@ const buildSizeFilterClause = (sizeFilter: ListPuzzleRequestFilters['sizeFilter'
   // Large: ≥17 without mini/midi in title
   const conditions: string[] = [];
   if (sizeFilter.Mini) {
-    conditions.push(`(${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}) OR (${GRID_MAX_DIM} <= 8 AND NOT ${TITLE_HAS_MIDI})`);
+    conditions.push(
+      `(${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}) OR (${GRID_MAX_DIM} <= 8 AND NOT ${TITLE_HAS_MIDI})`
+    );
   }
   if (sizeFilter.Midi) {
     conditions.push(`${TITLE_HAS_MIDI} OR (${GRID_MAX_DIM} BETWEEN 9 AND 12 AND NOT ${TITLE_HAS_MINI})`);
   }
-  if (sizeFilter.Standard) conditions.push(`${GRID_MAX_DIM} BETWEEN 13 AND 16 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
-  if (sizeFilter.Large) conditions.push(`${GRID_MAX_DIM} >= 17 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
+  if (sizeFilter.Standard)
+    conditions.push(`${GRID_MAX_DIM} BETWEEN 13 AND 16 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
+  if (sizeFilter.Large)
+    conditions.push(`${GRID_MAX_DIM} >= 17 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
 
   return `AND (${conditions.join(' OR ')})`;
 };

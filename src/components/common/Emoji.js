@@ -35,4 +35,4 @@ export default function Emoji({emoji, big}) {
       {data}
     </span>
   );
-};
+}

@@ -5,11 +5,11 @@ export const FencingToolbar: React.FC<{toolbarActions: ToolbarActions}> = (props
   <div>
     <button
       onMouseDown={(e) => {
-          e.preventDefault();
-          props.toolbarActions.revealCell();
-        }}
+        e.preventDefault();
+        props.toolbarActions.revealCell();
+      }}
     >
       Reveal Cell
     </button>
   </div>
-  );
+);
