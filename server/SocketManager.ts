@@ -1,7 +1,7 @@
 // ============= Server Values ===========
 
 import {RoomEvent} from '@shared/roomEvents';
-import socketIo from 'socket.io';
+import {Server} from 'socket.io';
 import {addGameEvent, GameEvent, getGameEvents} from './model/game';
 import {addRoomEvent, getRoomEvents} from './model/room';
 
@@ -28,9 +28,9 @@ function assignTimestamp(event: SocketEvent) {
 // ============== Socket Manager ==============
 
 class SocketManager {
-  io: socketIo.Server;
+  io: Server;
 
-  constructor(io: socketIo.Server) {
+  constructor(io: Server) {
     this.io = io;
   }
 

@@ -1,7 +1,7 @@
-import io from 'socket.io-client';
+import {io, Socket} from 'socket.io-client';
 import {SOCKET_HOST} from '../api/constants';
 
-let websocketPromise: Promise<SocketIOClient.Socket>;
+let websocketPromise: Promise<Socket>;
 export const getSocket = () => {
   if (!websocketPromise) {
     websocketPromise = (async () => {
@@ -19,7 +19,9 @@ export const getSocket = () => {
       });
 
       console.log('Connecting to', SOCKET_HOST);
-      await (socket as any).onceAsync('connect');
+      await new Promise<void>((resolve) => {
+        socket.once('connect', resolve);
+      });
       return socket;
     })();
   }

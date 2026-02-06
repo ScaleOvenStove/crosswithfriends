@@ -5,6 +5,7 @@ import {useUpdateEffect} from 'react-use';
 import {Helmet} from 'react-helmet';
 import Flex from 'react-flexview';
 import {makeStyles} from '@material-ui/core';
+import type {Socket} from 'socket.io-client';
 import {useSocket} from '../../sockets/useSocket';
 import {emitAsync} from '../../sockets/emitAsync';
 import Player from '../Player';
@@ -25,7 +26,7 @@ import {FencingCountdown} from './FencingCountdown';
 import Confetti from '../Game/Confetti.js';
 
 function subscribeToGameEvents(
-  socket: SocketIOClient.Socket | undefined,
+  socket: Socket | undefined,
   gid: string,
   eventsHook: GameEventsHook
 ) {

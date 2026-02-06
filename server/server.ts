@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import bodyParser from 'body-parser';
 
 import http from 'http';
-import socketIo from 'socket.io';
+import {Server} from 'socket.io';
 import _ from 'lodash';
 import cors from 'cors';
 import SocketManager from './SocketManager';
@@ -13,11 +13,14 @@ const app = express();
 const server = new http.Server(app);
 app.use(bodyParser.json());
 const port = process.env.PORT || 3000;
-const io = socketIo(server, { pingInterval: 2000, pingTimeout: 5000 });
-
-// ======== HTTP Server Config ==========
-
-io.origins('*:*'); // allow CORS for socket.io route
+const io = new Server(server, {
+  pingInterval: 2000,
+  pingTimeout: 5000,
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
 app.use(cors()); // allow CORS for all express routes
 if (process.env.NODE_ENV === 'production') {
   app.use(morgan('combined'));
@@ -29,7 +32,8 @@ app.use('/api', apiRouter);
 
 // ======== Error Handling Middleware ==========
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = err.statusCode || 500;
   console.error(`[API Error] ${req.method} ${req.path}:`, err.message || err);
   res.status(status).json({error: err.message || 'Internal server error'});

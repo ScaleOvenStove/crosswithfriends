@@ -6,6 +6,7 @@ import {Helmet} from 'react-helmet';
 import {RouteComponentProps} from 'react-router';
 
 import {makeStyles} from '@material-ui/core';
+import type {Socket} from 'socket.io-client';
 import {RoomEvent, SetGameRoomEvent, UserPingRoomEvent} from '../shared/roomEvents';
 import {useSocket} from '../sockets/useSocket';
 import {initialRoomState, roomReducer} from '../lib/reducers/room';
@@ -54,7 +55,7 @@ const useStyles = makeStyles({
   },
 });
 function subscribeToRoomEvents(
-  socket: SocketIOClient.Socket | undefined,
+  socket: Socket | undefined,
   rid: string,
   setEvents: Dispatch<SetStateAction<RoomEvent[]>>
 ) {

@@ -1,14 +1,12 @@
 import Promise from 'bluebird';
 import EventEmitter from 'events';
 import _ from 'lodash';
-import io from 'socket.io-client';
+import {io} from 'socket.io-client';
 import * as uuid from 'uuid';
 import * as colors from '../lib/colors';
 import {emitAsync} from '../sockets/emitAsync';
 import {getSocket} from '../sockets/getSocket';
 import {db, SERVER_TIME} from './firebase';
-
-Promise.promisifyAll(io);
 
 // ============ Serialize / Deserialize Helpers ========== //
 

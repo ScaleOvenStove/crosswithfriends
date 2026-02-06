@@ -4,6 +4,7 @@
     "strictNullChecks": true,
     "esModuleInterop": true,
     "allowJs": true,
+    "skipLibCheck": true,
     "paths": {
       "@shared/*": ["../src/shared/*"],
       "@lib/*": ["../src/lib/*"]
