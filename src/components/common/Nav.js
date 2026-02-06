@@ -5,9 +5,9 @@ import React, { useContext } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
 import swal from '@sweetalert/with-react';
+import { FaSun, FaMoon, FaDesktop } from 'react-icons/fa';
 import GlobalContext from '../../lib/GlobalContext';
 import { getUser } from '../../store/user';
-import { FaSun, FaMoon, FaDesktop } from 'react-icons/fa';
 
 function LogIn({ user, style }) {
   if (!user.attached) {

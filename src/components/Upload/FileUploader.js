@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 import './css/fileUploader.css';
 
 import React, {Component} from 'react';
@@ -92,9 +93,9 @@ export default class FileUploader extends Component {
   attemptPuzzleConversion(readerResult, fileType) {
     if (fileType === 'puz') {
       return this.convertPUZ(readerResult);
-    } else if (fileType === 'ipuz') {
+    } if (fileType === 'ipuz') {
       return this.convertIPUZ(readerResult);
-    } else if (fileType === 'jpz') {
+    } if (fileType === 'jpz') {
       throw new UnsupportedFileTypeError(fileType);
     } else {
       const guessedFileType = fileTypeGuesser(readerResult);

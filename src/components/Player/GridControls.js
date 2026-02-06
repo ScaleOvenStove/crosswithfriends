@@ -350,7 +350,7 @@ export default class GridControls extends Component {
     const {r, c} = this.props.selected;
     const nextEmptyCell = this.grid.getNextEmptyCell(r, c, this.props.direction, {
       skipFirst: true,
-      skipFilledSquares: skipFilledSquares,
+      skipFilledSquares,
     });
     if (nextEmptyCell) {
       this.setSelected(nextEmptyCell);

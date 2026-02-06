@@ -1,7 +1,6 @@
-import _ from 'lodash';
-import {pool} from './pool';
 import moment from 'moment';
 import {PuzzleJson} from '@shared/types';
+import {pool} from './pool';
 
 export type SolvedPuzzleType = {
   pid: string;

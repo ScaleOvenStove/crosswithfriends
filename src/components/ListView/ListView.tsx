@@ -36,7 +36,7 @@ export default class ListView extends React.PureComponent<ListViewProps> {
 
   isSelected(r: number, c: number, dir: 'across' | 'down' = this.props.direction) {
     const {selected, direction} = this.props;
-    return r === selected.r && c === selected.c && dir == direction;
+    return r === selected.r && c === selected.c && dir === direction;
   }
 
   isCircled(r: number, c: number) {
@@ -68,7 +68,7 @@ export default class ListView extends React.PureComponent<ListViewProps> {
       !this.isSelected(r, c, dir) &&
       this.grid.isWhite(r, c) &&
       this.grid.getParent(r, c, direction) === selectedParent &&
-      direction == dir
+      direction === dir
     );
   }
 
@@ -99,7 +99,7 @@ export default class ListView extends React.PureComponent<ListViewProps> {
   };
 
   clueContainsSquare({ori, num}: ClueCoords, r: number, c: number, dir: 'across' | 'down') {
-    return this.grid.isWhite(r, c) && this.grid.getParent(r, c, ori) === num && ori == dir;
+    return this.grid.isWhite(r, c) && this.grid.getParent(r, c, ori) === num && ori === dir;
   }
 
   getSizeClass(size: number) {
@@ -201,7 +201,7 @@ export default class ListView extends React.PureComponent<ListViewProps> {
                       <div className="list-view--list--clue--text">
                         <Clue text={clue} />
                       </div>
-                      <div className="list-view--list--clue--break"></div>
+                      <div className="list-view--list--clue--break" />
                       <div className="list-view--list--clue--grid">
                         <table className={`grid ${sizeClass}`}>
                           <tbody>

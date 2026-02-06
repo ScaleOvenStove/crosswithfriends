@@ -17,7 +17,7 @@ export async function getGameInfo(gid: string) {
   const res = await pool.query("SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create'", [
     gid,
   ]);
-  if (res.rowCount != 1) {
+  if (res.rowCount !== 1) {
     console.log(`Could not find info for game ${gid}`);
     return {};
   }
@@ -44,15 +44,12 @@ export interface InitialGameEvent extends GameEvent {
 }
 
 export async function addGameEvent(gid: string, event: GameEvent) {
-  const startTime = Date.now();
   await pool.query(
     `
       INSERT INTO game_events (gid, uid, ts, event_type, event_payload)
       VALUES ($1, $2, $3, $4, $5)`,
     [gid, event.user, new Date(event.timestamp).toISOString(), event.type, event]
   );
-  const ms = Date.now() - startTime;
-  //console.log(`addGameEvent(${gid}, ${event.type}) took ${ms}ms`);
 }
 
 export async function addInitialGameEvent(gid: string, pid: string) {

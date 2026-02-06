@@ -1,6 +1,6 @@
+import _ from 'lodash';
 import {MAX_CLOCK_INCREMENT} from '../timing';
 import {MAIN_BLUE_3} from '../colors';
-import _ from 'lodash';
 
 function getScopeGrid(grid, scope) {
   const scopeGrid = grid.map((row) => row.map(() => false));
@@ -172,13 +172,13 @@ const reducers = {
       });
     }
 
-    var newGame = {
+    let newGame = {
       ...game,
       grid,
     };
 
     if (params.autocheck === true) {
-      var checkParams = {
+      const checkParams = {
         scope: [params.cell],
       };
 

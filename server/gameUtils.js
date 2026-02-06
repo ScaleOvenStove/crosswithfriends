@@ -1,5 +1,16 @@
 import _ from 'lodash';
 
+function safe_while(condition, step, cap = 500) {
+  let i = 0;
+  while (condition()) {
+    step();
+    i += 1;
+    if (i > cap) {
+      throw new Error('Condition never became falsey!');
+    }
+  }
+}
+
 export const getOppositeDirection = (direction) =>
   ({
     across: 'down',
@@ -293,6 +304,7 @@ export class GridWrapper {
     let nextNumber = 1;
     for (const [r, c, cell] of this.items()) {
       if (!this.isWhite(r, c)) {
+        // eslint-disable-next-line no-continue
         continue;
       } else if (this.isStartOfClue(r, c, 'across') || this.isStartOfClue(r, c, 'down')) {
         cell.number = nextNumber;

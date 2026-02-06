@@ -18,6 +18,7 @@ const simpleParse = (clue: string): Tree => {
 
     // we never push text nodes onto the stack, so this should not happen
     if (!('children' in parent)) throw new Error('tree invariant broken')
+    // eslint-disable-next-line no-continue
     if (!node.hasChildNodes()) continue
 
     for (let i = 0; i < node.childNodes.length; i++) {
@@ -54,9 +55,9 @@ const simpleRender = (tree: Tree, allowed: string[]): ReactNode => {
   const children = tree.children.map((child) => simpleRender(child, allowed))
   if (tree.name !== undefined && allowed.includes(tree.name)) {
     return createElement(tree.name, {}, ...children)
-  } else {
+  } 
     return createElement(Fragment, {}, ...children)
-  }
+  
 }
 
 export default function ClueText({ text = '' }): JSX.Element {

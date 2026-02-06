@@ -350,7 +350,9 @@ export default class MobileGridControls extends GridControls {
   }
 
   focusKeyboard() {
-    this.inputRef.current.selectionStart = this.inputRef.current.selectionEnd = this.inputRef.current.value.length;
+    const cursorPosition = this.inputRef.current.value.length;
+    this.inputRef.current.selectionStart = cursorPosition;
+    this.inputRef.current.selectionEnd = cursorPosition;
     this.inputRef.current.focus();
   }
 
@@ -396,7 +398,7 @@ export default class MobileGridControls extends GridControls {
       // On some devices, the cursor gets stuck at position 0, even after the input box resets its value to "$".
       // To counter that, wait until after the render and then set it to the end. Use a direct reference to the
       // input in the timeout closure; the event is not reliable, nor is this.inputRef.
-      setTimeout(() => (textArea.selectionStart = textArea.value.length));
+      setTimeout(() => { textArea.selectionStart = textArea.value.length; });
       return;
     }
 

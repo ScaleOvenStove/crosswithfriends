@@ -43,12 +43,10 @@ export default class Toolbar extends Component {
     if (hexColor.length === 3) {
       hexColor = hexColor
         .split('')
-        .map(function (hex) {
-          return hex + hex;
-        })
+        .map((hex) => hex + hex)
         .join('');
     }
-    this.pencilColorPicker.value = '#' + hexColor;
+    this.pencilColorPicker.value = `#${  hexColor}`;
     this.pencilColorPicker.click();
   };
 
@@ -213,7 +211,7 @@ export default class Toolbar extends Component {
     if (isMobile()) {
       return (
         <div
-          className={`toolbar--color-attribution-toggle`}
+          className="toolbar--color-attribution-toggle"
           title="Color Attribution"
           onClick={onToggleColorAttributionMode}
         >
@@ -286,14 +284,14 @@ export default class Toolbar extends Component {
       >
         <i className="fa fa-pencil" />
         {pencilMode && (
-          <div className={'toolbar--pencil-color-picker-container'}>
-            <div className={'toolbar--pencil-color-picker'} onClick={this.handlePencilColorPickerClick}></div>
+          <div className="toolbar--pencil-color-picker-container">
+            <div className="toolbar--pencil-color-picker" onClick={this.handlePencilColorPickerClick} />
             <input
               type="color"
-              ref={(input) => (this.pencilColorPicker = input)}
+              ref={(input) => { this.pencilColorPicker = input; }}
               onClick={(e) => e.stopPropagation()}
               onChange={this.handlePencilColorPickerChange}
-            ></input>
+            />
           </div>
         )}
       </div>

@@ -3,15 +3,16 @@ function convertCluesArray(initialCluesArray) {
 
   for (let i = 0; i < initialCluesArray.length; i++) {
     const item = initialCluesArray[i];
-    let number, stringClue;
+    let number;
+    let stringClue;
     if (Array.isArray(item)) {
-      number = parseInt(item[0]);
+      number = parseInt(item[0], 10);
       stringClue = item[1];
     } else {
-      number = parseInt(item.number);
+      number = parseInt(item.number, 10);
       stringClue = item.clue;
     }
-    finalCluesArray[parseInt(number)] = stringClue;
+    finalCluesArray[parseInt(number, 10)] = stringClue;
   }
 
   return finalCluesArray;

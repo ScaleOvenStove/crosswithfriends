@@ -30,7 +30,7 @@ router.get<{gid: string}, GetGameResponse>('/:gid', async (req, res) => {
     const puzzleInfo = await getPuzzleInfo(gameState.pid) as InfoJson;
 
     res.json({
-      gid: gid,
+      gid,
       title: gameState.title,
       author: puzzleInfo?.author || 'Unknown',
       duration: gameState.time_taken_to_solve,

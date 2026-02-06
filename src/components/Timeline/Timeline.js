@@ -96,9 +96,9 @@ class Timeline extends React.PureComponent {
   handleMouse = (e) => {
     const {onSetPosition} = this.props;
     if (!this.timelineRef.current) return;
-    e = e.nativeEvent;
-    let x = e.offsetX;
-    let node = e.target;
+    const nativeEvent = e.nativeEvent;
+    let x = nativeEvent.offsetX;
+    let node = nativeEvent.target;
     while (node !== this.timelineRef.current) {
       x += node.offsetLeft;
       node = node.parentElement;
@@ -107,8 +107,8 @@ class Timeline extends React.PureComponent {
     let position = x / this.units + this.begin;
     position = Math.min(this.end, Math.max(this.begin, position));
     onSetPosition(position);
-    e.preventDefault();
-    e.stopPropagation();
+    nativeEvent.preventDefault();
+    nativeEvent.stopPropagation();
   };
 
   handleMouseDown = (e) => {
@@ -157,6 +157,7 @@ class Timeline extends React.PureComponent {
 
   render() {
     const {history} = this.props;
+    const timeline = this.timelineRef.current;
 
     return (
       <div
@@ -175,15 +176,15 @@ class Timeline extends React.PureComponent {
       >
         <TimelineBars history={history} begin={this.begin} units={this.units} />
         {this.renderCursor()}
-        {this.down && this.timelineRef.current && (
+        {this.down && timeline && (
           <div
             className="mouse--target"
             style={{
               position: 'absolute',
-              left: -this.timelineRef.current.getBoundingClientRect().left,
-              top: -this.timelineRef.current.getBoundingClientRect().top,
+              left: -timeline.getBoundingClientRect().left,
+              top: -timeline.getBoundingClientRect().top,
             }}
-          ></div>
+          />
         )}
       </div>
     );

@@ -1,4 +1,5 @@
 import {CellData, Cursor} from '../../shared/types';
+// eslint-disable-next-line import/no-cycle
 import {EnhancedCellData} from './Cell';
 
 export interface CellStyle {

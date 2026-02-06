@@ -105,7 +105,9 @@ export default class Chat extends Component {
     // `${window.location.host}/beta${this.props.path}`);
     const link = document.getElementById('pathText');
     link.classList.remove('flashBlue');
-    void link.offsetWidth;
+    // Force reflow to restart CSS animation
+    // eslint-disable-next-line no-unused-expressions
+    link.offsetWidth;
     link.classList.add('flashBlue');
   };
 
@@ -118,7 +120,9 @@ export default class Chat extends Component {
     navigator.clipboard.writeText(text);
     const link = document.getElementById('shareText');
     link.classList.remove('flashBlue');
-    void link.offsetWidth;
+    // Force reflow to restart CSS animation
+    // eslint-disable-next-line no-unused-expressions
+    link.offsetWidth;
     link.classList.add('flashBlue');
   };
 
@@ -345,14 +349,14 @@ export default class Chat extends Component {
 
     let clueNumber;
     try {
-      clueNumber = parseInt(clueref[1]);
-    } catch (e) {
+      clueNumber = parseInt(clueref[1], 10);
+    } catch {
       // not in a valid format, so just return the pattern
       return defaultPattern;
     }
 
     const directionFirstChar = clueref[2][0];
-    const isAcross = directionFirstChar == 'a' || directionFirstChar == 'A';
+    const isAcross = directionFirstChar === 'a' || directionFirstChar === 'A';
     const clues = isAcross ? this.props.game.clues.across : this.props.game.clues.down;
 
     if (clueNumber >= 0 && clueNumber < clues.length && clues[clueNumber] !== undefined) {
@@ -362,9 +366,9 @@ export default class Chat extends Component {
       };
 
       return <button onClick={handleClick}> {defaultPattern} </button>;
-    } else {
+    } 
       return defaultPattern;
-    }
+    
   }
 
   renderMessage(message) {

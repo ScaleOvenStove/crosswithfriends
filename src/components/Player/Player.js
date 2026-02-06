@@ -51,7 +51,7 @@ export default class Player extends Component {
         ? this.props.currentCursor
         : this.getInitialSelected();
     this.state = {
-      selected: selected,
+      selected,
       direction: this.props.clues.across.length ? 'across' : 'down',
     };
 
@@ -463,7 +463,7 @@ export default class Player extends Component {
               enableDebug={window.location.search.indexOf('debug') !== -1}
             >
               <div className="player--mobile" ref={this.mobileContainer}>
-                <div className={`player--mobile--list-view`}>
+                <div className="player--mobile--list-view">
                   <ListView ref="grid" {...listViewProps} />
                 </div>
               </div>
