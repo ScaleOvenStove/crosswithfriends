@@ -7,7 +7,8 @@ on:
     branches: [master]
 
 jobs:
-  lint-and-build:
+  lint:
+    name: ESLint
     runs-on: ubuntu-latest
 
     steps:
@@ -26,8 +27,44 @@ jobs:
       - name: Run ESLint
         run: yarn eslint --ext .js,.jsx,.ts,.tsx src/ server/
 
+  format:
+    name: Prettier
+    needs: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
       - name: Check Prettier formatting
         run: yarn prettier --check "src/**/*.{js,jsx,ts,tsx}" "server/**/*.{js,ts}"
+
+  build:
+    name: Build
+    needs: format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
 
       - name: Build
         run: yarn build
