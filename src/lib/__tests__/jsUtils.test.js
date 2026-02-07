@@ -1,4 +1,4 @@
-import {toArr, hasShape, rand_int} from '../jsUtils';
+import {toArr, hasShape, colorAverage, rand_int} from '../jsUtils';
 
 describe('toArr', () => {
   it('passes through an array unchanged', () => {
@@ -59,9 +59,29 @@ describe('hasShape', () => {
   });
 });
 
-// NOTE: colorAverage is not tested because hexToRgb has a bug:
-// it uses Number(x, 16) instead of parseInt(x, 16), so hex parsing
-// always returns NaN. This should be fixed separately.
+describe('colorAverage', () => {
+  it('returns first color at weight 0', () => {
+    expect(colorAverage('#ff0000', '#0000ff', 0)).toBe('#ff0000');
+  });
+
+  it('returns second color at weight 1', () => {
+    expect(colorAverage('#ff0000', '#0000ff', 1)).toBe('#0000ff');
+  });
+
+  it('blends two colors at weight 0.5', () => {
+    // #ff0000 + #0000ff at 0.5 → (128, 0, 128) → #800080
+    expect(colorAverage('#ff0000', '#0000ff', 0.5)).toBe('#800080');
+  });
+
+  it('blends white and black', () => {
+    // #ffffff + #000000 at 0.5 → (128, 128, 128) → #808080
+    expect(colorAverage('#ffffff', '#000000', 0.5)).toBe('#808080');
+  });
+
+  it('returns same color when both inputs match', () => {
+    expect(colorAverage('#abcdef', '#abcdef', 0.5)).toBe('#abcdef');
+  });
+});
 
 describe('rand_int', () => {
   it('returns a value within the specified range', () => {
