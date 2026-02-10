@@ -46,6 +46,7 @@ export default class Upload extends Component {
     });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   fail = () => {
     swal({
       title: `Malformed .puz file`,
@@ -94,8 +95,26 @@ export default class Upload extends Component {
     return null;
   };
 
-  renderUploadSuccessModal = () => {
+  renderUploadSuccessModal = (response) => {
     swal.close();
+    if (response && response.duplicate) {
+      const url = `/beta/play/${response.pid}${this.props.fencing ? '?fencing=1' : ''}`;
+      swal({
+        title: 'Puzzle Already Exists',
+        icon: 'info',
+        content: (
+          <div className="swal-text swal-text--no-margin swal-text--text-align-center">
+            <p style={{marginTop: 10, marginBottom: 10}}>
+              This puzzle has already been uploaded. You can play it here:{' '}
+              <a href={url} style={{wordBreak: 'break-all'}}>
+                {url}
+              </a>
+            </p>
+          </div>
+        ),
+      });
+      return;
+    }
     if (!this.state.recentUnlistedPid) {
       this.props.onCreate && this.props.onCreate();
       swal({
@@ -123,6 +142,7 @@ export default class Upload extends Component {
     }
   };
 
+  // eslint-disable-next-line class-methods-use-this
   renderUploadFailModal = (err) => {
     swal.close();
     swal({

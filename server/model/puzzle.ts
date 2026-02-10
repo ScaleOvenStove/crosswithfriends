@@ -1,7 +1,8 @@
+import crypto from 'crypto';
 import _ from 'lodash';
 import Joi from 'joi';
 import * as uuid from 'uuid';
-import {PuzzleJson, ListPuzzleRequestFilters} from '@shared/types';
+import {PuzzleJson, ListPuzzleRequestFilters, AddPuzzleResult} from '@shared/types';
 import {pool} from './pool';
 
 // ================ Read and Write methods used to interface with postgres ========== //
@@ -91,7 +92,7 @@ const buildDayOfWeekFilterClause = (
   const conditions: string[] = [];
 
   if (selectedDays.length > 0) {
-    const dayList = selectedDays.map((_, i) => `$${paramOffset + i}`);
+    const dayList = selectedDays.map((_day, i) => `$${paramOffset + i}`);
     conditions.push(`${DAY_EXTRACT} IN (${dayList.join(', ')})`);
   }
 
@@ -200,19 +201,40 @@ function validatePuzzle(puzzle: any) {
   }
 }
 
-export async function addPuzzle(puzzle: PuzzleJson, isPublic = false, pid?: string) {
-  if (!pid) {
-    pid = uuid.v4().substr(0, 8);
-  }
+function computePuzzleHash(puzzle: PuzzleJson): string {
+  const canonical = JSON.stringify({
+    clues: {across: puzzle.clues.across, down: puzzle.clues.down},
+    grid: puzzle.grid,
+  });
+  return crypto.createHash('sha256').update(canonical).digest('hex');
+}
+
+export async function addPuzzle(
+  puzzle: PuzzleJson,
+  isPublic = false,
+  pid?: string
+): Promise<AddPuzzleResult> {
+  const puzzleId = pid || uuid.v4().substr(0, 8);
   validatePuzzle(puzzle);
+  const contentHash = computePuzzleHash(puzzle);
+
+  if (isPublic) {
+    const {rows} = await pool.query(`SELECT pid FROM puzzles WHERE content_hash = $1 AND is_public = true`, [
+      contentHash,
+    ]);
+    if (rows.length > 0) {
+      return {pid: rows[0].pid, duplicate: true};
+    }
+  }
+
   const uploaded_at = Date.now();
   await pool.query(
     `
-      INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric)
-      VALUES ($1, to_timestamp($2), $3, $4, $5)`,
-    [pid, uploaded_at / 1000, isPublic, puzzle, pid]
+      INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric, content_hash)
+      VALUES ($1, to_timestamp($2), $3, $4, $5, $6)`,
+    [puzzleId, uploaded_at / 1000, isPublic, puzzle, puzzleId, contentHash]
   );
-  return pid;
+  return {pid: puzzleId, duplicate: false};
 }
 
 async function isGidAlreadySolved(gid: string) {

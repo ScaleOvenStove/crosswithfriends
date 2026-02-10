@@ -97,8 +97,14 @@ export interface AddPuzzleRequest {
   isPublic: boolean;
 }
 
+export interface AddPuzzleResult {
+  pid: string;
+  duplicate: boolean;
+}
+
 export interface AddPuzzleResponse {
   pid: string;
+  duplicate?: boolean;
 }
 
 export interface ListPuzzleStatsRequest {

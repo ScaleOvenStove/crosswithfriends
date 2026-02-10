@@ -108,8 +108,11 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
+    "!(backfills|utils)/**/*.{js,jsx,ts,tsx}": [
       "eslint --max-warnings=0",
+      "prettier --write"
+    ],
+    "(backfills|utils)/**/*.{js,jsx,ts,tsx}": [
       "prettier --write"
     ]
   },
