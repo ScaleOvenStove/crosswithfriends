@@ -1,6 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
+import helmet from 'helmet';
 
 import http from 'http';
 import {Server} from 'socket.io';
@@ -11,6 +12,11 @@ import apiRouter from './api/router';
 
 const app = express();
 const server = new http.Server(app);
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // disable CSP for now — MUI v4 uses inline styles
+  })
+);
 app.use(bodyParser.json());
 const port = process.env.PORT || 3000;
 const io = new Server(server, {
