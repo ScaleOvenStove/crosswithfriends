@@ -32,11 +32,19 @@ async function backfill() {
   const dryRun = process.env.DRY_RUN === '1';
   if (dryRun) console.log('DRY RUN — no updates will be written');
 
-  const {rows} = await pool.query(`SELECT pid, content FROM puzzles WHERE content_hash IS NULL`);
+  const {rows} = await pool.query(
+    `SELECT pid, is_public, content FROM puzzles WHERE content_hash IS NULL ORDER BY uploaded_at ASC`
+  );
   console.log(`Found ${rows.length} puzzles without content_hash`);
+
+  // Track hashes we've already assigned to public puzzles to avoid unique index violations.
+  // The unique index only applies to public puzzles, so only the first public puzzle with
+  // a given hash gets it set. Duplicate public puzzles are logged for manual review.
+  const publicHashes = new Set();
 
   let updated = 0;
   let skipped = 0;
+  let duplicates = 0;
   for (const row of rows) {
     const puzzle = row.content;
     if (!puzzle || !puzzle.clues || !puzzle.grid) {
@@ -45,13 +53,21 @@ async function backfill() {
       continue;
     }
     const hash = computePuzzleHash(puzzle);
+    if (row.is_public && publicHashes.has(hash)) {
+      console.log(`  Duplicate public puzzle: ${row.pid} (hash already assigned)`);
+      duplicates += 1;
+      continue;
+    }
+    if (row.is_public) {
+      publicHashes.add(hash);
+    }
     if (!dryRun) {
       await pool.query(`UPDATE puzzles SET content_hash = $1 WHERE pid = $2`, [hash, row.pid]);
     }
     updated += 1;
   }
 
-  console.log(`Done. Updated: ${updated}, Skipped: ${skipped}`);
+  console.log(`Done. Updated: ${updated}, Skipped: ${skipped}, Duplicate public: ${duplicates}`);
   await pool.end();
 }
 
