@@ -1,5 +1,3 @@
-import './css/compose.css';
-
 import {Helmet} from 'react-helmet';
 import _ from 'lodash';
 import React, {Component} from 'react';
