@@ -45,9 +45,6 @@
   justify-content: flex-begin;
 }
 
-.player--main--clue-bar--text span {
-}
-
 .player--main--left {
   display: flex;
   flex-direction: column;
