@@ -1,0 +1,77 @@
+.legal {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legal--content {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.legal--content h1 {
+  font-size: 24px;
+  margin: 0 0 8px;
+}
+
+.legal--content h2 {
+  font-size: 18px;
+  margin: 24px 0 8px;
+}
+
+.legal--content h3 {
+  font-size: 15px;
+  margin: 16px 0 4px;
+}
+
+.legal--content p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #333;
+}
+
+.legal--content ul {
+  margin: 0 0 12px;
+  padding-left: 24px;
+}
+
+.legal--content li {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.legal--content a {
+  color: #1976d2;
+}
+
+.legal--effective-date {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+/* Dark mode */
+.dark .legal--content h1,
+.dark .legal--content h2,
+.dark .legal--content h3 {
+  color: var(--dark-primary-text);
+}
+
+.dark .legal--content p,
+.dark .legal--content li {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dark .legal--effective-date {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .legal--content a {
+  color: #6aa9f4;
+}

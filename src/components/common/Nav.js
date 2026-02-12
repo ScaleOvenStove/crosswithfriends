@@ -1,49 +1,14 @@
 import './css/nav.css';
 
 import {Link} from 'react-router-dom';
-import React, {useContext} from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
 import swal from '@sweetalert/with-react';
-import {FaSun, FaMoon, FaDesktop} from 'react-icons/fa';
+import {FaSun, FaMoon, FaDesktop, FaUserCircle} from 'react-icons/fa';
 import GlobalContext from '../../lib/GlobalContext';
-import {getUser} from '../../store/user';
-
-function LogIn({user, style}) {
-  if (!user.attached) {
-    return null;
-  }
-  if (user.fb) {
-    // for now return a simple "logged in"
-    return (
-      <div className="nav--right" style={style}>
-        Logged in
-      </div>
-    );
-    /*
-    return (
-      <div className='nav--right'>
-        <Link to='/account'
-          className='nav--right'>
-          Account
-        </Link>
-      </div>
-    );
-    */
-  }
-  return (
-    <div className="nav--right" style={style}>
-      <div
-        className="nav--login"
-        onClick={() => {
-          user.logIn();
-        }}
-      >
-        Log in
-      </div>
-    </div>
-  );
-}
+import AuthContext from '../../lib/AuthContext';
+import LoginModal from '../Auth/LoginModal';
 
 function showInfo() {
   swal({
@@ -73,22 +38,113 @@ function showInfo() {
   });
 }
 
-function darkModePreferenceText(darkModePreference) {
-  switch (darkModePreference) {
-    case '1':
-      return 'On';
-    case '2':
-      return 'System default';
-    case '0':
-    default:
-      return 'Off';
-  }
+function darkModeIcon(darkModePreference) {
+  if (darkModePreference === '1') return <FaMoon />;
+  if (darkModePreference === '2') return <FaDesktop />;
+  return <FaSun />;
 }
 
-export default function Nav({hidden, canLogin, mobile, linkStyle, divRef}) {
+function darkModeLabel(darkModePreference) {
+  if (darkModePreference === '1') return 'Dark Mode: On';
+  if (darkModePreference === '2') return 'Dark Mode: System';
+  return 'Dark Mode: Off';
+}
+
+function UserMenu() {
+  const {isAuthenticated, user, handleLogout} = useContext(AuthContext);
   const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
-  if (hidden) return null; // no nav for mobile
-  const user = getUser();
+  const [open, setOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [open]);
+
+  return (
+    <div className="nav--user-menu" ref={menuRef}>
+      <div className="nav--user-menu--trigger" onClick={() => setOpen(!open)}>
+        <FaUserCircle size={20} />
+      </div>
+      {open && (
+        <div className="nav--user-menu--dropdown">
+          {isAuthenticated && (
+            <>
+              <div className="nav--user-menu--header">{user.displayName}</div>
+              <Link to="/profile" className="nav--user-menu--item" onClick={() => setOpen(false)}>
+                Your Profile &amp; Stats
+              </Link>
+              <Link to="/account" className="nav--user-menu--item" onClick={() => setOpen(false)}>
+                Settings
+              </Link>
+            </>
+          )}
+          {!isAuthenticated && (
+            <div
+              className="nav--user-menu--item"
+              onClick={() => {
+                setOpen(false);
+                setShowLogin(true);
+              }}
+            >
+              Sign Up / Log In
+            </div>
+          )}
+          <div className="nav--user-menu--item nav--user-menu--dark-mode" onClick={toggleMolesterMoons}>
+            <span className="nav--user-menu--dark-mode-icon">{darkModeIcon(darkModePreference)}</span>
+            {darkModeLabel(darkModePreference)}
+          </div>
+          <a
+            className="nav--user-menu--item"
+            href="https://ko-fi.com/crosswithfriends"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+          >
+            Support CWF
+          </a>
+          <div
+            className="nav--user-menu--item"
+            onClick={() => {
+              setOpen(false);
+              showInfo();
+            }}
+          >
+            About
+          </div>
+          <Link to="/help" className="nav--user-menu--item" onClick={() => setOpen(false)}>
+            Help &amp; FAQ
+          </Link>
+          {isAuthenticated && (
+            <>
+              <div className="nav--user-menu--divider" />
+              <div
+                className="nav--user-menu--item"
+                onClick={() => {
+                  setOpen(false);
+                  handleLogout();
+                }}
+              >
+                Log out
+              </div>
+            </>
+          )}
+        </div>
+      )}
+      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+    </div>
+  );
+}
+
+export default function Nav({hidden, mobile, linkStyle, divRef}) {
+  if (hidden) return null;
   const fencing = window.location.href.includes('fencing');
   return (
     <div className={classnames('nav', {mobile})} ref={divRef}>
@@ -96,22 +152,7 @@ export default function Nav({hidden, canLogin, mobile, linkStyle, divRef}) {
         <Link to={fencing ? '/fencing' : '/'}>Cross with Friends</Link>
       </div>
       <div className="nav--right">
-        <div
-          className="dark-mode-toggle"
-          onClick={toggleMolesterMoons}
-          title={`Dark Mode: ${darkModePreferenceText(darkModePreference)}`}
-        >
-          {darkModePreference === '0' && <FaSun />}
-          {darkModePreference === '1' && <FaMoon />}
-          {darkModePreference === '2' && <FaDesktop />}
-        </div>
-        {/* <div className="nav--right stats">
-          <a href="/stats">Your stats</a>
-        </div> */}
-        <div className="nav--info" onClick={showInfo}>
-          <i className="fa fa-info-circle" />
-        </div>
-        {canLogin && <LogIn user={user} />}
+        <UserMenu />
       </div>
     </div>
   );

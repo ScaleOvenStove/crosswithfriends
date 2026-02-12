@@ -1,7 +1,9 @@
+import {v4 as uuidv4} from 'uuid';
+
 const idKey = 'dfac-id';
 
 function genId() {
-  return Math.floor(Math.random() * 1000000000).toString(16);
+  return uuidv4();
 }
 
 function genAnonId() {

@@ -381,6 +381,15 @@ export default class Welcome extends Component {
             className="welcome--searchbar"
           />
         </Flex>
+        {this.mobile && (
+          <button
+            className="mobile-filter-button"
+            onClick={this.toggleMobileSidebar}
+            aria-label="Open filters"
+          >
+            <MdFilterList />
+          </button>
+        )}
       </Flex>
     );
   }
@@ -435,7 +444,7 @@ export default class Welcome extends Component {
         </div>
         <Flex grow={1} basis={1}>
           {this.showingSidebar && (
-            <Flex className="welcome--sidebar" column shrink={0} style={{justifyContent: 'space-between'}}>
+            <Flex className="welcome--sidebar" column shrink={0}>
               {this.renderFilters()}
               <WelcomeVariantsControl fencing={this.props.fencing} />
               {!this.mobile && this.renderQuickUpload()}
@@ -446,18 +455,7 @@ export default class Welcome extends Component {
             {this.renderPuzzles()}
           </Flex>
         </Flex>
-        {this.mobile && (
-          <>
-            {this.renderMobileSidebar()}
-            <button
-              className="mobile-filter-button"
-              onClick={this.toggleMobileSidebar}
-              aria-label="Open filters"
-            >
-              <MdFilterList />
-            </button>
-          </>
-        )}
+        {this.mobile && this.renderMobileSidebar()}
       </Flex>
     );
   }

@@ -16,7 +16,10 @@ IF NOT EXISTS puzzles
   times_solved numeric DEFAULT 0 CHECK (times_solved >= 0),
 
   -- static properties of the puzzle
-  content jsonb
+  content jsonb,
+
+  -- who uploaded this puzzle (NULL for puzzles uploaded before auth)
+  uploaded_by UUID REFERENCES users(id)
 );
 
 ALTER TABLE public.puzzles

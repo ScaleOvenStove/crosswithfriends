@@ -17,10 +17,13 @@ import {isMobile, rand_color} from '../lib/jsUtils';
 
 import * as powerupLib from '../lib/powerups';
 import {recordSolve} from '../api/puzzle.ts';
+import AuthContext from '../lib/AuthContext';
 
 import nameGenerator from '../lib/nameGenerator';
 
 export default class Game extends Component {
+  static contextType = AuthContext;
+
   constructor(props) {
     super(props);
     window.gameComponent = this;
@@ -301,7 +304,9 @@ export default class Game extends Component {
         });
       }
       // double log to postgres
-      await recordSolve(this.game.pid, this.state.gid, this.game.clock.totalTime);
+      const authToken = this.context?.accessToken || null;
+      const playerCount = Object.keys(this.game.users || {}).length || 1;
+      await recordSolve(this.game.pid, this.state.gid, this.game.clock.totalTime, authToken, playerCount);
       this.user.markSolved(this.state.gid);
       if (this.battleModel) {
         this.battleModel.setSolved(this.state.team);

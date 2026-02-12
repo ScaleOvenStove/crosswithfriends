@@ -1,7 +1,8 @@
 import _ from 'lodash';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 import {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '../../shared/types';
 import {fetchPuzzleList} from '../../api/puzzle_list';
+import AuthContext from '../../lib/AuthContext';
 import './css/puzzleList.css';
 import Entry, {EntryProps} from './Entry';
 
@@ -21,6 +22,7 @@ interface NewPuzzleListProps {
 }
 
 const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
+  const {accessToken} = useContext(AuthContext) as {accessToken: string | null};
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [fullyLoaded, setFullyLoaded] = useState<boolean>(false);
@@ -31,6 +33,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       pid: string;
       content: PuzzleJson;
       stats: PuzzleStatsJson;
+      isPublic?: boolean;
     }[]
   >([]);
   const fullyScrolled = (): boolean => {
@@ -47,12 +50,16 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
           pid: string;
           content: PuzzleJson;
           stats: PuzzleStatsJson;
+          isPublic?: boolean;
         }[],
         currentPage: number
       ) => {
         if (loading) return;
         setLoading(true);
-        const nextPage = await fetchPuzzleList({page: currentPage, pageSize, filter: props.filter});
+        const nextPage = await fetchPuzzleList(
+          {page: currentPage, pageSize, filter: props.filter},
+          accessToken
+        );
         setPuzzles([...currentPuzzles, ...nextPage.puzzles]);
         setPage(currentPage + 1);
         setLoading(false);
@@ -61,13 +68,13 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       500,
       {trailing: true}
     ),
-    [loading, JSON.stringify(props.filter)]
+    [loading, JSON.stringify(props.filter), accessToken]
   );
   useEffect(() => {
     // it is debatable if we want to blank out the current puzzles here or not,
     // for now we only change the puzzles when the reload happens.
     fetchMore([], 0);
-  }, [JSON.stringify(props.filter), props.uploadedPuzzles]);
+  }, [JSON.stringify(props.filter), props.uploadedPuzzles, !!accessToken]);
 
   const handleScroll = async () => {
     if (fullyLoaded) return;
@@ -95,6 +102,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         stats: puzzle.stats,
         status: props.puzzleStatuses[puzzle.pid],
         fencing: props.fencing,
+        isPublic: puzzle.isPublic,
       },
     }))
     .filter((data) => {

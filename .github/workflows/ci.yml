@@ -62,8 +62,11 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Run tests
+      - name: Run frontend tests
         run: yarn test --watchAll=false --ci
+
+      - name: Run server tests
+        run: yarn test:server --ci
 
   typecheck:
     name: TypeCheck

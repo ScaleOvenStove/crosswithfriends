@@ -2,6 +2,177 @@ import moment from 'moment';
 import {PuzzleJson} from '@shared/types';
 import {pool} from './pool';
 
+export type UserSolveHistoryItem = {
+  pid: string;
+  gid: string;
+  title: string;
+  size: string;
+  time: number;
+  solvedAt: string;
+  playerCount: number;
+  coSolvers: {userId: string; displayName: string}[];
+  anonCount: number;
+};
+
+export type SizeStats = {
+  size: string;
+  count: number;
+  avgTime: number;
+};
+
+export async function getUserSolveStats(
+  userId: string
+): Promise<{totalSolved: number; bySize: SizeStats[]; history: UserSolveHistoryItem[]}> {
+  // Summary stats by grid size — count distinct puzzles, use best time per puzzle for avg
+  const statsResult = await pool.query(
+    `SELECT size, COUNT(*)::int AS count, ROUND(AVG(best_time))::int AS avg_time
+     FROM (
+       SELECT DISTINCT ON (ps.pid)
+         ps.pid,
+         ps.time_taken_to_solve AS best_time,
+         GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+           || 'x' ||
+         LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+           AS size
+       FROM puzzle_solves ps
+       JOIN puzzles p ON ps.pid = p.pid
+       WHERE ps.user_id = $1
+       ORDER BY ps.pid, ps.time_taken_to_solve ASC
+     ) best_solves
+     GROUP BY size
+     ORDER BY count DESC`,
+    [userId]
+  );
+
+  const totalSolved = statsResult.rows.reduce((sum: number, r: any) => sum + r.count, 0);
+  const bySize: SizeStats[] = statsResult.rows.map((r: any) => ({
+    size: r.size,
+    count: r.count,
+    avgTime: r.avg_time,
+  }));
+
+  // Recent solve history with puzzle info
+  const historyResult = await pool.query(
+    `SELECT
+       ps.pid, ps.gid, ps.time_taken_to_solve, ps.solved_time, ps.player_count,
+       p.content->'info'->>'title' AS title,
+       GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+         || 'x' ||
+       LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+         AS size
+     FROM puzzle_solves ps
+     JOIN puzzles p ON ps.pid = p.pid
+     WHERE ps.user_id = $1
+     ORDER BY ps.solved_time DESC
+     LIMIT 100`,
+    [userId]
+  );
+
+  // For collaborative solves, find co-solvers
+  const collabGids = historyResult.rows.filter((r: any) => r.player_count > 1).map((r: any) => r.gid);
+
+  const coSolverMap: Map<string, {userId: string; displayName: string}[]> = new Map();
+  const solverCountMap: Map<string, number> = new Map();
+
+  if (collabGids.length > 0) {
+    const coSolverResult = await pool.query(
+      `SELECT ps.gid, ps.user_id, u.display_name
+       FROM puzzle_solves ps
+       JOIN users u ON ps.user_id = u.id
+       WHERE ps.gid = ANY($1) AND ps.user_id IS NOT NULL AND ps.user_id != $2`,
+      [collabGids, userId]
+    );
+    for (const row of coSolverResult.rows) {
+      const list = coSolverMap.get(row.gid) || [];
+      list.push({userId: row.user_id, displayName: row.display_name});
+      coSolverMap.set(row.gid, list);
+    }
+
+    // Count total authenticated solvers per gid (including the requesting user)
+    const countResult = await pool.query(
+      `SELECT gid, COUNT(*)::int AS solver_count
+       FROM puzzle_solves
+       WHERE gid = ANY($1) AND user_id IS NOT NULL
+       GROUP BY gid`,
+      [collabGids]
+    );
+    for (const row of countResult.rows) {
+      solverCountMap.set(row.gid, row.solver_count);
+    }
+  }
+
+  const history: UserSolveHistoryItem[] = historyResult.rows.map((r: any) => {
+    const pc = r.player_count || 1;
+    const authenticatedCount = solverCountMap.get(r.gid) || 1;
+    return {
+      pid: r.pid,
+      gid: r.gid,
+      title: r.title || 'Untitled',
+      size: r.size,
+      time: Number(r.time_taken_to_solve),
+      solvedAt: r.solved_time ? r.solved_time.toISOString() : '',
+      playerCount: pc,
+      coSolvers: coSolverMap.get(r.gid) || [],
+      anonCount: Math.max(0, pc - authenticatedCount),
+    };
+  });
+
+  return {totalSolved, bySize, history};
+}
+
+export type InProgressGameItem = {
+  gid: string;
+  pid: string;
+  title: string;
+  size: string;
+  lastActivity: string;
+};
+
+export async function getInProgressGames(userId: string): Promise<InProgressGameItem[]> {
+  const result = await pool.query(
+    `WITH user_dfac_ids AS (
+       SELECT dfac_id FROM user_identity_map WHERE user_id = $1
+     ),
+     user_games AS (
+       SELECT DISTINCT ge.gid
+       FROM game_events ge
+       WHERE ge.uid IN (SELECT dfac_id FROM user_dfac_ids)
+          OR ge.event_payload->'params'->>'id' IN (SELECT dfac_id FROM user_dfac_ids)
+     ),
+     solved_games AS (
+       SELECT DISTINCT gid FROM puzzle_solves WHERE user_id = $1
+     )
+     SELECT
+       ug.gid,
+       ce.event_payload->'params'->>'pid' AS pid,
+       p.content->'info'->>'title' AS title,
+       GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+         || 'x' ||
+       LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+         AS size,
+       (SELECT MAX(ge2.ts) FROM game_events ge2
+        WHERE ge2.gid = ug.gid
+          AND (ge2.uid IN (SELECT dfac_id FROM user_dfac_ids)
+               OR ge2.event_payload->'params'->>'id' IN (SELECT dfac_id FROM user_dfac_ids))
+       ) AS last_activity
+     FROM user_games ug
+     JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
+     LEFT JOIN puzzles p ON ce.event_payload->'params'->>'pid' = p.pid
+     WHERE ug.gid NOT IN (SELECT gid FROM solved_games)
+     ORDER BY last_activity DESC
+     LIMIT 50`,
+    [userId]
+  );
+
+  return result.rows.map((r: any) => ({
+    gid: r.gid,
+    pid: r.pid || '',
+    title: r.title || 'Untitled',
+    size: r.size || '',
+    lastActivity: r.last_activity ? r.last_activity.toISOString() : '',
+  }));
+}
+
 export type SolvedPuzzleType = {
   pid: string;
   gid: string;

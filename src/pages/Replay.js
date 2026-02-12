@@ -78,10 +78,13 @@ export default class Replay extends Component {
     const history = [this.historyWrapper.createEvent, ...this.historyWrapper.history];
     const filteredHistory = history.filter((event) => event.type !== 'updateCursor' && event.type !== 'chat');
     const position = this.state.position || history[0].gameTimestamp;
+    // If no meaningful events beyond create, replay data has been pruned
+    const replayUnavailable = filteredHistory.length <= 1;
     this.setState({
       history,
       filteredHistory,
       position,
+      replayUnavailable,
     });
   };
 
@@ -300,6 +303,14 @@ export default class Replay extends Component {
     }
     if (!this.game) {
       return <div>Loading...</div>;
+    }
+    if (this.state.replayUnavailable) {
+      return (
+        <div className="replay--unavailable">
+          <p>Replay is no longer available for this game.</p>
+          <p>Game event data has been archived.</p>
+        </div>
+      );
     }
 
     const {grid, circles, shades, cursors, clues, solved, users} = this.game;

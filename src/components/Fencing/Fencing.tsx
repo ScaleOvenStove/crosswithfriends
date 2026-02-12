@@ -233,7 +233,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
   );
   return (
     <Flex column style={{flex: 1}}>
-      <Nav hidden={false} canLogin={false} divRef={null} linkStyle={null} mobile={null} />
+      <Nav hidden={false} divRef={null} linkStyle={null} mobile={null} />
       <Flex style={{flex: 1, overflow: 'auto'}}>
         <div className={classes.container}>
           <Helmet title={`Fencing ${gid}`} />

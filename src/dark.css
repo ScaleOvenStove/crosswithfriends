@@ -56,7 +56,7 @@
 }
 
 .dark .cell.referenced {
-  background-color: #80A030 !important;
+  background-color: #80a030 !important;
   color: white;
 }
 
@@ -126,7 +126,6 @@
 .dark .toolbar--mobile {
   background-color: var(--dark-blue-1);
 }
-
 
 .dark .chat {
   border-color: #888;
@@ -240,6 +239,71 @@
 
 .dark .filter-quick-toggle--link:hover {
   color: #8bc4ff;
+}
+
+/* Login/Signup Modal */
+.dark .MuiDialog-paper {
+  background-color: #1e1e1e;
+  color: var(--dark-primary-text);
+}
+
+.dark .MuiDialogTitle-root {
+  color: var(--dark-primary-text);
+}
+
+.dark .MuiDialog-paper > .MuiTabs-root {
+  border-bottom-color: #444;
+}
+
+.dark .MuiTab-root {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .MuiTab-root.Mui-selected {
+  color: var(--dark-primary-text);
+}
+
+.dark .MuiTabs-indicator {
+  background-color: #6aa9f4;
+}
+
+.dark .MuiDialogContent-root .MuiInputBase-root {
+  color: var(--dark-primary-text);
+}
+
+.dark .MuiDialogContent-root .MuiInput-underline::before {
+  border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .MuiDialogContent-root .MuiInputLabel-root {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .MuiDialogContent-root .MuiFormHelperText-root {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.dark .MuiDialogContent-root .MuiTypography-colorTextSecondary {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.dark .MuiDialogContent-root .MuiButton-root {
+  color: var(--dark-primary-text);
+}
+
+.dark .MuiDialogContent-root .MuiButton-containedPrimary {
+  color: #fff;
+}
+
+.dark .MuiButton-contained.Mui-disabled {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .google-sign-in-btn {
+  background-color: #303134 !important;
+  color: #e8eaed !important;
+  border-color: #5f6368 !important;
 }
 
 :root {

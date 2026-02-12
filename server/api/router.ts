@@ -7,15 +7,19 @@ import statsRouter from './stats';
 import oEmbedRouter from './oembed';
 import linkPreviewRouter from './link_preview';
 import countersRouter from './counters';
+import authRouter from './auth';
+import userStatsRouter from './user_stats';
 // import statsRouter from './stats';
 
 const router = express.Router();
 
+router.use('/auth', authRouter);
 router.use('/puzzle_list', puzzleListRouter);
 router.use('/puzzle', puzzleRouter);
 router.use('/game', gameRouter);
 router.use('/record_solve', recordSolveRouter);
 router.use('/stats', statsRouter);
+router.use('/user-stats', userStatsRouter);
 router.use('/oembed', oEmbedRouter);
 router.use('/link_preview', linkPreviewRouter);
 router.use('/counters', countersRouter);

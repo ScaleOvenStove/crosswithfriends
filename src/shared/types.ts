@@ -146,6 +146,7 @@ export interface ListPuzzleResponse {
     pid: string;
     content: PuzzleJson;
     stats: PuzzleStatsJson;
+    isPublic?: boolean;
   }[];
 }
 
@@ -189,6 +190,7 @@ export interface GetGameResponse {
 export interface RecordSolveRequest {
   gid: string;
   time_to_solve: number;
+  player_count?: number;
 }
 
 export interface RecordSolveResponse {}

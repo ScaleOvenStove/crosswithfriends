@@ -19,6 +19,7 @@ export interface EntryProps {
     solves?: Array<any>;
   };
   fencing?: boolean;
+  isPublic?: boolean;
 }
 
 export default class Entry extends Component<EntryProps> {
@@ -59,7 +60,7 @@ export default class Entry extends Component<EntryProps> {
   }
 
   render() {
-    const {title, author, pid, status, stats, fencing} = this.props;
+    const {title, author, pid, status, stats, fencing, isPublic} = this.props;
     const numSolvesOld = _.size(stats?.solves || []);
     const numSolves = numSolvesOld + (stats?.numSolves || 0);
     const displayName = _.compact([author.trim(), this.size]).join(' | ');
@@ -79,6 +80,7 @@ export default class Entry extends Component<EntryProps> {
               </p>
             </Flex>
             <Flex>
+              {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
               {status === 'started' && <MdRadioButtonUnchecked className="entry--icon" />}
               {status === 'solved' && <MdCheckCircle className="entry--icon" />}
               {status !== 'started' && status !== 'solved' && fencing && (

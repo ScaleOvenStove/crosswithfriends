@@ -1,11 +1,171 @@
 .account {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.account--left {
+.account--title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  padding: 24px 20px 0;
 }
 
-.account--right {
+.account--main {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.account-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.dark .account-section {
+  border-color: #444;
+}
+
+.account-section--title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dark .account-section--title {
+  color: #aaa;
+}
+
+.account-section--content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-section--actions {
+  width: 100%;
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Verification warning banner */
+.account-verify-banner {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background-color: #fff3e0;
+  color: #e65100;
+  font-size: 14px;
+}
+
+.account-verify-banner a {
+  color: #e65100;
+  font-weight: 600;
+}
+
+/* Dark mode overrides for Account page */
+.dark .account--title {
+  color: var(--dark-primary-text);
+}
+
+.dark .account-section--content {
+  color: var(--dark-primary-text);
+}
+
+.dark .account-section--content .MuiTypography-colorTextSecondary {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.dark .account-section--content .MuiButton-root {
+  color: var(--dark-primary-text);
+}
+
+.dark .account-section--content .MuiButton-containedPrimary {
+  color: #fff;
+}
+
+.dark .account-section--content .MuiInputBase-root {
+  color: var(--dark-primary-text);
+}
+
+.dark .account-section--content .MuiInput-underline::before {
+  border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .account-section--content .MuiInputLabel-root {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .account-section--content .MuiFormHelperText-root {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.dark .account-section--content .MuiButton-outlined {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Dark mode for standalone account pages (verify-email, forgot-password, reset-password) */
+.dark .account--main {
+  color: var(--dark-primary-text);
+}
+
+.dark .account--main .MuiTypography-root {
+  color: var(--dark-primary-text);
+}
+
+.dark .account--main .MuiTypography-colorTextSecondary {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.dark .account--main .MuiTypography-colorError {
+  color: #ef5350 !important;
+}
+
+.dark .account--main .MuiInputBase-root {
+  color: var(--dark-primary-text);
+}
+
+.dark .account--main .MuiInput-underline::before {
+  border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .account--main .MuiInputLabel-root {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .account--main .MuiFormHelperText-root {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.dark .account-verify-banner {
+  background-color: rgba(230, 81, 0, 0.15);
+  color: #ffb74d;
+}
+
+.dark .account-verify-banner a {
+  color: #ffb74d;
+}
+
+.dark .account--main .MuiButton-contained.Mui-disabled {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .account--main a {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .account--main a:hover {
+  color: var(--dark-primary-text);
 }

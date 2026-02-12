@@ -5,8 +5,11 @@ import swal from '@sweetalert/with-react';
 import actions from '../../actions';
 import FileUploader from './FileUploader';
 import {createNewPuzzle} from '../../api/puzzle';
+import AuthContext from '../../lib/AuthContext';
 
 export default class Upload extends Component {
+  static contextType = AuthContext;
+
   constructor() {
     super();
     this.state = {
@@ -40,6 +43,7 @@ export default class Upload extends Component {
 
       createNewPuzzle(puzzle, pid, {
         isPublic,
+        accessToken: this.context?.accessToken,
       })
         .then(this.renderUploadSuccessModal)
         .catch(this.renderUploadFailModal);

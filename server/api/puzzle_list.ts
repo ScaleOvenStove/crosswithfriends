@@ -3,10 +3,11 @@ import express from 'express';
 import _ from 'lodash';
 import {listPuzzles} from '../model/puzzle';
 import {ListPuzzleRequestFilters} from '../../src/shared/types';
+import {optionalAuth} from '../auth/middleware';
 
 const router = express.Router();
 
-router.get<{}, ListPuzzleResponse>('/', async (req, res, next) => {
+router.get<{}, ListPuzzleResponse>('/', optionalAuth, async (req, res, next) => {
   try {
     const page = Number.parseInt(req.query.page as string, 10);
     const pageSize = Number.parseInt(req.query.pageSize as string, 10);
@@ -37,11 +38,12 @@ router.get<{}, ListPuzzleResponse>('/', async (req, res, next) => {
     if (!(Number.isFinite(page) && Number.isFinite(pageSize))) {
       return next(_.assign(new Error('page and pageSize should be integers'), {statusCode: 400}));
     }
-    const rawPuzzleList = await listPuzzles(filters, pageSize, page * pageSize);
+    const rawPuzzleList = await listPuzzles(filters, pageSize, page * pageSize, req.authUser?.userId);
     const puzzles = rawPuzzleList.map((puzzle) => ({
       pid: puzzle.pid,
       content: puzzle.content,
       stats: {numSolves: puzzle.times_solved},
+      isPublic: puzzle.is_public,
     }));
     res.json({
       puzzles,

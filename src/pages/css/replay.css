@@ -61,6 +61,16 @@
   color: var(--main-blue);
 }
 
+.replay--unavailable {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--main-gray-1);
+}
+
+.replay--unavailable p {
+  margin: 8px 0;
+}
+
 .scrub--autoplay {
   cursor: pointer;
   color: var(--main-blue);

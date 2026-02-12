@@ -44,11 +44,13 @@ export interface InitialGameEvent extends GameEvent {
 }
 
 export async function addGameEvent(gid: string, event: GameEvent) {
+  // event.user is historically always null; fall back to params.id (the player's dfac_id)
+  const uid = event.user || event.params?.id || null;
   await pool.query(
     `
       INSERT INTO game_events (gid, uid, ts, event_type, event_payload)
       VALUES ($1, $2, $3, $4, $5)`,
-    [gid, event.user, new Date(event.timestamp).toISOString(), event.type, event]
+    [gid, uid, new Date(event.timestamp).toISOString(), event.type, event]
   );
 }
 

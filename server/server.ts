@@ -2,6 +2,7 @@ import express from 'express';
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 import http from 'http';
 import {Server} from 'socket.io';
@@ -9,6 +10,10 @@ import _ from 'lodash';
 import cors from 'cors';
 import SocketManager from './SocketManager';
 import apiRouter from './api/router';
+import passport from './auth/passport';
+import {optionalAuth} from './auth/middleware';
+import {cleanupExpiredTokens} from './model/refresh_token';
+import {cleanupExpiredEmailTokens, cleanupExpiredResetTokens} from './model/email_token';
 
 const app = express();
 const server = new http.Server(app);
@@ -18,16 +23,23 @@ app.use(
   })
 );
 app.use(bodyParser.json());
+app.use(cookieParser());
+app.use(passport.initialize());
 const port = process.env.PORT || 3000;
+
+const corsOrigins =
+  process.env.NODE_ENV === 'production' ? true : ['http://localhost:3020', 'http://localhost:3021'];
 const io = new Server(server, {
   pingInterval: 2000,
   pingTimeout: 5000,
   cors: {
-    origin: '*',
+    origin: corsOrigins,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
-app.use(cors()); // allow CORS for all express routes
+app.use(cors({origin: corsOrigins, credentials: true}));
+app.use(optionalAuth);
 if (process.env.NODE_ENV === 'production') {
   app.use(morgan('combined'));
 } else {
@@ -70,6 +82,20 @@ async function runServer() {
   console.log(`  User: ${process.env.PGUSER || process.env.USER}`);
   console.log(`  Port: ${process.env.PGPORT || 5432}`);
   console.log('--------------------------------------------------------------------------------');
+  // Clean up expired/revoked tokens every hour
+  setInterval(async () => {
+    try {
+      const deleted = await cleanupExpiredTokens();
+      if (deleted > 0) console.log(`Cleaned up ${deleted} expired refresh tokens`);
+      const deletedEmail = await cleanupExpiredEmailTokens();
+      if (deletedEmail > 0) console.log(`Cleaned up ${deletedEmail} expired email verification tokens`);
+      const deletedReset = await cleanupExpiredResetTokens();
+      if (deletedReset > 0) console.log(`Cleaned up ${deletedReset} expired password reset tokens`);
+    } catch (err) {
+      console.error('Token cleanup error:', err);
+    }
+  }, 60 * 60 * 1000);
+
   server.listen(port, () => console.log(`Listening on port ${port}`));
   process.once('SIGUSR2', () => {
     server.close(() => {

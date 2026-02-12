@@ -78,11 +78,20 @@ const useStyles = makeStyles({
   title: {
     fontSize: '110%',
     fontWeight: 600,
+    '.dark &': {
+      color: 'var(--dark-primary-text)',
+    },
   },
   option: {
-    color: 'gray',
+    color: '#666',
     '&.selected': {
-      color: 'blue',
+      color: '#1976d2',
+    },
+    '.dark &': {
+      color: 'rgba(255, 255, 255, 0.5)',
+    },
+    '.dark &.selected': {
+      color: '#6aa9f4',
     },
   },
 });

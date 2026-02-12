@@ -4,6 +4,7 @@ import {RoomEvent} from '@shared/roomEvents';
 import {Server} from 'socket.io';
 import {addGameEvent, GameEvent, getGameEvents} from './model/game';
 import {addRoomEvent, getRoomEvents} from './model/room';
+import {verifyAccessToken} from './auth/jwt';
 
 interface SocketEvent {
   [key: string]: any;
@@ -47,6 +48,18 @@ class SocketManager {
   }
 
   listen() {
+    // Auth middleware: verify JWT on connection if provided (guests still allowed)
+    this.io.use((socket, next) => {
+      const token = socket.handshake.auth?.token;
+      if (token) {
+        const payload = verifyAccessToken(token);
+        if (payload) {
+          socket.data.authUser = payload;
+        }
+      }
+      next();
+    });
+
     this.io.on('connection', (socket) => {
       // ======== Game Events ========= //
       // NOTICE: join is deprecated in favor of sync_all_game_events
@@ -79,7 +92,12 @@ class SocketManager {
       });
 
       socket.on('game_event', async (message, ack) => {
-        await this.addGameEvent(message.gid, message.event);
+        const event = message.event;
+        // Stamp verified user identity if authenticated
+        if (socket.data.authUser) {
+          event.verifiedUserId = socket.data.authUser.userId;
+        }
+        await this.addGameEvent(message.gid, event);
         ack();
       });
 

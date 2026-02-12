@@ -109,12 +109,14 @@ const buildDayOfWeekFilterClause = (
 export async function listPuzzles(
   filter: ListPuzzleRequestFilters,
   limit: number,
-  offset: number
+  offset: number,
+  userId?: string
 ): Promise<
   {
     pid: string;
     content: PuzzleJson;
     times_solved: number;
+    is_public: boolean;
   }[]
 > {
   const startTime = Date.now();
@@ -139,11 +141,18 @@ export async function listPuzzles(
     dayParamOffset
   );
 
+  // If authenticated, also show the user's own unlisted puzzles
+  const userIdParamIndex = dayParamOffset + dayParams.length;
+  const visibilityClause = userId
+    ? `(is_public = true OR uploaded_by = $${userIdParamIndex})`
+    : 'is_public = true';
+  const userIdParams = userId ? [userId] : [];
+
   const {rows} = await pool.query(
     `
-      SELECT pid, uploaded_at, content, times_solved
+      SELECT pid, uploaded_at, is_public, content, times_solved
       FROM puzzles
-      WHERE is_public = true
+      WHERE ${visibilityClause}
       ${sizeClause}
       ${typeClause}
       ${parameterizedTitleAuthorFilter}
@@ -152,7 +161,7 @@ export async function listPuzzles(
       LIMIT $1
       OFFSET $2
     `,
-    [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams]
+    [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams, ...userIdParams]
   );
   const puzzles = rows.map(
     (row: {
@@ -212,7 +221,8 @@ function computePuzzleHash(puzzle: PuzzleJson): string {
 export async function addPuzzle(
   puzzle: PuzzleJson,
   isPublic = false,
-  pid?: string
+  pid?: string,
+  uploadedBy?: string | null
 ): Promise<AddPuzzleResult> {
   const puzzleId = pid || uuid.v4().substr(0, 8);
   validatePuzzle(puzzle);
@@ -230,57 +240,79 @@ export async function addPuzzle(
   const uploaded_at = Date.now();
   await pool.query(
     `
-      INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric, content_hash)
-      VALUES ($1, to_timestamp($2), $3, $4, $5, $6)`,
-    [puzzleId, uploaded_at / 1000, isPublic, puzzle, puzzleId, contentHash]
+      INSERT INTO puzzles (pid, uploaded_at, is_public, content, pid_numeric, content_hash, uploaded_by)
+      VALUES ($1, to_timestamp($2), $3, $4, $5, $6, $7)`,
+    [puzzleId, uploaded_at / 1000, isPublic, puzzle, puzzleId, contentHash, uploadedBy || null]
   );
   return {pid: puzzleId, duplicate: false};
 }
 
+export async function getUserUploadedPuzzles(userId: string) {
+  const {rows} = await pool.query(
+    `SELECT pid, content->'info'->>'title' as title,
+            uploaded_at, times_solved, is_public,
+            jsonb_array_length(content->'grid') as rows,
+            jsonb_array_length(content->'grid'->0) as cols
+     FROM puzzles
+     WHERE uploaded_by = $1
+     ORDER BY uploaded_at DESC
+     LIMIT 100`,
+    [userId]
+  );
+  return rows.map((r: any) => ({
+    pid: r.pid,
+    title: r.title || 'Untitled',
+    uploadedAt: r.uploaded_at,
+    timesSolved: Number(r.times_solved),
+    size: `${r.rows}x${r.cols}`,
+    isPublic: !!r.is_public,
+  }));
+}
+
 async function isGidAlreadySolved(gid: string) {
-  // Note: This gate makes use of the assumption "one pid per gid";
-  // The unique index on (pid, gid) is more strict than this
   const {
     rows: [{count}],
-  } = await pool.query(
-    `
-    SELECT COUNT(*)
-    FROM puzzle_solves
-    WHERE gid=$1
-  `,
-    [gid]
-  );
+  } = await pool.query(`SELECT COUNT(*) FROM puzzle_solves WHERE gid=$1`, [gid]);
   return count > 0;
 }
 
-export async function recordSolve(pid: string, gid: string, timeToSolve: number) {
+async function isAlreadySolvedByUser(gid: string, userId: string) {
+  const {
+    rows: [{count}],
+  } = await pool.query(`SELECT COUNT(*) FROM puzzle_solves WHERE gid=$1 AND user_id=$2`, [gid, userId]);
+  return count > 0;
+}
+
+export async function recordSolve(
+  pid: string,
+  gid: string,
+  timeToSolve: number,
+  userId?: string | null,
+  playerCount?: number
+) {
   const solved_time = Date.now();
 
-  // Clients may log a solve multiple times; skip logging after the first one goes through
-  if (await isGidAlreadySolved(gid)) {
-    return;
+  // Dedup: authenticated users get one record per game, anonymous gets one per game
+  if (userId) {
+    if (await isAlreadySolvedByUser(gid, userId)) return;
+  } else {
+    if (await isGidAlreadySolved(gid)) return;
   }
+
+  // Only increment times_solved on the first solve for this game (any user)
+  const isFirstSolveForGame = !(await isGidAlreadySolved(gid));
+
   const client = await pool.connect();
-
-  // The frontend clients are designed in a way that concurrent double logs are fairly common
-  // we use a transaction here as it lets us only update if we are able to insert a solve (in case we double log a solve).
-
   try {
     await client.query('BEGIN');
     await client.query(
-      `
-      INSERT INTO puzzle_solves (pid, gid, solved_time, time_taken_to_solve)
-      VALUES ($1, $2, to_timestamp($3), $4)
-    `,
-      [pid, gid, solved_time / 1000.0, timeToSolve]
+      `INSERT INTO puzzle_solves (pid, gid, solved_time, time_taken_to_solve, user_id, player_count)
+       VALUES ($1, $2, to_timestamp($3), $4, $5, $6)`,
+      [pid, gid, solved_time / 1000.0, timeToSolve, userId || null, playerCount || 1]
     );
-    await client.query(
-      `
-      UPDATE puzzles SET times_solved = times_solved + 1
-      WHERE pid = $1
-    `,
-      [pid]
-    );
+    if (isFirstSolveForGame) {
+      await client.query(`UPDATE puzzles SET times_solved = times_solved + 1 WHERE pid = $1`, [pid]);
+    }
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');

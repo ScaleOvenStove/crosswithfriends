@@ -173,6 +173,17 @@
   font-size: 0.75em;
 }
 
+.entry--unlisted {
+  font-size: 10px;
+  font-weight: 600;
+  color: #888;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
 .entry--icon {
   position: relative;
   z-index: 1;
@@ -289,26 +300,21 @@ p {
 
 /* Mobile sidebar */
 .mobile-filter-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background-color: var(--main-blue);
-  color: white;
+  background: none;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 100;
+  padding: 6px;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
 .mobile-filter-button svg {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 
 .mobile-sidebar-overlay {
