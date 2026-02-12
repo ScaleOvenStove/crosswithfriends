@@ -370,7 +370,7 @@ export default class Game extends Component {
         mobile={mobile}
         startTime={startTime}
         pausedTime={pausedTime}
-        isPaused={isPaused}
+        isPaused={isPaused || this.props.syncFailed}
         listMode={listMode}
         expandMenu={expandMenu}
         pencilMode={pencilMode}

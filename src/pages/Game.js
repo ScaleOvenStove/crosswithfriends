@@ -489,23 +489,23 @@ export default class Game extends Component {
         {this.state.syncWarning === 'failed' && (
           <div
             style={{
-              background: '#b71c1c',
+              background: window.socket?.connected ? '#2e7d32' : '#b71c1c',
               color: 'white',
               padding: '8px 12px',
               textAlign: 'center',
               fontSize: '14px',
             }}
           >
-            Connection lost — leaving this page may lose your progress. Stay here until reconnected.
-            {window.socket?.connected && (
+            {window.socket?.connected ? (
               <>
-                {' '}
+                You are back online! Any letters typed while offline were not saved. Click refresh to resync
+                your game.
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
                   style={{
                     background: 'white',
-                    color: '#b71c1c',
+                    color: '#2e7d32',
                     border: 'none',
                     borderRadius: '4px',
                     padding: '4px 12px',
@@ -517,6 +517,8 @@ export default class Game extends Component {
                   Refresh
                 </button>
               </>
+            ) : (
+              'Connection lost — leaving this page may lose your progress. Stay here until reconnected.'
             )}
           </div>
         )}
