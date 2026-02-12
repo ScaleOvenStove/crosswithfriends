@@ -127,35 +127,37 @@ export const allNums = (str) => {
 
 export const getReferencedClues = (str, clues) => {
   if (!str) return [];
-  str = str.toLowerCase();
+  let searchText = str.toLowerCase();
   let res = [];
-  while (str.indexOf('across') !== -1 || str.indexOf('down') !== -1) {
-    const a = str.indexOf('across');
-    const b = str.indexOf('down');
+  while (searchText.indexOf('across') !== -1 || searchText.indexOf('down') !== -1) {
+    const a = searchText.indexOf('across');
+    const b = searchText.indexOf('down');
     if ((a < b || b === -1) && a !== -1) {
-      const nums = allNums(str.substring(0, a));
+      const nums = allNums(searchText.substring(0, a));
       res = res.concat(
         nums.map((num) => ({
           ori: 'across',
           num,
         }))
       );
-      str = str.substr(a + 'across'.length);
+      searchText = searchText.substr(a + 'across'.length);
     } else {
-      const nums = allNums(str.substring(0, b));
+      const nums = allNums(searchText.substring(0, b));
       res = res.concat(
         nums.map((num) => ({
           ori: 'down',
           num,
         }))
       );
-      str = str.substr(b + 'down'.length);
+      searchText = searchText.substr(b + 'down'.length);
     }
   }
 
   const referencesStars =
-    str.indexOf('starred') !== -1 &&
-    (str.indexOf('clue') !== -1 || str.indexOf('entry') !== -1 || str.indexOf('entries') !== -1);
+    searchText.indexOf('starred') !== -1 &&
+    (searchText.indexOf('clue') !== -1 ||
+      searchText.indexOf('entry') !== -1 ||
+      searchText.indexOf('entries') !== -1);
   if (referencesStars) {
     ['down', 'across'].forEach((dir) => {
       clues[dir].forEach((clueText, i) => {

@@ -26,6 +26,13 @@ import './dark.css';
 
 const darkModeLocalStorageKey = 'dark_mode_preference';
 
+const DiscordRedirect = () => {
+  React.useEffect(() => {
+    window.location.href = 'https://discord.gg/RmjCV8EZ73';
+  }, []);
+  return null;
+};
+
 const Root = () => {
   const urlDarkMode = window.location.search.indexOf('dark') !== -1;
   const savedDarkModePreference = (localStorage && localStorage.getItem(darkModeLocalStorageKey)) || '0';
@@ -80,14 +87,7 @@ const Root = () => {
             <Route exact path="/composition/:cid" component={Composition} />
             <Route exact path="/fencing/:gid" component={Fencing} />
             <Route exact path="/beta/fencing/:gid" component={Fencing} />
-            <Route
-              exact
-              path="/discord"
-              component={() => {
-                window.location.href = 'https://discord.gg/RmjCV8EZ73';
-                return null;
-              }}
-            />
+            <Route exact path="/discord" component={DiscordRedirect} />
           </Switch>
         </div>
       </GlobalContext.Provider>
