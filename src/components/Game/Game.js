@@ -1,3 +1,6 @@
+/* eslint-disable react/jsx-no-bind */
+/* eslint-disable react/jsx-props-no-spreading */
+/* eslint-disable consistent-return */
 import 'react-flexview/lib/flexView.css';
 
 import React, {Component} from 'react';
@@ -315,7 +318,7 @@ export default class Game extends Component {
         cursors={cursors}
         pings={pings}
         users={users}
-        frozen={solved}
+        frozen={solved || this.props.syncFailed}
         myColor={myColor}
         updateGrid={this.handleUpdateGrid}
         updateCursor={this.handleUpdateCursor}
@@ -367,7 +370,7 @@ export default class Game extends Component {
         mobile={mobile}
         startTime={startTime}
         pausedTime={pausedTime}
-        isPaused={isPaused}
+        isPaused={isPaused || this.props.syncFailed}
         listMode={listMode}
         expandMenu={expandMenu}
         pencilMode={pencilMode}
