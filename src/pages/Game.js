@@ -133,7 +133,11 @@ export default class Game extends Component {
     this.gameModel.on('reconnect', () => {
       // Don't clear optimistic events — the retry loop will re-send them
       // and they'll be confirmed through the normal server broadcast flow
-      this.setState({syncWarning: null});
+      // Only clear the warning banner if the model isn't in 'failed' state —
+      // failed events exhausted retries and were never persisted
+      if (this.gameModel.syncState !== 'failed') {
+        this.setState({syncWarning: null});
+      }
       this.handleChange();
       this.handleUpdate();
     });
