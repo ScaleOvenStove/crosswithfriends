@@ -19,7 +19,10 @@ IF NOT EXISTS puzzles
   content jsonb,
 
   -- who uploaded this puzzle (NULL for puzzles uploaded before auth)
-  uploaded_by UUID REFERENCES users(id)
+  uploaded_by UUID REFERENCES users(id),
+
+  -- SHA-256 hash for duplicate detection
+  content_hash text
 );
 
 ALTER TABLE public.puzzles
@@ -36,3 +39,6 @@ CREATE INDEX puzzle_pid_numeric_desc
     ON public.puzzles USING btree
     (pid_numeric DESC NULLS LAST)
     TABLESPACE pg_default;
+
+CREATE UNIQUE INDEX IF NOT EXISTS puzzles_content_hash_public
+    ON puzzles (content_hash) WHERE is_public = true AND content_hash IS NOT NULL;
