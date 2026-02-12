@@ -89,8 +89,9 @@ export default class Game extends EventEmitter {
   }
 
   setSyncState(level, detail) {
-    // Don't downgrade from 'failed' to 'retrying' — only a successful send or reconnect clears it
-    if (this.syncState === 'failed' && level === 'retrying') return;
+    // Once failed, only a reconnect (or refresh) can clear it — individual
+    // event successes and retries must not mask the lost-data state
+    if (this.syncState === 'failed' && level !== 'failed') return;
     this.syncState = level;
     this.emit('syncWarning', {level, ...detail});
   }

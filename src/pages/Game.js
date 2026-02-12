@@ -206,6 +206,7 @@ export default class Game extends Component {
   }
 
   componentWillUnmount() {
+    if (this._retryTimer) clearInterval(this._retryTimer);
     if (this.gameModel) this.gameModel.detach();
   }
 
