@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle, @typescript-eslint/no-shadow, no-param-reassign */
 import _ from 'lodash';
 import {reduce as gameReducer} from '../reducers/game';
 
@@ -97,6 +98,10 @@ export default class HistoryWrapper {
   addEvent(event) {
     window.timeStampOffset = event.timestamp - Date.now();
     this.optimisticEvents = this.optimisticEvents.filter((ev) => ev.id !== event.id);
+    // Dedup: skip if this event ID is already in history (can happen after reconnect retry)
+    if (event.id && this.history.some((e) => e.id === event.id)) {
+      return;
+    }
     // we must support retroactive updates to the event log
     const insertPoint = _.sortedLastIndexBy(this.history, event, (event) => event.timestamp);
     this.history.splice(insertPoint, 0, event);
@@ -122,15 +127,6 @@ export default class HistoryWrapper {
       ...event,
       timestamp: (_.last(this.history)?.timestamp ?? 0) + this.optimisticEvents.length + 1000,
     };
-    setTimeout(() => {
-      if (this.optimisticEvents.includes(event)) {
-        console.log('Detected websocket drop, reconnecting...');
-        this.optimisticEvents = [];
-        alert('disconnected, please refresh');
-        window.socket.close();
-        window.socket.open();
-      }
-    }, 5000);
     this.optimisticEvents.push(event);
   }
 

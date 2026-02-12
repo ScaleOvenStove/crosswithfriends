@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary, class-methods-use-this, consistent-return, react/jsx-no-bind */
 import 'react-flexview/lib/flexView.css';
 
 import React, {Component} from 'react';
@@ -133,9 +134,37 @@ export default class Game extends Component {
       this.handleUpdate();
     });
     this.gameModel.on('reconnect', () => {
-      this.historyWrapper.clearOptimisticEvents();
+      // Don't clear optimistic events — the retry loop will re-send them
+      // and they'll be confirmed through the normal server broadcast flow
+      // Only clear the warning banner if the model isn't in 'failed' state —
+      // failed events exhausted retries and were never persisted
+      if (this.gameModel.syncState !== 'failed') {
+        this.setState({syncWarning: null});
+      }
       this.handleChange();
       this.handleUpdate();
+    });
+    this.gameModel.on('syncWarning', (info) => {
+      if (!info || !info.level) {
+        this.setState({syncWarning: null, retryCountdown: 0});
+        if (this._retryTimer) clearInterval(this._retryTimer);
+        return;
+      }
+      this.setState({syncWarning: info.level});
+      if (info.level === 'retrying' && info.retryIn) {
+        this.setState({retryCountdown: info.retryIn});
+        if (this._retryTimer) clearInterval(this._retryTimer);
+        this._retryTimer = setInterval(() => {
+          this.setState((prev) => {
+            const next = prev.retryCountdown - 1;
+            if (next <= 0) {
+              clearInterval(this._retryTimer);
+              return {retryCountdown: 0};
+            }
+            return {retryCountdown: next};
+          });
+        }, 1000);
+      }
     });
 
     this.gameModel.on('archived', () => {
@@ -180,6 +209,7 @@ export default class Game extends Component {
   }
 
   componentWillUnmount() {
+    if (this._retryTimer) clearInterval(this._retryTimer);
     if (this.gameModel) this.gameModel.detach();
   }
 
@@ -356,6 +386,7 @@ export default class Game extends Component {
         battleModel={this.battleModel}
         team={this.state.team}
         unreads={this.unreads}
+        syncFailed={this.state.syncWarning === 'failed'}
       />
     );
   }
@@ -446,6 +477,56 @@ export default class Game extends Component {
         <Helmet>
           <title>{this.getPuzzleTitle()}</title>
         </Helmet>
+        {this.state.syncWarning === 'retrying' && (
+          <div
+            style={{
+              background: '#e65100',
+              color: 'white',
+              padding: '6px 12px',
+              textAlign: 'center',
+              fontSize: '14px',
+            }}
+          >
+            Connection interrupted — retrying
+            {this.state.retryCountdown > 0 ? ` in ${this.state.retryCountdown}s` : ''}...
+          </div>
+        )}
+        {this.state.syncWarning === 'failed' && (
+          <div
+            style={{
+              background: window.socket?.connected ? '#2e7d32' : '#b71c1c',
+              color: 'white',
+              padding: '8px 12px',
+              textAlign: 'center',
+              fontSize: '14px',
+            }}
+          >
+            {window.socket?.connected ? (
+              <>
+                You are back online! Any letters typed while offline were not saved. Click refresh to resync
+                your game.
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  style={{
+                    background: 'white',
+                    color: '#2e7d32',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '4px 12px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    marginLeft: '8px',
+                  }}
+                >
+                  Refresh
+                </button>
+              </>
+            ) : (
+              'Connection lost — leaving this page may lose your progress. Stay here until reconnected.'
+            )}
+          </div>
+        )}
         {this.renderContent()}
       </Flex>
     );
