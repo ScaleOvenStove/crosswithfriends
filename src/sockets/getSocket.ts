@@ -11,11 +11,26 @@ export const getSocket = () => {
 
       (window as any).socket = socket;
 
-      socket.on('pong', (ms: number) => {
-        (window as any).connectionStatus = {
-          latency: ms,
-          timestamp: Date.now(),
-        };
+      // In socket.io v4, ping/pong is handled by Engine.IO — measure round-trip latency.
+      // The Manager replaces its engine on each reconnect, so we must rebind listeners
+      // every time a new engine is created.
+      let pingStart = 0;
+      const bindEngineListeners = () => {
+        socket.io.engine.on('ping', () => {
+          pingStart = Date.now();
+        });
+        socket.io.engine.on('pong', () => {
+          (window as any).connectionStatus = {
+            connected: true,
+            latency: pingStart ? Date.now() - pingStart : 0,
+            timestamp: Date.now(),
+          };
+        });
+      };
+      bindEngineListeners();
+      socket.io.on('open', bindEngineListeners);
+      socket.on('disconnect', () => {
+        (window as any).connectionStatus = undefined;
       });
 
       console.log('Connecting to', SOCKET_HOST);

@@ -1,4 +1,5 @@
-/* eslint react/no-string-refs: "warn" */
+/* eslint-disable react/no-string-refs */
+/* eslint-disable react/jsx-props-no-spreading */
 import './css/index.css';
 
 import React, {Component} from 'react';
@@ -611,12 +612,7 @@ export default class Player extends Component {
               margin: '0 auto',
             }}
           >
-            <div>
-              {this.props.optimisticCounter ? <>{this.props.optimisticCounter} ahead</> : <>Synced</>}
-            </div>
-            <div>
-              <ConnectionStats />
-            </div>
+            <ConnectionStats optimisticCounter={this.props.optimisticCounter} />
           </div>
         )}
         {this.renderColorAttributionCounts()}
