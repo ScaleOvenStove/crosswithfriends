@@ -1,8 +1,9 @@
 import React, {useState, useEffect} from 'react';
 
-const ConnectionStats: React.FC<{}> = () => {
+const ConnectionStats: React.FC<{optimisticCounter?: number}> = ({optimisticCounter}) => {
   const [connectionStatus, setConnectionStatus] = useState<
     | {
+        connected: boolean;
         latency: number;
         timestamp: number;
       }
@@ -11,19 +12,17 @@ const ConnectionStats: React.FC<{}> = () => {
   useEffect(() => {
     const it = setInterval(() => {
       setConnectionStatus((window as any).connectionStatus);
-    }, 100);
+    }, 2000);
     return () => {
       clearInterval(it);
     };
   }, []);
 
-  if (connectionStatus) {
+  if (connectionStatus?.connected) {
+    const syncLabel = optimisticCounter ? `${optimisticCounter} ahead` : 'Synced';
     return (
       <div>
-        <div>
-          Ping: {connectionStatus?.latency}
-          ms ({Math.floor((Date.now() - connectionStatus?.timestamp) / 1000)}s ago)
-        </div>
+        {syncLabel} ({connectionStatus.latency}ms)
       </div>
     );
   }
