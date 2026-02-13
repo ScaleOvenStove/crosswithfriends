@@ -47,7 +47,7 @@ export default class Game extends Component {
       vimMode,
     });
 
-    let skipFilledSquares = true;
+    let skipFilledSquares = this.state.skipFilledSquares;
     try {
       const storedValue = localStorage.getItem(skipFilledSquaresKey);
       if (storedValue != null) {
