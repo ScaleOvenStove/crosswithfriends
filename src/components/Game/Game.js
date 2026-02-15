@@ -14,6 +14,7 @@ import Toolbar from '../Toolbar';
 import {toArr} from '../../lib/jsUtils';
 import {toHex, darken, GREENISH} from '../../lib/colors';
 
+const skipFilledSquaresKey = 'skip-filled-squares';
 const vimModeKey = 'vim-mode';
 const vimModeRegex = /^\d+(a|d)*$/;
 
@@ -45,6 +46,18 @@ export default class Game extends Component {
     this.setState({
       vimMode,
     });
+
+    let skipFilledSquares = this.state.skipFilledSquares;
+    try {
+      const storedValue = localStorage.getItem(skipFilledSquaresKey);
+      if (storedValue != null) {
+        skipFilledSquares = JSON.parse(localStorage.getItem(skipFilledSquaresKey));
+      }
+    } catch (e) {
+      console.error('Failed to parse local storage: skipFilledSquares');
+    }
+    this.setState({skipFilledSquares});
+
     this.componentDidUpdate({});
   }
 
@@ -185,9 +198,11 @@ export default class Game extends Component {
   };
 
   handleToggleSkipFilledSquares = () => {
-    this.setState((prevState) => ({
-      skipFilledSquares: !prevState.skipFilledSquares,
-    }));
+    this.setState((prevState) => {
+      const skipFilledSquares = !prevState.skipFilledSquares;
+      localStorage.setItem(skipFilledSquaresKey, JSON.stringify(skipFilledSquares));
+      return {skipFilledSquares: skipFilledSquares};
+    });
   };
 
   handleTogglePencil = () => {
