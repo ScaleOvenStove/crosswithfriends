@@ -1,5 +1,4 @@
 import Puz from 'puzjs';
-import GridObject from './wrappers/GridWrapper';
 
 const infoToMeta = (info) => {
   const {title = '', author = '', description = '', notes = '', copyright = ''} = info;
@@ -25,43 +24,6 @@ const f = () => ({
       clues,
       extras: {
         circles,
-      },
-    });
-  },
-
-  fromComposition: (composition) => {
-    const {info, grid: compositionGrid, clues: compositionClues, circles = []} = composition;
-
-    const grid = compositionGrid.map((row) =>
-      row.map(({value, pencil}) => ({
-        black: value === '.',
-        value: value === '.' ? '' : value || ' ',
-        pencil,
-        number: null,
-      }))
-    );
-    new GridObject(grid).assignNumbers();
-
-    const unalignedClues = {
-      across: [],
-      down: [],
-    };
-    compositionClues.forEach(({r, c, dir, value}) => {
-      const num = grid[r][c].number;
-      if (num) {
-        unalignedClues[dir][num] = value;
-      }
-    });
-    const clues = new GridObject(grid).alignClues(unalignedClues);
-
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    return intermediate({
-      info,
-      grid,
-      clues,
-      extras: {
-        circles,
-        shades: [],
       },
     });
   },
@@ -99,9 +61,6 @@ const intermediate = ({info, grid, clues, extras}) => {
         clues,
         circles: extras.circles,
       }),
-    toComposition: () => ({
-      // TODO
-    }),
 
     toPuzzle: () => ({
       grid,

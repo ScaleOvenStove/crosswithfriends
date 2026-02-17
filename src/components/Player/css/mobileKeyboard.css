@@ -36,9 +36,6 @@
   background-position: center;
 }
 
-.simple-keyboard .hg-button.hg-button-emoji::after {
-}
-
 .simple-keyboard .hg-button.hg-button-space {
   color: white;
   width: 180px;

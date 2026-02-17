@@ -162,11 +162,6 @@
   }
 }
 
-/* Legacy styles kept for other pages that may reference them */
-.nav--v2 {
-  color: pink;
-  margin-left: 2px;
-}
 
 .secret {
   opacity: 0;

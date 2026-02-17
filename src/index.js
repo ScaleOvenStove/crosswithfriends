@@ -9,8 +9,6 @@ import {isMobile} from './lib/jsUtils';
 import {
   Account,
   Battle,
-  Compose,
-  Composition,
   Game,
   Play,
   Privacy,
@@ -53,6 +51,13 @@ function VerificationGate({children}) {
   // Redirect unverified users to the verify-email page
   return <Redirect to="/verify-email" />;
 }
+
+const DiscordRedirect = () => {
+  React.useEffect(() => {
+    window.location.href = 'https://discord.gg/RmjCV8EZ73';
+  }, []);
+  return null;
+};
 
 const Root = () => {
   const urlDarkMode = window.location.search.indexOf('dark') !== -1;
@@ -120,18 +125,9 @@ const Root = () => {
                 <Route path="/account" component={Account} />
                 <Route exact path="/profile" component={Profile} />
                 <Route exact path="/profile/:userId" component={Profile} />
-                <Route exact path="/compose" component={Compose} />
-                <Route exact path="/composition/:cid" component={Composition} />
                 <Route exact path="/fencing/:gid" component={Fencing} />
                 <Route exact path="/beta/fencing/:gid" component={Fencing} />
-                <Route
-                  exact
-                  path="/discord"
-                  component={() => {
-                    window.location.href = 'https://discord.gg/RmjCV8EZ73';
-                    return null;
-                  }}
-                />
+                <Route exact path="/discord" component={DiscordRedirect} />
               </Switch>
             </VerificationGate>
           </div>
