@@ -1,11 +1,4 @@
-import {
-  getOppositeDirection,
-  makeEmptyGame,
-  makeGrid,
-  allNums,
-  getReferencedClues,
-  convertGridForComposition,
-} from '../gameUtils';
+import {getOppositeDirection, makeEmptyGame, makeGrid, allNums, getReferencedClues} from '../gameUtils';
 
 describe('getOppositeDirection', () => {
   it('returns down for across', () => {
@@ -167,17 +160,5 @@ describe('getReferencedClues', () => {
 
   it('returns empty array for no references', () => {
     expect(getReferencedClues('Just a normal clue', clues)).toEqual([]);
-  });
-});
-
-describe('convertGridForComposition', () => {
-  it('wraps each cell value in an object', () => {
-    const grid = [
-      ['A', 'B'],
-      ['C', '.'],
-    ];
-    const result = convertGridForComposition(grid);
-    expect(result[0][0]).toEqual({value: 'A'});
-    expect(result[1][1]).toEqual({value: '.'});
   });
 });

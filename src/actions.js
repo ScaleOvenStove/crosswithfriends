@@ -1,5 +1,4 @@
 import {gameWords} from './lib/names';
-import {makeGrid} from './lib/gameUtils';
 import firebase from './store/firebase';
 // eslint-disable-next-line import/no-cycle
 import {GameModel, PuzzleModel} from './store';
@@ -32,14 +31,6 @@ const actions = {
     cbk(bid);
   },
 
-  getNextCid: (cbk) => {
-    const NUM_CIDS = 1000000;
-    for (let tries = 0; tries < 10; tries += 1) {
-      const cid = `${NUM_CIDS + Math.floor(Math.random() * NUM_CIDS)}`.substring(1);
-      cbk(cid);
-    }
-  },
-
   // TODO: this should probably be createGame and the above should be deleted but idk what it does...
   createGameForBattle: ({pid, battleData}, cbk) => {
     actions.getNextGid((gid) => {
@@ -52,26 +43,6 @@ const actions = {
           cbk && cbk(gid);
         });
       });
-    });
-  },
-
-  createComposition: (dims, pattern, cbk) => {
-    const type = Math.max(dims.r, dims.c) <= 7 ? 'Mini Puzzle' : 'Daily Puzzle';
-    const textGrid = pattern.map((row) => row.map((cell) => (cell === 0 ? '' : '.')));
-    const grid = makeGrid(textGrid);
-    const composition = {
-      info: {
-        title: 'Untitled',
-        type,
-        author: 'Anonymous',
-      },
-      grid: grid.toArray(),
-      clues: grid.alignClues([]),
-      published: false,
-    };
-    const cid = db.ref('composition').push().key;
-    db.ref(`composition/${cid}`).set(composition, () => {
-      cbk(cid);
     });
   },
 };

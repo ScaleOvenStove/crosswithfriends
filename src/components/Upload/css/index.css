@@ -30,27 +30,3 @@
   font-size: 18px;
 }
 
-.upload--preview {
-  height: 40px;
-  padding: 15px 15px 15px 15px;
-}
-
-.upload--success {
-  margin-top: 10px;
-  font-size: 12px;
-  text-align: center;
-}
-
-.upload--success--title {
-  font-weight: bold;
-}
-
-.upload--button {
-  margin-top: 12px;
-  font-size: 15px;
-  background-color: #fafafa;
-}
-
-.upload--button.v2 {
-  background-color: #ffffff;
-}

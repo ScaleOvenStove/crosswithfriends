@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import firebase, {db, SERVER_TIME, getTime} from './firebase';
+import firebase, {db, getTime} from './firebase';
 import getLocalId from '../localAuth';
 import {rand_color} from '../lib/jsUtils';
 
@@ -61,24 +61,6 @@ export default class User extends EventEmitter {
       .child('history')
       .once('value')
       .then((snapshot) => snapshot.val());
-  }
-
-  listCompositions() {
-    return this.ref
-      .child('compositions')
-      .once('value')
-      .then((snapshot) => snapshot.val());
-  }
-
-  // write methods
-  joinComposition(cid, {title, author, published = false}) {
-    // safe to call this multiple times
-    return this.ref.child('compositions').child(cid).set({
-      title,
-      author,
-      published,
-      updateTime: SERVER_TIME,
-    });
   }
 
   joinGame(gid, {pid = -1, solved = false, v2 = false}) {
