@@ -60,11 +60,6 @@
   align-items: center;
 }
 
-.nav--v2 {
-  color: pink;
-  margin-left: 2px;
-}
-
 .secret {
   opacity: 0;
   transition: all ease-in 0.5s;
