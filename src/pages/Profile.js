@@ -90,16 +90,14 @@ function HistoryTable({history}) {
             <th>Size</th>
             <th>Time</th>
             <th>Date</th>
-            <th>Replay</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {history.map((item) => (
             <tr key={`${item.pid}-${item.gid}`}>
               <td>
-                <Link to={`/beta/play/${item.pid}`} style={{color: 'inherit'}}>
-                  {item.title}
-                </Link>
+                {item.title}
                 <CollabTag
                   playerCount={item.playerCount}
                   coSolvers={item.coSolvers}
@@ -109,9 +107,19 @@ function HistoryTable({history}) {
               <td>{item.size}</td>
               <td>{formatTime(item.time)}</td>
               <td>{formatDate(item.solvedAt)}</td>
-              <td>
+              <td className="profile--actions">
                 <Link to={`/beta/replay/${item.gid}`} className="profile--replay-link" title="Watch replay">
-                  <FaPlay size={10} />
+                  <span className="profile--actions-full">View Replay</span>
+                  <span className="profile--actions-short">Replay</span>
+                </Link>
+                <span className="profile--actions-sep">|</span>
+                <Link
+                  to={`/beta/play/${item.pid}`}
+                  className="profile--replay-link"
+                  title="View solved puzzle"
+                >
+                  <span className="profile--actions-full">View Solved Puzzle</span>
+                  <span className="profile--actions-short">Puzzle</span>
                 </Link>
               </td>
             </tr>
@@ -222,6 +230,9 @@ export default function Profile() {
     }
     let cancelled = false;
     setLoading(true);
+    setNotFound(false);
+    setIsPrivate(false);
+    setData(null);
     getUserStats(targetUserId, accessToken).then((result) => {
       if (cancelled) return;
       if (!result) {

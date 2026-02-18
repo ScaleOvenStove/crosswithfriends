@@ -117,6 +117,58 @@
   opacity: 0.7;
 }
 
+.profile--actions {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.profile--actions-sep {
+  margin: 0 4px;
+  color: #ccc;
+}
+
+.profile--actions-short {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .profile--actions {
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .profile--actions-full {
+    display: none;
+  }
+
+  .profile--actions-short {
+    display: inline;
+  }
+
+  .profile--history-table {
+    table-layout: fixed;
+    word-break: break-word;
+  }
+
+  .profile--history-table th {
+    white-space: nowrap;
+  }
+
+  .profile--history-table th:nth-child(2),
+  .profile--history-table td:nth-child(2) {
+    display: none;
+  }
+
+  .profile--history-table thead,
+  .profile--history-table tbody,
+  .profile--history-table tr,
+  .profile--history-table th,
+  .profile--history-table td {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+}
+
 .profile--uploads {
   margin-top: 32px;
 }
@@ -198,6 +250,10 @@
 
 .dark .profile--replay-link {
   color: #6aa9f4;
+}
+
+.dark .profile--actions-sep {
+  color: #555;
 }
 
 .dark .profile--uploads h3 {

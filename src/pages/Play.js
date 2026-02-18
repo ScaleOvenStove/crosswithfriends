@@ -1,4 +1,5 @@
 import React, {Component} from 'react';
+import {Helmet} from 'react-helmet';
 import _ from 'lodash';
 import querystring from 'querystring';
 import Timestamp from 'react-timestamp';
@@ -147,6 +148,9 @@ export default class Play extends Component {
   render() {
     return (
       <div>
+        <Helmet>
+          <title>Play - Cross with Friends</title>
+        </Helmet>
         <Nav />
         {this.renderMain()}
       </div>
