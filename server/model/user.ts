@@ -127,16 +127,18 @@ export async function verifyPassword(plaintext: string, hash: string): Promise<b
   return bcrypt.compare(plaintext, hash);
 }
 
-export async function linkDfacId(userId: string, dfacId: string): Promise<void> {
+export async function linkDfacId(userId: string, dfacId: string): Promise<boolean> {
   const startTime = Date.now();
-  await pool.query(
+  const result = await pool.query(
     `INSERT INTO user_identity_map (user_id, dfac_id)
      VALUES ($1, $2)
      ON CONFLICT (dfac_id) DO NOTHING`,
     [userId, dfacId]
   );
+  const isNew = (result.rowCount || 0) > 0;
   const ms = Date.now() - startTime;
-  console.log(`linkDfacId(${userId}, ${dfacId}) took ${ms}ms`);
+  console.log(`linkDfacId(${userId}, ${dfacId}) ${isNew ? 'NEW' : 'already linked'} in ${ms}ms`);
+  return isNew;
 }
 
 export async function getDfacIdsForUser(userId: string): Promise<string[]> {

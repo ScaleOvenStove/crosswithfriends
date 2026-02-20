@@ -650,9 +650,12 @@ router.post('/link-identity', requireAuth, async (req, res) => {
     res.status(400).json({error: 'dfacId is required'});
     return;
   }
-  await linkDfacId(req.authUser!.userId, dfacId);
-  // Backfill any anonymous puzzle_solves for games this dfac_id participated in
-  const backfilled = await backfillSolvesForDfacId(req.authUser!.userId, dfacId);
+  const isNew = await linkDfacId(req.authUser!.userId, dfacId);
+  // Only backfill on first link — skip the heavy game_events scan on subsequent page loads
+  let backfilled = 0;
+  if (isNew) {
+    backfilled = await backfillSolvesForDfacId(req.authUser!.userId, dfacId);
+  }
   res.json({ok: true, backfilledSolves: backfilled});
 });
 
