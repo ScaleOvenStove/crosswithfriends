@@ -128,48 +128,11 @@ export type InProgressGameItem = {
   lastActivity: string;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getInProgressGames(userId: string): Promise<InProgressGameItem[]> {
-  const result = await pool.query(
-    `WITH user_dfac_ids AS (
-       SELECT dfac_id FROM user_identity_map WHERE user_id = $1
-     ),
-     user_games AS (
-       SELECT gid FROM game_events WHERE uid IN (SELECT dfac_id FROM user_dfac_ids)
-       UNION
-       SELECT gid FROM game_events WHERE event_payload->'params'->>'id' IN (SELECT dfac_id FROM user_dfac_ids)
-     ),
-     solved_games AS (
-       SELECT DISTINCT gid FROM puzzle_solves WHERE user_id = $1
-     )
-     SELECT
-       ug.gid,
-       ce.event_payload->'params'->>'pid' AS pid,
-       p.content->'info'->>'title' AS title,
-       GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-         || 'x' ||
-       LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-         AS size,
-       (SELECT MAX(ge2.ts) FROM game_events ge2
-        WHERE ge2.gid = ug.gid
-          AND (ge2.uid IN (SELECT dfac_id FROM user_dfac_ids)
-               OR ge2.event_payload->'params'->>'id' IN (SELECT dfac_id FROM user_dfac_ids))
-       ) AS last_activity
-     FROM user_games ug
-     JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
-     LEFT JOIN puzzles p ON ce.event_payload->'params'->>'pid' = p.pid
-     WHERE ug.gid NOT IN (SELECT gid FROM solved_games)
-     ORDER BY last_activity DESC
-     LIMIT 50`,
-    [userId]
-  );
-
-  return result.rows.map((r: any) => ({
-    gid: r.gid,
-    pid: r.pid || '',
-    title: r.title || 'Untitled',
-    size: r.size || '',
-    lastActivity: r.last_activity ? r.last_activity.toISOString() : '',
-  }));
+  // Disabled: game_events table scans are too expensive without a game_participants table.
+  // TODO: re-enable once game_participants is implemented.
+  return [];
 }
 
 export async function backfillSolvesForDfacId(userId: string, dfacId: string): Promise<number> {
