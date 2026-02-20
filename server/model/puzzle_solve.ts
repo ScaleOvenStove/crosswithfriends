@@ -134,10 +134,9 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
        SELECT dfac_id FROM user_identity_map WHERE user_id = $1
      ),
      user_games AS (
-       SELECT DISTINCT ge.gid
-       FROM game_events ge
-       WHERE ge.uid IN (SELECT dfac_id FROM user_dfac_ids)
-          OR ge.event_payload->'params'->>'id' IN (SELECT dfac_id FROM user_dfac_ids)
+       SELECT gid FROM game_events WHERE uid IN (SELECT dfac_id FROM user_dfac_ids)
+       UNION
+       SELECT gid FROM game_events WHERE event_payload->'params'->>'id' IN (SELECT dfac_id FROM user_dfac_ids)
      ),
      solved_games AS (
        SELECT DISTINCT gid FROM puzzle_solves WHERE user_id = $1
@@ -180,9 +179,12 @@ export async function backfillSolvesForDfacId(userId: string, dfacId: string): P
     `INSERT INTO puzzle_solves (pid, gid, solved_time, time_taken_to_solve, user_id, player_count)
      SELECT ps.pid, ps.gid, ps.solved_time, ps.time_taken_to_solve, $1, ps.player_count
      FROM puzzle_solves ps
-     JOIN game_events ge ON ge.gid = ps.gid
      WHERE ps.user_id IS NULL
-       AND (ge.uid = $2 OR ge.event_payload->'params'->>'id' = $2)
+       AND ps.gid IN (
+         SELECT gid FROM game_events WHERE uid = $2
+         UNION
+         SELECT gid FROM game_events WHERE event_payload->'params'->>'id' = $2
+       )
      ON CONFLICT DO NOTHING`,
     [userId, dfacId]
   );
