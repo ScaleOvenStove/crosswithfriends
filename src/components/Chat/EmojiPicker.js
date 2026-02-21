@@ -1,4 +1,3 @@
-/* eslint react/no-unescaped-entities: "warn" */
 import React from 'react';
 
 import Flex from 'react-flexview';
@@ -189,7 +188,7 @@ export default class EmojiPicker extends React.Component {
     return (
       <Flex style={headerStyle}>
         <span>
-          <span style={patternStyle}>"{`:${pattern}`}"</span>
+          <span style={patternStyle}>&quot;{`:${pattern}`}&quot;</span>
         </span>
         <span>
           <span style={hintStyle}>

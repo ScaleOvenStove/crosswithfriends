@@ -28,6 +28,7 @@ export default class EditableSpan extends PureComponent {
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
+    // eslint-disable-next-line no-underscore-dangle -- key_ avoids collision with React's reserved `key` prop
     if (prevProps.key_ !== this.props.key_ || !this.focused) {
       this.text = this.displayValue;
       if (snapshot.start !== undefined && snapshot.start !== this.caret.startPosition) {

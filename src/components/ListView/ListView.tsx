@@ -18,9 +18,31 @@ interface ListViewProps extends GridProps {
   selectClue: (dir: 'across' | 'down', i: number) => void;
 }
 
-export default class ListView extends React.PureComponent<ListViewProps> {
-  _scrollToClue = this.scrollToClue.bind(this);
+function getSizeClass(size: number) {
+  if (size < 20) {
+    return 'tiny';
+  }
+  if (size < 25) {
+    return 'small';
+  }
+  if (size < 40) {
+    return 'medium';
+  }
+  return 'big';
+}
 
+function scrollToClue(dir: 'across' | 'down', num: number, el: any) {
+  if (el) {
+    lazy(`scrollToClue${dir}${num}`, () => {
+      const parent = el.offsetParent;
+      if (parent) {
+        parent.scrollTop = el.offsetTop - parent.offsetHeight * 0.2;
+      }
+    });
+  }
+}
+
+export default class ListView extends React.PureComponent<ListViewProps> {
   get grid() {
     return new GridWrapper(this.props.grid);
   }
@@ -94,36 +116,33 @@ export default class ListView extends React.PureComponent<ListViewProps> {
     this.props.onSetSelected({r, c});
   };
 
+  handleClickAcross = (r: number, c: number) => {
+    this.handleClick(r, c, 'across');
+  };
+
+  handleClickDown = (r: number, c: number) => {
+    this.handleClick(r, c, 'down');
+  };
+
   handleRightClick = (r: number, c: number) => {
     this.props.onPing && this.props.onPing(r, c);
   };
 
+  handleClueClick = (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+    const {dir, clueidx} = (e.currentTarget as HTMLElement).dataset;
+    if (dir && clueidx) {
+      this.props.selectClue(dir as 'across' | 'down', Number(clueidx));
+    }
+  };
+
+  handleClueKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      this.handleClueClick(e);
+    }
+  };
+
   clueContainsSquare({ori, num}: ClueCoords, r: number, c: number, dir: 'across' | 'down') {
     return this.grid.isWhite(r, c) && this.grid.getParent(r, c, ori) === num && ori === dir;
-  }
-
-  getSizeClass(size: number) {
-    if (size < 20) {
-      return 'tiny';
-    }
-    if (size < 25) {
-      return 'small';
-    }
-    if (size < 40) {
-      return 'medium';
-    }
-    return 'big';
-  }
-
-  scrollToClue(dir: 'across' | 'down', num: number, el: any) {
-    if (el) {
-      lazy(`scrollToClue${dir}${num}`, () => {
-        const parent = el.offsetParent;
-        if (parent) {
-          parent.scrollTop = el.offsetTop - parent.offsetHeight * 0.2;
-        }
-      });
-    }
   }
 
   mapGridToClues() {
@@ -178,26 +197,37 @@ export default class ListView extends React.PureComponent<ListViewProps> {
 
   render() {
     const {size, clues} = this.props;
-    const sizeClass = this.getSizeClass(size);
+    const sizeClass = getSizeClass(size);
 
     const cluesCells = this.mapGridToClues();
 
     return (
       <div className="list-view">
         <div className="list-view--scroll">
-          {(['across', 'down'] as ('across' | 'down')[]).map((dir, i) => (
-            <div className="list-view--list" key={i}>
+          {(['across', 'down'] as ('across' | 'down')[]).map((dir) => (
+            <div className="list-view--list" key={dir}>
               <div className="list-view--list--title">{dir.toUpperCase()}</div>
               {clues[dir].map(
-                (clue, i) =>
+                (clue, clueIdx) =>
                   clue && (
                     <div
                       className="list-view--list--clue"
-                      key={i}
-                      ref={this.props.isClueSelected(dir, i) ? this._scrollToClue.bind(this, dir, i) : null}
-                      onClick={this.props.selectClue.bind(this, dir, i)}
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={clueIdx}
+                      // eslint-disable-next-line react/jsx-no-bind
+                      ref={
+                        this.props.isClueSelected(dir, clueIdx)
+                          ? (el: any) => scrollToClue(dir, clueIdx, el)
+                          : null
+                      }
+                      data-dir={dir}
+                      data-clueidx={clueIdx}
+                      role="button"
+                      tabIndex={0}
+                      onClick={this.handleClueClick}
+                      onKeyDown={this.handleClueKeyDown}
                     >
-                      <div className="list-view--list--clue--number">{i}</div>
+                      <div className="list-view--list--clue--number">{clueIdx}</div>
                       <div className="list-view--list--clue--text">
                         <Clue text={clue} />
                       </div>
@@ -206,15 +236,16 @@ export default class ListView extends React.PureComponent<ListViewProps> {
                         <table className={`grid ${sizeClass}`}>
                           <tbody>
                             <RerenderBoundary
-                              name={`${dir} clue ${i}`}
-                              key={i}
-                              hash={hashGridRow(cluesCells[dir][i], {
+                              name={`${dir} clue ${clueIdx}`}
+                              // eslint-disable-next-line react/no-array-index-key
+                              key={clueIdx}
+                              hash={hashGridRow(cluesCells[dir][clueIdx], {
                                 ...this.props.cellStyle,
                                 size: this.props.size,
                               })}
                             >
                               <tr>
-                                {cluesCells[dir][i].map((cellProps) => (
+                                {cluesCells[dir][clueIdx].map((cellProps) => (
                                   <td
                                     key={`${cellProps.r}_${cellProps.c}`}
                                     className="grid--cell"
@@ -226,8 +257,11 @@ export default class ListView extends React.PureComponent<ListViewProps> {
                                     }}
                                   >
                                     <Cell
+                                      // eslint-disable-next-line react/jsx-props-no-spreading
                                       {...cellProps}
-                                      onClick={(r, c) => this.handleClick(r, c, dir)}
+                                      onClick={
+                                        dir === 'across' ? this.handleClickAcross : this.handleClickDown
+                                      }
                                       onContextMenu={this.handleRightClick}
                                       onFlipColor={this.props.onFlipColor}
                                     />

@@ -66,10 +66,13 @@ export const apply = (ownGame, opponentGame, ownPowerups, opponentPowerups) => {
     return {ownGame, opponentGame};
   }
 
-  const applyOneDirection = (ownGame, opponentGame, currentPowerups) => {
+  const applyOneDirection = (own, opponent, currentPowerups) => {
     const inUsePowerups = _.filter(currentPowerups, inUse);
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    return _.reduce(inUsePowerups, (g, p) => powerups[p.type].action(g), {ownGame, opponentGame});
+    return _.reduce(inUsePowerups, (g, p) => powerups[p.type].action(g), {
+      ownGame: own,
+      opponentGame: opponent,
+    });
   };
 
   // TODO: better names for these variables / better way to do this.

@@ -1,1 +1,6 @@
 backfills/
+build/
+jest.config.server.js
+middleware.ts
+prettier.config.js
+utils/

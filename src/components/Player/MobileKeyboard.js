@@ -56,6 +56,7 @@ export default class MobileKeyboard extends React.PureComponent {
     this.componentDidUpdate();
   }
 
+  // eslint-disable-next-line class-methods-use-this
   componentDidUpdate() {
     Array.from(document.querySelectorAll('.hg-button')).forEach((el) => {
       if (el.attributes['data-react']) return;

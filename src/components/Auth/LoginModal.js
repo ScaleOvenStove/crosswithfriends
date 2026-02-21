@@ -1,4 +1,4 @@
-import React, {useState, useContext} from 'react';
+import React, {useState, useContext, useCallback} from 'react';
 import {useHistory} from 'react-router-dom';
 import Dialog from '@material-ui/core/Dialog';
 import DialogContent from '@material-ui/core/DialogContent';
@@ -22,61 +22,86 @@ export default function LoginModal({open, onClose}) {
   const {handleLoginSuccess} = useContext(AuthContext);
   const history = useHistory();
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEmail('');
     setPassword('');
     setDisplayName('');
     setError('');
     setLoading(false);
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     resetForm();
     onClose();
-  };
+  }, [resetForm, onClose]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const tokens = await login(email, password);
-      await handleLoginSuccess(tokens);
-      handleClose();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleLogin = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setError('');
+      setLoading(true);
+      try {
+        const tokens = await login(email, password);
+        await handleLoginSuccess(tokens);
+        handleClose();
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [email, password, handleLoginSuccess, handleClose]
+  );
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const tokens = await signup(email, password, displayName);
-      await handleLoginSuccess(tokens);
-      handleClose();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSignup = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setError('');
+      setLoading(true);
+      try {
+        const tokens = await signup(email, password, displayName);
+        await handleLoginSuccess(tokens);
+        handleClose();
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [email, password, displayName, handleLoginSuccess, handleClose]
+  );
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = useCallback(() => {
     window.location.href = getGoogleAuthUrl();
-  };
+  }, []);
+
+  const handleTabChange = useCallback((e, v) => {
+    setTab(v);
+    setError('');
+  }, []);
+
+  const handleEmailChange = useCallback((e) => {
+    setEmail(e.target.value);
+  }, []);
+
+  const handlePasswordChange = useCallback((e) => {
+    setPassword(e.target.value);
+  }, []);
+
+  const handleDisplayNameChange = useCallback((e) => {
+    setDisplayName(e.target.value);
+  }, []);
+
+  const handleForgotPassword = useCallback(() => {
+    handleClose();
+    history.push('/forgot-password');
+  }, [handleClose, history]);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
       <Tabs
         value={tab}
-        onChange={(e, v) => {
-          setTab(v);
-          setError('');
-        }}
+        onChange={handleTabChange}
         variant="fullWidth"
         indicatorColor="primary"
         textColor="primary"
@@ -100,7 +125,7 @@ export default function LoginModal({open, onClose}) {
               fullWidth
               margin="dense"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
               required
             />
             <TextField
@@ -109,17 +134,14 @@ export default function LoginModal({open, onClose}) {
               fullWidth
               margin="dense"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               required
             />
             <Typography
               variant="body2"
               style={{textAlign: 'right', marginTop: 4, cursor: 'pointer'}}
               color="textSecondary"
-              onClick={() => {
-                handleClose();
-                history.push('/forgot-password');
-              }}
+              onClick={handleForgotPassword}
             >
               Forgot password?
             </Typography>
@@ -137,7 +159,7 @@ export default function LoginModal({open, onClose}) {
               fullWidth
               margin="dense"
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={handleDisplayNameChange}
               required
             />
             <TextField
@@ -146,7 +168,7 @@ export default function LoginModal({open, onClose}) {
               fullWidth
               margin="dense"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
               required
             />
             <TextField
@@ -155,7 +177,7 @@ export default function LoginModal({open, onClose}) {
               fullWidth
               margin="dense"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               required
               helperText="At least 8 characters"
             />

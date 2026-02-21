@@ -154,6 +154,7 @@ const WrappedWelcome = (props: UseFencing) => {
     fencing: props.fencing,
   };
 
+  // eslint-disable-next-line react/jsx-props-no-spreading
   return <Welcome {...welcomeProps} />;
 };
 

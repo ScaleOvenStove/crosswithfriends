@@ -64,7 +64,14 @@ export default class Play extends Component {
     if (shouldAutojoin) {
       const {gid} = games[0];
       const {v2} = games[0];
-      const href = v2 ? (this.is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`) : `/game/${gid}`;
+      let href;
+      if (!v2) {
+        href = `/game/${gid}`;
+      } else if (this.is_fencing) {
+        href = `/fencing/${gid}`;
+      } else {
+        href = `/beta/game/${gid}`;
+      }
 
       if (games.length > 1) {
         setTimeout(() => {

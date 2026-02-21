@@ -13,7 +13,44 @@ import {isMobile} from '../../lib/jsUtils';
 
 const pencilColorKey = 'pencil-color';
 
+function handleMouseDown(e) {
+  e.preventDefault();
+}
+
+function handleStopPropagation(e) {
+  e.stopPropagation();
+}
+
+function handleKeyDown(callback) {
+  return (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      callback(e);
+    }
+  };
+}
+
+function handlePencilColorPickerChange(e) {
+  const color = e.target.value;
+  document.documentElement.style.setProperty('--pencil-color', color);
+  localStorage.setItem(pencilColorKey, color);
+}
+
+function confirmResetPuzzle(callback) {
+  swal({
+    title: `Are you sure you want to reset the entire puzzle?`,
+    icon: 'warning',
+    buttons: true,
+    dangerMode: true,
+  }).then((confirmed) => {
+    if (confirmed) {
+      callback();
+    }
+  });
+}
+
 export default class Toolbar extends Component {
+  // eslint-disable-next-line class-methods-use-this
   componentDidMount() {
     document.documentElement.style.setProperty(
       '--pencil-color',
@@ -25,8 +62,8 @@ export default class Toolbar extends Component {
     this.props.onRefocus();
   };
 
-  handleMouseDown = (e) => {
-    e.preventDefault();
+  handlePencilColorPickerRef = (input) => {
+    this.pencilColorPicker = input;
   };
 
   handlePencilClick = (e) => {
@@ -48,12 +85,6 @@ export default class Toolbar extends Component {
     }
     this.pencilColorPicker.value = `#${hexColor}`;
     this.pencilColorPicker.click();
-  };
-
-  handlePencilColorPickerChange = (e) => {
-    const color = e.target.value;
-    document.documentElement.style.setProperty('--pencil-color', color);
-    localStorage.setItem(pencilColorKey, color);
   };
 
   handleAutocheckClick = (e) => {
@@ -82,7 +113,7 @@ export default class Toolbar extends Component {
       <button
         className="toolbar--btn pause"
         tabIndex={-1}
-        onMouseDown={this.handleMouseDown}
+        onMouseDown={handleMouseDown}
         onClick={onPauseClock}
       >
         Pause Clock
@@ -91,7 +122,7 @@ export default class Toolbar extends Component {
       <button
         className="toolbar--btn start"
         tabIndex={-1}
-        onMouseDown={this.handleMouseDown}
+        onMouseDown={handleMouseDown}
         onClick={onStartClock}
       >
         Start Clock
@@ -139,7 +170,7 @@ export default class Toolbar extends Component {
         actions={{
           Square: this.reset.bind(this, 'square'),
           Word: this.reset.bind(this, 'word'),
-          Puzzle: this.confirmResetPuzzle.bind(this, () => this.reset('puzzle')),
+          Puzzle: confirmResetPuzzle.bind(this, () => this.reset('puzzle')),
           'Puzzle and Timer': this.resetPuzzleAndTimer.bind(this),
         }}
       />
@@ -181,7 +212,7 @@ export default class Toolbar extends Component {
         label="Play Again"
         onBlur={this.handleBlur}
         actions={{
-          'Reset this game': this.confirmResetPuzzle.bind(this, () => {
+          'Reset this game': confirmResetPuzzle.bind(this, () => {
             this.reset('puzzle', true);
             this.props.onResetClock();
           }),
@@ -213,7 +244,10 @@ export default class Toolbar extends Component {
         <div
           className="toolbar--color-attribution-toggle"
           title="Color Attribution"
+          role="button"
+          tabIndex={0}
           onClick={onToggleColorAttributionMode}
+          onKeyDown={handleKeyDown(onToggleColorAttributionMode)}
         >
           {colorAttributionMode ? <RiPaintFill /> : <RiPaintLine />}
         </div>
@@ -223,7 +257,10 @@ export default class Toolbar extends Component {
       <div
         className={`toolbar--color-attribution-toggle${colorAttributionMode ? ' on' : ''}`}
         title="Color Attribution"
+        role="button"
+        tabIndex={0}
         onClick={onToggleColorAttributionMode}
+        onKeyDown={handleKeyDown(onToggleColorAttributionMode)}
       >
         <RiPaintFill />
       </div>
@@ -251,8 +288,11 @@ export default class Toolbar extends Component {
     return (
       <div
         className={`toolbar--list-view${listMode ? ' on' : ''}`}
+        role="button"
+        tabIndex={0}
         onClick={this.handleToggleListView}
-        onMouseDown={this.handleMouseDown}
+        onKeyDown={handleKeyDown(this.handleToggleListView)}
+        onMouseDown={handleMouseDown}
         title="List View"
       >
         <i className="fa fa-list" />
@@ -278,21 +318,28 @@ export default class Toolbar extends Component {
     return (
       <div
         className={`toolbar--pencil${pencilMode ? ' on' : ''}`}
+        role="button"
+        tabIndex={0}
         onClick={this.handlePencilClick}
-        onMouseDown={this.handleMouseDown}
+        onKeyDown={handleKeyDown(this.handlePencilClick)}
+        onMouseDown={handleMouseDown}
         title="Shortcut: ."
       >
         <i className="fa fa-pencil" />
         {pencilMode && (
           <div className="toolbar--pencil-color-picker-container">
-            <div className="toolbar--pencil-color-picker" onClick={this.handlePencilColorPickerClick} />
+            <div
+              className="toolbar--pencil-color-picker"
+              role="button"
+              tabIndex={0}
+              onClick={this.handlePencilColorPickerClick}
+              onKeyDown={handleKeyDown(this.handlePencilColorPickerClick)}
+            />
             <input
               type="color"
-              ref={(input) => {
-                this.pencilColorPicker = input;
-              }}
-              onClick={(e) => e.stopPropagation()}
-              onChange={this.handlePencilColorPickerChange}
+              ref={this.handlePencilColorPickerRef}
+              onClick={handleStopPropagation}
+              onChange={handlePencilColorPickerChange}
             />
           </div>
         )}
@@ -305,8 +352,11 @@ export default class Toolbar extends Component {
     return (
       <div
         className={`toolbar--autocheck${autocheckMode ? ' on' : ''}`}
+        role="button"
+        tabIndex={0}
         onClick={this.handleAutocheckClick}
-        onMouseDown={this.handleMouseDown}
+        onKeyDown={handleKeyDown(this.handleAutocheckClick)}
+        onMouseDown={handleMouseDown}
         title="Autocheck"
       >
         <i className="fa fa-check-square" />
@@ -434,21 +484,8 @@ export default class Toolbar extends Component {
     this.props.onKeybind(mode);
   }
 
-  confirmResetPuzzle(callback) {
-    swal({
-      title: `Are you sure you want to reset the entire puzzle?`,
-      icon: 'warning',
-      buttons: true,
-      dangerMode: true,
-    }).then((confirmed) => {
-      if (confirmed) {
-        callback();
-      }
-    });
-  }
-
   resetPuzzleAndTimer() {
-    this.confirmResetPuzzle(() => {
+    confirmResetPuzzle(() => {
       this.reset('puzzle');
       this.props.onResetClock();
     });
@@ -465,7 +502,7 @@ export default class Toolbar extends Component {
         className="toolbar--save-replay"
         onClick={onSaveReplay}
         disabled={savingReplay}
-        onMouseDown={this.handleMouseDown}
+        onMouseDown={handleMouseDown}
       >
         {savingReplay ? 'Saving...' : 'Save Replay'}
       </button>

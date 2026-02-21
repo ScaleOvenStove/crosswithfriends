@@ -9,6 +9,9 @@ export default class Clues extends Component {
       showClueLengths: false,
     };
     this._toggleShowClueLengths = this.toggleShowClueLengths.bind(this);
+    this._handleSecretKeyDown = this.handleSecretKeyDown.bind(this);
+    this._handleClueClick = this.handleClueClick.bind(this);
+    this._handleClueKeyDown = this.handleClueKeyDown.bind(this);
   }
 
   toggleShowClueLengths() {
@@ -16,55 +19,72 @@ export default class Clues extends Component {
     this.setState({showClueLengths: !showClueLengths});
   }
 
+  handleSecretKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') this._toggleShowClueLengths();
+  }
+
+  handleClueClick(e) {
+    const {dir, clueIndex} = e.currentTarget.dataset;
+    this.props.selectClue(dir, Number(clueIndex));
+  }
+
+  handleClueKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const {dir, clueIndex} = e.currentTarget.dataset;
+      this.props.selectClue(dir, Number(clueIndex));
+    }
+  }
+
   render() {
-    const {
-      clues,
-      clueLengths,
-      isClueSelected,
-      isClueHalfSelected,
-      isClueFilled,
-      scrollToClue,
-      selectClue,
-    } = this.props;
+    const {clues, clueLengths, isClueSelected, isClueHalfSelected, isClueFilled, scrollToClue} = this.props;
     const {showClueLengths} = this.state;
 
     return (
       <div className="clues">
         <div
           className="clues--secret"
+          role="button"
+          tabIndex={0}
           onClick={this._toggleShowClueLengths}
+          onKeyDown={this._handleSecretKeyDown}
           title={showClueLengths ? '' : 'Show lengths'}
         />
         {
           // Clues component
-          ['across', 'down'].map((dir, i) => (
-            <div key={i} className="clues--list">
+          ['across', 'down'].map((dir) => (
+            <div key={dir} className="clues--list">
               <div className="clues--list--title">{dir.toUpperCase()}</div>
 
               <div className={`clues--list--scroll ${dir}`} ref={`clues--list--${dir}`}>
                 {clues[dir].map(
-                  (clue, i) =>
+                  (clue, clueIndex) =>
                     clue && (
                       <div
-                        key={i}
+                        key={clueIndex} // eslint-disable-line react/no-array-index-key
+                        role="button"
+                        tabIndex={0}
                         className={`${
-                          (isClueSelected(dir, i) ? 'selected ' : ' ') +
-                          (isClueHalfSelected(dir, i) ? 'half-selected ' : ' ') +
-                          (isClueFilled(dir, i) ? 'complete ' : ' ')
+                          (isClueSelected(dir, clueIndex) ? 'selected ' : ' ') +
+                          (isClueHalfSelected(dir, clueIndex) ? 'half-selected ' : ' ') +
+                          (isClueFilled(dir, clueIndex) ? 'complete ' : ' ')
                         }clues--list--scroll--clue`}
+                        // eslint-disable-next-line react/jsx-no-bind
                         ref={
-                          isClueSelected(dir, i) || isClueHalfSelected(dir, i)
-                            ? scrollToClue.bind(this, dir, i)
+                          isClueSelected(dir, clueIndex) || isClueHalfSelected(dir, clueIndex)
+                            ? (node) => scrollToClue(dir, clueIndex, node)
                             : null
                         }
-                        onClick={selectClue.bind(this, dir, i)}
+                        data-dir={dir}
+                        data-clue-index={clueIndex}
+                        onClick={this._handleClueClick}
+                        onKeyDown={this._handleClueKeyDown}
                       >
-                        <div className="clues--list--scroll--clue--number">{i}</div>
+                        <div className="clues--list--scroll--clue--number">{clueIndex}</div>
                         <div className="clues--list--scroll--clue--text">
                           <ClueText text={clue} />
                           {showClueLengths ? (
                             <span className="clues--list--scroll--clue--hint">
-                              {'  '}({clueLengths[dir][i]})
+                              {'  '}({clueLengths[dir][clueIndex]})
                             </span>
                           ) : null}
                         </div>

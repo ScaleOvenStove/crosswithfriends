@@ -22,18 +22,18 @@ export interface EntryProps {
   isPublic?: boolean;
 }
 
+const handleClick = () => {
+  /*
+  this.setState({
+    expanded: !this.state.expanded,
+  });
+  this.props.onPlay(this.props.pid);
+  */
+};
+
+const handleMouseLeave = () => {};
+
 export default class Entry extends Component<EntryProps> {
-  handleClick = () => {
-    /*
-    this.setState({
-      expanded: !this.state.expanded,
-    });
-    this.props.onPlay(this.props.pid);
-    */
-  };
-
-  handleMouseLeave = () => {};
-
   get size() {
     const {grid, title} = this.props;
     const titleLower = (title || '').toLowerCase();
@@ -69,7 +69,7 @@ export default class Entry extends Component<EntryProps> {
         to={`/beta/play/${pid}${fencing ? '?fencing=1' : ''}`}
         style={{textDecoration: 'none', color: 'initial'}}
       >
-        <Flex className="entry" column onClick={this.handleClick} onMouseLeave={this.handleMouseLeave}>
+        <Flex className="entry" column onClick={handleClick} onMouseLeave={handleMouseLeave}>
           <Flex className="entry--top--left">
             <Flex grow={0}>
               <p

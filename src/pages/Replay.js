@@ -1,4 +1,3 @@
-/* eslint react/no-string-refs: "warn" */
 // eslint-disable-next-line max-classes-per-file
 import './css/replay.css';
 import React, {Component} from 'react';
@@ -52,12 +51,46 @@ export default class Replay extends Component {
     };
     this.followCursor = -1;
     this.historyWrapper = null;
+
+    this.gameRef = React.createRef();
+    this.chatRef = React.createRef();
+    this.controlsRef = React.createRef();
+    this.scrubLeftRef = React.createRef();
+    this.scrubRightRef = React.createRef();
+
+    this.handleToggleColorAttributionMode = this.handleToggleColorAttributionMode.bind(this);
+    this.handleToggleListView = this.handleToggleListView.bind(this);
+    this.handleToggleExpandMenu = this.handleToggleExpandMenu.bind(this);
+    this.handleSetAutoplaySpeed = this.handleSetAutoplaySpeed.bind(this);
+  }
+
+  handleToggleColorAttributionMode() {
+    this.setState((prevState) => ({colorAttributionMode: !prevState.colorAttributionMode}));
+  }
+
+  handleToggleListView() {
+    this.setState((prevState) => ({
+      listMode: !prevState.listMode,
+    }));
+  }
+
+  handleToggleExpandMenu() {
+    this.setState((prevState) => ({expandMenu: !prevState.expandMenu}));
+  }
+
+  handleSetAutoplaySpeed(e) {
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    const speed = Number(e.currentTarget.dataset.speed);
+    this.setState({autoplaySpeed: speed});
   }
 
   handleSetPosition = (position, isAutoplay = false) => {
-    position = Math.min(position, this.state.history[this.state.history.length - 1].gameTimestamp);
-    this.setState({position});
-    this.setPositionToRender(position);
+    const clampedPosition = Math.min(
+      position,
+      this.state.history[this.state.history.length - 1].gameTimestamp
+    );
+    this.setState({position: clampedPosition});
+    this.setPositionToRender(clampedPosition);
     if (!isAutoplay && this.state.autoplayEnabled) {
       this.setState({
         autoplayEnabled: false,
@@ -67,7 +100,7 @@ export default class Replay extends Component {
 
   setPositionToRender = _.throttle((positionToRender) => {
     this.setState({positionToRender});
-    this.refs.controls.focus();
+    this.controlsRef.current.focus();
   }, 200);
 
   get gid() {
@@ -169,9 +202,9 @@ export default class Replay extends Component {
 
     // compute it here so the grid doesn't go crazy
     this.screenWidth = window.innerWidth - 1;
-    if (this.refs.controls) {
+    if (this.controlsRef.current) {
       setTimeout(() => {
-        this.refs.controls.focus();
+        this.controlsRef.current.focus();
       }, 100);
     }
 
@@ -192,7 +225,7 @@ export default class Replay extends Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.position !== this.state.position) {
-      if (!this.refs.game) return;
+      if (!this.gameRef.current) return;
       if (!this.game.cursors) return;
       const gameCursors = this.game.cursors;
       if (this.followCursor === -1) {
@@ -203,12 +236,12 @@ export default class Replay extends Component {
       }
 
       if (this.followCursor !== undefined) {
-        const gameCursors = this.game.cursors;
-        const cursor = _.find(gameCursors, (cursor) => cursor.id === this.followCursor);
-        if (cursor) {
-          this.refs.game.setSelected({
-            r: cursor.r,
-            c: cursor.c,
+        const innerGameCursors = this.game.cursors;
+        const cursorEntry = _.find(innerGameCursors, (c) => c.id === this.followCursor);
+        if (cursorEntry) {
+          this.gameRef.current.setSelected({
+            r: cursorEntry.r,
+            c: cursorEntry.c,
           });
         }
       }
@@ -222,16 +255,16 @@ export default class Replay extends Component {
   };
 
   focus = () => {
-    if (this.refs.controls) {
-      this.refs.controls.focus();
+    if (this.controlsRef.current) {
+      this.controlsRef.current.focus();
     }
   };
 
   handleUpdateCursor = ({r, c}) => {
-    const gameCursors = this.game.cursors;
-    const cursor = _.find(gameCursors, (cursor) => cursor.r === r && cursor.c === c);
-    if (cursor !== undefined) {
-      this.followCursor = cursor.id;
+    const currentCursors = this.game.cursors;
+    const matchedCursor = _.find(currentCursors, (cur) => cur.r === r && cur.c === c);
+    if (matchedCursor !== undefined) {
+      this.followCursor = matchedCursor.id;
     } else {
       this.followCursor = undefined;
     }
@@ -279,6 +312,12 @@ export default class Replay extends Component {
       this.setState({left: false});
     } else if (e.key === 'ArrowRight') {
       this.setState({right: false});
+    }
+  };
+
+  handleAutoplayKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      this.handleToggleAutoplay();
     }
   };
 
@@ -357,17 +396,9 @@ export default class Replay extends Component {
         colorAttributionMode={this.state.colorAttributionMode}
         listMode={this.state.listMode}
         expandMenu={this.state.expandMenu}
-        onToggleColorAttributionMode={() => {
-          this.setState((prevState) => ({colorAttributionMode: !prevState.colorAttributionMode}));
-        }}
-        onToggleListView={() => {
-          this.setState((prevState) => ({
-            listMode: !prevState.listMode,
-          }));
-        }}
-        onToggleExpandMenu={() => {
-          this.setState((prevState) => ({expandMenu: !prevState.expandMenu}));
-        }}
+        onToggleColorAttributionMode={this.handleToggleColorAttributionMode}
+        onToggleListView={this.handleToggleListView}
+        onToggleExpandMenu={this.handleToggleExpandMenu}
       />
     );
   }
@@ -474,7 +505,7 @@ export default class Replay extends Component {
     const size = width / cols;
     return (
       <Player
-        ref="game"
+        ref={this.gameRef}
         size={size}
         grid={grid}
         circles={circles}
@@ -504,7 +535,13 @@ export default class Replay extends Component {
 
     return (
       <div className="replay--chat">
-        <Chat ref="chat" info={this.game.info} data={this.game.chat} colors={this.game.colors} hideChatBar />
+        <Chat
+          ref={this.chatRef}
+          info={this.game.info}
+          data={this.game.chat}
+          colors={this.game.colors}
+          hideChatBar
+        />
       </div>
     );
   }
@@ -516,7 +553,7 @@ export default class Replay extends Component {
     // renders the controls / state
     return (
       <div
-        ref="controls"
+        ref={this.controlsRef}
         style={{
           flex: 1,
           display: 'flex',
@@ -526,7 +563,8 @@ export default class Replay extends Component {
           outline: 'none',
           width,
         }}
-        tabIndex="1"
+        role="toolbar"
+        tabIndex={0}
         onKeyDown={this.handleKeyDown}
         onKeyUp={this.handleKeyUp}
       >
@@ -540,7 +578,7 @@ export default class Replay extends Component {
         ) : null}
         <div className="replay--control-icons">
           <MdChevronLeft
-            ref="scrubLeft"
+            ref={this.scrubLeftRef}
             className={`scrub ${left ? 'active' : ''}`}
             onMouseDown={this.handleMouseDownLeft}
             onMouseUp={this.handleMouseUpLeft}
@@ -548,13 +586,19 @@ export default class Replay extends Component {
             onTouchEnd={this.handleMouseUpLeft}
             onMouseLeave={this.handleMouseUpLeft}
           />
-          <div className="scrub--autoplay" onClick={this.handleToggleAutoplay}>
+          <div
+            className="scrub--autoplay"
+            role="button"
+            tabIndex={0}
+            onClick={this.handleToggleAutoplay}
+            onKeyDown={this.handleAutoplayKeyDown}
+          >
             {autoplayEnabled && <MdPause />}
             {!autoplayEnabled && <MdPlayArrow />}
           </div>
           <Tooltip title="Shortcut: Right Arrow">
             <MdChevronRight
-              ref="scrubRight"
+              ref={this.scrubRightRef}
               className={`scrub ${right ? 'active' : ''}`}
               onMouseDown={this.handleMouseDownRight}
               onTouchStart={this.handleMouseDownRight}
@@ -575,9 +619,11 @@ export default class Replay extends Component {
           {AUTOPLAY_SPEEDS.map((speed) => (
             <div
               className={`scrub--speed--option${speed === this.state.autoplaySpeed ? ' selected' : ''}`}
-              onClick={() => {
-                this.setState({autoplaySpeed: speed});
-              }}
+              onClick={this.handleSetAutoplaySpeed}
+              data-speed={speed}
+              role="button"
+              tabIndex={0}
+              onKeyDown={this.handleSetAutoplaySpeed}
               key={speed}
             >
               {speed}x

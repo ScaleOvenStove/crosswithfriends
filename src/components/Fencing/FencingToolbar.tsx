@@ -1,15 +1,18 @@
-import React from 'react';
+import React, {useCallback} from 'react';
 import {ToolbarActions} from './useToolbarActions';
 
-export const FencingToolbar: React.FC<{toolbarActions: ToolbarActions}> = (props) => (
-  <div>
-    <button
-      onMouseDown={(e) => {
-        e.preventDefault();
-        props.toolbarActions.revealCell();
-      }}
-    >
-      Reveal Cell
-    </button>
-  </div>
-);
+export const FencingToolbar: React.FC<{toolbarActions: ToolbarActions}> = (props) => {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      props.toolbarActions.revealCell();
+    },
+    [props.toolbarActions]
+  );
+
+  return (
+    <div>
+      <button onMouseDown={handleMouseDown}>Reveal Cell</button>
+    </div>
+  );
+};

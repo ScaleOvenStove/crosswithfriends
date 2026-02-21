@@ -7,9 +7,8 @@ const {
 } = nameWords;
 
 function capitalize(s) {
-  s = s.toLowerCase();
-  s = s.substr(0, 1).toUpperCase() + s.substr(1).toLowerCase();
-  return s;
+  const lower = s.toLowerCase();
+  return lower.substr(0, 1).toUpperCase() + lower.substr(1);
 }
 
 function isAlpha(s) {
@@ -17,9 +16,8 @@ function isAlpha(s) {
 }
 
 function sanitize(s) {
-  s = s.trim();
-  s = s.split(' ').filter(isAlpha).map(capitalize).join(' ');
-  return s;
+  const trimmed = s.trim();
+  return trimmed.split(' ').filter(isAlpha).map(capitalize).join(' ');
 }
 
 function adjFilter(s) {

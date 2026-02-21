@@ -1,21 +1,30 @@
-/* eslint react/no-string-refs: "warn", no-plusplus: "off" */
+/* eslint no-plusplus: "off" */
 import './css/gridControls.css';
 
 import React, {Component} from 'react';
 
 import GridObject from '../../lib/wrappers/GridWrapper';
 
-function safe_while(condition, step, cap = 500) {
-  while (condition() && cap >= 0) {
+function safe_while(condition, step, capLimit = 500) {
+  let remaining = capLimit;
+  while (condition() && remaining >= 0) {
     step();
-    cap -= 1;
+    remaining -= 1;
   }
+}
+
+function validLetter(letter) {
+  const VALID_SYMBOLS = '!@#$%^&*()-+=`~/?\\'; // special theme puzzles have these sometimes;
+  if (VALID_SYMBOLS.indexOf(letter) !== -1) return true;
+  return letter.match(/^[A-Z0-9]$/);
 }
 
 export default class GridControls extends Component {
   constructor() {
     super();
     this.inputRef = React.createRef();
+    this.handleClick = this.handleClick.bind(this);
+    this.handleKeyDown = this.handleKeyDown.bind(this);
   }
 
   actions = {
@@ -179,23 +188,17 @@ export default class GridControls extends Component {
   }
 
   handleAltKey(key, shiftKey) {
-    key = key.toLowerCase();
+    const lowerKey = key.toLowerCase();
     const altAction = shiftKey ? this.props.onReveal : this.props.onCheck;
-    if (key === 's') {
+    if (lowerKey === 's') {
       altAction('square');
     }
-    if (key === 'w') {
+    if (lowerKey === 'w') {
       altAction('word');
     }
-    if (key === 'p') {
+    if (lowerKey === 'p') {
       altAction('puzzle');
     }
-  }
-
-  validLetter(letter) {
-    const VALID_SYMBOLS = '!@#$%^&*()-+=`~/?\\'; // special theme puzzles have these sometimes;
-    if (VALID_SYMBOLS.indexOf(letter) !== -1) return true;
-    return letter.match(/^[A-Z0-9]$/);
   }
 
   // takes in key, a string
@@ -243,11 +246,12 @@ export default class GridControls extends Component {
       onPressEscape && onPressEscape();
     } else if (!this.props.frozen) {
       const letter = key.toUpperCase();
-      if (this.validLetter(letter)) {
+      if (validLetter(letter)) {
         this.typeLetter(letter, shiftKey);
         return true;
       }
     }
+    return undefined;
   };
 
   _handleKeyDownVim = (key, shiftKey, altKey) => {
@@ -319,11 +323,12 @@ export default class GridControls extends Component {
       onVimNormal && onVimNormal();
     } else if (vimInsert && !this.props.frozen) {
       const letter = key.toUpperCase();
-      if (this.validLetter(letter)) {
+      if (validLetter(letter)) {
         this.typeLetter(letter, shiftKey);
         return true;
       }
     }
+    return undefined;
   };
 
   handleClick(ev) {
@@ -334,12 +339,12 @@ export default class GridControls extends Component {
   // takes in a Keyboard Event
   handleKeyDown(ev) {
     const {vimMode} = this.props;
-    const _handleKeyDown = vimMode ? this._handleKeyDownVim : this._handleKeyDown;
+    const keyDownHandler = vimMode ? this._handleKeyDownVim : this._handleKeyDown;
 
     if (ev.target !== this.inputRef && (ev.tagName === 'INPUT' || ev.metaKey || ev.ctrlKey)) {
       return;
     }
-    if (_handleKeyDown(ev.key, ev.shiftKey, ev.altKey)) {
+    if (keyDownHandler(ev.key, ev.shiftKey, ev.altKey)) {
       ev.preventDefault();
       ev.stopPropagation();
     }
@@ -364,6 +369,7 @@ export default class GridControls extends Component {
     if (nextClueIfFilled) {
       this.selectNextClue();
     }
+    return undefined;
   }
 
   goToPreviousCell() {
@@ -391,37 +397,41 @@ export default class GridControls extends Component {
       this.setSelected({r, c});
       return {r, c};
     }
+    return undefined;
   }
 
   typeLetter(letter, isRebus, {nextClueIfFilled} = {}) {
     const {r, c} = this.props.selected;
     if (!this.isSelectable(r, c)) {
-      return; // don't type in hidden/non-selectable cells
+      return undefined; // don't type in hidden/non-selectable cells
     }
     if (this.props.beta) {
-      return this.typeLetterSync(letter, isRebus, {nextClueIfFilled});
+      this.typeLetterSync(letter, isRebus, {nextClueIfFilled});
+      return undefined;
     }
     if (!this.nextTime) this.nextTime = Date.now();
     setTimeout(() => {
-      if (letter === '/') isRebus = true;
-      const {r, c} = this.props.selected;
-      const value = this.props.grid[r][c].value;
-      if (!isRebus) {
+      let rebusFlag = isRebus;
+      if (letter === '/') rebusFlag = true;
+      const {r: selR, c: selC} = this.props.selected;
+      const value = this.props.grid[selR][selC].value;
+      if (!rebusFlag) {
         this.goToNextEmptyCell({nextClueIfFilled});
       }
-      this.props.updateGrid(r, c, isRebus ? (value || '').substr(0, 10) + letter : letter);
+      this.props.updateGrid(selR, selC, rebusFlag ? (value || '').substr(0, 10) + letter : letter);
     }, Math.max(0, this.nextTime - Date.now()));
     this.nextTime = Math.max(this.nextTime, Date.now()) + 30;
+    return undefined;
   }
 
   typeLetterSync(letter, isRebus, {nextClueIfFilled} = {}) {
-    if (letter === '/') isRebus = true;
+    const rebusFlag = letter === '/' ? true : isRebus;
     const {r, c} = this.props.selected;
     const value = this.props.grid[r][c].value;
-    if (!isRebus) {
+    if (!rebusFlag) {
       this.goToNextEmptyCell({nextClueIfFilled});
     }
-    this.props.updateGrid(r, c, isRebus ? (value || '').substr(0, 10) + letter : letter);
+    this.props.updateGrid(r, c, rebusFlag ? (value || '').substr(0, 10) + letter : letter);
   }
 
   // Returns true if the letter was successfully deleted
@@ -464,32 +474,33 @@ export default class GridControls extends Component {
   }
 
   render() {
-    const gridProps = {
-      style: {
-        // Disable double-tap-to-zoom as it delays clicks by up to 300ms (to see if it becomes a double-tap)
-        touchAction: 'manipulation',
-      },
+    const gridStyle = {
+      // Disable double-tap-to-zoom as it delays clicks by up to 300ms (to see if it becomes a double-tap)
+      touchAction: 'manipulation',
     };
-    const inputProps = {
-      style: {
-        opacity: 0,
-        width: 0,
-        height: 0,
-      },
-      autoComplete: 'none',
-      autoCapitalize: 'none',
+    const inputStyle = {
+      opacity: 0,
+      width: 0,
+      height: 0,
     };
     return (
       <div
-        ref="gridControls"
+        role="grid"
         className="grid-controls"
-        tabIndex="1"
-        onClick={this.handleClick.bind(this)}
-        onKeyDown={this.handleKeyDown.bind(this)}
-        {...gridProps}
+        tabIndex={0}
+        onClick={this.handleClick}
+        onKeyDown={this.handleKeyDown}
+        style={gridStyle}
       >
         <div className="grid--content">{this.props.children}</div>
-        <input tabIndex={-1} name="grid" ref={this.inputRef} {...inputProps} />
+        <input
+          tabIndex={-1}
+          name="grid"
+          ref={this.inputRef}
+          style={inputStyle}
+          autoComplete="none"
+          autoCapitalize="none"
+        />
       </div>
     );
   }

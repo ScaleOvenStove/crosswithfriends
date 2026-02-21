@@ -5,13 +5,13 @@ export default class Caret {
 
   _getRange() {
     const {el} = this;
-    if (!el) return;
+    if (!el) return undefined;
     let start;
     let end;
     if (typeof window.getSelection !== 'undefined') {
       const {baseOffset, focusOffset} = window.getSelection();
-      const start = Math.min(baseOffset, focusOffset);
-      const end = Math.max(baseOffset, focusOffset);
+      start = Math.min(baseOffset, focusOffset);
+      end = Math.max(baseOffset, focusOffset);
       return {
         start,
         end,
@@ -37,15 +37,16 @@ export default class Caret {
   set startPosition(position) {
     const {el} = this;
     if (!el) return;
-    if (position > el.length) {
-      position = el.length;
+    let pos = position;
+    if (pos > el.length) {
+      pos = el.length;
     }
     if (typeof window.getSelection !== 'undefined' && typeof document.createRange !== 'undefined') {
       const range = document.createRange();
       range.selectNodeContents(el);
       range.collapse(false);
-      range.setStart(range.startContainer, position);
-      range.setEnd(range.startContainer, position);
+      range.setStart(range.startContainer, pos);
+      range.setEnd(range.startContainer, pos);
       const sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(range);

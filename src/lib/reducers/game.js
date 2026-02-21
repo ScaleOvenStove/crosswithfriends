@@ -359,19 +359,20 @@ export const reduce = (game, action, options = {}) => {
     console.error('action', type, 'not found');
     return game;
   }
+  let result = game;
   try {
-    game = reducers[type](game, params, timestamp);
+    result = reducers[type](result, params, timestamp);
 
-    game = checkSolved(game);
+    result = checkSolved(result);
     const isPause =
-      (type === 'updateClock' && params && params.action === 'pause') || type === 'create' || game.solved;
+      (type === 'updateClock' && params && params.action === 'pause') || type === 'create' || result.solved;
     if (options.isOptimistic) {
-      game = incrementOptimisticCounter(game);
+      result = incrementOptimisticCounter(result);
     } else {
-      game = tick(game, timestamp, isPause);
+      result = tick(result, timestamp, isPause);
     }
   } catch (e) {
     console.error('Error handling action', action);
   }
-  return game;
+  return result;
 };

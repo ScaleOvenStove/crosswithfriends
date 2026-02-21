@@ -25,6 +25,13 @@ export default class Clock extends Component {
       clock: '00:00',
     };
     this._togglePause = this.togglePause.bind(this);
+    this._handleKeyDown = this._handleKeyDown.bind(this);
+  }
+
+  _handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      this._togglePause();
+    }
   }
 
   componentDidMount() {
@@ -92,7 +99,14 @@ export default class Clock extends Component {
     const clockStr = this.isPaused ? `(${clock})` : clock;
     const titleStr = this.isPaused ? 'Click to unpause' : 'Click to pause';
     return (
-      <div className="clock" onClick={this._togglePause} title={titleStr}>
+      <div
+        className="clock"
+        onClick={this._togglePause}
+        onKeyDown={this._handleKeyDown}
+        role="button"
+        tabIndex={0}
+        title={titleStr}
+      >
         {clockStr}
       </div>
     );

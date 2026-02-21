@@ -18,21 +18,30 @@ export const VimCommandBar: React.FC<VimCommandBarProps> = ({
   const [command, setCommand] = React.useState('');
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const handleKeydown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    e.stopPropagation();
-    if (e.key === 'Enter') {
-      setCommand('');
-      onEnter(command);
-    } else if (e.key === 'Escape') {
-      setCommand('');
-      onEscape();
-    }
-  };
+  const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCommand(e.target.value);
+  }, []);
 
-  const handleBlur: React.FocusEventHandler<HTMLElement> = () => {
+  const handleKeydown = React.useCallback<React.KeyboardEventHandler<HTMLInputElement>>(
+    (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        setCommand('');
+        onEnter(command);
+      } else if (e.key === 'Escape') {
+        setCommand('');
+        onEscape();
+      }
+    },
+    [command, onEnter, onEscape]
+  );
+
+  const handleBlur = React.useCallback<React.FocusEventHandler<HTMLElement>>(() => {
     setCommand('');
-    isVimCommandMode && onVimCommand();
-  };
+    if (isVimCommandMode) {
+      onVimCommand();
+    }
+  }, [isVimCommandMode, onVimCommand]);
 
   React.useEffect(() => {
     if (isVimCommandMode) {
@@ -49,7 +58,7 @@ export const VimCommandBar: React.FC<VimCommandBarProps> = ({
           ref={inputRef}
           type="text"
           value={command}
-          onChange={(e) => setCommand(e.target.value)}
+          onChange={handleChange}
           onBlur={handleBlur}
           disabled={!isVimCommandMode}
           onKeyDown={handleKeydown}

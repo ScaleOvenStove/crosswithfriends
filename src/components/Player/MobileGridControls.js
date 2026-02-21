@@ -15,6 +15,10 @@ const RunOnce = ({effect}) => {
   return null;
 };
 
+function getClueAbbreviation({clueNumber = '', direction = ''} = {}) {
+  return `${clueNumber}${direction.substring(0, 1).toUpperCase()}`;
+}
+
 export default class MobileGridControls extends GridControls {
   constructor() {
     super();
@@ -28,6 +32,7 @@ export default class MobileGridControls extends GridControls {
     this.zoomContainer = React.createRef();
     this.wasUnfocused = Date.now() - 1000;
     this.lastTouchMove = Date.now();
+    this.boundCenterGridX = () => this.centerGridX();
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -202,9 +207,31 @@ export default class MobileGridControls extends GridControls {
     this.keepFocus();
   };
 
+  gridContentRef = (e) => {
+    if (!e) return;
+    e.addEventListener('touchstart', this.handleTouchStart, {passive: false});
+    e.addEventListener('touchmove', this.handleTouchMove, {passive: false});
+    e.addEventListener('touchend', this.handleTouchEnd, {passive: false});
+  };
+
+  leftArrowRef = (e) => {
+    if (e) e.addEventListener('touchend', this.handleLeftArrowTouchEnd, {passive: false});
+  };
+
+  clueBarRef = (e) => {
+    if (!e) return;
+    e.addEventListener('touchstart', this.handleClueBarTouchStart, {passive: false});
+    e.addEventListener('touchmove', this.handleClueBarTouchMove, {passive: false});
+    e.addEventListener('touchend', this.handleClueBarTouchEnd, {passive: false});
+  };
+
+  rightArrowRef = (e) => {
+    if (e) e.addEventListener('touchend', this.handleRightArrowTouchEnd, {passive: false});
+  };
+
   getTransform(anchors, {scale, translateX, translateY}) {
     if (!this.props.enablePan) {
-      return;
+      return undefined;
     }
 
     const getCenterAndDistance = (point1, point2) => {
@@ -236,28 +263,27 @@ export default class MobileGridControls extends GridControls {
     const {center: touchCenter, distance: touchDistance} = getCenterAndDistance(
       ..._.map(anchors, ({touchPosition}) => touchPosition)
     );
+    let newScale = scale;
+    let newTranslateX = translateX;
+    let newTranslateY = translateY;
     if (anchors.length >= 2) {
-      scale = touchDistance / pixelDistance;
+      newScale = touchDistance / pixelDistance;
     }
 
     if (anchors.length >= 1) {
-      translateX = touchCenter.x - scale * pixelCenter.x;
-      translateY = touchCenter.y - scale * pixelCenter.y;
+      newTranslateX = touchCenter.x - newScale * pixelCenter.x;
+      newTranslateY = touchCenter.y - newScale * pixelCenter.y;
     }
 
     return {
-      scale,
-      translateX,
-      translateY,
+      scale: newScale,
+      translateX: newTranslateX,
+      translateY: newTranslateY,
     };
   }
 
   get grid() {
     return new GridObject(this.props.grid);
-  }
-
-  getClueAbbreviation({clueNumber = '', direction = ''} = {}) {
-    return `${clueNumber}${direction.substring(0, 1).toUpperCase()}`;
   }
 
   getClueText({clueNumber = '', direction = ''} = {}) {
@@ -283,13 +309,7 @@ export default class MobileGridControls extends GridControls {
           flexBasis: 1,
         }}
         className="mobile-grid-controls--grid-content"
-        ref={(e) => {
-          if (!e) return;
-          e.addEventListener('touchstart', this.handleTouchStart, {passive: false});
-          e.addEventListener('touchmove', this.handleTouchMove, {passive: false});
-          e.addEventListener('touchend', this.handleTouchEnd, {passive: false});
-          // e.addEventListener('mouseup', this.handleTouchEnd, {passive: false});
-        }}
+        ref={this.gridContentRef}
       >
         <div
           style={{display: 'flex', flexGrow: 1}}
@@ -307,31 +327,26 @@ export default class MobileGridControls extends GridControls {
   renderClueBar() {
     return (
       <Flex className="mobile-grid-controls--clue-bar-container">
-        <div
-          ref={(e) => e && e.addEventListener('touchend', this.handleLeftArrowTouchEnd, {passive: false})}
-          style={{display: 'flex'}}
-        >
+        <div ref={this.leftArrowRef} style={{display: 'flex'}}>
           <MdKeyboardArrowLeft className="mobile-grid-controls--intra-clue left" onClick={this.keepFocus} />
         </div>
         <div
+          role="button"
+          tabIndex={0}
           style={{
             display: 'flex',
             flexGrow: 1,
             alignItems: 'center',
           }}
           className="mobile-grid-controls--clue-bar"
-          ref={(e) => {
-            if (!e) return;
-            e.addEventListener('touchstart', this.handleClueBarTouchStart, {passive: false});
-            e.addEventListener('touchmove', this.handleClueBarTouchMove, {passive: false});
-            e.addEventListener('touchend', this.handleClueBarTouchEnd, {passive: false});
-          }}
+          ref={this.clueBarRef}
           onClick={this.keepFocus}
+          onKeyDown={this.keepFocus}
         >
           <div className="mobile-grid-controls--clue-bar--clues--container">
             <div className="mobile-grid-controls--clue-bar--main">
               <div className="mobile-grid-controls--clue-bar--number">
-                <Clue text={this.getClueAbbreviation(this.mainClue)} />
+                <Clue text={getClueAbbreviation(this.mainClue)} />
               </div>
               <Flex className="mobile-grid-controls--clue-bar--text" grow={1}>
                 <Clue text={this.getClueText(this.mainClue)} />
@@ -339,10 +354,7 @@ export default class MobileGridControls extends GridControls {
             </div>
           </div>
         </div>
-        <div
-          ref={(e) => e && e.addEventListener('touchend', this.handleRightArrowTouchEnd, {passive: false})}
-          style={{display: 'flex'}}
-        >
+        <div ref={this.rightArrowRef} style={{display: 'flex'}}>
           <MdKeyboardArrowRight className="mobile-grid-controls--intra-clue left" onClick={this.keepFocus} />
         </div>
       </Flex>
@@ -438,38 +450,99 @@ export default class MobileGridControls extends GridControls {
   };
 
   renderMobileInputs() {
-    const inputProps = {
-      value: '$', // This resets the input to contain just "$" on every render.
-      type: 'email',
-      style: {
-        opacity: 0,
-        width: 0,
-        height: 0,
-        pointerEvents: 'none',
-        touchEvents: 'none',
-        position: 'absolute',
-      },
-      autoComplete: 'none',
-      autoCapitalize: 'none',
-      onBlur: this.handleInputBlur,
-      onFocus: this.handleInputFocus,
-      onChange: this.handleInputChange,
+    // This resets the input to contain just "$" on every render.
+    const inputValue = '$';
+    const inputType = 'email';
+    const inputStyle = {
+      opacity: 0,
+      width: 0,
+      height: 0,
+      pointerEvents: 'none',
+      touchEvents: 'none',
+      position: 'absolute',
     };
+    const inputAutoComplete = 'none';
+    const inputAutoCapitalize = 'none';
+
     const USE_TEXT_AREA = true;
     if (USE_TEXT_AREA) {
       return (
         <>
-          <textarea name="1" {...inputProps} />
-          <textarea name="2" ref={this.inputRef} {...inputProps} onKeyUp={this.handleKeyUp} />
-          <textarea name="3" {...inputProps} />
+          <textarea
+            name="1"
+            value={inputValue}
+            type={inputType}
+            style={inputStyle}
+            autoComplete={inputAutoComplete}
+            autoCapitalize={inputAutoCapitalize}
+            onBlur={this.handleInputBlur}
+            onFocus={this.handleInputFocus}
+            onChange={this.handleInputChange}
+          />
+          <textarea
+            name="2"
+            ref={this.inputRef}
+            value={inputValue}
+            type={inputType}
+            style={inputStyle}
+            autoComplete={inputAutoComplete}
+            autoCapitalize={inputAutoCapitalize}
+            onBlur={this.handleInputBlur}
+            onFocus={this.handleInputFocus}
+            onChange={this.handleInputChange}
+            onKeyUp={this.handleKeyUp}
+          />
+          <textarea
+            name="3"
+            value={inputValue}
+            type={inputType}
+            style={inputStyle}
+            autoComplete={inputAutoComplete}
+            autoCapitalize={inputAutoCapitalize}
+            onBlur={this.handleInputBlur}
+            onFocus={this.handleInputFocus}
+            onChange={this.handleInputChange}
+          />
         </>
       );
     }
     return (
       <>
-        <input name="1" {...inputProps} />
-        <input name="2" ref={this.inputRef} {...inputProps} onKeyUp={this.handleKeyUp} />
-        <input name="3" {...inputProps} />
+        <input
+          name="1"
+          value={inputValue}
+          type={inputType}
+          style={inputStyle}
+          autoComplete={inputAutoComplete}
+          autoCapitalize={inputAutoCapitalize}
+          onBlur={this.handleInputBlur}
+          onFocus={this.handleInputFocus}
+          onChange={this.handleInputChange}
+        />
+        <input
+          name="2"
+          ref={this.inputRef}
+          value={inputValue}
+          type={inputType}
+          style={inputStyle}
+          autoComplete={inputAutoComplete}
+          autoCapitalize={inputAutoCapitalize}
+          onBlur={this.handleInputBlur}
+          onFocus={this.handleInputFocus}
+          onChange={this.handleInputChange}
+          onKeyUp={this.handleKeyUp}
+        />
+        <input
+          name="3"
+          value={inputValue}
+          type={inputType}
+          style={inputStyle}
+          autoComplete={inputAutoComplete}
+          autoCapitalize={inputAutoCapitalize}
+          onBlur={this.handleInputBlur}
+          onFocus={this.handleInputFocus}
+          onChange={this.handleInputChange}
+        />
       </>
     );
   }
@@ -483,7 +556,7 @@ export default class MobileGridControls extends GridControls {
         {this.renderMobileInputs()}
         {/* {this.renderMobileKeyboard()} */}
         {this.props.enableDebug && (this.state.dbgstr || 'No message')}
-        <RunOnce effect={this.centerGridX.bind(this)} />
+        <RunOnce effect={this.boundCenterGridX} />
       </div>
     );
   }

@@ -12,33 +12,37 @@ import React, {Component} from 'react';
  * - Toolbar
  * */
 
+function handleMouseDown(e) {
+  e.preventDefault();
+}
+
 export default class Popup extends Component {
   constructor() {
     super();
     this.state = {
       active: false,
     };
+    this.handleClick = this.handleClick.bind(this);
+    this.handleBlur = this.handleBlur.bind(this);
   }
 
-  onClick() {
+  handleClick() {
     this.setState((prevState) => ({active: !prevState.active}));
   }
 
-  onBlur() {
+  handleBlur() {
     this.setState({active: false});
     this.props.onBlur();
   }
 
   render() {
     return (
-      <div className={`${this.state.active ? 'active ' : ''}popup-menu`} onBlur={this.onBlur.bind(this)}>
+      <div className={`${this.state.active ? 'active ' : ''}popup-menu`} onBlur={this.handleBlur}>
         <button
           tabIndex={-1}
           className={`popup-menu--button fa ${this.props.icon ? this.props.icon : ''}`}
-          onMouseDown={(e) => {
-            e.preventDefault();
-          }}
-          onClick={this.onClick.bind(this)}
+          onMouseDown={handleMouseDown}
+          onClick={this.handleClick}
         >
           {this.props.label ? this.props.label : ''}
         </button>

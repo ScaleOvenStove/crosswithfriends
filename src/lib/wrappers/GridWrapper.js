@@ -4,9 +4,10 @@ import _ from 'lodash';
 import * as gameUtils from '../gameUtils';
 
 function safe_while(condition, step, cap = 500) {
-  while (condition() && cap >= 0) {
+  let remaining = cap;
+  while (condition() && remaining >= 0) {
     step();
-    cap -= 1;
+    remaining -= 1;
   }
 }
 
@@ -97,30 +98,36 @@ export default class GridWrapper {
   }
 
   getNextCell(r, c, direction) {
+    let row = r;
+    let col = c;
     if (direction === 'across') {
-      c += 1;
+      col += 1;
     } else {
-      r += 1;
+      row += 1;
     }
-    if (this.isWriteable(r, c)) {
-      return {r, c};
+    if (this.isWriteable(row, col)) {
+      return {r: row, c: col};
     }
     return undefined;
   }
 
   getPreviousCell(r, c, direction) {
+    let row = r;
+    let col = c;
     if (direction === 'across') {
-      c -= 1;
+      col -= 1;
     } else {
-      r -= 1;
+      row -= 1;
     }
-    if (this.isWriteable(r, c)) {
-      return {r, c};
+    if (this.isWriteable(row, col)) {
+      return {r: row, c: col};
     }
     return undefined;
   }
 
   getEdge(r, c, direction, start = true) {
+    let row = r;
+    let col = c;
     let dr = 0;
     let dc = 0;
 
@@ -135,39 +142,44 @@ export default class GridWrapper {
     }
 
     do {
-      c += dc;
-      r += dr;
-    } while (this.isWriteable(r, c));
-    c -= dc;
-    r -= dr;
+      col += dc;
+      row += dr;
+    } while (this.isWriteable(row, col));
+    col -= dc;
+    row -= dr;
 
-    return {r, c};
+    return {r: row, c: col};
   }
 
   getNextEmptyCell(r, c, direction, options = {}) {
     const _r = r;
     const _c = c;
-    let {noWraparound = false, skipFirst = false, skipFilledSquares = true} = options;
+    let row = r;
+    let col = c;
+    const {noWraparound = false, skipFirst = false, skipFilledSquares = true} = options;
+    let shouldSkipFirst = skipFirst;
 
-    while (this.isWriteable(r, c)) {
-      if (skipFilledSquares && !this.isFilled(r, c)) {
-        if (!skipFirst) {
-          return {r, c};
+    while (this.isWriteable(row, col)) {
+      if (skipFilledSquares && !this.isFilled(row, col)) {
+        if (!shouldSkipFirst) {
+          return {r: row, c: col};
         }
       }
-      skipFirst = false;
+      shouldSkipFirst = false;
       if (direction === 'across') {
-        c += 1;
+        col += 1;
       } else {
-        r += 1;
+        row += 1;
       }
     }
 
     if (!noWraparound) {
-      ({r, c} = this.getEdge(r, c, direction));
+      const edge = this.getEdge(row, col, direction);
+      row = edge.r;
+      col = edge.c;
 
       // recurse but not infinitely
-      const result = this.getNextEmptyCell(r, c, direction, {
+      const result = this.getNextEmptyCell(row, col, direction, {
         noWraparound: true,
         skipFilledSquares,
       });
@@ -187,30 +199,35 @@ export default class GridWrapper {
   }
 
   getNextClue(clueNumber, direction, clues, backwards, parallel, skipFilledSquares) {
-    clueNumber = parallel ? this.parallelMap[direction][clueNumber] : clueNumber;
+    let currentClueNumber = parallel ? this.parallelMap[direction][clueNumber] : clueNumber;
+    let currentDirection = direction;
     const add = backwards ? -1 : 1;
-    const start = () => (backwards ? clues[direction].length - 1 : 1);
+    const start = () => (backwards ? clues[currentDirection].length - 1 : 1);
     const step = () => {
-      if (clueNumber + add < clues[direction].length && clueNumber + add >= 0) {
-        clueNumber += add;
+      if (currentClueNumber + add < clues[currentDirection].length && currentClueNumber + add >= 0) {
+        currentClueNumber += add;
       } else {
-        direction = gameUtils.getOppositeDirection(direction);
-        clueNumber = start();
+        currentDirection = gameUtils.getOppositeDirection(currentDirection);
+        currentClueNumber = start();
       }
     };
     const ok = () => {
-      const number = parallel ? this.parallelMapInverse[direction][clueNumber] : clueNumber;
+      const number = parallel
+        ? this.parallelMapInverse[currentDirection][currentClueNumber]
+        : currentClueNumber;
       return (
-        clues[direction][number] !== undefined &&
-        (this.isGridFilled() || !skipFilledSquares || !this.isWordFilled(direction, number))
+        clues[currentDirection][number] !== undefined &&
+        (this.isGridFilled() || !skipFilledSquares || !this.isWordFilled(currentDirection, number))
       );
     };
     step();
 
     safe_while(() => !ok(), step);
-    const number = parallel ? this.parallelMapInverse[direction][clueNumber] : clueNumber;
+    const number = parallel
+      ? this.parallelMapInverse[currentDirection][currentClueNumber]
+      : currentClueNumber;
     return {
-      direction,
+      direction: currentDirection,
       clueNumber: number,
     };
   }
@@ -258,15 +275,17 @@ export default class GridWrapper {
 
   fixSelect({r, c}) {
     // Find the next valid white square in line order
-    while (!this.isWhite(r, c)) {
-      if (c + 1 < this.grid[r].length) {
-        c += 1;
+    let row = r;
+    let col = c;
+    while (!this.isWhite(row, col)) {
+      if (col + 1 < this.grid[row].length) {
+        col += 1;
       } else {
-        r += 1;
-        c = 0;
+        row += 1;
+        col = 0;
       }
     }
-    return {r, c};
+    return {r: row, c: col};
   }
 
   isInBounds(r, c) {
@@ -333,17 +352,27 @@ export default class GridWrapper {
         cell.number = null;
       }
 
+      let acrossParent;
+      if (this.isStartOfClue(r, c, 'across')) {
+        acrossParent = cell.number;
+      } else if (this.isSqueezedSquare(r, c, 'across')) {
+        acrossParent = 0;
+      } else {
+        acrossParent = this.grid[r][c - 1].parents.across;
+      }
+
+      let downParent;
+      if (this.isStartOfClue(r, c, 'down')) {
+        downParent = cell.number;
+      } else if (this.isSqueezedSquare(r, c, 'down')) {
+        downParent = 0;
+      } else {
+        downParent = this.grid[r - 1][c].parents.down;
+      }
+
       cell.parents = {
-        across: this.isStartOfClue(r, c, 'across')
-          ? cell.number
-          : this.isSqueezedSquare(r, c, 'across')
-          ? 0
-          : this.grid[r][c - 1].parents.across,
-        down: this.isStartOfClue(r, c, 'down')
-          ? cell.number
-          : this.isSqueezedSquare(r, c, 'down')
-          ? 0
-          : this.grid[r - 1][c].parents.down,
+        across: acrossParent,
+        down: downParent,
       };
     }
     this.computeCellsByNumber();

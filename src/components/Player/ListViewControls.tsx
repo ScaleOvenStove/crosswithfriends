@@ -24,6 +24,7 @@ export default class ListViewControls extends GridControls {
       return nextCell;
     }
     this.selectNextClue();
+    return undefined;
   }
 
   moveToPreviousCell() {
@@ -34,6 +35,7 @@ export default class ListViewControls extends GridControls {
       return previousCell;
     }
     this.selectPreviousClue();
+    return undefined;
   }
 
   selectPreviousClue() {

@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
 
   try {
     url = new URL(req.query.url as string);
-  } catch (_) {
+  } catch (_urlError) {
     res.sendStatus(400);
     return;
   }

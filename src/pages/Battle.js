@@ -11,6 +11,28 @@ import {BattleModel} from '../store';
 import redirect from '../lib/redirect';
 import {isMobile} from '../lib/jsUtils';
 
+function renderPlayer(player, idx) {
+  return (
+    <Flex className="battle--player" key={idx}>
+      {' '}
+      {player.name}{' '}
+    </Flex>
+  );
+}
+
+function renderTeam(team, idx) {
+  return (
+    <Flex className="battle--team" key={idx}>
+      <Flex className="battle--team-name">
+        {' '}
+        Team
+        {Number(idx) + 1}
+      </Flex>
+      {_.map(team, renderPlayer)}
+    </Flex>
+  );
+}
+
 export default class Battle extends Component {
   constructor(props) {
     super(props);
@@ -88,6 +110,22 @@ export default class Battle extends Component {
     }
   };
 
+  handleSelectTeam0 = () => {
+    if (this.state.name) this.handleTeamSelect(0);
+  };
+
+  handleSelectTeam1 = () => {
+    if (this.state.name) this.handleTeamSelect(1);
+  };
+
+  handleNameInputChange = (event) => {
+    this.handleChangeName(event.target.value);
+  };
+
+  handleStart = () => {
+    this.battleModel.start();
+  };
+
   // ================
   // Render Methods
 
@@ -102,53 +140,31 @@ export default class Battle extends Component {
           <Flex
             className={buttonClass}
             hAlignContent="center"
-            onClick={() => !disabled && this.handleTeamSelect(0)}
+            onClick={disabled ? undefined : this.handleSelectTeam0}
           >
             Team 1
           </Flex>
           <Flex
             className={buttonClass}
             hAlignContent="center"
-            onClick={() => !disabled && this.handleTeamSelect(1)}
+            onClick={disabled ? undefined : this.handleSelectTeam1}
           >
             Team 2
           </Flex>
         </Flex>
         <Flex className="battle--name">
-          <input
-            className="battle--input"
-            placeholder="Name..."
-            onChange={(event) => this.handleChangeName(event.target.value)}
-          />
+          <input className="battle--input" placeholder="Name..." onChange={this.handleNameInputChange} />
         </Flex>
         {this.renderTeams()}
       </Flex>
     );
   }
 
-  renderPlayer = (player, idx) => (
-    <Flex className="battle--player" key={idx}>
-      {' '}
-      {player.name}{' '}
-    </Flex>
-  );
-
-  renderTeam = (team, idx) => (
-    <Flex className="battle--team" key={idx}>
-      <Flex className="battle--team-name">
-        {' '}
-        Team
-        {Number(idx) + 1}
-      </Flex>
-      {_.map(team, this.renderPlayer)}
-    </Flex>
-  );
-
   renderTeams() {
     const numTeams = Math.max(_.max(_.map(this.state.players, 'team')), 2);
     const teams = _.map(_.range(numTeams), (team) => _.filter(this.state.players, {team}));
 
-    return <Flex className="battle--teams">{_.map(teams, this.renderTeam)}</Flex>;
+    return <Flex className="battle--teams">{_.map(teams, renderTeam)}</Flex>;
   }
 
   renderPreGameLobby() {
@@ -156,7 +172,7 @@ export default class Battle extends Component {
       <Flex className="battle--selector">
         <Flex className="battle--teams">(This starts the game for all players)</Flex>
         <Flex className="battle--buttons">
-          <Flex className="battle--button" hAlignContent="center" onClick={() => this.battleModel.start()}>
+          <Flex className="battle--button" hAlignContent="center" onClick={this.handleStart}>
             Start
           </Flex>
         </Flex>

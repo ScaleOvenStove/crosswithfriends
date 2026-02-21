@@ -43,7 +43,7 @@ export default class Chat extends Component {
     this.handleUpdateDisplayName(username);
   }
 
-  get usernameKey() {
+  static get usernameKey() {
     return `username_${window.location.href}`;
   }
 
@@ -51,31 +51,32 @@ export default class Chat extends Component {
     const {id} = this.props;
     const username = this.props.users[id].displayName;
     this.props.onChat(username, id, message);
-    localStorage.setItem(this.usernameKey, username);
+    localStorage.setItem(Chat.usernameKey, username);
   };
 
   handleUpdateDisplayName = (username) => {
+    let displayName = username;
     if (!this.usernameInput?.current?.focused) {
-      username = username || nameGenerator();
+      displayName = displayName || nameGenerator();
     }
     const {id} = this.props;
-    this.props.onUpdateDisplayName(id, username);
-    this.setState({username});
-    localStorage.setItem(this.usernameKey, username);
+    this.props.onUpdateDisplayName(id, displayName);
+    this.setState({username: displayName});
+    localStorage.setItem(Chat.usernameKey, displayName);
     // Check if localStorage has username_default, if not set it to the last
     // updated name
     if (
-      localStorage.getItem('username_default') !== localStorage.getItem(this.usernameKey) &&
-      !isFromNameGenerator(username)
+      localStorage.getItem('username_default') !== localStorage.getItem(Chat.usernameKey) &&
+      !isFromNameGenerator(displayName)
     ) {
-      localStorage.setItem('username_default', username);
+      localStorage.setItem('username_default', displayName);
     }
   };
 
   handleUpdateColor = (color) => {
-    color = color || this.props.color;
+    const resolvedColor = color || this.props.color;
     const {id} = this.props;
-    this.props.onUpdateColor(id, color);
+    this.props.onUpdateColor(id, resolvedColor);
   };
 
   handleUnfocus = () => {
@@ -88,16 +89,22 @@ export default class Chat extends Component {
     this.setState({username});
   };
 
+  static handleMessagesRef(el) {
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }
+
   handleToggleChat = () => {
     this.props.onToggleChat();
   };
 
-  get serverUrl() {
+  static get serverUrl() {
     return `${window.location.protocol}//${window.location.host}`;
   }
 
   get url() {
-    return `${this.serverUrl}/beta${this.props.path}`;
+    return `${Chat.serverUrl}/beta${this.props.path}`;
   }
 
   handleCopyClick = () => {
@@ -113,7 +120,7 @@ export default class Chat extends Component {
   handleShareScoreClick = () => {
     const text = `${Object.keys(this.props.users).length > 1 ? 'We' : 'I'} solved ${
       this.props.game.info.title
-    } in ${formatMilliseconds(this.props.game.clock.totalTime)}!\n\n${this.serverUrl}/beta/play/${
+    } in ${formatMilliseconds(this.props.game.clock.totalTime)}!\n\n${Chat.serverUrl}/beta/play/${
       this.props.game.pid
     }`;
     navigator.clipboard.writeText(text);
@@ -131,12 +138,13 @@ export default class Chat extends Component {
     }
   };
 
-  mergeMessages(data, opponentData) {
+  static mergeMessages(data, opponentData) {
     if (!opponentData) {
       return data.messages || [];
     }
 
-    const getMessages = (data, isOpponent) => _.map(data.messages, (message) => ({...message, isOpponent}));
+    const getMessages = (chatData, isOpponent) =>
+      _.map(chatData.messages, (message) => ({...message, isOpponent}));
 
     const messages = _.concat(getMessages(data, false), getMessages(opponentData, true));
 
@@ -159,7 +167,7 @@ export default class Chat extends Component {
   }
 
   renderToolbar() {
-    if (!this.props.mobile) return;
+    if (!this.props.mobile) return null;
     return (
       <Flex className="toolbar--mobile" vAlignContent="center">
         <Link to="/">Cross with Friends</Link> {this.renderGameButton()}
@@ -232,7 +240,7 @@ export default class Chat extends Component {
     );
   }
 
-  renderUserPresent(id, displayName, color) {
+  static renderUserPresent(id, displayName, color) {
     const style = color && {
       color,
     };
@@ -247,7 +255,7 @@ export default class Chat extends Component {
   renderUsersPresent(users) {
     return this.props.hideChatBar ? null : (
       <div className="chat--users--present">
-        {Object.keys(users).map((id) => this.renderUserPresent(id, users[id].displayName, users[id].color))}
+        {Object.keys(users).map((id) => Chat.renderUserPresent(id, users[id].displayName, users[id].color))}
       </div>
     );
   }
@@ -264,7 +272,7 @@ export default class Chat extends Component {
     );
   }
 
-  renderMessageTimestamp(timestamp) {
+  static renderMessageTimestamp(timestamp) {
     return (
       <span className="chat--message--timestamp">
         {new Date(timestamp).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}
@@ -272,7 +280,7 @@ export default class Chat extends Component {
     );
   }
 
-  renderMessageSender(name, color) {
+  static renderMessageSender(name, color) {
     const style = color && {
       color,
     };
@@ -323,17 +331,23 @@ export default class Chat extends Component {
     });
 
     const bigEmoji = tokens.length <= 3 && _.every(tokens, (token) => token.type === 'emoji');
+
+    const renderToken = (token) => {
+      if (token.type === 'emoji') {
+        return <Emoji emoji={token.data} big={bigEmoji} />;
+      }
+      if (token.type === 'clueref') {
+        return this.renderClueRef(token.data);
+      }
+      return token.data;
+    };
+
     return (
       <span className="chat--message--text">
         {tokens.map((token, i) => (
+          // eslint-disable-next-line react/no-array-index-key
           <React.Fragment key={i}>
-            {token.type === 'emoji' ? (
-              <Emoji emoji={token.data} big={bigEmoji} />
-            ) : token.type === 'clueref' ? (
-              this.renderClueRef(token.data)
-            ) : (
-              token.data
-            )}
+            {renderToken(token)}
             {token.type !== 'emoji' && ' '}
           </React.Fragment>
         ))}
@@ -363,7 +377,13 @@ export default class Chat extends Component {
         this.props.onSelectClue(directionStr, clueNumber);
       };
 
-      return <button onClick={handleClick}> {defaultPattern} </button>;
+      return (
+        // eslint-disable-next-line react/jsx-no-bind
+        <button type="button" onClick={handleClick}>
+          {' '}
+          {defaultPattern}{' '}
+        </button>
+      );
     }
     return defaultPattern;
   }
@@ -377,17 +397,17 @@ export default class Chat extends Component {
     return (
       <div className={`chat--message${big ? ' big' : ''}`}>
         <div className="chat--message--content">
-          {this.renderMessageSender(users[id]?.displayName ?? 'Unknown', color)}
+          {Chat.renderMessageSender(users[id]?.displayName ?? 'Unknown', color)}
           {this.renderMessageText(message.text)}
         </div>
-        <div className="chat--message--timestamp">{this.renderMessageTimestamp(timestamp)}</div>
+        <div className="chat--message--timestamp">{Chat.renderMessageTimestamp(timestamp)}</div>
       </div>
     );
   }
 
   renderMobileKeyboard() {
     if (!this.props.mobile) {
-      return;
+      return null;
     }
 
     return (
@@ -410,21 +430,14 @@ export default class Chat extends Component {
   }
 
   render() {
-    const messages = this.mergeMessages(this.props.data, this.props.opponentData);
+    const messages = Chat.mergeMessages(this.props.data, this.props.opponentData);
     return (
       <Flex column grow={1}>
         {this.renderToolbar()}
         <div className="chat">
           {this.renderChatHeader()}
           {this.renderChatSubheader()}
-          <div
-            ref={(el) => {
-              if (el) {
-                el.scrollTop = el.scrollHeight;
-              }
-            }}
-            className="chat--messages"
-          >
+          <div ref={Chat.handleMessagesRef} className="chat--messages">
             <div className="chat--message chat--system-message">
               <div>
                 <i>
@@ -438,13 +451,22 @@ export default class Chat extends Component {
                 <i
                   className="fa fa-clone copyButton"
                   title="Copy to Clipboard"
+                  role="button"
+                  tabIndex={0}
                   onClick={this.handleCopyClick}
+                  onKeyDown={this.handleCopyClick}
                 />
               </div>
             </div>
             {this.props.game.solved && (
               <div className="chat--message chat--system-message">
-                <div className="copyText" onClick={this.handleShareScoreClick}>
+                <div
+                  className="copyText"
+                  role="button"
+                  tabIndex={0}
+                  onClick={this.handleShareScoreClick}
+                  onKeyDown={this.handleShareScoreClick}
+                >
                   <i id="shareText">
                     Congratulations! You solved the puzzle in{' '}
                     <b>{formatMilliseconds(this.props.game.clock.totalTime)}</b>. Click here to share your
@@ -457,6 +479,7 @@ export default class Chat extends Component {
               </div>
             )}
             {messages.map((message, i) => (
+              // eslint-disable-next-line react/no-array-index-key
               <div key={i}>{this.renderMessage(message)}</div>
             ))}
           </div>

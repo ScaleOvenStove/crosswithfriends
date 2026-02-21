@@ -51,6 +51,7 @@ router.get<{}, ListPuzzleResponse>('/', optionalAuth, async (req, res, next) => 
   } catch (err) {
     next(err);
   }
+  return undefined;
 });
 
 export default router;

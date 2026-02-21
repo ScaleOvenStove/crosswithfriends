@@ -1,4 +1,4 @@
-import React, {Dispatch, SetStateAction, useEffect, useMemo, useState} from 'react';
+import React, {Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState} from 'react';
 import {useUpdateEffect} from 'react-use';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet';
@@ -132,13 +132,13 @@ const Room: React.FC<RouteComponentProps<{rid: string}>> = (props) => {
       window.removeEventListener('keydown', renewActivity);
     };
   }, [rid, socket]);
-  const handleAddGame = () => {
+  const handleAddGame = useCallback(() => {
     const gameLink = window.prompt('Enter new game link');
     const gid = _.last(gameLink?.split('/'));
     if (gid && gid.match('[a-z0-9-]{1,15}')) {
       setGame(gid);
     }
-  };
+  }, [setGame]);
   const currentTime = useTimer();
   const classes = useStyles();
   const currentGame = _.first(roomState.games);
@@ -164,7 +164,7 @@ const Room: React.FC<RouteComponentProps<{rid: string}>> = (props) => {
           <span className={classes.totalUsersParen}>({roomState.users.length} total)</span>
         </div>
         <div>
-          <button onClick={handleAddGame}>
+          <button type="button" onClick={handleAddGame}>
             Game:
             {currentGame?.gid ?? 'N/A'}
           </button>

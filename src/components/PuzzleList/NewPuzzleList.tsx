@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import React, {useContext, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '../../shared/types';
 import {fetchPuzzleList} from '../../api/puzzle_list';
 import {getUserStats} from '../../api/user_stats';
@@ -71,12 +71,12 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       isPublic?: boolean;
     }[]
   >([]);
-  const fullyScrolled = (): boolean => {
+  const fullyScrolled = useCallback((): boolean => {
     if (!containerRef.current) return false;
     const {scrollTop, scrollHeight, clientHeight} = containerRef.current;
     const buffer = 600; // 600 pixels of buffer, i guess?
     return scrollTop + clientHeight + buffer > scrollHeight;
-  };
+  }, []);
 
   const fetchMore = React.useCallback(
     _.throttle(
@@ -111,16 +111,16 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
     fetchMore([], 0);
   }, [JSON.stringify(props.filter), props.uploadedPuzzles, !!accessToken]);
 
-  const handleScroll = async () => {
+  const handleScroll = useCallback(async () => {
     if (fullyLoaded) return;
     if (fullyScrolled()) {
       await fetchMore(puzzles, page);
     }
-  };
-  const handleTouchEnd = async () => {
+  }, [fullyLoaded, fullyScrolled, fetchMore, puzzles, page]);
+  const handleTouchEnd = useCallback(async () => {
     if (containerRef.current) return;
     await handleScroll();
-  };
+  }, [handleScroll]);
 
   const puzzleData: {
     entryProps: EntryProps;
@@ -160,9 +160,19 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       onScroll={handleScroll}
       onTouchEnd={handleTouchEnd}
     >
-      {puzzleData.map(({entryProps}, i) => (
-        <div className="entry--container" key={i}>
-          <Entry {...entryProps} />
+      {puzzleData.map(({entryProps}) => (
+        <div className="entry--container" key={entryProps.pid}>
+          <Entry
+            info={entryProps.info}
+            grid={entryProps.grid}
+            title={entryProps.title}
+            author={entryProps.author}
+            pid={entryProps.pid}
+            stats={entryProps.stats}
+            status={entryProps.status}
+            fencing={entryProps.fencing}
+            isPublic={entryProps.isPublic}
+          />
         </div>
       ))}
     </div>

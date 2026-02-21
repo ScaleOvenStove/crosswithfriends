@@ -1,5 +1,5 @@
 import {makeStyles} from '@material-ui/core';
-import React from 'react';
+import React, {useCallback} from 'react';
 import {Link} from 'react-router-dom';
 import clsx from 'clsx';
 // @ts-ignore
@@ -9,7 +9,7 @@ export const WelcomeVariantsControl: React.FC<{
   fencing?: boolean;
 }> = (props) => {
   const classes = useStyles();
-  const showFencingInfo = () => {
+  const showFencingInfo = useCallback(() => {
     swal({
       title: 'crosswithfriends.com/fencing',
       icon: 'info',
@@ -34,7 +34,15 @@ export const WelcomeVariantsControl: React.FC<{
         </div>
       ),
     });
-  };
+  }, []);
+  const handleFencingInfoKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        showFencingInfo();
+      }
+    },
+    [showFencingInfo]
+  );
   return (
     <div className={classes.container}>
       <span className={classes.title}>Variants</span>
@@ -57,7 +65,13 @@ export const WelcomeVariantsControl: React.FC<{
             Fencing
           </span>
         </Link>
-        <span className="nav--info" onClick={showFencingInfo}>
+        <span
+          className="nav--info"
+          onClick={showFencingInfo}
+          onKeyDown={handleFencingInfoKeyDown}
+          role="button"
+          tabIndex={0}
+        >
           <i className="fa fa-info-circle" />
         </span>
       </span>

@@ -1,7 +1,7 @@
 import './css/nav.css';
 
 import {Link} from 'react-router-dom';
-import React, {useContext, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useContext, useEffect, useRef, useState} from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
 import swal from '@sweetalert/with-react';
@@ -68,9 +68,60 @@ function UserMenu() {
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [open]);
 
+  const handleToggleOpen = useCallback(() => {
+    setOpen((prev) => !prev);
+  }, []);
+
+  const handleCloseMenu = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  const handleOpenLogin = useCallback(() => {
+    setOpen(false);
+    setShowLogin(true);
+  }, []);
+
+  const handleCloseLogin = useCallback(() => {
+    setShowLogin(false);
+  }, []);
+
+  const handleShowAbout = useCallback(() => {
+    setOpen(false);
+    showInfo();
+  }, []);
+
+  const handleLogoutClick = useCallback(() => {
+    setOpen(false);
+    handleLogout();
+  }, [handleLogout]);
+
+  const handleToggleDarkMode = useCallback(
+    (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        toggleMolesterMoons();
+      }
+    },
+    [toggleMolesterMoons]
+  );
+
+  const handleButtonKeyDown = useCallback(
+    (handler) => (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        handler();
+      }
+    },
+    []
+  );
+
   return (
     <div className="nav--user-menu" ref={menuRef}>
-      <div className="nav--user-menu--trigger" onClick={() => setOpen(!open)}>
+      <div
+        className="nav--user-menu--trigger"
+        role="button"
+        tabIndex={0}
+        onClick={handleToggleOpen}
+        onKeyDown={handleButtonKeyDown(handleToggleOpen)}
+      >
         <FaUserCircle size={20} />
       </div>
       {open && (
@@ -78,10 +129,10 @@ function UserMenu() {
           {isAuthenticated && (
             <>
               <div className="nav--user-menu--header">{user.displayName}</div>
-              <Link to="/profile" className="nav--user-menu--item" onClick={() => setOpen(false)}>
+              <Link to="/profile" className="nav--user-menu--item" onClick={handleCloseMenu}>
                 Your Profile &amp; Stats
               </Link>
-              <Link to="/account" className="nav--user-menu--item" onClick={() => setOpen(false)}>
+              <Link to="/account" className="nav--user-menu--item" onClick={handleCloseMenu}>
                 Settings
               </Link>
             </>
@@ -89,15 +140,21 @@ function UserMenu() {
           {!isAuthenticated && (
             <div
               className="nav--user-menu--item"
-              onClick={() => {
-                setOpen(false);
-                setShowLogin(true);
-              }}
+              role="button"
+              tabIndex={0}
+              onClick={handleOpenLogin}
+              onKeyDown={handleButtonKeyDown(handleOpenLogin)}
             >
               Sign Up / Log In
             </div>
           )}
-          <div className="nav--user-menu--item nav--user-menu--dark-mode" onClick={toggleMolesterMoons}>
+          <div
+            className="nav--user-menu--item nav--user-menu--dark-mode"
+            role="button"
+            tabIndex={0}
+            onClick={toggleMolesterMoons}
+            onKeyDown={handleToggleDarkMode}
+          >
             <span className="nav--user-menu--dark-mode-icon">{darkModeIcon(darkModePreference)}</span>
             {darkModeLabel(darkModePreference)}
           </div>
@@ -106,20 +163,20 @@ function UserMenu() {
             href="https://ko-fi.com/crosswithfriends"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setOpen(false)}
+            onClick={handleCloseMenu}
           >
             Support CWF
           </a>
           <div
             className="nav--user-menu--item"
-            onClick={() => {
-              setOpen(false);
-              showInfo();
-            }}
+            role="button"
+            tabIndex={0}
+            onClick={handleShowAbout}
+            onKeyDown={handleButtonKeyDown(handleShowAbout)}
           >
             About
           </div>
-          <Link to="/help" className="nav--user-menu--item" onClick={() => setOpen(false)}>
+          <Link to="/help" className="nav--user-menu--item" onClick={handleCloseMenu}>
             Help &amp; FAQ
           </Link>
           {isAuthenticated && (
@@ -127,10 +184,10 @@ function UserMenu() {
               <div className="nav--user-menu--divider" />
               <div
                 className="nav--user-menu--item"
-                onClick={() => {
-                  setOpen(false);
-                  handleLogout();
-                }}
+                role="button"
+                tabIndex={0}
+                onClick={handleLogoutClick}
+                onKeyDown={handleButtonKeyDown(handleLogoutClick)}
               >
                 Log out
               </div>
@@ -138,7 +195,7 @@ function UserMenu() {
           )}
         </div>
       )}
-      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+      <LoginModal open={showLogin} onClose={handleCloseLogin} />
     </div>
   );
 }

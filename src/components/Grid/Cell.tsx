@@ -70,9 +70,9 @@ export default class Cell extends React.Component<Props> {
     const {cursors} = this.props;
     return (
       <div className="cell--cursors">
-        {cursors.map(({color, active}, i) => (
+        {cursors.map(({id: cursorId, color, active}, i) => (
           <div
-            key={i}
+            key={cursorId}
             className={clsx('cell--cursor', {
               active,
               inactive: !active,
@@ -92,9 +92,9 @@ export default class Cell extends React.Component<Props> {
     const {pings} = this.props;
     return (
       <div className="cell--pings">
-        {pings.map(({color, active}, i) => (
+        {pings.map(({id: pingId, color, active}, i) => (
           <div
-            key={i}
+            key={pingId}
             className={clsx('cell--ping', {
               active,
               inactive: !active,
@@ -109,16 +109,30 @@ export default class Cell extends React.Component<Props> {
     );
   }
 
+  handleFlipClick: React.MouseEventHandler<HTMLElement> = (e) => {
+    e.stopPropagation();
+    const {onFlipColor} = this.props;
+    if (onFlipColor) onFlipColor(this.props.r, this.props.c);
+  };
+
+  handleFlipKeyDown: React.KeyboardEventHandler<HTMLElement> = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.stopPropagation();
+      const {onFlipColor} = this.props;
+      if (onFlipColor) onFlipColor(this.props.r, this.props.c);
+    }
+  };
+
   renderFlipButton() {
-    const {canFlipColor, onFlipColor} = this.props;
+    const {canFlipColor} = this.props;
     if (canFlipColor) {
       return (
         <i
           className="cell--flip fa fa-small fa-sticky-note"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onFlipColor) onFlipColor(this.props.r, this.props.c);
-          }}
+          role="button"
+          tabIndex={0}
+          onClick={this.handleFlipClick}
+          onKeyDown={this.handleFlipKeyDown}
         />
       );
     }
@@ -188,6 +202,13 @@ export default class Cell extends React.Component<Props> {
     this.props.onContextMenu(this.props.r, this.props.c);
   };
 
+  handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.props.onClick(this.props.r, this.props.c);
+    }
+  };
+
   render() {
     const {
       black,
@@ -214,7 +235,10 @@ export default class Cell extends React.Component<Props> {
             hidden: isHidden,
           })}
           style={selected ? {borderColor: myColor} : undefined}
+          role="button"
+          tabIndex={0}
           onClick={this.handleClick}
+          onKeyDown={this.handleKeyDown}
           onContextMenu={this.handleRightClick}
         >
           {this.renderPings()}
@@ -245,7 +269,10 @@ export default class Cell extends React.Component<Props> {
             frozen,
           })}
           style={style}
+          role="button"
+          tabIndex={0}
           onClick={this.handleClick}
+          onKeyDown={this.handleKeyDown}
           onContextMenu={this.handleRightClick}
         >
           <div className="cell--wrapper">

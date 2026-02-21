@@ -26,13 +26,13 @@ function getRebus(bytes) {
 
   const table = getExtension(bytes, grbs);
   if (!table) {
-    return; // no rebus
+    return undefined; // no rebus
   }
   const solbytes = getExtension(bytes, rtbl);
   const enc = new TextDecoder('ISO-8859-1');
   const solstring = enc.decode(new Uint8Array(solbytes));
   if (!solstring) {
-    return;
+    return undefined;
   }
   const sols = {};
   solstring.split(';').forEach((s) => {

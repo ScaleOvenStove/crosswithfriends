@@ -14,6 +14,7 @@ export default class DemoUser extends User {
     }, 0);
   }
 
+  // eslint-disable-next-line class-methods-use-this
   detach() {}
 
   logIn() {

@@ -40,6 +40,7 @@ router.get<{gid: string}, GetGameResponse>('/:gid', async (req, res) => {
     console.error('Error fetching game state:', error);
     res.sendStatus(500);
   }
+  return undefined;
 });
 
 export default router;

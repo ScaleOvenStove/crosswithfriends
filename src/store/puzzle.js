@@ -30,8 +30,8 @@ export default class Puzzle extends EventEmitter {
     const puzzlelistRef = db.ref(puzzlelistPath);
     statsRef.child('solves').child(gid).set(stats);
     statsRef.once('value').then((snapshot) => {
-      const stats = snapshot.val();
-      const numSolves = _.keys(stats.solves).length;
+      const solveStats = snapshot.val();
+      const numSolves = _.keys(solveStats.solves).length;
       puzzlelistRef.child('stats/numSolves').set(numSolves);
     });
   }

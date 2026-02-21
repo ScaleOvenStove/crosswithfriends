@@ -1,6 +1,6 @@
 import {makeStyles} from '@material-ui/core';
 import _ from 'lodash';
-import React from 'react';
+import React, {useCallback} from 'react';
 import {GameState} from '../../shared/fencingGameEvents/types/GameState';
 import EditableSpan from '../common/EditableSpan';
 import './css/fencingScoreboard.css';
@@ -42,16 +42,18 @@ export const FencingScoreboard: React.FC<{
   isGameComplete: boolean;
 }> = (props) => {
   const classes = useStyles();
-  // TODO buttons need to be icons / dropdown menu once team names are editable
-  const spectateButton = (
-    <button
-      onClick={() => {
-        props.spectate();
-      }}
-    >
-      Leave Team
-    </button>
+  const handleSpectate = useCallback(() => {
+    props.spectate();
+  }, [props]);
+  const handleJoinTeam = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      const teamId = Number(e.currentTarget.getAttribute('data-team-id'));
+      props.joinTeam(teamId);
+    },
+    [props]
   );
+  // TODO buttons need to be icons / dropdown menu once team names are editable
+  const spectateButton = <button onClick={handleSpectate}>Leave Team</button>;
 
   // Determine if the game is complete and which team won
   // should be able to handle ties with any number of teams
@@ -98,11 +100,7 @@ export const FencingScoreboard: React.FC<{
           )}
           {currentUser?.teamId === team.id && spectateButton}
           {currentUser?.teamId === 0 && (
-            <button
-              onClick={() => {
-                props.joinTeam(team.id);
-              }}
-            >
+            <button data-team-id={team.id} onClick={handleJoinTeam}>
               Join Team
             </button>
           )}

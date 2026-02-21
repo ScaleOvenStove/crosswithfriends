@@ -33,6 +33,7 @@ const TimelineBars = pure(({history, begin, units}) => (
   <div>
     {history.map(({gameTimestamp, type}, i) => (
       <div
+        // eslint-disable-next-line react/no-array-index-key
         key={i}
         className="timeline--bar"
         style={{
@@ -169,8 +170,14 @@ class Timeline extends React.PureComponent {
           backgroundColor: TIMELINE_BACKGROUND_COLOR,
           cursor: 'pointer',
         }}
+        role="slider"
+        tabIndex={0}
+        aria-valuenow={this.props.position}
+        aria-valuemin={this.begin}
+        aria-valuemax={this.end}
         onMouseDown={this.handleMouseDown}
         onMouseOut={this.handleMouseOut}
+        onBlur={this.handleMouseOut}
         onMouseMove={this.handleMouseMove}
         onMouseUp={this.handleMouseUp}
       >

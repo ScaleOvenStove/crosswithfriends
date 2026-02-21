@@ -10,10 +10,10 @@ export const toHex = (number) => `#${(2 ** 24 + number).toString(16).substring(1
 
 const num = ({r, g, b}) => b + 256 * (g + 256 * r);
 
-const rgb = (num) => ({
-  r: Math.floor(num / 256 / 256),
-  g: Math.floor(num / 256) % 256,
-  b: num % 256,
+const rgb = (value) => ({
+  r: Math.floor(value / 256 / 256),
+  g: Math.floor(value / 256) % 256,
+  b: value % 256,
 });
 
 export const darken = (number) => {

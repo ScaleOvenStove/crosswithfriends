@@ -23,7 +23,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Run ESLint
-        run: yarn eslint --ext .js,.jsx,.ts,.tsx src/ server/
+        run: yarn eslint --max-warnings 0 --ext .js,.jsx,.ts,.tsx src/ server/
 
   format:
     name: Prettier

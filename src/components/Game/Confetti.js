@@ -8,6 +8,7 @@ export default class ConfettiWrapper extends Component {
       done: false,
       numberOfPieces: 200,
     };
+    this.handleConfettiComplete = this.handleConfettiComplete.bind(this);
   }
 
   componentDidMount() {
@@ -18,13 +19,14 @@ export default class ConfettiWrapper extends Component {
     }, 7000);
   }
 
+  handleConfettiComplete() {
+    this.setState({done: true});
+  }
+
   render() {
     if (this.state.done) return null;
     return (
-      <Confetti
-        numberOfPieces={this.state.numberOfPieces}
-        onConfettiComplete={() => this.setState({done: true})}
-      />
+      <Confetti numberOfPieces={this.state.numberOfPieces} onConfettiComplete={this.handleConfettiComplete} />
     );
   }
 }

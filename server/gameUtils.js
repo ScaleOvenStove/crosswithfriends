@@ -104,33 +104,38 @@ export class GridWrapper {
   }
 
   getNextCell(r, c, direction) {
+    let nextR = r;
+    let nextC = c;
     if (direction === 'across') {
-      c += 1;
+      nextC += 1;
     } else {
-      r += 1;
+      nextR += 1;
     }
-    if (this.isWriteable(r, c)) {
-      return {r, c};
+    if (this.isWriteable(nextR, nextC)) {
+      return {r: nextR, c: nextC};
     }
     return undefined;
   }
 
   getNextEmptyCell(r, c, direction, options = {}) {
-    const _r = r;
-    const _c = c;
-    let {noWraparound = false, skipFirst = false} = options;
+    const origR = r;
+    const origC = c;
+    let curR = r;
+    let curC = c;
+    const {noWraparound = false} = options;
+    let shouldSkipFirst = options.skipFirst || false;
 
-    while (this.isWriteable(r, c)) {
-      if (!this.isFilled(r, c)) {
-        if (!skipFirst) {
-          return {r, c};
+    while (this.isWriteable(curR, curC)) {
+      if (!this.isFilled(curR, curC)) {
+        if (!shouldSkipFirst) {
+          return {r: curR, c: curC};
         }
       }
-      skipFirst = false;
+      shouldSkipFirst = false;
       if (direction === 'across') {
-        c += 1;
+        curC += 1;
       } else {
-        r += 1;
+        curR += 1;
       }
     }
 
@@ -138,22 +143,22 @@ export class GridWrapper {
       // move to start of word
       do {
         if (direction === 'across') {
-          c -= 1;
+          curC -= 1;
         } else {
-          r -= 1;
+          curR -= 1;
         }
-      } while (this.isWriteable(r, c));
+      } while (this.isWriteable(curR, curC));
       if (direction === 'across') {
-        c += 1;
+        curC += 1;
       } else {
-        r += 1;
+        curR += 1;
       }
 
       // recurse but not infinitely
-      const result = this.getNextEmptyCell(r, c, direction, {
+      const result = this.getNextEmptyCell(curR, curC, direction, {
         noWraparound: true,
       });
-      if (!result || (result.r === _r && result.c === _c)) return undefined;
+      if (!result || (result.r === origR && result.c === origC)) return undefined;
       return result;
     }
     return undefined;
@@ -169,30 +174,31 @@ export class GridWrapper {
   }
 
   getNextClue(clueNumber, direction, clues, backwards, parallel) {
-    clueNumber = parallel ? this.parallelMap[direction][clueNumber] : clueNumber;
+    let curClueNumber = parallel ? this.parallelMap[direction][clueNumber] : clueNumber;
+    let curDirection = direction;
     const add = backwards ? -1 : 1;
-    const start = () => (backwards ? clues[direction].length - 1 : 1);
+    const start = () => (backwards ? clues[curDirection].length - 1 : 1);
     const step = () => {
-      if (clueNumber + add < clues[direction].length && clueNumber + add >= 0) {
-        clueNumber += add;
+      if (curClueNumber + add < clues[curDirection].length && curClueNumber + add >= 0) {
+        curClueNumber += add;
       } else {
-        direction = getOppositeDirection(direction);
-        clueNumber = start();
+        curDirection = getOppositeDirection(curDirection);
+        curClueNumber = start();
       }
     };
     const ok = () => {
-      const number = parallel ? this.parallelMapInverse[direction][clueNumber] : clueNumber;
+      const number = parallel ? this.parallelMapInverse[curDirection][curClueNumber] : curClueNumber;
       return (
-        clues[direction][number] !== undefined &&
-        (this.isGridFilled() || !this.isWordFilled(direction, number))
+        clues[curDirection][number] !== undefined &&
+        (this.isGridFilled() || !this.isWordFilled(curDirection, number))
       );
     };
     step();
 
     safe_while(() => !ok(), step);
-    const number = parallel ? this.parallelMapInverse[direction][clueNumber] : clueNumber;
+    const number = parallel ? this.parallelMapInverse[curDirection][curClueNumber] : curClueNumber;
     return {
-      direction,
+      direction: curDirection,
       clueNumber: number,
     };
   }
@@ -237,19 +243,22 @@ export class GridWrapper {
         return {r, c};
       }
     }
+    return undefined;
   }
 
   fixSelect({r, c}) {
     // Find the next valid white square in line order
-    while (!this.isWhite(r, c)) {
-      if (c + 1 < this.grid[r].length) {
-        c += 1;
+    let curR = r;
+    let curC = c;
+    while (!this.isWhite(curR, curC)) {
+      if (curC + 1 < this.grid[curR].length) {
+        curC += 1;
       } else {
-        r += 1;
-        c = 0;
+        curR += 1;
+        curC = 0;
       }
     }
-    return {r, c};
+    return {r: curR, c: curC};
   }
 
   isInBounds(r, c) {
@@ -313,17 +322,27 @@ export class GridWrapper {
         cell.number = null;
       }
 
+      let acrossParent;
+      if (this.isStartOfClue(r, c, 'across')) {
+        acrossParent = cell.number;
+      } else if (this.isSqueezedSquare(r, c, 'across')) {
+        acrossParent = 0;
+      } else {
+        acrossParent = this.grid[r][c - 1].parents.across;
+      }
+
+      let downParent;
+      if (this.isStartOfClue(r, c, 'down')) {
+        downParent = cell.number;
+      } else if (this.isSqueezedSquare(r, c, 'down')) {
+        downParent = 0;
+      } else {
+        downParent = this.grid[r - 1][c].parents.down;
+      }
+
       cell.parents = {
-        across: this.isStartOfClue(r, c, 'across')
-          ? cell.number
-          : this.isSqueezedSquare(r, c, 'across')
-          ? 0
-          : this.grid[r][c - 1].parents.across,
-        down: this.isStartOfClue(r, c, 'down')
-          ? cell.number
-          : this.isSqueezedSquare(r, c, 'down')
-          ? 0
-          : this.grid[r - 1][c].parents.down,
+        across: acrossParent,
+        down: downParent,
       };
     }
   }

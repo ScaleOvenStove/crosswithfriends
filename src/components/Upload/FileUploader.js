@@ -33,91 +33,91 @@ class UnsupportedFileTypeError extends Error {
   }
 }
 
-export default class FileUploader extends Component {
-  validPuzzle(puzzle) {
-    const shape = {
-      info: {
-        title: '',
-        type: '',
-        author: '',
-      },
-      grid: [['']],
-      // circles: {} is optional
-      clues: {
-        across: {},
-        down: {},
-      },
-    };
-    return hasShape(puzzle, shape);
+function validPuzzle(puzzle) {
+  const shape = {
+    info: {
+      title: '',
+      type: '',
+      author: '',
+    },
+    grid: [['']],
+    // circles: {} is optional
+    clues: {
+      across: {},
+      down: {},
+    },
+  };
+  return hasShape(puzzle, shape);
+}
+
+function convertPUZ(buffer) {
+  const raw = PUZtoJSON(buffer);
+
+  const {grid: rawGrid, info, circles, shades, across, down} = raw;
+
+  const {title, author, description} = info;
+
+  const grid = rawGrid.map((row) => row.map(({solution}) => solution || '.'));
+  const type = grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
+
+  const result = {
+    grid,
+    circles,
+    shades,
+    info: {
+      type,
+      title,
+      author,
+      description,
+    },
+    clues: {across, down},
+  };
+  return result;
+}
+
+function convertIPUZ(readerResult) {
+  const {grid, info, circles, shades, across, down} = iPUZtoJSON(readerResult);
+
+  const result = {
+    grid,
+    circles,
+    shades,
+    info,
+    clues: {across, down},
+  };
+
+  return result;
+}
+
+function attemptPuzzleConversion(readerResult, fileType) {
+  if (fileType === 'puz') {
+    return convertPUZ(readerResult);
   }
-
-  convertPUZ(buffer) {
-    const raw = PUZtoJSON(buffer);
-
-    const {grid: rawGrid, info, circles, shades, across, down} = raw;
-
-    const {title, author, description} = info;
-
-    const grid = rawGrid.map((row) => row.map(({solution}) => solution || '.'));
-    const type = grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
-
-    const result = {
-      grid,
-      circles,
-      shades,
-      info: {
-        type,
-        title,
-        author,
-        description,
-      },
-      clues: {across, down},
-    };
-    return result;
+  if (fileType === 'ipuz') {
+    return convertIPUZ(readerResult);
   }
-
-  convertIPUZ(readerResult) {
-    const {grid, info, circles, shades, across, down} = iPUZtoJSON(readerResult);
-
-    const result = {
-      grid,
-      circles,
-      shades,
-      info,
-      clues: {across, down},
-    };
-
-    return result;
-  }
-
-  attemptPuzzleConversion(readerResult, fileType) {
-    if (fileType === 'puz') {
-      return this.convertPUZ(readerResult);
-    }
-    if (fileType === 'ipuz') {
-      return this.convertIPUZ(readerResult);
-    }
-    if (fileType === 'jpz') {
-      throw new UnsupportedFileTypeError(fileType);
+  if (fileType === 'jpz') {
+    throw new UnsupportedFileTypeError(fileType);
+  } else {
+    const guessedFileType = fileTypeGuesser(readerResult);
+    if (!guessedFileType) {
+      throw new UnknownFileTypeError(fileType);
     } else {
-      const guessedFileType = fileTypeGuesser(readerResult);
-      if (!guessedFileType) {
-        throw new UnknownFileTypeError(fileType);
-      } else {
-        return this.attemptPuzzleConversion(readerResult, guessedFileType);
-      }
+      return attemptPuzzleConversion(readerResult, guessedFileType);
     }
   }
+}
 
-  onDrop(acceptedFiles) {
+export default class FileUploader extends Component {
+  handleDrop = (acceptedFiles) => {
     const file = acceptedFiles[0];
     const fileType = file.name.split('.').pop();
     const reader = new FileReader();
     const {success, fail} = this.props;
     reader.addEventListener('loadend', () => {
       try {
-        const puzzle = this.attemptPuzzleConversion(reader.result, fileType);
-        if (this.validPuzzle(puzzle)) {
+        const puzzle = attemptPuzzleConversion(reader.result, fileType);
+        if (validPuzzle(puzzle)) {
           success(puzzle);
         } else {
           fail();
@@ -142,14 +142,14 @@ export default class FileUploader extends Component {
       window.URL.revokeObjectURL(acceptedFiles[0].preview);
     });
     reader.readAsArrayBuffer(file);
-  }
+  };
 
   render() {
     const {v2} = this.props;
     return (
       <Dropzone
         className="file-uploader"
-        onDrop={this.onDrop.bind(this)}
+        onDrop={this.handleDrop}
         activeStyle={{
           outline: '3px solid var(--main-blue)',
           outlineOffset: '-10px',

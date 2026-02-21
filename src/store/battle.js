@@ -143,8 +143,8 @@ export default class Battle extends EventEmitter {
 
       async.map(
         pickups,
-        (pickup, cbk) => {
-          this.ref.child('pickups').push(pickup, () => cbk());
+        (pickup, mapCbk) => {
+          this.ref.child('pickups').push(pickup, () => mapCbk());
         },
         () => cbk && cbk()
       );

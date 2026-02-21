@@ -21,17 +21,25 @@ export default class Powerups extends React.Component {
     clearInterval(this.interval);
   }
 
+  handlePowerupClick = (e) => {
+    const powerupType = e.currentTarget.getAttribute('data-powerup-type');
+    if (!powerupType) return;
+    const powerup = this.props.powerups.find((p) => p.type === powerupType);
+    if (powerup && !inUse(powerup)) {
+      this.props.handleUsePowerup(powerup);
+    }
+  };
+
   // TODO: forceUpdate to make sure hasExpired check clears powerups that time out.
   // Maybe by using a delay callback?
   renderPowerup(powerup, count) {
     if (hasExpired(powerup)) {
-      return;
+      return null;
     }
     const {type} = powerup;
     const {icon, name} = powerups[type];
     const inuse = inUse(powerup);
     const className = `powerups--emoji ${inuse ? 'powerups--in-use' : 'powerups--unused'}`;
-    const onClick = inuse ? undefined : () => this.props.handleUsePowerup(powerup);
 
     const secsLeft = timeLeft(powerup);
     const format = (x) => x.toString().padStart(2, '0');
@@ -39,7 +47,14 @@ export default class Powerups extends React.Component {
     const timeSecs = format(secsLeft % 60);
 
     return (
-      <Flex key={type} column className="powerups--powerup" onClick={onClick} hAlignContent="center">
+      <Flex
+        key={type}
+        column
+        className="powerups--powerup"
+        data-powerup-type={inuse ? undefined : type}
+        onClick={inuse ? undefined : this.handlePowerupClick}
+        hAlignContent="center"
+      >
         <Flex className="powerups--label">{name}</Flex>
         <Flex className={className}>
           <Flex column>

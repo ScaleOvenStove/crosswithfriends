@@ -26,6 +26,7 @@ function getTime(game) {
     if (game.pauseTime) t += game.pauseTime;
     return t;
   }
+  return undefined;
 }
 
 // I guess this function can live here for now
@@ -63,6 +64,12 @@ export default class Replays extends Component {
       limit: 20,
     };
     this.puzzle = null;
+    this.handleIncreaseLimit = this.increaseLimit.bind(this);
+  }
+
+  increaseLimit(e) {
+    const amount = Number(e.currentTarget.dataset.amount);
+    this.setState((prevState) => ({limit: prevState.limit + amount}));
   }
 
   get pid() {
@@ -72,7 +79,7 @@ export default class Replays extends Component {
     return Number(this.props.match.params.pid);
   }
 
-  processGame(rawGame, gid) {
+  static processGame(rawGame, gid) {
     if (rawGame.events) {
       const events = _.values(rawGame.events);
       const historyWrapper = new HistoryWrapper(events);
@@ -116,7 +123,7 @@ export default class Replays extends Component {
       // go through the list of all the games
       // callback: if this is its pid, append its gid to the games list
       this.puzzle.listGames(limit).then((rawGames) => {
-        const games = _.map(_.keys(rawGames), (gid) => this.processGame(rawGames[gid], gid));
+        const games = _.map(_.keys(rawGames), (gid) => Replays.processGame(rawGames[gid], gid));
         this.setState({
           games,
         });
@@ -132,9 +139,9 @@ export default class Replays extends Component {
               .ref('/game')
               .child(g)
               .once('value')
-              .then((snapshot) => ({...snapshot.val(), gid: g}))
+              .then((gameSnapshot) => ({...gameSnapshot.val(), gid: g}))
           ).then((rawGames) => {
-            const games = _.map(_.keys(rawGames), (g) => this.processGame(rawGames[g], rawGames[g].gid));
+            const games = _.map(_.keys(rawGames), (g) => Replays.processGame(rawGames[g], rawGames[g].gid));
             this.setState({
               games,
             });
@@ -166,10 +173,16 @@ export default class Replays extends Component {
     );
   }
 
-  linkToGame(gid, {v2, active, solved}) {
-    return (
-      <a href={`${v2 ? '/beta' : ''}/game/${gid}`}>{solved ? 'done' : active ? 'still playing' : 'paused'}</a>
-    );
+  static linkToGame(gid, {v2, active, solved}) {
+    let status;
+    if (solved) {
+      status = 'done';
+    } else if (active) {
+      status = 'still playing';
+    } else {
+      status = 'paused';
+    }
+    return <a href={`${v2 ? '/beta' : ''}/game/${gid}`}>{status}</a>;
   }
 
   renderList() {
@@ -199,7 +212,7 @@ export default class Replays extends Component {
           <td>
             <TimeFormatter millis={time} />
           </td>
-          <td>{this.linkToGame(gid, {v2, active, solved})}</td>
+          <td>{Replays.linkToGame(gid, {v2, active, solved})}</td>
           <td style={{overflow: 'auto', maxWidth: 300}}>{chatters.join(', ')}</td>
         </tr>
       )
@@ -277,21 +290,11 @@ export default class Replays extends Component {
             {limit}
           </span>
           &nbsp;
-          <button
-            className="limit--button"
-            onClick={() => {
-              this.setState({limit: limit + 10});
-            }}
-          >
+          <button className="limit--button" data-amount="10" onClick={this.handleIncreaseLimit}>
             +
           </button>
           &nbsp;
-          <button
-            className="limit--button"
-            onClick={() => {
-              this.setState({limit: limit + 50});
-            }}
-          >
+          <button className="limit--button" data-amount="50" onClick={this.handleIncreaseLimit}>
             ++
           </button>
         </Flex>

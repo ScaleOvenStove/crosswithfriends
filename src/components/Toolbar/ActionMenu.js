@@ -32,6 +32,8 @@ export default class ActionMenu extends Component {
     this.state = {
       active: false,
     };
+    this._onClick = this.onClick.bind(this);
+    this._onBlur = this.onBlur.bind(this);
   }
 
   handlePointerDown = (e) => {
@@ -42,6 +44,10 @@ export default class ActionMenu extends Component {
     }
     this.setState({active: false});
   };
+
+  static onButtonMouseDown(e) {
+    e.preventDefault();
+  }
 
   onClick() {
     this.setState(
@@ -61,40 +67,39 @@ export default class ActionMenu extends Component {
     this.props.onBlur();
   }
 
+  handleAction = (ev) => {
+    ev.preventDefault();
+    const actionKey = ev.currentTarget.dataset.actionKey;
+    this.props.actions[actionKey]();
+    this.onBlur();
+    this.setState({active: false});
+  };
+
   render() {
     return (
       <div
         ref={this.containerRef}
         className={`${this.state.active ? 'active ' : ''}action-menu`}
-        onBlur={this.onBlur.bind(this)}
+        onBlur={this._onBlur}
       >
         <button
           tabIndex={-1}
           className="action-menu--button"
-          onMouseDown={(e) => {
-            e.preventDefault();
-          }}
-          onClick={this.onClick.bind(this)}
+          onMouseDown={ActionMenu.onButtonMouseDown}
+          onClick={this._onClick}
         >
           {this.props.label}
         </button>
         <div className="action-menu--list">
-          {Object.keys(this.props.actions).map((key, i) => (
+          {Object.keys(this.props.actions).map((key) => (
             <div
-              key={i}
+              key={key}
+              role="button"
+              tabIndex={0}
               className="action-menu--list--action"
-              onMouseDown={(ev) => {
-                ev.preventDefault();
-                this.props.actions[key]();
-                this.onBlur();
-                this.setState({active: false});
-              }}
-              onTouchStart={(ev) => {
-                ev.preventDefault();
-                this.props.actions[key]();
-                this.onBlur();
-                this.setState({active: false});
-              }}
+              data-action-key={key}
+              onMouseDown={this.handleAction}
+              onTouchStart={this.handleAction}
             >
               <span> {key} </span>
             </div>

@@ -130,7 +130,7 @@ export default class Grid extends React.PureComponent<GridProps> {
     return this.grid.isWhite(r, c) && this.grid.getParent(r, c, ori) === num;
   }
 
-  getSizeClass(size: number) {
+  static getSizeClass(size: number) {
     if (size < 20) {
       return 'tiny';
     }
@@ -145,7 +145,7 @@ export default class Grid extends React.PureComponent<GridProps> {
 
   render() {
     const {size, cellStyle} = this.props;
-    const sizeClass = this.getSizeClass(size);
+    const sizeClass = Grid.getSizeClass(size);
 
     const data = this.props.grid.map((row, r) =>
       row.map((cell, c) => ({
@@ -179,6 +179,7 @@ export default class Grid extends React.PureComponent<GridProps> {
           {data.map((row, i) => (
             <RerenderBoundary
               name={`grid row ${i}`}
+              // eslint-disable-next-line react/no-array-index-key
               key={i}
               hash={hashGridRow(row, {...this.props.cellStyle, size})}
             >
@@ -195,6 +196,7 @@ export default class Grid extends React.PureComponent<GridProps> {
                     }}
                   >
                     <Cell
+                      // eslint-disable-next-line react/jsx-props-no-spreading
                       {...cellProps}
                       onClick={this.handleClick}
                       onContextMenu={this.handleRightClick}

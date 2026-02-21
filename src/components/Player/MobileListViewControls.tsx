@@ -25,6 +25,7 @@ export default class MobileListViewControls extends MobileGridControls {
       return nextCell;
     }
     this.selectNextClue();
+    return undefined;
   }
 
   moveToPreviousCell() {
@@ -35,6 +36,7 @@ export default class MobileListViewControls extends MobileGridControls {
       return previousCell;
     }
     this.selectPreviousClue();
+    return undefined;
   }
 
   selectPreviousClue() {

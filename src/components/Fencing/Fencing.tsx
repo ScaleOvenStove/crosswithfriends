@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import * as uuid from 'uuid';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {useUpdateEffect} from 'react-use';
 import {Helmet} from 'react-helmet';
 import Flex from 'react-flexview';
@@ -161,41 +161,46 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
   const toolbarActions = useToolbarActions(sendEvent, gameState, id);
   const playerActions = usePlayerActions(sendEvent, id);
 
-  const changeName = (newName: string): void => {
-    if (newName.trim().length === 0) {
-      newName = nameGenerator();
-    }
-    sendEvent({
-      type: 'updateDisplayName',
-      params: {
-        id,
-        displayName: newName,
-      },
-    });
-  };
-  const changeTeamName = (newName: string): void => {
-    if (!teamId) return;
-    if (newName.trim().length === 0) {
-      newName = nameGenerator();
-    }
-    sendEvent({
-      type: 'updateTeamName',
-      params: {
-        teamId,
-        teamName: newName,
-      },
-    });
-  };
-  const joinTeam = (teamId: number) => {
-    sendEvent({
-      type: 'updateTeamId',
-      params: {
-        id,
-        teamId,
-      },
-    });
-  };
-  const spectate = () => {
+  const changeName = useCallback(
+    (newName: string): void => {
+      const displayName = newName.trim().length === 0 ? nameGenerator() : newName;
+      sendEvent({
+        type: 'updateDisplayName',
+        params: {
+          id,
+          displayName,
+        },
+      });
+    },
+    [id, sendEvent]
+  );
+  const changeTeamName = useCallback(
+    (newName: string): void => {
+      if (!teamId) return;
+      const teamName = newName.trim().length === 0 ? nameGenerator() : newName;
+      sendEvent({
+        type: 'updateTeamName',
+        params: {
+          teamId,
+          teamName,
+        },
+      });
+    },
+    [teamId, sendEvent]
+  );
+  const joinTeam = useCallback(
+    (newTeamId: number) => {
+      sendEvent({
+        type: 'updateTeamId',
+        params: {
+          id,
+          teamId: newTeamId,
+        },
+      });
+    },
+    [id, sendEvent]
+  );
+  const spectate = useCallback(() => {
     sendEvent({
       type: 'updateTeamId',
       params: {
@@ -203,23 +208,29 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
         teamId: teamId ? 0 : 1,
       },
     });
-  };
-  const handleChat = (username: string, id: string, message: string) => {
-    sendEvent({
-      type: 'sendChatMessage',
-      params: {
-        id,
-        message,
-      },
-    });
-    sendEvent({
-      type: 'chat' as any,
-      params: {
-        id,
-        text: message,
-      },
-    });
-  };
+  }, [id, teamId, sendEvent]);
+  const handleChat = useCallback(
+    (username: string, chatId: string, message: string) => {
+      sendEvent({
+        type: 'sendChatMessage',
+        params: {
+          id: chatId,
+          message,
+        },
+      });
+      sendEvent({
+        type: 'chat' as any,
+        params: {
+          id: chatId,
+          text: message,
+        },
+      });
+    },
+    [sendEvent]
+  );
+  const handleUpdateDisplayName = useCallback((_userId: string, name: string) => changeName(name), [
+    changeName,
+  ]);
   const fencingScoreboard = (
     <FencingScoreboard
       gameState={gameState}
@@ -276,7 +287,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
               onChat={handleChat}
               mobile={false}
               updateSeenChatMessage={null}
-              onUpdateDisplayName={(_id: string, name: string) => changeName(name)}
+              onUpdateDisplayName={handleUpdateDisplayName}
             />
           )}
         </Flex>

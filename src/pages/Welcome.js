@@ -25,6 +25,10 @@ import {isMobile, colorAverage} from '../lib/jsUtils';
 const BLUE = '#6aa9f4';
 const WHITE = '#FFFFFF';
 
+const handleLabelMouseDown = (e) => {
+  e.preventDefault();
+};
+
 export default class Welcome extends Component {
   constructor(props) {
     super(props);
@@ -218,6 +222,57 @@ export default class Welcome extends Component {
     this.setState({mobileSidebarOpen: false});
   };
 
+  handleCloseSidebarKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.closeMobileSidebar();
+    }
+  };
+
+  handleCheckboxChange = (e) => {
+    const {header, name} = e.target.dataset;
+    this.handleFilterChange(header, name, e.target.checked);
+  };
+
+  handleToggleFilterGroupClick = (e) => {
+    const {header} = e.currentTarget.dataset;
+    this.toggleFilterGroup(header);
+  };
+
+  handleToggleFilterGroupKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const {header} = e.currentTarget.dataset;
+      this.toggleFilterGroup(header);
+    }
+  };
+
+  handleSelectAllClick = (e) => {
+    const {header} = e.currentTarget.dataset;
+    this.handleSelectAll(header);
+  };
+
+  handleSelectAllKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const {header} = e.currentTarget.dataset;
+      this.handleSelectAll(header);
+    }
+  };
+
+  handleSelectNoneClick = (e) => {
+    const {header} = e.currentTarget.dataset;
+    this.handleSelectNone(header);
+  };
+
+  handleSelectNoneKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const {header} = e.currentTarget.dataset;
+      this.handleSelectNone(header);
+    }
+  };
+
   renderFilters() {
     const sizeFilter = this.props.sizeFilter;
     const statusFilter = this.props.statusFilter;
@@ -240,11 +295,18 @@ export default class Welcome extends Component {
       margin: 'unset',
     };
 
-    const checkboxGroup = (header, items, handleChange, showQuickToggle = false) => {
+    const checkboxGroup = (header, items, showQuickToggle = false) => {
       const collapsed = collapsedFilters[header];
       return (
         <Flex column style={groupStyle} className="checkbox-group">
-          <span style={headerStyle} onClick={() => this.toggleFilterGroup(header)}>
+          <span
+            role="button"
+            tabIndex={0}
+            style={headerStyle}
+            data-header={header}
+            onClick={this.handleToggleFilterGroupClick}
+            onKeyDown={this.handleToggleFilterGroupKeyDown}
+          >
             {header}
             {collapsed ? (
               <MdExpandMore style={{width: 20, height: 20}} />
@@ -254,30 +316,40 @@ export default class Welcome extends Component {
           </span>
           {!collapsed && showQuickToggle && (
             <div className="filter-quick-toggle">
-              <span className="filter-quick-toggle--link" onClick={() => this.handleSelectAll(header)}>
+              <span
+                role="button"
+                tabIndex={0}
+                className="filter-quick-toggle--link"
+                data-header={header}
+                onClick={this.handleSelectAllClick}
+                onKeyDown={this.handleSelectAllKeyDown}
+              >
                 All
               </span>
               <span className="filter-quick-toggle--separator">/</span>
-              <span className="filter-quick-toggle--link" onClick={() => this.handleSelectNone(header)}>
+              <span
+                role="button"
+                tabIndex={0}
+                className="filter-quick-toggle--link"
+                data-header={header}
+                onClick={this.handleSelectNoneClick}
+                onKeyDown={this.handleSelectNoneKeyDown}
+              >
                 None
               </span>
             </div>
           )}
           {!collapsed &&
             _.keys(items).map((name, i) => (
-              <label
-                key={i}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                }}
-              >
+              // eslint-disable-next-line react/no-array-index-key
+              <label key={i} role="presentation" onMouseDown={handleLabelMouseDown}>
                 <input
                   type="checkbox"
                   style={inputStyle}
                   checked={items[name]}
-                  onChange={(e) => {
-                    handleChange(header, name, e.target.checked);
-                  }}
+                  data-header={header}
+                  data-name={name}
+                  onChange={this.handleCheckboxChange}
                 />
                 {items[name] ? (
                   <MdCheckBox className="checkbox-icon" />
@@ -293,10 +365,10 @@ export default class Welcome extends Component {
 
     return (
       <Flex className="filters" column hAlignContent="left" shrink={0}>
-        {checkboxGroup('Size', sizeFilter, this.handleFilterChange)}
-        {checkboxGroup('Type', typeFilter, this.handleFilterChange)}
-        {checkboxGroup('Day', dayOfWeekFilter, this.handleFilterChange, true)}
-        {checkboxGroup('Status', statusFilter, this.handleFilterChange)}
+        {checkboxGroup('Size', sizeFilter)}
+        {checkboxGroup('Type', typeFilter)}
+        {checkboxGroup('Day', dayOfWeekFilter, true)}
+        {checkboxGroup('Status', statusFilter)}
       </Flex>
     );
   }
@@ -407,8 +479,11 @@ export default class Welcome extends Component {
     return (
       <>
         <div
+          role="button"
+          tabIndex={0}
           className={classnames('mobile-sidebar-overlay', {open: mobileSidebarOpen})}
           onClick={this.closeMobileSidebar}
+          onKeyDown={this.handleCloseSidebarKeyDown}
         />
         <Flex className={classnames('mobile-sidebar', {open: mobileSidebarOpen})} column>
           <Flex className="mobile-sidebar--header" vAlignContent="center">

@@ -1,4 +1,3 @@
-/* eslint @typescript-eslint/no-unused-vars : "warn" */
 import {GameEvent} from '../../shared/fencingGameEvents/types/GameEvent';
 import {CellCoords} from '../Grid/types';
 
@@ -28,7 +27,7 @@ export const usePlayerActions = (dispatch: DispatchFn, id: string): PlayerAction
     }, 10);
   },
   addPing() {},
-  updateTeamName(name: string) {
+  updateTeamName() {
     dispatch({type: 'updateTeamName', params: {}});
   },
   startGame() {
