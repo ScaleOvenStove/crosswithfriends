@@ -27,3 +27,9 @@ CREATE INDEX game_events_gid_ts_idx
     ON public.game_events USING btree
     (gid COLLATE pg_catalog."default" ASC NULLS LAST, ts ASC NULLS LAST)
     TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS game_events_uid_idx
+    ON public.game_events (uid);
+
+CREATE INDEX IF NOT EXISTS game_events_payload_id_idx
+    ON public.game_events (((event_payload->'params'->>'id')));
