@@ -38,7 +38,7 @@ export default function iPUZtoJSON(readerResult) {
         if (cell.style.shapebg === 'circle') {
           circles.push(rowIndex * row.length + cellIndex);
         }
-        if (cell.style.color) {
+        if (cell.style.color || cell.style.highlight) {
           shades.push(rowIndex * row.length + cellIndex);
         }
       }

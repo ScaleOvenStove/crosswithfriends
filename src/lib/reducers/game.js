@@ -37,6 +37,7 @@ const reducers = {
       grid = [[{}]],
       solution = [['']],
       circles = [],
+      shades = [],
       chat = {messages: []},
       clues = {},
       clock = {
@@ -61,6 +62,7 @@ const reducers = {
       grid,
       solution,
       circles,
+      shades,
       chat,
       clues,
       clock,
