@@ -27,8 +27,13 @@ app.use(cookieParser());
 app.use(passport.initialize());
 const port = process.env.PORT || 3000;
 
-const corsOrigins =
-  process.env.NODE_ENV === 'production' ? true : ['http://localhost:3020', 'http://localhost:3021'];
+function getCorsOrigins() {
+  if (process.env.NODE_ENV !== 'production') {
+    return ['http://localhost:3020', 'http://localhost:3021'];
+  }
+  return process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : true;
+}
+const corsOrigins = getCorsOrigins();
 const io = new Server(server, {
   pingInterval: 2000,
   pingTimeout: 5000,
@@ -82,6 +87,11 @@ async function runServer() {
   console.log(`  User: ${process.env.PGUSER || process.env.USER}`);
   console.log(`  Port: ${process.env.PGPORT || 5432}`);
   console.log('--------------------------------------------------------------------------------');
+  if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
+    console.warn(
+      'WARNING: FRONTEND_URL is not set. CORS will allow all origins — set FRONTEND_URL for security.'
+    );
+  }
   // Clean up expired/revoked tokens every hour
   setInterval(async () => {
     try {
