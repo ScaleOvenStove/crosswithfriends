@@ -9,7 +9,7 @@ export async function saveGameSnapshot(
   await pool.query(
     `INSERT INTO game_snapshots (gid, pid, snapshot, replay_retained)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (gid) DO UPDATE SET snapshot = $3, replay_retained = $4`,
+     ON CONFLICT (gid) DO UPDATE SET snapshot = $3, replay_retained = game_snapshots.replay_retained OR $4`,
     [gid, pid, JSON.stringify(snapshot), replayRetained]
   );
 }

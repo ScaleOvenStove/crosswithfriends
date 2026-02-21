@@ -48,6 +48,7 @@ export default class Replay extends Component {
       listMode: false,
       replayRetained: null, // null = unknown, true/false = fetched from server
       savingReplay: false,
+      hasSnapshot: false,
     };
     this.followCursor = -1;
     this.historyWrapper = null;
@@ -119,7 +120,9 @@ export default class Replay extends Component {
       const resp = await fetch(`${SERVER_URL}/api/game-snapshot/${this.gid}`);
       if (resp.ok) {
         const data = await resp.json();
-        this.setState({replayRetained: data.replayRetained || false});
+        // Only enable Save Replay for real snapshots, not solution-only fallbacks
+        const hasSnapshot = data.type !== 'solution_only';
+        this.setState({replayRetained: data.replayRetained || false, hasSnapshot});
       }
     } catch (e) {
       // Snapshot may not exist yet — that's fine
@@ -587,11 +590,11 @@ export default class Replay extends Component {
   }
 
   renderSaveReplayButton() {
-    const {replayRetained, savingReplay, replayUnavailable} = this.state;
+    const {replayRetained, savingReplay, replayUnavailable, hasSnapshot} = this.state;
     const isAuthenticated = this.context?.isAuthenticated;
 
-    // Only show when replay events exist, user is logged in, and replay isn't already saved
-    if (replayUnavailable || !isAuthenticated || replayRetained === null || replayRetained) {
+    // Only show when a real snapshot exists, user is logged in, and replay isn't already saved
+    if (replayUnavailable || !isAuthenticated || !hasSnapshot || replayRetained === null || replayRetained) {
       if (replayRetained) {
         return <div className="replay--save-status">Replay saved</div>;
       }
