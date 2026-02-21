@@ -188,6 +188,41 @@ describe('PUZtoJSON', () => {
     expect(() => PUZtoJSON(bytes.buffer)).toThrow('Scrambled');
   });
 
+  it('decodes Windows-1252 special characters in clues', () => {
+    // Build a buffer with raw Windows-1252 bytes for special chars:
+    // 0x93 = left double quote, 0x94 = right double quote, 0x97 = em dash
+    const solution = [
+      ['A', 'B'],
+      ['C', '.'],
+    ];
+    const buffer = buildPuzBuffer({
+      nrow: 2,
+      ncol: 2,
+      solution,
+      clues: ['placeholder', 'placeholder'],
+    });
+
+    // Patch the first clue bytes in the buffer to contain Windows-1252 chars.
+    // The clue area starts after header(52) + solution(4) + state(4) + title(\0) + author(\0) + copyright(\0)
+    const bytes = new Uint8Array(buffer);
+    // Find "placeholder" in the bytes after the grid area
+    const gridEnd = 52 + 2 * 2 * 2; // header + solution + state
+    // Skip 3 null-terminated empty strings (title, author, copyright)
+    const clueStart = gridEnd + 3; // 3 null bytes for empty title/author/copyright
+
+    // Write: 0x93 A 0x94 0x97 B 0x00 (clue with smart quotes and em dash)
+    bytes[clueStart] = 0x93; // left double quote
+    bytes[clueStart + 1] = 0x41; // A
+    bytes[clueStart + 2] = 0x94; // right double quote
+    bytes[clueStart + 3] = 0x97; // em dash
+    bytes[clueStart + 4] = 0x42; // B
+    bytes[clueStart + 5] = 0x00; // null terminator
+
+    const result = PUZtoJSON(bytes.buffer);
+    const acrossClues = result.across.filter(Boolean);
+    expect(acrossClues[0]).toBe('\u201CA\u201D\u2014B'); // "A"—B
+  });
+
   it('returns empty circles and shades when no extensions', () => {
     const solution = [
       ['A', 'B'],
