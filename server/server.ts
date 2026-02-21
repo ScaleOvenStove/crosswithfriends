@@ -31,7 +31,16 @@ function getCorsOrigins() {
   if (process.env.NODE_ENV !== 'production') {
     return ['http://localhost:3020', 'http://localhost:3021'];
   }
-  return process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : true;
+  if (!process.env.FRONTEND_URL) return true;
+  const url = process.env.FRONTEND_URL;
+  // Allow both www and non-www variants
+  const origins = [url];
+  if (url.includes('://www.')) {
+    origins.push(url.replace('://www.', '://'));
+  } else {
+    origins.push(url.replace('://', '://www.'));
+  }
+  return origins;
 }
 const corsOrigins = getCorsOrigins();
 const io = new Server(server, {
