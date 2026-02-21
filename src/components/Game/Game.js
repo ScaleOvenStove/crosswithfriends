@@ -415,6 +415,10 @@ export default class Game extends Component {
         }}
         onRefocus={this.handleRefocus}
         unreads={this.props.unreads}
+        onSaveReplay={this.props.onSaveReplay}
+        replayRetained={this.props.replayRetained}
+        savingReplay={this.props.savingReplay}
+        isAuthenticated={this.props.isAuthenticated}
       />
     );
   }

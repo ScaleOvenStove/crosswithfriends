@@ -36,6 +36,14 @@
   font-weight: 500;
 }
 
+.replay--controls-container {
+  flex-shrink: 0;
+  background: white;
+  border-top: 1px solid #e2e2e2;
+  position: relative;
+  z-index: 1;
+}
+
 .replay--control-icons {
   display: flex;
   flex-direction: row;
@@ -75,4 +83,30 @@
   cursor: pointer;
   color: var(--main-blue);
   display: flex;
+}
+
+.replay--save-btn {
+  margin-top: 12px;
+  padding: 6px 16px;
+  background: var(--main-blue);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.replay--save-btn:hover {
+  opacity: 0.85;
+}
+
+.replay--save-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.replay--save-status {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--main-gray-1);
 }
