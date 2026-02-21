@@ -20,8 +20,14 @@ function convertCluesArray(initialCluesArray) {
 
 export default function iPUZtoJSON(readerResult) {
   const jsonFromReader = JSON.parse(new TextDecoder().decode(readerResult));
-  const grid = jsonFromReader.solution.map((row) =>
-    row.map((cell) => (cell === null || cell === '#' ? '.' : cell))
+  const hasSolution = !!jsonFromReader.solution;
+  const gridSource = jsonFromReader.solution || jsonFromReader.puzzle;
+  const grid = gridSource.map((row) =>
+    row.map((cell) => {
+      if (cell === null || cell === '#') return '.';
+      if (!hasSolution) return ''; // no solution — white cells are empty
+      return cell;
+    })
   );
   const info = {
     type: grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle',

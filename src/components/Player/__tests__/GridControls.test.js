@@ -81,6 +81,50 @@ describe('GridControls._handleKeyDown — action keys', () => {
   });
 });
 
+describe('GridControls._handleKeyDown — alt key shortcuts', () => {
+  it('calls onCheck("square") for Alt+S on Mac (ev.key="ß", ev.code="KeyS")', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('ß', false, true, 'KeyS');
+    expect(props.onCheck).toHaveBeenCalledWith('square');
+  });
+
+  it('calls onCheck("word") for Alt+W on Mac (ev.key="∑", ev.code="KeyW")', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('∑', false, true, 'KeyW');
+    expect(props.onCheck).toHaveBeenCalledWith('word');
+  });
+
+  it('calls onCheck("puzzle") for Alt+P on Mac (ev.key="π", ev.code="KeyP")', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('π', false, true, 'KeyP');
+    expect(props.onCheck).toHaveBeenCalledWith('puzzle');
+  });
+
+  it('calls onReveal("square") for Alt+Shift+S on Mac', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('ß', true, true, 'KeyS');
+    expect(props.onReveal).toHaveBeenCalledWith('square');
+  });
+
+  it('calls onReveal("word") for Alt+Shift+W on Mac', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('∑', true, true, 'KeyW');
+    expect(props.onReveal).toHaveBeenCalledWith('word');
+  });
+
+  it('calls onReveal("puzzle") for Alt+Shift+P on Mac', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('π', true, true, 'KeyP');
+    expect(props.onReveal).toHaveBeenCalledWith('puzzle');
+  });
+
+  it('works with Latin ev.key values on Windows/Linux', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('s', false, true, 'KeyS');
+    expect(props.onCheck).toHaveBeenCalledWith('square');
+  });
+});
+
 describe('GridControls.delete', () => {
   it('clears a filled cell and returns true', () => {
     const {instance, props} = makeControlsInstance(GridControls, {

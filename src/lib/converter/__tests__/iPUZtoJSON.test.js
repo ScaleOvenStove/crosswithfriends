@@ -181,4 +181,33 @@ describe('iPUZtoJSON', () => {
     expect(result.circles).toEqual([]);
     expect(result.shades).toEqual([]);
   });
+
+  describe('missing solution field', () => {
+    it('does not crash when solution is missing', () => {
+      const ipuz = makeMinimalIPUZ();
+      delete ipuz.solution;
+      expect(() => iPUZtoJSON(makeBuffer(ipuz))).not.toThrow();
+    });
+
+    it('builds grid from puzzle field with empty white cells', () => {
+      const ipuz = makeMinimalIPUZ();
+      delete ipuz.solution;
+      const result = iPUZtoJSON(makeBuffer(ipuz));
+      // White cells become empty strings
+      expect(result.grid[0][0]).toBe('');
+      expect(result.grid[0][1]).toBe('');
+      expect(result.grid[1][0]).toBe('');
+      // Black squares still marked correctly
+      expect(result.grid[1][1]).toBe('.');
+    });
+
+    it('still extracts info, clues, and circles', () => {
+      const ipuz = makeMinimalIPUZ();
+      delete ipuz.solution;
+      const result = iPUZtoJSON(makeBuffer(ipuz));
+      expect(result.info.title).toBe('Test Puzzle');
+      expect(result.across[1]).toBe('First across');
+      expect(result.down[1]).toBe('First down');
+    });
+  });
 });

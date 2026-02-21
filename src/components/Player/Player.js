@@ -86,6 +86,9 @@ export default class Player extends Component {
 
   componentDidMount() {
     window.addEventListener('resize', this.updateSize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.updateSize);
+    }
     this.updateSize();
   }
 
@@ -106,6 +109,9 @@ export default class Player extends Component {
 
   componentWillUnmount() {
     window.removeEventListener('resize', this.updateSize);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.updateSize);
+    }
   }
 
   get size() {

@@ -35,6 +35,25 @@ export default class MobileGridControls extends GridControls {
     this.boundCenterGridX = () => this.centerGridX();
   }
 
+  componentDidMount() {
+    super.componentDidMount();
+    // Listen to visualViewport resize events to handle keyboard show/hide on mobile.
+    // window.resize doesn't reliably fire on iOS Safari when the virtual keyboard
+    // appears/disappears, but visualViewport.resize does.
+    if (window.visualViewport) {
+      this._handleViewportResize = () => {
+        this.fitOnScreen(true);
+      };
+      window.visualViewport.addEventListener('resize', this._handleViewportResize);
+    }
+  }
+
+  componentWillUnmount() {
+    if (window.visualViewport && this._handleViewportResize) {
+      window.visualViewport.removeEventListener('resize', this._handleViewportResize);
+    }
+  }
+
   componentDidUpdate(prevProps, prevState) {
     if (prevState.transform !== this.state.transform) {
       if (this.state.anchors.length === 0) {
@@ -80,8 +99,11 @@ export default class MobileGridControls extends GridControls {
       const paddingY = (rect.height - this.grid.rows * size) / 2;
       const tX = (posX + paddingX) * scale;
       const tY = (posY + paddingY) * scale;
+      // Use the actual visible height (accounting for keyboard) instead of the
+      // layout container height, so the selected cell isn't panned behind the keyboard
+      const visibleHeight = usableHeight;
       translateX = _.clamp(translateX, -tX, rect.width - tX - size * scale);
-      translateY = _.clamp(translateY, -tY, rect.height - tY - size * scale);
+      translateY = _.clamp(translateY, -tY, visibleHeight - tY - size * scale);
     }
 
     this.setState({
