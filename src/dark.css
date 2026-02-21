@@ -306,6 +306,100 @@
   border-color: #5f6368 !important;
 }
 
+/* SweetAlert modals */
+
+.dark .swal-overlay {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.dark .swal-modal {
+  background-color: #2d2d2d;
+  border: 1px solid #444;
+}
+
+.dark .swal-title {
+  color: var(--dark-primary-text);
+}
+
+.dark .swal-text {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .swal-button {
+  background-color: var(--dark-blue-1);
+  color: var(--dark-primary-text);
+}
+
+.dark .swal-button:hover {
+  background-color: var(--dark-blue-2);
+}
+
+.dark .swal-button--cancel {
+  background-color: #444;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .swal-button--cancel:hover {
+  background-color: #555;
+}
+
+.dark .swal-button--danger {
+  background-color: #c62828;
+}
+
+.dark .swal-button--danger:hover {
+  background-color: #b71c1c;
+}
+
+/* Chat header (puzzle instructions / description) */
+
+.dark .chat--header--subtitle {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dark .chat--header--description {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ActionMenu dropdowns (Check, Reveal, Reset, Extras, Play Again) */
+
+.dark .action-menu--list {
+  background-color: #2d2d2d;
+  border: 1px solid #555;
+}
+
+.dark .action-menu--list--action {
+  color: var(--dark-primary-text);
+  border-color: #555;
+}
+
+.dark .action-menu--list--action:hover {
+  background-color: #444;
+  color: var(--dark-primary-text);
+}
+
+/* Popup info panel (How to Enter Answers) */
+
+.dark .popup-menu--content {
+  background-color: #2d2d2d;
+  color: var(--dark-primary-text);
+  border: 1px solid #555;
+}
+
+.dark .popup-menu--content tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .popup-menu--content code {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--dark-primary-text);
+}
+
+.dark .popup-menu--button:hover {
+  background-color: transparent;
+  color: var(--dark-primary-text);
+}
+
 :root {
   --dark-blue-1: rgb(36, 79, 115);
   --dark-blue-2: #183a60;
