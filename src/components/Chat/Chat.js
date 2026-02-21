@@ -89,12 +89,6 @@ export default class Chat extends Component {
     this.setState({username});
   };
 
-  static handleMessagesRef(el) {
-    if (el) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }
-
   handleToggleChat = () => {
     this.props.onToggleChat();
   };
@@ -437,7 +431,16 @@ export default class Chat extends Component {
         <div className="chat">
           {this.renderChatHeader()}
           {this.renderChatSubheader()}
-          <div ref={Chat.handleMessagesRef} className="chat--messages">
+          {/* eslint-disable react/jsx-no-bind -- intentionally unstable ref to auto-scroll on every render */}
+          <div
+            ref={(el) => {
+              if (el) {
+                el.scrollTop = el.scrollHeight;
+              }
+            }}
+            className="chat--messages"
+          >
+            {/* eslint-enable react/jsx-no-bind */}
             <div className="chat--message chat--system-message">
               <div>
                 <i>
