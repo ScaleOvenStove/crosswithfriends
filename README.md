@@ -1,73 +1,87 @@
-## crosswithfriends
+## Cross with Friends
 
-Crosswithfriends is an online website for sharing crosswords and playing collaboratively with friends in real time.
+Cross with Friends is an online platform for sharing crossword puzzles and solving them collaboratively with friends in real time.
 
-It is hosted at https://crosswithfriends.com/.
+Hosted at [crosswithfriends.com](https://www.crosswithfriends.com).
 
-# 🚨 Repository Status & Branching Strategy
+## Tech Stack
 
-**Important:** This repository is currently in a transition phase between the Legacy Production app and the V2 Rewrite. Please ensure you are working on the correct branch.
+- **Frontend:** React (CRA), Material UI v4, TypeScript/JavaScript
+- **Backend:** Express, Socket.IO (real-time gameplay), PostgreSQL
+- **Auth:** Google OAuth, email/password with JWT sessions
+- **Infrastructure:** Render (hosting + managed Postgres)
+- **CI:** GitHub Actions (ESLint, Prettier, TypeCheck, Tests, Build)
 
-| Environment    | Branch       | Status                                                                  | URL                                                        |
-| :------------- | :----------- | :---------------------------------------------------------------------- | :--------------------------------------------------------- |
-| **Production** | `master`     | 🔒 **Maintenance Only**<br>Critical hotfixes for the live app.          | [crosswithfriends.com](https://www.crosswithfriends.com)   |
-| **V2**         | `v2-rewrite` | 🚀 **Active Development**<br>All new features and the rewrite codebase. | [v2.crosswithfriends.com](https://v2.crosswithfriends.com) |
+## Recent Changes
 
----
+### User Accounts & Authentication
 
-## 🛠️ Which branch should I use?
+- Google OAuth and email/password sign-up with JWT cookie sessions
+- User profiles with solve history, stats, and privacy toggle
+- Email verification via SendGrid
+- Solve history backfill on signup from existing game data
 
-### 1. Working on the New App (Default)
+### Game Snapshots & Event Optimization
 
-Most development should happen here. This is the new codebase (React/Vite/Node).
-`git checkout v2-rewrite`
-`git pull origin v2-rewrite`
+- New `game_snapshots` table captures final grid state when a puzzle is solved
+- Ephemeral events (`updateCursor`, `addPing`, `updateDisplayName`, `updateColor`) are broadcast via socket but no longer persisted to `game_events`, eliminating ~40-60% of DB writes
+- "Save Replay" opt-in lets users preserve full replay data from automated cleanup
+- Replay page falls back to snapshot view when events have been pruned
+- Backfill and cleanup scripts for managing historical data (`server/jobs/`)
 
-### 2. Fixing a Bug in Production (Legacy)
+### Connection & Reliability
 
-Only check this out if you need to patch the currently live application.
+- Reconnection retry loop with two-tier warning banner (replacing the old disconnect alert)
+- Fixed socket.io v4 connection status indicator and engine ping rebinding
+- CORS fixes for cross-origin cookie handling
 
-    `git checkout master`
-    `git pull origin master`
+### Security
 
-# ⚠️ Do not merge v2-rewrite into master!
+- Helmet middleware for security response headers
+- Content hash deduplication to prevent duplicate public puzzle uploads
+- Express 4.21, body-parser 1.20, moment 2.30 upgrades for known CVE fixes
 
-## Contributing
+### Testing & CI
 
-If you notice a bug or have a feature request, feel free to open an issue.
+- Expanded test coverage from 79 to 191 tests across 13 suites
+- Added TypeCheck CI job
+- Branch protection on `master`: requires ESLint, Prettier, Tests, TypeCheck, and Build checks
 
-### Getting Started
+## Getting Started
 
-1. Install `nvm` and `yarn`
+1. Install `nvm` and clone the repo:
 
-2. Clone repo and cd to repo root.
+   ```sh
+   git clone https://github.com/ScaleOvenStove/crosswithfriends.git
+   cd crosswithfriends
+   ```
 
-   `git clone https://github.com/ScaleOvenStove/crosswithfriends.git`
-   `cd crosswithfriends`
+2. Use Node 18:
 
-3. Use node v18
-   `nvm install`
-   `nvm use`
-   `nvm alias default 18` (optional)
+   ```sh
+   nvm install
+   nvm use
+   ```
 
-4. Install Dependencies
-   `yarn`
+3. Install dependencies:
 
-5. Run frontend server
+   ```sh
+   yarn
+   ```
+
+4. Set up local environment:
+
+   Copy `server/.env.example` to `server/.env.local` and fill in your Postgres credentials and other config.
+
+5. Run the dev server:
 
    ```sh
    yarn start
    ```
 
-   Or to do frontend development against the remote server:
+## Development Workflow
 
-   ```sh
-   REACT_APP_STAGING_API_URL="downforacross-com.onrender.com" yarn start
-   ```
-
-### Development Workflow
-
-This project uses ESLint, Prettier, and Jest. CI runs all of these on every pull request.
+This project uses ESLint, Prettier, and Jest. CI runs all checks on every pull request.
 
 **Run tests:**
 
@@ -78,13 +92,13 @@ yarn test
 **Lint:**
 
 ```sh
-yarn eslint --ext .js,.jsx,.ts,.tsx src/ server/
+npx eslint . --ext .js,.jsx,.ts,.tsx
 ```
 
 **Check formatting:**
 
 ```sh
-yarn prettier --check "src/**/*.{js,jsx,ts,tsx}" "server/**/*.{js,ts}"
+npx prettier --check .
 ```
 
 **Production build:**
@@ -95,23 +109,27 @@ yarn build
 
 A pre-commit hook (via Husky + lint-staged) automatically lints and formats staged files on commit.
 
-### Contributing
+## Database Scripts
 
-Cross with Friends is open to contributions from developers of any level or experience.
-See the `Getting Started` section for instructions on setting up.
+Scripts in `server/jobs/` for database maintenance:
 
-Join the [discord](https://discord.gg/RmjCV8EZ73) for discussion.
+- **`backfill_snapshots.js`** — Creates snapshots for historical solved games by replaying events through the game reducer. Supports `DATABASE_URL`, configurable `BATCH_SIZE`, and `LOOP=1` for continuous processing.
+- **`cleanup_game_events.js`** — Removes non-create events from solved+snapshotted games, respecting `replay_retained` flag and a 7-day grace period. Supports `DRY_RUN=1`.
 
-### Tips
+Both scripts load config from `server/.env.local` by default, or accept a `DATABASE_URL` env var for remote databases.
+
+## Contributing
+
+Cross with Friends is open to contributions from developers of any level.
+
+If you notice a bug or have a feature request, feel free to open an issue.
+
+Join the [Discord](https://discord.gg/RmjCV8EZ73) for discussion.
+
+## Tips
 
 Developing for mobile web:
 
-- Mobile device emulator: https://appetize.io/demo?device=nexus7&scale=50&orientation=portrait&osVersion=9.0
-- Public urls for local server: ngrok, https://ngrok.com/
-- Remote debugging (e.g. safari developer mode) tips: https://support.brightcove.com/debugging-mobile-devices
-
-### Other resources
-
-- https://firebase.google.com/docs/database/web/start (intro to firebase realtime database)
-- https://reactjs.org/tutorial/tutorial.html (intro to react)
-- https://discord.gg/RmjCV8EZ73 (community discord)
+- Mobile device emulator: https://appetize.io/demo
+- Public URLs for local server: [ngrok](https://ngrok.com/)
+- Remote debugging tips: https://support.brightcove.com/debugging-mobile-devices
