@@ -31,13 +31,15 @@ export async function recordSolve(
   gid: string,
   time_to_solve: number,
   accessToken?: string | null,
-  playerCount?: number
+  playerCount?: number,
+  snapshot?: object
 ): Promise<RecordSolveResponse> {
   const url = `${SERVER_URL}/api/record_solve/${pid}`;
   const data: RecordSolveRequest = {
     gid,
     time_to_solve,
     player_count: playerCount,
+    snapshot,
   };
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

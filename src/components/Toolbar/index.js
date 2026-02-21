@@ -454,6 +454,24 @@ export default class Toolbar extends Component {
     });
   }
 
+  renderSaveReplay() {
+    const {onSaveReplay, replayRetained, savingReplay, isAuthenticated, solved} = this.props;
+    if (!solved || !isAuthenticated || !onSaveReplay || replayRetained === null) return null;
+    if (replayRetained) {
+      return <span className="toolbar--replay-saved">Replay saved</span>;
+    }
+    return (
+      <button
+        className="toolbar--save-replay"
+        onClick={onSaveReplay}
+        disabled={savingReplay}
+        onMouseDown={this.handleMouseDown}
+      >
+        {savingReplay ? 'Saving...' : 'Save Replay'}
+      </button>
+    );
+  }
+
   render() {
     const {
       mobile,
@@ -487,6 +505,7 @@ export default class Toolbar extends Component {
                 {!solved && !replayMode && this.renderCheckMenu()}
                 {!solved && !replayMode && this.renderRevealMenu()}
                 {solved && !replayMode && this.renderReplayLink()}
+                {solved && !replayMode && this.renderSaveReplay()}
               </>
             ) : (
               <>
@@ -520,6 +539,7 @@ export default class Toolbar extends Component {
         {!solved && !replayMode && this.renderRevealMenu()}
         {!solved && !replayMode && <div className="toolbar--menu reset">{this.renderResetMenu()}</div>}
         {solved && !replayMode && this.renderReplayLink()}
+        {solved && !replayMode && this.renderSaveReplay()}
         {this.renderColorAttributionToggle()}
         {this.renderListViewButton()}
         {!replayMode && this.renderPencil()}

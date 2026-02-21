@@ -64,3 +64,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- 9. user_identity_map (depends on users)
 -- ============================================================
 \ir create_user_identity_map.sql
+
+-- ============================================================
+-- 10. game_snapshots (no dependencies)
+-- ============================================================
+\ir create_game_snapshots.sql

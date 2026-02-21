@@ -19,6 +19,7 @@ import {isMobile, rand_color} from '../lib/jsUtils';
 import * as powerupLib from '../lib/powerups';
 import {recordSolve} from '../api/puzzle.ts';
 import AuthContext from '../lib/AuthContext';
+import {SERVER_URL} from '../api/constants';
 
 import nameGenerator from '../lib/nameGenerator';
 
@@ -34,6 +35,8 @@ export default class Game extends Component {
       mode: 'game',
       powerups: undefined,
       lastReadChat: 0,
+      replayRetained: null, // null = no snapshot yet, false = snapshot exists but not retained, true = retained
+      savingReplay: false,
     };
     this.initializeUser();
     window.addEventListener('resize', () => {
@@ -336,13 +339,50 @@ export default class Game extends Component {
       // double log to postgres
       const authToken = this.context?.accessToken || null;
       const playerCount = Object.keys(this.game.users || {}).length || 1;
-      await recordSolve(this.game.pid, this.state.gid, this.game.clock.totalTime, authToken, playerCount);
+      const snapshot = {
+        grid: this.game.grid,
+        users: this.game.users,
+        clock: this.game.clock,
+        chat: this.game.chat,
+      };
+      await recordSolve(
+        this.game.pid,
+        this.state.gid,
+        this.game.clock.totalTime,
+        authToken,
+        playerCount,
+        snapshot
+      );
+      this.setState({replayRetained: false});
       this.user.markSolved(this.state.gid);
       if (this.battleModel) {
         this.battleModel.setSolved(this.state.team);
       }
     }
   });
+
+  handleSaveReplay = async () => {
+    const accessToken = this.context?.accessToken;
+    if (!accessToken) return;
+    this.setState({savingReplay: true});
+    try {
+      const resp = await fetch(`${SERVER_URL}/api/game-snapshot/${this.state.gid}/keep-replay`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (resp.ok) {
+        this.setState({replayRetained: true, savingReplay: false});
+      } else {
+        this.setState({savingReplay: false});
+      }
+    } catch (e) {
+      console.error('Failed to save replay:', e);
+      this.setState({savingReplay: false});
+    }
+  };
 
   handleUsePowerup = (powerup) => {
     this.battleModel.usePowerup(powerup.type, this.state.team);
@@ -387,6 +427,10 @@ export default class Game extends Component {
         team={this.state.team}
         unreads={this.unreads}
         syncFailed={this.state.syncWarning === 'failed'}
+        onSaveReplay={this.handleSaveReplay}
+        replayRetained={this.state.replayRetained}
+        savingReplay={this.state.savingReplay}
+        isAuthenticated={this.context?.isAuthenticated}
       />
     );
   }

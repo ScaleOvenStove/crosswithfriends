@@ -191,6 +191,8 @@ export interface RecordSolveRequest {
   gid: string;
   time_to_solve: number;
   player_count?: number;
+  snapshot?: object;
+  keep_replay?: boolean;
 }
 
 export interface RecordSolveResponse {}

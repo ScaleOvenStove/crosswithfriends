@@ -8,6 +8,7 @@ import {MdPlayArrow, MdPause, MdChevronLeft, MdChevronRight} from 'react-icons/m
 import _ from 'lodash';
 
 import {GameModel} from '../store';
+import AuthContext from '../lib/AuthContext';
 
 import HistoryWrapper from '../lib/wrappers/HistoryWrapper';
 import Player from '../components/Player';
@@ -17,6 +18,7 @@ import {Timeline} from '../components/Timeline/Timeline';
 import {isMobile, toArr} from '../lib/jsUtils';
 import Toolbar from '../components/Toolbar';
 import {Tooltip} from '@material-ui/core';
+import {SERVER_URL} from '../api/constants';
 
 const SCRUB_SPEED = 50; // 30 actions per second
 const AUTOPLAY_SPEEDS = localStorage.premium ? [1, 10, 100, 1000] : [1, 10, 100];
@@ -31,6 +33,8 @@ const formatTime = (seconds) => {
   return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 };
 export default class Replay extends Component {
+  static contextType = AuthContext;
+
   constructor() {
     super();
     this.state = {
@@ -42,6 +46,9 @@ export default class Replay extends Component {
       autoplaySpeed: 10,
       colorAttributionMode: false,
       listMode: false,
+      replayRetained: null, // null = unknown, true/false = fetched from server
+      savingReplay: false,
+      hasSnapshot: false,
     };
     this.followCursor = -1;
     this.historyWrapper = null;
@@ -86,6 +93,63 @@ export default class Replay extends Component {
       position,
       replayUnavailable,
     });
+    if (replayUnavailable && !this.state.snapshotData && !this.snapshotFetched) {
+      this.fetchSnapshot();
+    }
+    if (!replayUnavailable && this.state.replayRetained === null && !this.replayStatusFetched) {
+      this.fetchReplayStatus();
+    }
+  };
+
+  fetchSnapshot = async () => {
+    this.snapshotFetched = true;
+    try {
+      const resp = await fetch(`${SERVER_URL}/api/game-snapshot/${this.gid}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        this.setState({snapshotData: data});
+      }
+    } catch (e) {
+      console.error('Failed to fetch game snapshot:', e);
+    }
+  };
+
+  fetchReplayStatus = async () => {
+    this.replayStatusFetched = true;
+    try {
+      const resp = await fetch(`${SERVER_URL}/api/game-snapshot/${this.gid}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        // Only enable Save Replay for real snapshots, not solution-only fallbacks
+        const hasSnapshot = data.type !== 'solution_only';
+        this.setState({replayRetained: data.replayRetained || false, hasSnapshot});
+      }
+    } catch (e) {
+      // Snapshot may not exist yet — that's fine
+    }
+  };
+
+  handleSaveReplay = async () => {
+    const accessToken = this.context?.accessToken;
+    if (!accessToken) return;
+    this.setState({savingReplay: true});
+    try {
+      const resp = await fetch(`${SERVER_URL}/api/game-snapshot/${this.gid}/keep-replay`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (resp.ok) {
+        this.setState({replayRetained: true, savingReplay: false});
+      } else {
+        this.setState({savingReplay: false});
+      }
+    } catch (e) {
+      console.error('Failed to save replay:', e);
+      this.setState({savingReplay: false});
+    }
   };
 
   debouncedRecomputeHistory = _.debounce(this.recomputeHistory);
@@ -259,10 +323,17 @@ export default class Replay extends Component {
   };
 
   renderHeader() {
-    if (!this.game || this.state.error) {
+    if (this.state.error) {
       return null;
     }
-    const {title, author, type} = this.game.info;
+    let info;
+    if (this.game) {
+      info = this.game.info;
+    } else if (this.state.snapshotData?.type === 'solution_only') {
+      info = this.state.snapshotData.info;
+    }
+    if (!info) return null;
+    const {title, author, type} = info;
     return (
       <div>
         <div className="header--title">{title}</div>
@@ -273,7 +344,7 @@ export default class Replay extends Component {
   }
 
   renderToolbar() {
-    if (!this.game) return;
+    if (!this.game) return null;
     const {clock} = this.game;
     const {totalTime} = clock;
     return (
@@ -285,6 +356,7 @@ export default class Replay extends Component {
         pausedTime={totalTime}
         colorAttributionMode={this.state.colorAttributionMode}
         listMode={this.state.listMode}
+        expandMenu={this.state.expandMenu}
         onToggleColorAttributionMode={() => {
           this.setState((prevState) => ({colorAttributionMode: !prevState.colorAttributionMode}));
         }}
@@ -293,7 +365,93 @@ export default class Replay extends Component {
             listMode: !prevState.listMode,
           }));
         }}
+        onToggleExpandMenu={() => {
+          this.setState((prevState) => ({expandMenu: !prevState.expandMenu}));
+        }}
       />
+    );
+  }
+
+  renderSnapshotFallback() {
+    const {snapshotData} = this.state;
+    if (!snapshotData) {
+      return (
+        <div className="replay--unavailable">
+          <p>Replay is no longer available for this game.</p>
+          <p>Game event data has been archived.</p>
+        </div>
+      );
+    }
+
+    let grid;
+    let clues;
+    let info;
+    let message;
+
+    if (snapshotData.type === 'snapshot') {
+      // Full snapshot — show the solved grid as captured at solve time
+      grid = snapshotData.snapshot.grid;
+      clues = this.game && this.game.clues;
+      info = this.game && this.game.info;
+      message = 'Replay data has been cleaned up. Showing the final solved state.';
+    } else if (snapshotData.type === 'solution_only') {
+      // Solution-only fallback — build a grid from the puzzle solution
+      grid = snapshotData.solution.map((row) =>
+        row.map((value) => ({
+          value: value === '.' ? '' : value,
+          black: value === '.',
+          good: value !== '.',
+        }))
+      );
+      clues = snapshotData.clues;
+      info = snapshotData.info;
+      message = 'Replay data is no longer available. Showing the puzzle solution.';
+    } else {
+      return (
+        <div className="replay--unavailable">
+          <p>Replay is no longer available for this game.</p>
+        </div>
+      );
+    }
+
+    if (!grid) {
+      return (
+        <div className="replay--unavailable">
+          <p>Replay is no longer available for this game.</p>
+        </div>
+      );
+    }
+
+    const screenWidth = this.screenWidth;
+    const cols = grid[0].length;
+    const rows = grid.length;
+    const width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
+    const size = width / cols;
+
+    return (
+      <div>
+        <div className="replay--unavailable" style={{marginBottom: 12}}>
+          <p>{message}</p>
+          {info && <p style={{fontWeight: 'bold'}}>{info.title}</p>}
+        </div>
+        <Player
+          size={size}
+          grid={grid}
+          circles={[]}
+          shades={[]}
+          clues={clues ? {across: toArr(clues.across), down: toArr(clues.down)} : {across: [], down: []}}
+          cursors={[]}
+          frozen
+          myColor="#000000"
+          updateGrid={_.noop}
+          updateCursor={_.noop}
+          onPressEnter={_.noop}
+          mobile={isMobile()}
+          users={{}}
+          colorAttributionMode={false}
+          listMode={false}
+        />
+      </div>
     );
   }
 
@@ -305,12 +463,7 @@ export default class Replay extends Component {
       return <div>Loading...</div>;
     }
     if (this.state.replayUnavailable) {
-      return (
-        <div className="replay--unavailable">
-          <p>Replay is no longer available for this game.</p>
-          <p>Game event data has been archived.</p>
-        </div>
-      );
+      return this.renderSnapshotFallback();
     }
 
     const {grid, circles, shades, cursors, clues, solved, users} = this.game;
@@ -431,14 +584,35 @@ export default class Replay extends Component {
             </div>
           ))}
         </div>
+        {this.renderSaveReplayButton()}
       </div>
+    );
+  }
+
+  renderSaveReplayButton() {
+    const {replayRetained, savingReplay, replayUnavailable, hasSnapshot} = this.state;
+    const isAuthenticated = this.context?.isAuthenticated;
+
+    // Only show when a real snapshot exists, user is logged in, and replay isn't already saved
+    if (replayUnavailable || !isAuthenticated || !hasSnapshot || replayRetained === null || replayRetained) {
+      if (replayRetained) {
+        return <div className="replay--save-status">Replay saved</div>;
+      }
+      return null;
+    }
+
+    return (
+      <button className="replay--save-btn" onClick={this.handleSaveReplay} disabled={savingReplay}>
+        {savingReplay ? 'Saving...' : 'Save Replay'}
+      </button>
     );
   }
 
   getPuzzleTitle() {
     const game = this.game;
-    if (!game || !game.info) return '';
-    return game.info.title;
+    if (game && game.info) return game.info.title;
+    if (this.state.snapshotData?.info) return this.state.snapshotData.info.title;
+    return '';
   }
 
   render() {
@@ -468,17 +642,10 @@ export default class Replay extends Component {
             border: '1px solid #E2E2E2',
           }}
         >
-          <Flex grow={1} style={{padding: isMobile() ? 0 : 20}}>
+          <Flex grow={1} style={{padding: isMobile() ? 0 : 20, overflow: 'auto'}}>
             {this.renderPlayer()}
           </Flex>
-          <div
-            style={{
-              zIndex: 1,
-              // flex: 1,
-            }}
-          >
-            {this.renderControls()}
-          </div>
+          <div className="replay--controls-container">{this.renderControls()}</div>
         </Flex>
         {/* Controls:
       Playback scrubber
