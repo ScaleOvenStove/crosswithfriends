@@ -26,6 +26,10 @@ function assignTimestamp(event: SocketEvent) {
   return event;
 }
 
+// Event types that are broadcast to connected clients but NOT persisted to the database.
+// These are only meaningful in real-time and not needed for game resume or replay.
+const EPHEMERAL_EVENT_TYPES = new Set(['updateCursor', 'addPing', 'updateDisplayName', 'updateColor']);
+
 // ============== Socket Manager ==============
 
 class SocketManager {
@@ -37,7 +41,9 @@ class SocketManager {
 
   async addGameEvent(gid: string, event: SocketEvent) {
     const gameEvent: GameEvent = assignTimestamp(event);
-    await addGameEvent(gid, gameEvent);
+    if (!EPHEMERAL_EVENT_TYPES.has(gameEvent.type)) {
+      await addGameEvent(gid, gameEvent);
+    }
     this.io.to(`game-${gid}`).emit('game_event', gameEvent);
   }
 

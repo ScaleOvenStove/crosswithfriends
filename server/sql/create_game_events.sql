@@ -1,4 +1,8 @@
 -- psql < create_puzzles.sql
+--
+-- Persisted event types: create, updateCell, check, reveal, reset, updateClock, chat
+-- Ephemeral event types (broadcast only, NOT written to DB): updateCursor, addPing, updateDisplayName, updateColor
+-- See EPHEMERAL_EVENT_TYPES in server/SocketManager.ts
 
 CREATE TABLE public.game_events
 (
