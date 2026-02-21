@@ -185,3 +185,45 @@ code {
   color: rgba(255, 255, 255, 0.7);
   font-size: 11px;
 }
+
+.toolbar--mark-solved {
+  padding: 4px 10px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar--mark-solved:hover {
+  background: #43a047;
+}
+
+.toolbar--unmark-solved {
+  padding: 4px 10px;
+  background: #757575;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar--unmark-solved:hover {
+  background: #616161;
+}
+
+.toolbar--mobile .toolbar--mark-solved {
+  background: rgba(76, 175, 80, 0.8);
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.toolbar--mobile .toolbar--unmark-solved {
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  padding: 3px 8px;
+}

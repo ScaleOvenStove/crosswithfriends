@@ -164,6 +164,16 @@ export default class Game extends Component {
     this.props.gameModel.reset(scope, force);
   };
 
+  handleMarkSolved = () => {
+    this.props.gameModel.markSolved();
+    this.props.onChange();
+  };
+
+  handleUnmarkSolved = () => {
+    this.props.gameModel.unmarkSolved();
+    this.props.onChange();
+  };
+
   handleKeybind = (mode) => {
     this.setState({
       vimMode: mode === 'vim',
@@ -357,6 +367,7 @@ export default class Game extends Component {
         optimisticCounter={optimisticCounter}
         onCheck={this.handleCheck}
         onReveal={this.handleReveal}
+        contest={!!this.game.contest}
         {...themeStyles}
       />
     );
@@ -393,6 +404,7 @@ export default class Game extends Component {
         vimMode={vimMode}
         skipFilledSquares={skipFilledSquares}
         solved={solved}
+        contest={!!this.game.contest}
         vimInsert={vimInsert}
         vimCommand={vimCommand}
         onStartClock={this.handleStartClock}
@@ -401,6 +413,8 @@ export default class Game extends Component {
         onCheck={this.handleCheck}
         onReveal={this.handleReveal}
         onReset={this.handleReset}
+        onMarkSolved={this.handleMarkSolved}
+        onUnmarkSolved={this.handleUnmarkSolved}
         onKeybind={this.handleKeybind}
         onTogglePencil={this.handleTogglePencil}
         onToggleVimMode={this.handleToggleVimMode}

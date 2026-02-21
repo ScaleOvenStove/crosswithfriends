@@ -188,6 +188,7 @@ export default class GridControls extends Component {
   }
 
   handleAltKey(code, shiftKey) {
+    if (this.props.contest) return; // no check/reveal for contest puzzles
     const altAction = shiftKey ? this.props.onReveal : this.props.onCheck;
     if (code === 'KeyS') {
       altAction('square');

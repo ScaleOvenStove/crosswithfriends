@@ -176,6 +176,16 @@ export default function PUZtoJSON(buffer) {
     grid = addRebusToGrid(grid, rebus);
   }
 
+  // Detect contest puzzles: all white cells have the same solution letter (e.g. all 'X')
+  const whiteSolutions = grid.flatMap((row) =>
+    row.filter((cell) => cell.type === 'white').map((cell) => cell.solution)
+  );
+  const contest = whiteSolutions.length > 0 && whiteSolutions.every((s) => s === whiteSolutions[0]);
+  if (contest) {
+    // Clear fake solution values so the puzzle behaves like iPUZ with missing solution
+    grid = grid.map((row) => row.map((cell) => (cell.type === 'white' ? {...cell, solution: ''} : cell)));
+  }
+
   return {
     grid,
     info,
@@ -183,5 +193,6 @@ export default function PUZtoJSON(buffer) {
     shades,
     across,
     down,
+    contest,
   };
 }

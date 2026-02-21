@@ -51,6 +51,7 @@ export interface GameJson {
   clues: CluesJson;
   circles?: CellIndex[];
   shades?: CellIndex[];
+  contest?: boolean;
 }
 
 export interface UserJson {
@@ -85,6 +86,7 @@ export interface PuzzleJson {
   shades: string[];
   clues: CluesJson;
   private?: boolean;
+  contest?: boolean;
 }
 
 export interface PuzzleStatsJson {

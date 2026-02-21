@@ -204,4 +204,89 @@ describe('PUZtoJSON', () => {
     expect(result.circles).toEqual([]);
     expect(result.shades).toEqual([]);
   });
+
+  it('marks normal puzzle as not contest', () => {
+    const solution = [
+      ['A', 'B'],
+      ['C', '.'],
+    ];
+    const buffer = buildPuzBuffer({
+      nrow: 2,
+      ncol: 2,
+      solution,
+      clues: ['c1', 'c2'],
+    });
+
+    const result = PUZtoJSON(buffer);
+    expect(result.contest).toBe(false);
+  });
+
+  describe('contest puzzle detection (all-X solution)', () => {
+    it('detects all-X solution as contest', () => {
+      const solution = [
+        ['X', 'X'],
+        ['X', '.'],
+      ];
+      const buffer = buildPuzBuffer({
+        nrow: 2,
+        ncol: 2,
+        solution,
+        clues: ['c1', 'c2'],
+      });
+
+      const result = PUZtoJSON(buffer);
+      expect(result.contest).toBe(true);
+    });
+
+    it('clears solution values for contest puzzles', () => {
+      const solution = [
+        ['X', 'X'],
+        ['X', '.'],
+      ];
+      const buffer = buildPuzBuffer({
+        nrow: 2,
+        ncol: 2,
+        solution,
+        clues: ['c1', 'c2'],
+      });
+
+      const result = PUZtoJSON(buffer);
+      expect(result.grid[0][0].solution).toBe('');
+      expect(result.grid[0][1].solution).toBe('');
+      expect(result.grid[1][0].solution).toBe('');
+      expect(result.grid[1][1].type).toBe('black');
+    });
+
+    it('detects any uniform single-letter solution as contest', () => {
+      const solution = [
+        ['A', 'A'],
+        ['A', '.'],
+      ];
+      const buffer = buildPuzBuffer({
+        nrow: 2,
+        ncol: 2,
+        solution,
+        clues: ['c1', 'c2'],
+      });
+
+      const result = PUZtoJSON(buffer);
+      expect(result.contest).toBe(true);
+    });
+
+    it('does not flag varied solution as contest', () => {
+      const solution = [
+        ['A', 'B'],
+        ['C', '.'],
+      ];
+      const buffer = buildPuzBuffer({
+        nrow: 2,
+        ncol: 2,
+        solution,
+        clues: ['c1', 'c2'],
+      });
+
+      const result = PUZtoJSON(buffer);
+      expect(result.contest).toBe(false);
+    });
+  });
 });

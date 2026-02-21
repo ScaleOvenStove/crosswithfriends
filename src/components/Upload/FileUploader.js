@@ -53,7 +53,7 @@ function validPuzzle(puzzle) {
 function convertPUZ(buffer) {
   const raw = PUZtoJSON(buffer);
 
-  const {grid: rawGrid, info, circles, shades, across, down} = raw;
+  const {grid: rawGrid, info, circles, shades, across, down, contest} = raw;
 
   const {title, author, description} = info;
 
@@ -71,12 +71,13 @@ function convertPUZ(buffer) {
       description,
     },
     clues: {across, down},
+    ...(contest ? {contest} : {}),
   };
   return result;
 }
 
 function convertIPUZ(readerResult) {
-  const {grid, info, circles, shades, across, down} = iPUZtoJSON(readerResult);
+  const {grid, info, circles, shades, across, down, contest} = iPUZtoJSON(readerResult);
 
   const result = {
     grid,
@@ -84,6 +85,7 @@ function convertIPUZ(readerResult) {
     shades,
     info,
     clues: {across, down},
+    ...(contest ? {contest} : {}),
   };
 
   return result;

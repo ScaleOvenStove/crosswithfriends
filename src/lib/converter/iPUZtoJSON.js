@@ -21,6 +21,7 @@ function convertCluesArray(initialCluesArray) {
 export default function iPUZtoJSON(readerResult) {
   const jsonFromReader = JSON.parse(new TextDecoder().decode(readerResult));
   const hasSolution = !!jsonFromReader.solution;
+  const contest = !hasSolution;
   const gridSource = jsonFromReader.solution || jsonFromReader.puzzle;
   const grid = gridSource.map((row) =>
     row.map((rawCell) => {
@@ -71,5 +72,6 @@ export default function iPUZtoJSON(readerResult) {
     shades,
     across,
     down,
+    contest,
   };
 }
