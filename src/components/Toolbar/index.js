@@ -414,7 +414,7 @@ export default class Toolbar extends Component {
               </tr>
               <tr>
                 <td>
-                  <code>Alt</code> + <code>S</code>, <code>W</code>, or <code>P</code>
+                  <code>Alt</code> / <code>Option</code> + <code>S</code>, <code>W</code>, or <code>P</code>
                 </td>
                 <td>
                   Check <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
@@ -422,7 +422,8 @@ export default class Toolbar extends Component {
               </tr>
               <tr>
                 <td>
-                  <code>Alt</code> + <code>Shift</code> + <code>S</code>, <code>W</code>, or <code>P</code>
+                  <code>Alt</code> / <code>Option</code> + <code>Shift</code> + <code>S</code>, <code>W</code>
+                  , or <code>P</code>
                 </td>
                 <td>
                   Reveal <b>S</b>quare, <b>W</b>ord, or <b>P</b>uzzle
