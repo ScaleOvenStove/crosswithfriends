@@ -60,7 +60,7 @@ export default class Play extends Component {
       this.create();
       return;
     }
-    const shouldAutojoin = games && games.length > 0 && !this.state.creating;
+    const shouldAutojoin = games && games.length === 1 && !this.state.creating;
     if (shouldAutojoin) {
       const {gid} = games[0];
       const {v2} = games[0];
@@ -73,13 +73,7 @@ export default class Play extends Component {
         href = `/beta/game/${gid}`;
       }
 
-      if (games.length > 1) {
-        setTimeout(() => {
-          redirect(href, `Redirecting to game ${gid}`);
-        }, 0);
-      } else {
-        redirect(href, null);
-      }
+      redirect(href, null);
     }
   }
 
@@ -136,16 +130,26 @@ export default class Play extends Component {
         Your Games
         <table>
           <tbody>
-            {_.map(this.games, ({gid, time}) => (
-              <tr key={gid}>
-                <td>
-                  <Timestamp time={time} />
-                </td>
-                <td>
-                  <Link to={`/game/${gid}`}>Game {gid}</Link>
-                </td>
-              </tr>
-            ))}
+            {_.map(this.games, ({gid, time, v2}) => {
+              let href;
+              if (!v2) {
+                href = `/game/${gid}`;
+              } else if (this.is_fencing) {
+                href = `/fencing/${gid}`;
+              } else {
+                href = `/beta/game/${gid}`;
+              }
+              return (
+                <tr key={gid}>
+                  <td>
+                    <Timestamp time={time} />
+                  </td>
+                  <td>
+                    <Link to={href}>Game {gid}</Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
