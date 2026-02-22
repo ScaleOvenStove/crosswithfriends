@@ -23,6 +23,7 @@ router.get<{}, ListPuzzleResponse>('/', optionalAuth, async (req, res, next) => 
       typeFilter: {
         Standard: rawFilters?.typeFilter?.Standard !== 'false',
         Cryptic: rawFilters?.typeFilter?.Cryptic !== 'false',
+        Contest: rawFilters?.typeFilter?.Contest !== 'false',
       },
       dayOfWeekFilter: {
         Mon: rawFilters?.dayOfWeekFilter?.Mon !== 'false',

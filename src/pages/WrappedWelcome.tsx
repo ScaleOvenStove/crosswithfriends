@@ -23,6 +23,7 @@ interface SizeFilter {
 interface TypeFilter {
   Standard: boolean;
   Cryptic: boolean;
+  Contest: boolean;
 }
 
 interface DayOfWeekFilter {
@@ -44,8 +45,8 @@ function makeSizeFilter(mini: boolean, midi: boolean, standard: boolean, large: 
   return {Mini: mini, Midi: midi, Standard: standard, Large: large};
 }
 
-function makeTypeFilter(standard: boolean, cryptic: boolean): TypeFilter {
-  return {Standard: standard, Cryptic: cryptic};
+function makeTypeFilter(standard: boolean, cryptic: boolean, contest: boolean): TypeFilter {
+  return {Standard: standard, Cryptic: cryptic, Contest: contest};
 }
 
 function makeDayOfWeekFilter(
@@ -84,6 +85,7 @@ const WrappedWelcome = (props: UseFencing) => {
     strToBool
   );
   const [includeCryptic, setIncludeCryptic] = useStateParams(true, 'type_cryptic', boolToStr, strToBool);
+  const [includeContest, setIncludeContest] = useStateParams(true, 'type_contest', boolToStr, strToBool);
 
   // Day of week filter
   const [includeMon, setIncludeMon] = useStateParams(true, 'day_mon', boolToStr, strToBool);
@@ -118,6 +120,7 @@ const WrappedWelcome = (props: UseFencing) => {
   function setTypeFilter(typeFilter: TypeFilter) {
     setIncludeStandardType(typeFilter.Standard);
     setIncludeCryptic(typeFilter.Cryptic);
+    setIncludeContest(typeFilter.Contest);
   }
 
   function setDayOfWeekFilter(dayFilter: DayOfWeekFilter) {
@@ -136,7 +139,7 @@ const WrappedWelcome = (props: UseFencing) => {
     setStatusFilter,
     sizeFilter: makeSizeFilter(includeMini, includeMidi, includeStandard, includeLarge),
     setSizeFilter,
-    typeFilter: makeTypeFilter(includeStandardType, includeCryptic),
+    typeFilter: makeTypeFilter(includeStandardType, includeCryptic, includeContest),
     setTypeFilter,
     dayOfWeekFilter: makeDayOfWeekFilter(
       includeMon,

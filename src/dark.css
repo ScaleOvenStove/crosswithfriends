@@ -400,6 +400,29 @@
   color: var(--dark-primary-text);
 }
 
+/* Contest puzzle buttons */
+
+.dark .toolbar--mark-solved {
+  background: #2e7d32;
+}
+
+.dark .toolbar--mark-solved:hover {
+  background: #388e3c;
+}
+
+.dark .toolbar--unmark-solved {
+  background: #555;
+}
+
+.dark .toolbar--unmark-solved:hover {
+  background: #666;
+}
+
+.dark .entry--contest {
+  color: #f0a050;
+  border-color: #f0a050;
+}
+
 :root {
   --dark-blue-1: rgb(36, 79, 115);
   --dark-blue-2: #183a60;

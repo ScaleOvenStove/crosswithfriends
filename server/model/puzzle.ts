@@ -53,14 +53,20 @@ const buildSizeFilterClause = (sizeFilter: ListPuzzleRequestFilters['sizeFilter'
   return `AND (${conditions.join(' OR ')})`;
 };
 
+const IS_CRYPTIC = `(content->'info'->>'title') ~* '(cryptic|quiptic)'`;
+const IS_CONTEST = `(content->>'contest')::boolean IS TRUE`;
+
 const buildTypeFilterClause = (typeFilter: ListPuzzleRequestFilters['typeFilter']): string => {
-  if ((typeFilter.Standard && typeFilter.Cryptic) || (!typeFilter.Standard && !typeFilter.Cryptic)) {
-    return '';
-  }
-  if (typeFilter.Cryptic && !typeFilter.Standard) {
-    return `AND (content->'info'->>'title') ~* '(cryptic|quiptic)'`;
-  }
-  return `AND NOT ((content->'info'->>'title') ~* '(cryptic|quiptic)')`;
+  const allSelected = typeFilter.Standard && typeFilter.Cryptic && typeFilter.Contest;
+  const noneSelected = !typeFilter.Standard && !typeFilter.Cryptic && !typeFilter.Contest;
+  if (allSelected || noneSelected) return '';
+
+  const conditions: string[] = [];
+  if (typeFilter.Standard) conditions.push(`(NOT ${IS_CRYPTIC} AND NOT ${IS_CONTEST})`);
+  if (typeFilter.Cryptic) conditions.push(IS_CRYPTIC);
+  if (typeFilter.Contest) conditions.push(IS_CONTEST);
+
+  return `AND (${conditions.join(' OR ')})`;
 };
 
 // Case-insensitive day extraction with support for various abbreviations (Mon, Tues, Weds, Thurs, etc.)
@@ -200,6 +206,7 @@ const puzzleValidator = Joi.object({
     down: Joi.array(),
   }),
   private: Joi.boolean().optional(),
+  contest: Joi.boolean().optional(),
 });
 
 function validatePuzzle(puzzle: any) {

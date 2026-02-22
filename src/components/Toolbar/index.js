@@ -207,19 +207,17 @@ export default class Toolbar extends Component {
   }
 
   renderPlayAgainLink() {
-    return (
-      <ActionMenu
-        label="Play Again"
-        onBlur={this.handleBlur}
-        actions={{
-          'Reset this game': confirmResetPuzzle.bind(this, () => {
-            this.reset('puzzle', true);
-            this.props.onResetClock();
-          }),
-          'Create new game link': () => window.open(`/beta/play/${this.props.pid}?new=1`, '_blank'),
-        }}
-      />
-    );
+    const {contest, onUnmarkSolved} = this.props;
+    const actions = {};
+    if (contest && onUnmarkSolved) {
+      actions['Unmark as Solved'] = onUnmarkSolved;
+    }
+    actions['Reset this game'] = confirmResetPuzzle.bind(this, () => {
+      this.reset('puzzle', true);
+      this.props.onResetClock();
+    });
+    actions['Create new game link'] = () => window.open(`/beta/play/${this.props.pid}?new=1`, '_blank');
+    return <ActionMenu label="Play Again" onBlur={this.handleBlur} actions={actions} />;
   }
 
   renderReplayLink() {
@@ -510,6 +508,30 @@ export default class Toolbar extends Component {
     );
   }
 
+  renderMarkSolvedButton() {
+    return (
+      <button
+        className="toolbar--mark-solved"
+        onClick={this.props.onMarkSolved}
+        onMouseDown={handleMouseDown}
+      >
+        Mark as Solved
+      </button>
+    );
+  }
+
+  renderUnmarkSolvedButton() {
+    return (
+      <button
+        className="toolbar--unmark-solved"
+        onClick={this.props.onUnmarkSolved}
+        onMouseDown={handleMouseDown}
+      >
+        Unmark as Solved
+      </button>
+    );
+  }
+
   render() {
     const {
       mobile,
@@ -519,6 +541,7 @@ export default class Toolbar extends Component {
       onStartClock,
       onPauseClock,
       solved,
+      contest,
       replayMode,
       expandMenu,
     } = this.props;
@@ -540,8 +563,9 @@ export default class Toolbar extends Component {
                   onStart={onStartClock}
                   onPause={onPauseClock}
                 />
-                {!solved && !replayMode && this.renderCheckMenu()}
-                {!solved && !replayMode && this.renderRevealMenu()}
+                {!solved && !replayMode && !contest && this.renderCheckMenu()}
+                {!solved && !replayMode && !contest && this.renderRevealMenu()}
+                {!solved && !replayMode && contest && this.renderMarkSolvedButton()}
                 {solved && !replayMode && this.renderReplayLink()}
                 {solved && !replayMode && this.renderSaveReplay()}
               </>
@@ -551,7 +575,7 @@ export default class Toolbar extends Component {
                 {solved && !replayMode && this.renderPlayAgainLink()}
                 {this.renderColorAttributionToggle()}
                 {this.renderListViewButton()}
-                {this.renderAutocheck()}
+                {!contest && this.renderAutocheck()}
                 {this.renderChatButton()}
               </>
             )}
@@ -575,15 +599,17 @@ export default class Toolbar extends Component {
             onPause={onPauseClock}
           />
         </div>
-        {!solved && !replayMode && this.renderCheckMenu()}
-        {!solved && !replayMode && this.renderRevealMenu()}
+        {!solved && !replayMode && !contest && this.renderCheckMenu()}
+        {!solved && !replayMode && !contest && this.renderRevealMenu()}
         {!solved && !replayMode && <div className="toolbar--menu reset">{this.renderResetMenu()}</div>}
+        {!solved && !replayMode && contest && this.renderMarkSolvedButton()}
+        {solved && !replayMode && contest && this.renderUnmarkSolvedButton()}
         {solved && !replayMode && this.renderReplayLink()}
         {solved && !replayMode && this.renderSaveReplay()}
         {this.renderColorAttributionToggle()}
         {this.renderListViewButton()}
         {!replayMode && this.renderPencil()}
-        {!solved && !replayMode && this.renderAutocheck()}
+        {!solved && !replayMode && !contest && this.renderAutocheck()}
         {!replayMode && this.renderExtrasMenu()}
         {solved && !replayMode && this.renderPlayAgainLink()}
         {!replayMode && this.renderInfo()}

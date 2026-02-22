@@ -143,6 +143,8 @@
 
 .entry--details {
   padding-top: 10px;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .entry--details > p {
@@ -154,6 +156,17 @@
   font-weight: 600;
   color: #888;
   border: 1px solid #aaa;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.entry--contest {
+  font-size: 10px;
+  font-weight: 600;
+  color: #e67e22;
+  border: 1px solid #e67e22;
   border-radius: 3px;
   padding: 1px 5px;
   margin-right: 4px;

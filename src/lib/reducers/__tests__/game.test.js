@@ -289,4 +289,126 @@ describe('reduce — solved detection', () => {
     });
     expect(game.solved).toBe(false);
   });
+
+  it('does not auto-solve when all solutions are empty', () => {
+    let game = makeGame({
+      solution: [
+        ['', ''],
+        ['', '.'],
+      ],
+    });
+    // Fill in values — should not trigger solved since solution is all empty
+    game = reduce(game, {
+      type: 'updateCell',
+      timestamp: 2000,
+      params: {cell: {r: 0, c: 0}, value: 'X', id: 'u1'},
+    });
+    game = reduce(game, {
+      type: 'updateCell',
+      timestamp: 3000,
+      params: {cell: {r: 0, c: 1}, value: 'X', id: 'u1'},
+    });
+    game = reduce(game, {
+      type: 'updateCell',
+      timestamp: 4000,
+      params: {cell: {r: 1, c: 0}, value: 'X', id: 'u1'},
+    });
+    expect(game.solved).toBe(false);
+  });
+});
+
+describe('reduce — contest puzzles', () => {
+  function makeContestGame() {
+    return makeGame({
+      contest: true,
+      solution: [
+        ['', ''],
+        ['', '.'],
+      ],
+    });
+  }
+
+  it('creates game with contest flag and contestSolved', () => {
+    const game = makeContestGame();
+    expect(game.contest).toBe(true);
+    expect(game.contestSolved).toBe(false);
+    expect(game.solved).toBe(false);
+  });
+
+  it('check is a no-op for contest puzzles', () => {
+    let game = makeContestGame();
+    game = reduce(game, {
+      type: 'updateCell',
+      timestamp: 2000,
+      params: {cell: {r: 0, c: 0}, value: 'X', id: 'u1'},
+    });
+    const beforeCheck = {...game.grid[0][0]};
+    game = reduce(game, {
+      type: 'check',
+      timestamp: 3000,
+      params: {scope: [{r: 0, c: 0}]},
+    });
+    expect(game.grid[0][0].good).toBe(beforeCheck.good);
+    expect(game.grid[0][0].bad).toBe(beforeCheck.bad);
+  });
+
+  it('reveal is a no-op for contest puzzles', () => {
+    let game = makeContestGame();
+    game = reduce(game, {
+      type: 'reveal',
+      timestamp: 2000,
+      params: {scope: [{r: 0, c: 0}]},
+    });
+    expect(game.grid[0][0].revealed).toBeFalsy();
+    expect(game.grid[0][0].good).toBeFalsy();
+  });
+
+  it('markSolved sets contestSolved and solved', () => {
+    let game = makeContestGame();
+    game = reduce(game, {
+      type: 'markSolved',
+      timestamp: 2000,
+      params: {},
+    });
+    expect(game.contestSolved).toBe(true);
+    expect(game.solved).toBe(true);
+  });
+
+  it('unmarkSolved clears contestSolved and solved', () => {
+    let game = makeContestGame();
+    game = reduce(game, {
+      type: 'markSolved',
+      timestamp: 2000,
+      params: {},
+    });
+    expect(game.solved).toBe(true);
+    game = reduce(game, {
+      type: 'unmarkSolved',
+      timestamp: 3000,
+      params: {},
+    });
+    expect(game.contestSolved).toBe(false);
+    expect(game.solved).toBe(false);
+  });
+
+  it('markSolved is a no-op for non-contest puzzles', () => {
+    let game = makeGame();
+    game = reduce(game, {
+      type: 'markSolved',
+      timestamp: 2000,
+      params: {},
+    });
+    expect(game.contestSolved).toBe(false);
+    expect(game.solved).toBe(false);
+  });
+
+  it('unmarkSolved is a no-op for non-contest puzzles', () => {
+    let game = makeGame();
+    game = reduce(game, {
+      type: 'unmarkSolved',
+      timestamp: 2000,
+      params: {},
+    });
+    expect(game.contestSolved).toBe(false);
+  });
 });

@@ -11,7 +11,13 @@ function getScopeGrid(grid, scope) {
 }
 
 function isSolved(game) {
+  if (game.contest) {
+    return game.contestSolved || false;
+  }
   const {grid, solution} = game;
+  // Safety net: if no white cell has a real solution, don't auto-solve
+  const hasAnySolution = solution.some((row) => row.some((cell) => cell !== '.' && cell !== ''));
+  if (!hasAnySolution) return false;
   // TODO this can be memoized
   function isRowSolved(gridRow, solutionRow) {
     for (let i = 0; i < gridRow.length; i += 1) {
@@ -51,6 +57,7 @@ const reducers = {
       // displayName: string
       users = {},
       solved = false,
+      contest = false,
       themeColor = MAIN_BLUE_3,
       // themeColor = GREENISH,
     } = params.game;
@@ -67,6 +74,8 @@ const reducers = {
       clues,
       clock,
       solved,
+      contest,
+      contestSolved: false,
       cursors,
       users,
       themeColor,
@@ -191,6 +200,7 @@ const reducers = {
   },
 
   check: (game, params) => {
+    if (game.contest) return game;
     const {scope = []} = params;
     let {grid, solution} = game;
     const scopeGrid = getScopeGrid(grid, scope);
@@ -213,6 +223,7 @@ const reducers = {
   },
 
   reveal: (game, params) => {
+    if (game.contest) return game;
     const {scope = []} = params;
     let {grid, solution} = game;
     const scopeGrid = getScopeGrid(grid, scope);
@@ -305,6 +316,22 @@ const reducers = {
       chat,
     };
   },
+  markSolved: (game) => {
+    if (!game.contest) return game;
+    return {
+      ...game,
+      contestSolved: true,
+    };
+  },
+
+  unmarkSolved: (game) => {
+    if (!game.contest) return game;
+    return {
+      ...game,
+      contestSolved: false,
+    };
+  },
+
   startGame: (game) => ({
     ...game,
     isFencing: true,
