@@ -1,3 +1,0 @@
-export PGDATABASE=dfac
-export PGUSER=postgres
-export PGPASSWORD=password
