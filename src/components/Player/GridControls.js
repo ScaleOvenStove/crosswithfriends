@@ -247,7 +247,7 @@ export default class GridControls extends Component {
     } else if (!this.props.frozen) {
       const letter = key.toUpperCase();
       if (validLetter(letter)) {
-        this.typeLetter(letter, shiftKey);
+        this.typeLetter(letter, shiftKey, {nextClueIfFilled: true});
         return true;
       }
     }
@@ -324,7 +324,7 @@ export default class GridControls extends Component {
     } else if (vimInsert && !this.props.frozen) {
       const letter = key.toUpperCase();
       if (validLetter(letter)) {
-        this.typeLetter(letter, shiftKey);
+        this.typeLetter(letter, shiftKey, {nextClueIfFilled: true});
         return true;
       }
     }
