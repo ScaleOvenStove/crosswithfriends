@@ -28,7 +28,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? {rejectUnauthorized: false} : undefined,
 });
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '1000', 10);
 const GRACE_DAYS = parseInt(process.env.GRACE_DAYS || '7', 10);
 
 async function cleanup() {

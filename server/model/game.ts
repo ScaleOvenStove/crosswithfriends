@@ -3,6 +3,7 @@ import _ from 'lodash';
 import {makeGrid} from '../gameUtils';
 import {pool} from './pool';
 import {getPuzzle} from './puzzle';
+import {getGameSnapshot} from './game_snapshot';
 
 export async function getGameEvents(gid: string) {
   const startTime = Date.now();
@@ -10,6 +11,22 @@ export async function getGameEvents(gid: string) {
   const events = _.map(res.rows, 'event_payload');
   const ms = Date.now() - startTime;
   console.log(`getGameEvents(${gid}) took ${ms}ms`);
+
+  // If only the create event remains (events were cleaned up), restore the
+  // solved state from the snapshot so the client sees the completed grid.
+  if (events.length === 1 && events[0].type === 'create') {
+    const snapshot = await getGameSnapshot(gid);
+    if (snapshot) {
+      const game = events[0].params.game;
+      const snap = snapshot.snapshot as any;
+      if (snap.grid) game.grid = snap.grid;
+      if (snap.users) game.users = snap.users;
+      if (snap.clock) game.clock = snap.clock;
+      if (snap.chat) game.chat = snap.chat;
+      game.solved = true;
+    }
+  }
+
   return events;
 }
 
