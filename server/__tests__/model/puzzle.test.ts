@@ -13,7 +13,7 @@ describe('listPuzzles', () => {
   const defaultFilter = {
     nameOrTitleFilter: '',
     sizeFilter: {Mini: true, Midi: true, Standard: true, Large: true},
-    typeFilter: {Standard: true, Cryptic: true},
+    typeFilter: {Standard: true, Cryptic: true, Contest: true},
     dayOfWeekFilter: {
       Mon: true,
       Tue: true,
