@@ -138,6 +138,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         status: mergedStatuses[puzzle.pid],
         fencing: props.fencing,
         isPublic: puzzle.isPublic,
+        contest: puzzle.content.contest,
       },
     }))
     .filter((data) => {
@@ -172,6 +173,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
             status={entryProps.status}
             fencing={entryProps.fencing}
             isPublic={entryProps.isPublic}
+            contest={entryProps.contest}
           />
         </div>
       ))}

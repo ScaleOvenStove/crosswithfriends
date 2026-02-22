@@ -130,6 +130,7 @@ export interface ListPuzzleRequestFilters {
   typeFilter: {
     Standard: boolean;
     Cryptic: boolean;
+    Contest: boolean;
   };
   dayOfWeekFilter: {
     Mon: boolean;

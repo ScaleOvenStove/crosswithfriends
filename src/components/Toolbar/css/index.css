@@ -177,8 +177,10 @@ code {
 .toolbar--mobile .toolbar--save-replay {
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  font-size: 11px;
-  padding: 3px 8px;
+  font-size: 12px;
+  padding: 6px 12px;
+  height: auto;
+  border-radius: 4px;
 }
 
 .toolbar--mobile .toolbar--replay-saved {
@@ -217,13 +219,18 @@ code {
 }
 
 .toolbar--mobile .toolbar--mark-solved {
-  background: rgba(76, 175, 80, 0.8);
-  font-size: 11px;
-  padding: 3px 8px;
+  background: rgba(76, 175, 80, 0.9);
+  font-size: 12px;
+  padding: 6px 12px;
+  height: auto;
+  border-radius: 4px;
+  font-weight: 600;
 }
 
 .toolbar--mobile .toolbar--unmark-solved {
   background: rgba(255, 255, 255, 0.2);
-  font-size: 11px;
-  padding: 3px 8px;
+  font-size: 12px;
+  padding: 6px 12px;
+  height: auto;
+  border-radius: 4px;
 }

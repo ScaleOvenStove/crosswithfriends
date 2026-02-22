@@ -207,19 +207,17 @@ export default class Toolbar extends Component {
   }
 
   renderPlayAgainLink() {
-    return (
-      <ActionMenu
-        label="Play Again"
-        onBlur={this.handleBlur}
-        actions={{
-          'Reset this game': confirmResetPuzzle.bind(this, () => {
-            this.reset('puzzle', true);
-            this.props.onResetClock();
-          }),
-          'Create new game link': () => window.open(`/beta/play/${this.props.pid}?new=1`, '_blank'),
-        }}
-      />
-    );
+    const {contest, onUnmarkSolved} = this.props;
+    const actions = {};
+    if (contest && onUnmarkSolved) {
+      actions['Unmark as Solved'] = onUnmarkSolved;
+    }
+    actions['Reset this game'] = confirmResetPuzzle.bind(this, () => {
+      this.reset('puzzle', true);
+      this.props.onResetClock();
+    });
+    actions['Create new game link'] = () => window.open(`/beta/play/${this.props.pid}?new=1`, '_blank');
+    return <ActionMenu label="Play Again" onBlur={this.handleBlur} actions={actions} />;
   }
 
   renderReplayLink() {
@@ -568,7 +566,6 @@ export default class Toolbar extends Component {
                 {!solved && !replayMode && !contest && this.renderCheckMenu()}
                 {!solved && !replayMode && !contest && this.renderRevealMenu()}
                 {!solved && !replayMode && contest && this.renderMarkSolvedButton()}
-                {solved && !replayMode && contest && this.renderUnmarkSolvedButton()}
                 {solved && !replayMode && this.renderReplayLink()}
                 {solved && !replayMode && this.renderSaveReplay()}
               </>
@@ -578,7 +575,7 @@ export default class Toolbar extends Component {
                 {solved && !replayMode && this.renderPlayAgainLink()}
                 {this.renderColorAttributionToggle()}
                 {this.renderListViewButton()}
-                {this.renderAutocheck()}
+                {!contest && this.renderAutocheck()}
                 {this.renderChatButton()}
               </>
             )}

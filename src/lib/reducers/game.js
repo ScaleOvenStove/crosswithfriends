@@ -15,6 +15,9 @@ function isSolved(game) {
     return game.contestSolved || false;
   }
   const {grid, solution} = game;
+  // Safety net: if no white cell has a real solution, don't auto-solve
+  const hasAnySolution = solution.some((row) => row.some((cell) => cell !== '.' && cell !== ''));
+  if (!hasAnySolution) return false;
   // TODO this can be memoized
   function isRowSolved(gridRow, solutionRow) {
     for (let i = 0; i < gridRow.length; i += 1) {

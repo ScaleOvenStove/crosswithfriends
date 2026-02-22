@@ -169,7 +169,7 @@ describe('PUZtoJSON', () => {
     expect(acrossClues.length + downClues.length).toBeGreaterThan(0);
   });
 
-  it('throws on scrambled puzzle', () => {
+  it('handles scrambled puzzle as contest', () => {
     const solution = [
       ['A', 'B'],
       ['C', 'D'],
@@ -185,7 +185,14 @@ describe('PUZtoJSON', () => {
     const bytes = new Uint8Array(buffer);
     bytes[50] = 1;
 
-    expect(() => PUZtoJSON(bytes.buffer)).toThrow('Scrambled');
+    const result = PUZtoJSON(bytes.buffer);
+    expect(result.contest).toBe(true);
+    // White cells should have empty solutions
+    expect(result.grid[0][0].type).toBe('white');
+    expect(result.grid[0][0].solution).toBe('');
+    expect(result.grid[0][1].solution).toBe('');
+    // Clues should still be extracted
+    expect(result.info).toBeDefined();
   });
 
   it('returns empty circles and shades when no extensions', () => {

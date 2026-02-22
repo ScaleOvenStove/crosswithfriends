@@ -20,6 +20,7 @@ export interface EntryProps {
   };
   fencing?: boolean;
   isPublic?: boolean;
+  contest?: boolean;
 }
 
 const handleClick = () => {
@@ -80,8 +81,10 @@ export default class Entry extends Component<EntryProps> {
               </p>
             </Flex>
             <Flex>
-              {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
-              {status === 'started' && <MdRadioButtonUnchecked className="entry--icon" />}
+              {status === 'started' && !this.props.contest && (
+                <MdRadioButtonUnchecked className="entry--icon" />
+              )}
+              {status === 'started' && this.props.contest && <GiCrossedSwords className="entry--icon" />}
               {status === 'solved' && <MdCheckCircle className="entry--icon" />}
               {status !== 'started' && status !== 'solved' && fencing && (
                 <GiCrossedSwords className="entry--icon fencing" />
@@ -99,6 +102,10 @@ export default class Entry extends Component<EntryProps> {
             <p>
               Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
             </p>
+            <Flex>
+              {this.props.contest && <span className="entry--contest">Contest</span>}
+              {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
+            </Flex>
           </Flex>
         </Flex>
       </Link>

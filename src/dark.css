@@ -418,6 +418,11 @@
   background: #666;
 }
 
+.dark .entry--contest {
+  color: #f0a050;
+  border-color: #f0a050;
+}
+
 :root {
   --dark-blue-1: rgb(36, 79, 115);
   --dark-blue-2: #183a60;

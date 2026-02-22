@@ -57,7 +57,7 @@ function convertPUZ(buffer) {
 
   const {title, author, description} = info;
 
-  const grid = rawGrid.map((row) => row.map(({solution}) => solution || '.'));
+  const grid = rawGrid.map((row) => row.map(({solution}) => (solution !== undefined ? solution : '.')));
   const type = grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
 
   const result = {
