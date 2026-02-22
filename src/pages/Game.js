@@ -37,6 +37,7 @@ export default class Game extends Component {
       lastReadChat: 0,
       replayRetained: null, // null = no snapshot yet, false = snapshot exists but not retained, true = retained
       savingReplay: false,
+      connectionFailed: false,
     };
     this.initializeUser();
     window.addEventListener('resize', () => {
@@ -144,6 +145,8 @@ export default class Game extends Component {
       if (this.gameModel.syncState !== 'failed') {
         this.setState({syncWarning: null});
       }
+      if (this._connectionTimer) clearTimeout(this._connectionTimer);
+      this.setState({connectionFailed: false});
       this.handleChange();
       this.handleUpdate();
     });
@@ -175,6 +178,16 @@ export default class Game extends Component {
         archived: true,
       });
     });
+
+    // Show error if socket doesn't connect within 10 seconds
+    this.setState({connectionFailed: false});
+    if (this._connectionTimer) clearTimeout(this._connectionTimer);
+    this._connectionTimer = setTimeout(() => {
+      if (!this.historyWrapper || !this.historyWrapper.ready) {
+        this.setState({connectionFailed: true});
+      }
+    }, 10000);
+
     this.gameModel.attach();
   }
 
@@ -213,6 +226,7 @@ export default class Game extends Component {
 
   componentWillUnmount() {
     if (this._retryTimer) clearInterval(this._retryTimer);
+    if (this._connectionTimer) clearTimeout(this._connectionTimer);
     if (this.gameModel) this.gameModel.detach();
   }
 
@@ -569,6 +583,30 @@ export default class Game extends Component {
             ) : (
               'Connection lost — leaving this page may lose your progress. Stay here until reconnected.'
             )}
+          </div>
+        )}
+        {this.state.connectionFailed && !this.state.syncWarning && (
+          <div
+            style={{
+              background: '#b71c1c',
+              color: 'white',
+              padding: '8px 12px',
+              textAlign: 'center',
+              fontSize: '14px',
+            }}
+          >
+            {process.env.REACT_APP_MAINTENANCE_MESSAGE ||
+              'Unable to connect to the server. The backend may be undergoing maintenance.'}{' '}
+            Reach out on{' '}
+            <a
+              href="https://discord.gg/RmjCV8EZ73"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{color: 'white', textDecoration: 'underline'}}
+            >
+              Discord
+            </a>{' '}
+            for more info.
           </div>
         )}
         {this.renderContent()}

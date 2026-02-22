@@ -29,6 +29,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
   };
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch solve statuses from PostgreSQL for authenticated users (cross-device support)
   const [pgStatuses, setPgStatuses] = useState<PuzzleStatuses>({});
@@ -91,14 +92,24 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       ) => {
         if (loading) return;
         setLoading(true);
-        const nextPage = await fetchPuzzleList(
-          {page: currentPage, pageSize, filter: props.filter},
-          accessToken
-        );
-        setPuzzles([...currentPuzzles, ...nextPage.puzzles]);
-        setPage(currentPage + 1);
-        setLoading(false);
-        setFullyLoaded(_.size(nextPage.puzzles) < pageSize);
+        try {
+          setError(null);
+          const nextPage = await fetchPuzzleList(
+            {page: currentPage, pageSize, filter: props.filter},
+            accessToken
+          );
+          setPuzzles([...currentPuzzles, ...nextPage.puzzles]);
+          setPage(currentPage + 1);
+          setFullyLoaded(_.size(nextPage.puzzles) < pageSize);
+        } catch (err) {
+          console.error('Failed to fetch puzzles:', err);
+          setError(
+            process.env.REACT_APP_MAINTENANCE_MESSAGE ||
+              'Cross with Friends backend is currently unavailable. Please try again later.'
+          );
+        } finally {
+          setLoading(false);
+        }
       },
       500,
       {trailing: true}
@@ -117,6 +128,9 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       await fetchMore(puzzles, page);
     }
   }, [fullyLoaded, fullyScrolled, fetchMore, puzzles, page]);
+  const handleRetry = useCallback(() => {
+    fetchMore([], 0);
+  }, [fetchMore]);
   const handleTouchEnd = useCallback(async () => {
     if (containerRef.current) return;
     await handleScroll();
@@ -161,6 +175,21 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       onScroll={handleScroll}
       onTouchEnd={handleTouchEnd}
     >
+      {error && (
+        <div className="puzzlelist--error">
+          <p className="puzzlelist--error--message">{error}</p>
+          <p className="puzzlelist--error--discord">
+            Reach out on{' '}
+            <a href="https://discord.gg/RmjCV8EZ73" target="_blank" rel="noopener noreferrer">
+              Discord
+            </a>{' '}
+            for more info.
+          </p>
+          <button type="button" className="puzzlelist--error--retry" onClick={handleRetry}>
+            Try again
+          </button>
+        </div>
+      )}
       {puzzleData.map(({entryProps}) => (
         <div className="entry--container" key={entryProps.pid}>
           <Entry

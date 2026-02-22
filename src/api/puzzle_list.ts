@@ -15,5 +15,8 @@ export async function fetchPuzzleList(
     headers.Authorization = `Bearer ${accessToken}`;
   }
   const resp = await fetch(url, {headers});
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch puzzle list (${resp.status})`);
+  }
   return resp.json();
 }

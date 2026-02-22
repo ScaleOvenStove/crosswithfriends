@@ -325,6 +325,10 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
+.dark .swal-text a {
+  color: var(--dark-blue-2);
+}
+
 .dark .swal-button {
   background-color: var(--dark-blue-1);
   color: var(--dark-primary-text);
