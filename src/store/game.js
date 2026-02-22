@@ -309,6 +309,22 @@ export default class Game extends EventEmitter {
     });
   }
 
+  markSolved() {
+    this.addEvent({
+      timestamp: SERVER_TIME,
+      type: 'markSolved',
+      params: {},
+    });
+  }
+
+  unmarkSolved() {
+    this.addEvent({
+      timestamp: SERVER_TIME,
+      type: 'unmarkSolved',
+      params: {},
+    });
+  }
+
   chat(username, id, text) {
     this.addEvent({
       timestamp: SERVER_TIME,

@@ -53,11 +53,11 @@ function validPuzzle(puzzle) {
 function convertPUZ(buffer) {
   const raw = PUZtoJSON(buffer);
 
-  const {grid: rawGrid, info, circles, shades, across, down} = raw;
+  const {grid: rawGrid, info, circles, shades, across, down, contest} = raw;
 
   const {title, author, description} = info;
 
-  const grid = rawGrid.map((row) => row.map(({solution}) => solution || '.'));
+  const grid = rawGrid.map((row) => row.map(({solution}) => (solution !== undefined ? solution : '.')));
   const type = grid.length > 10 ? 'Daily Puzzle' : 'Mini Puzzle';
 
   const result = {
@@ -71,12 +71,13 @@ function convertPUZ(buffer) {
       description,
     },
     clues: {across, down},
+    ...(contest ? {contest} : {}),
   };
   return result;
 }
 
 function convertIPUZ(readerResult) {
-  const {grid, info, circles, shades, across, down} = iPUZtoJSON(readerResult);
+  const {grid, info, circles, shades, across, down, contest} = iPUZtoJSON(readerResult);
 
   const result = {
     grid,
@@ -84,6 +85,7 @@ function convertIPUZ(readerResult) {
     shades,
     info,
     clues: {across, down},
+    ...(contest ? {contest} : {}),
   };
 
   return result;

@@ -382,6 +382,7 @@ export default class Player extends Component {
       clueBarStyle = {},
       gridStyle = {},
       colorAttributionMode,
+      contest,
     } = this.props;
     const size = this.size;
     const {cellStyle = {}} = gridStyle;
@@ -582,6 +583,7 @@ export default class Player extends Component {
           beta={beta}
           onCheck={this.props.onCheck}
           onReveal={this.props.onReveal}
+          contest={contest}
         >
           <div className="player--main">
             <div className="player--main--left">

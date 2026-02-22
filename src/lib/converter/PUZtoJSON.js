@@ -141,19 +141,21 @@ export default function PUZtoJSON(buffer) {
 
   const ncol = bytes[44];
   const nrow = bytes[45];
-  if (!(bytes[50] === 0 && bytes[51] === 0)) {
-    throw new Error('Scrambled PUZ file');
-  }
+  const isScrambled = !(bytes[50] === 0 && bytes[51] === 0);
 
   for (let i = 0; i < nrow; i++) {
     grid[i] = [];
 
     for (let j = 0; j < ncol; j++) {
-      const letter = String.fromCharCode(bytes[52 + i * ncol + j]);
+      // For scrambled files, read from the player state grid (offset after solution)
+      // where '.' still marks black squares and '-' marks unsolved white squares.
+      const offset = isScrambled ? 52 + ncol * nrow + i * ncol + j : 52 + i * ncol + j;
+      const letter = String.fromCharCode(bytes[offset]);
       if (letter !== '.') {
         grid[i][j] = {
           type: 'white',
-          solution: letter,
+          // Scrambled files have encrypted solutions; use empty string
+          solution: isScrambled ? '' : letter,
         };
       } else {
         grid[i][j] = {
@@ -218,6 +220,16 @@ export default function PUZtoJSON(buffer) {
     grid = addRebusToGrid(grid, rebus);
   }
 
+  // Detect contest puzzles: all white cells have the same solution letter (e.g. all 'X')
+  const whiteSolutions = grid.flatMap((row) =>
+    row.filter((cell) => cell.type === 'white').map((cell) => cell.solution)
+  );
+  const contest = whiteSolutions.length > 0 && whiteSolutions.every((s) => s === whiteSolutions[0]);
+  if (contest) {
+    // Clear fake solution values so the puzzle behaves like iPUZ with missing solution
+    grid = grid.map((row) => row.map((cell) => (cell.type === 'white' ? {...cell, solution: ''} : cell)));
+  }
+
   return {
     grid,
     info,
@@ -225,5 +237,6 @@ export default function PUZtoJSON(buffer) {
     shades,
     across,
     down,
+    contest,
   };
 }
