@@ -4,6 +4,16 @@
 const mockQuery = jest.fn();
 const mockConnect = jest.fn();
 
+// Mock client returned by pool.connect() for transaction-based tests
+const mockClientQuery = jest.fn();
+const mockClientRelease = jest.fn();
+export const mockClient = {
+  query: mockClientQuery,
+  release: mockClientRelease,
+};
+
+mockConnect.mockResolvedValue(mockClient);
+
 export const pool = {
   query: mockQuery,
   connect: mockConnect,
@@ -13,4 +23,7 @@ export const pool = {
 export function resetPoolMocks() {
   mockQuery.mockReset();
   mockConnect.mockReset();
+  mockClientQuery.mockReset();
+  mockClientRelease.mockReset();
+  mockConnect.mockResolvedValue(mockClient);
 }

@@ -1,9 +1,16 @@
-import {pool, resetPoolMocks} from '../../__mocks__/pool';
+import {pool, resetPoolMocks, mockClient} from '../../__mocks__/pool';
 
 // Mock the pool module before importing the module under test
 jest.mock('../../model/pool', () => require('../../__mocks__/pool'));
 
-import {listPuzzles, getUserUploadedPuzzles} from '../../model/puzzle';
+import {
+  listPuzzles,
+  getUserUploadedPuzzles,
+  getPuzzle,
+  addPuzzle,
+  recordSolve,
+  getPuzzleInfo,
+} from '../../model/puzzle';
 
 describe('listPuzzles', () => {
   beforeEach(() => {
@@ -285,5 +292,169 @@ describe('getUserUploadedPuzzles', () => {
     const sql = pool.query.mock.calls[0][0] as string;
     expect(sql).toContain('ORDER BY uploaded_at DESC');
     expect(sql).toContain('LIMIT 100');
+  });
+});
+
+describe('getPuzzle', () => {
+  beforeEach(() => {
+    resetPoolMocks();
+  });
+
+  it('returns content from the first row', async () => {
+    const puzzleContent = {info: {title: 'Test'}, grid: [['A']], clues: {across: [], down: []}};
+    pool.query.mockResolvedValueOnce({rows: [{content: puzzleContent}]});
+    const result = await getPuzzle('p1');
+    expect(result).toEqual(puzzleContent);
+  });
+
+  it('queries by pid parameter', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{content: {}}]});
+    await getPuzzle('my-puzzle-id');
+    const params = pool.query.mock.calls[0][1] as any[];
+    expect(params[0]).toBe('my-puzzle-id');
+  });
+});
+
+const validPuzzle = {
+  grid: [
+    ['A', 'B'],
+    ['C', 'D'],
+  ],
+  info: {title: 'Test', author: 'Author', copyright: '', description: ''},
+  clues: {across: ['clue1', 'clue2'], down: ['clue3', 'clue4']},
+  circles: [],
+  shades: [],
+};
+
+describe('addPuzzle', () => {
+  beforeEach(() => {
+    resetPoolMocks();
+    pool.query.mockResolvedValue({rows: []});
+  });
+
+  it('returns {pid, duplicate: false} for a new public puzzle', async () => {
+    pool.query
+      .mockResolvedValueOnce({rows: []}) // no duplicate
+      .mockResolvedValueOnce({rows: []});
+    const result = await addPuzzle(validPuzzle as any, true, 'test-pid');
+    expect(result).toEqual({pid: 'test-pid', duplicate: false});
+  });
+
+  it('returns {pid, duplicate: true} when content_hash already exists for public puzzle', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{pid: 'existing-pid'}]}); // duplicate found
+    const result = await addPuzzle(validPuzzle as any, true, 'new-pid');
+    expect(result).toEqual({pid: 'existing-pid', duplicate: true});
+  });
+
+  it('skips duplicate check for non-public puzzles', async () => {
+    pool.query.mockResolvedValueOnce({rows: []}); // INSERT only, no dup check
+    const result = await addPuzzle(validPuzzle as any, false, 'priv-pid');
+    expect(result.duplicate).toBe(false);
+    // Only 1 query (INSERT), not 2 (dup check + INSERT)
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses provided pid when given', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    const result = await addPuzzle(validPuzzle as any, false, 'my-custom-pid');
+    expect(result.pid).toBe('my-custom-pid');
+  });
+
+  it('throws on invalid puzzle (missing required fields)', async () => {
+    const invalidPuzzle = {grid: 'not-an-array'};
+    await expect(addPuzzle(invalidPuzzle as any)).rejects.toThrow();
+  });
+});
+
+describe('recordSolve', () => {
+  beforeEach(() => {
+    resetPoolMocks();
+  });
+
+  it('skips insert when user already solved this game', async () => {
+    // isAlreadySolvedByUser returns count > 0
+    pool.query.mockResolvedValueOnce({rows: [{count: 1}]});
+    await recordSolve('p1', 'g1', 300, 'user-1');
+    // Should only call the check query, not pool.connect
+    expect(pool.connect).not.toHaveBeenCalled();
+  });
+
+  it('skips insert when anonymous and game already solved', async () => {
+    // isGidAlreadySolved returns count > 0
+    pool.query.mockResolvedValueOnce({rows: [{count: 1}]});
+    await recordSolve('p1', 'g1', 300);
+    expect(pool.connect).not.toHaveBeenCalled();
+  });
+
+  it('increments times_solved only for first solve of a game', async () => {
+    // isAlreadySolvedByUser: not yet solved
+    pool.query.mockResolvedValueOnce({rows: [{count: 0}]});
+    // BEGIN
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // SELECT FOR UPDATE (lock)
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // COUNT for first-solve check: 0 existing
+    mockClient.query.mockResolvedValueOnce({rows: [{count: 0}]});
+    // INSERT puzzle_solve
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // UPDATE times_solved
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // COMMIT
+    mockClient.query.mockResolvedValueOnce({rows: []});
+
+    await recordSolve('p1', 'g1', 300, 'user-1');
+
+    // Verify times_solved increment happened (5th client.query call)
+    const updateSql = mockClient.query.mock.calls[4][0] as string;
+    expect(updateSql).toContain('times_solved = times_solved + 1');
+  });
+
+  it('does not increment times_solved when game was already solved by someone else', async () => {
+    // isAlreadySolvedByUser: not yet solved by this user
+    pool.query.mockResolvedValueOnce({rows: [{count: 0}]});
+    // BEGIN
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // SELECT FOR UPDATE
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // COUNT: already 1 solve exists
+    mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
+    // INSERT puzzle_solve
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // COMMIT (no UPDATE times_solved)
+    mockClient.query.mockResolvedValueOnce({rows: []});
+
+    await recordSolve('p1', 'g1', 300, 'user-2');
+
+    // 5 client.query calls total (no times_solved increment)
+    expect(mockClient.query).toHaveBeenCalledTimes(5);
+    const allSql = mockClient.query.mock.calls.map((c: any[]) => c[0] as string);
+    expect(allSql.some((s) => s.includes('times_solved'))).toBe(false);
+  });
+
+  it('calls ROLLBACK on error and releases client', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{count: 0}]});
+    mockClient.query
+      .mockResolvedValueOnce({rows: []}) // BEGIN
+      .mockRejectedValueOnce(new Error('db error')); // SELECT FOR UPDATE fails
+    mockClient.query.mockResolvedValueOnce({rows: []}); // ROLLBACK
+
+    await recordSolve('p1', 'g1', 300, 'user-1');
+
+    const rollbackCall = mockClient.query.mock.calls.find((c: any[]) => c[0] === 'ROLLBACK');
+    expect(rollbackCall).toBeDefined();
+    expect(mockClient.release).toHaveBeenCalled();
+  });
+});
+
+describe('getPuzzleInfo', () => {
+  beforeEach(() => {
+    resetPoolMocks();
+  });
+
+  it('returns puzzle.info from getPuzzle result', async () => {
+    const info = {title: 'My Puzzle', author: 'Author', copyright: '', description: ''};
+    pool.query.mockResolvedValueOnce({rows: [{content: {info, grid: [], clues: {across: [], down: []}}}]});
+    const result = await getPuzzleInfo('p1');
+    expect(result).toEqual(info);
   });
 });
