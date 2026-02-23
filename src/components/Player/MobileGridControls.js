@@ -30,6 +30,7 @@ export default class MobileGridControls extends GridControls {
     this.prvInput = '';
     this.inputRef = React.createRef();
     this.zoomContainer = React.createRef();
+    this.gridControlsRef = React.createRef();
     this.wasUnfocused = Date.now() - 1000;
     this.lastTouchMove = Date.now();
     this.boundCenterGridX = () => this.centerGridX();
@@ -575,8 +576,7 @@ export default class MobileGridControls extends GridControls {
 
   render() {
     return (
-      // eslint-disable-next-line react/no-string-refs
-      <div ref="gridControls" className="mobile-grid-controls">
+      <div ref={this.gridControlsRef} className="mobile-grid-controls">
         {this.renderClueBar()}
         {this.renderGridContent()}
         {this.renderMobileInputs()}
