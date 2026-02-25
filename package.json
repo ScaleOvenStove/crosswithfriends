@@ -15,8 +15,8 @@
     "@types/morgan": "^1.9.2",
     "@types/node": "^14.14.14",
     "@types/querystringify": "^2.0.0",
-    "@types/react": "^16.9.34",
-    "@types/react-dom": "^16.9.7",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
     "@types/react-router": "^5.1.11",
     "@types/react-router-dom": "^5.1.7",
     "aws-sdk": "^2.496.0",
@@ -45,10 +45,10 @@
     "pg": "^8.3.3",
     "puzjs": "^1.0.2",
     "querystringify": "^2.2.0",
-    "react": "^16.12",
+    "react": "^17.0.0",
     "react-color": "^2.19.3",
     "react-confetti": "^5.0.1",
-    "react-dom": "^16.12",
+    "react-dom": "^17.0.0",
     "react-dropzone": "^4.0.0",
     "react-flexview": "^3.0.1",
     "react-fontawesome": "^1.6.1",
@@ -73,7 +73,7 @@
   "resolutions": {
     "**/@typescript-eslint/eslint-plugin": "^4.1.1",
     "**/@typescript-eslint/parser": "^4.1.1",
-    "@types/react": "^16.9.34"
+    "@types/react": "^17.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0-0",

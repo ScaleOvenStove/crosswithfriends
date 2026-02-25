@@ -1,4 +1,3 @@
-/* eslint-disable react/no-string-refs */
 /* eslint-disable react/jsx-props-no-spreading */
 import './css/index.css';
 
@@ -69,6 +68,8 @@ export default class Player extends Component {
     this._setSelected = this.setSelected.bind(this);
     this._changeDirection = this.changeDirection.bind(this);
     this.mobileContainer = React.createRef();
+    this.gridRef = React.createRef();
+    this.gridControlsRef = React.createRef();
     this.cursorLocked = false;
   }
 
@@ -158,7 +159,7 @@ export default class Player extends Component {
   }
 
   focus() {
-    this.refs.gridControls && this.refs.gridControls.focus();
+    this.gridControlsRef.current?.focus();
   }
 
   /* Callback fns, to be passed to child components */
@@ -228,7 +229,7 @@ export default class Player extends Component {
   }
 
   selectClue(direction, number) {
-    this.refs.gridControls.selectClue(direction, number);
+    this.gridControlsRef.current.selectClue(direction, number);
   }
 
   /* Helper functions used when rendering */
@@ -267,11 +268,11 @@ export default class Player extends Component {
   }
 
   isHighlighted(r, c) {
-    return this.refs.grid.isHighlighted(r, c);
+    return this.gridRef.current.isHighlighted(r, c);
   }
 
   isSelected(r, c) {
-    return this.refs.grid.isSelected(r, c);
+    return this.gridRef.current.isSelected(r, c);
   }
 
   /* Public functions, called by parent components */
@@ -455,7 +456,7 @@ export default class Player extends Component {
         return (
           <div className="player--mobile--wrapper mobile">
             <MobileListViewControls
-              ref="mobileGridControls"
+              ref={this.gridControlsRef}
               onPressEnter={onPressEnter}
               onPressPeriod={onPressPeriod}
               skipFilledSquares={skipFilledSquares}
@@ -476,7 +477,7 @@ export default class Player extends Component {
             >
               <div className="player--mobile" ref={this.mobileContainer}>
                 <div className="player--mobile--list-view">
-                  <ListView ref="grid" {...listViewProps} />
+                  <ListView ref={this.gridRef} {...listViewProps} />
                 </div>
               </div>
             </MobileListViewControls>
@@ -488,7 +489,7 @@ export default class Player extends Component {
         <div className="player--mobile--wrapper mobile">
           <MobileGridControls
             enablePan
-            ref="mobileGridControls"
+            ref={this.gridControlsRef}
             onPressEnter={onPressEnter}
             onPressPeriod={onPressPeriod}
             skipFilledSquares={skipFilledSquares}
@@ -509,7 +510,7 @@ export default class Player extends Component {
           >
             <div className="player--mobile" ref={this.mobileContainer}>
               <div className={`player--mobile--grid${frozen ? ' frozen' : ''}`}>
-                <Grid ref="grid" {...gridProps} />
+                <Grid ref={this.gridRef} {...gridProps} />
               </div>
             </div>
           </MobileGridControls>
@@ -527,7 +528,7 @@ export default class Player extends Component {
           }}
         >
           <ListViewControls
-            ref="gridControls"
+            ref={this.gridControlsRef}
             onPressEnter={onPressEnter}
             onPressPeriod={onPressPeriod}
             vimMode={vimMode}
@@ -553,7 +554,7 @@ export default class Player extends Component {
           >
             <div className="player--main">
               <div className="player--main--list-view">
-                <ListView ref="grid" {...listViewProps} />
+                <ListView ref={this.gridRef} {...listViewProps} />
               </div>
             </div>
           </ListViewControls>
@@ -565,7 +566,7 @@ export default class Player extends Component {
     return (
       <div className="player--main--wrapper">
         <GridControls
-          ref="gridControls"
+          ref={this.gridControlsRef}
           onPressEnter={onPressEnter}
           onPressPeriod={onPressPeriod}
           vimMode={vimMode}
@@ -602,7 +603,7 @@ export default class Player extends Component {
               </div>
 
               <div className={`player--main--left--grid${frozen ? ' frozen' : ''} blurable`}>
-                <Grid ref="grid" {...gridProps} />
+                <Grid ref={this.gridRef} {...gridProps} />
               </div>
               {vimMode && (
                 <VimCommandBar
