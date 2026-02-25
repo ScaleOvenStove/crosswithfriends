@@ -79,6 +79,7 @@
     "@babel/core": "^7.0.0-0",
     "@babel/node": "^7.10.5",
     "@babel/preset-env": "^7.11.0",
+    "@playwright/test": "^1.58.2",
     "@types/argparse": "^1.0.38",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
@@ -122,10 +123,15 @@
     "test": "react-scripts test --env=jsdom",
     "test:server": "jest --config jest.config.server.js",
     "eject": "react-scripts eject",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
+    "test:e2e:headed": "npx playwright test --config=e2e/playwright.config.ts --headed",
+    "test:e2e:ui": "npx playwright test --config=e2e/playwright.config.ts --ui",
+    "test:e2e:chromium": "npx playwright test --config=e2e/playwright.config.ts --project=chromium",
+    "test:e2e:report": "npx playwright show-report e2e/playwright-report"
   },
   "lint-staged": {
-    "!(backfills|utils)/**/*.{js,jsx,ts,tsx}": [
+    "!(backfills|utils|e2e)/**/*.{js,jsx,ts,tsx}": [
       "eslint --max-warnings=0",
       "prettier --write"
     ],
