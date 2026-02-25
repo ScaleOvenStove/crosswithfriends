@@ -29,7 +29,7 @@ yarn test:e2e:headed                    # Debug with visible browsers
 yarn test:e2e:ui                        # Playwright UI mode
 npx playwright install                  # First-time: install browser binaries
 ```
-E2E tests live in `e2e/` and cover smoke tests: page rendering, navigation, puzzle list, dark mode, and game page loading. Configurable via `BASE_URL` env var (defaults to `https://crosswithfriends.com`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server via `yarn start` (or reuses one already running).
+E2E tests live in `e2e/` with two layers. **Smoke tests**: page rendering, navigation, puzzle list, dark mode, game page loading. **Gameplay tests**: grid interactions (cell selection, letter entry, arrow keys, direction toggle, Tab/Backspace), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions. Configurable via `BASE_URL` env var (defaults to `https://crosswithfriends.com`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server via `yarn start` (or reuses one already running). Shared fixtures in `e2e/fixtures/` (`base.ts` for smoke, `game.ts` for gameplay).
 
 ### Quality Checks
 ```sh

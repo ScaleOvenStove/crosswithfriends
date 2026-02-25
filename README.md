@@ -119,6 +119,10 @@ BASE_URL=http://localhost:3020 yarn test:e2e
 
 First-time setup: `npx playwright install` to download browser binaries.
 
+Tests are organized in two layers:
+- **Smoke tests** — page rendering, navigation, puzzle list, dark mode, game page loading
+- **Gameplay tests** — grid interactions (cell selection, letter entry, keyboard navigation), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions
+
 ## Database Scripts
 
 Scripts in `server/jobs/` for database maintenance:
