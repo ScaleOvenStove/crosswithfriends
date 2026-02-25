@@ -10,6 +10,7 @@ export interface SolveHistoryItem {
   gid: string;
   title: string;
   size: string;
+  dow: string | null;
   time: number;
   solvedAt: string;
   playerCount: number;
@@ -19,6 +20,12 @@ export interface SolveHistoryItem {
 
 export interface SizeStats {
   size: string;
+  count: number;
+  avgTime: number;
+}
+
+export interface DayOfWeekStats {
+  day: string;
   count: number;
   avgTime: number;
 }
@@ -49,6 +56,7 @@ export interface UserStatsResponse {
   stats?: {
     totalSolved: number;
     bySize: SizeStats[];
+    byDay: DayOfWeekStats[];
   };
   history?: SolveHistoryItem[];
   uploads?: UploadedPuzzle[];

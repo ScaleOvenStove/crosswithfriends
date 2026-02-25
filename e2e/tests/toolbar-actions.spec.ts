@@ -2,8 +2,16 @@ import {test, expect, assertNoFatalErrors} from '../fixtures/game';
 
 test.describe('Toolbar actions', () => {
   test('Check Square marks a wrong letter as bad', async ({gamePage}) => {
-    const {clickCell, typeLetter, openActionMenu, clickAction, cellHasClass, findFirstWhiteCell, consoleErrors, page} =
-      gamePage;
+    const {
+      clickCell,
+      typeLetter,
+      openActionMenu,
+      clickAction,
+      cellHasClass,
+      findFirstWhiteCell,
+      consoleErrors,
+      page,
+    } = gamePage;
 
     const {r, c} = await findFirstWhiteCell();
     await clickCell(r, c);
@@ -32,7 +40,15 @@ test.describe('Toolbar actions', () => {
   });
 
   test('Reveal Square confirms and applies answer', async ({gamePage}) => {
-    const {clickCell, typeLetter, openActionMenu, clickAction, findFirstWhiteCell, consoleErrors, page} = gamePage;
+    const {
+      clickCell,
+      typeLetter,
+      openActionMenu,
+      clickAction,
+      findFirstWhiteCell,
+      consoleErrors,
+      page,
+    } = gamePage;
 
     const {r, c} = await findFirstWhiteCell();
     await clickCell(r, c);
@@ -61,8 +77,16 @@ test.describe('Toolbar actions', () => {
   });
 
   test('Reset Square clears the cell value', async ({gamePage}) => {
-    const {clickCell, typeLetter, getCellValue, openActionMenu, clickAction, findFirstWhiteCell, consoleErrors, page} =
-      gamePage;
+    const {
+      clickCell,
+      typeLetter,
+      getCellValue,
+      openActionMenu,
+      clickAction,
+      findFirstWhiteCell,
+      consoleErrors,
+      page,
+    } = gamePage;
 
     const {r, c} = await findFirstWhiteCell();
     await clickCell(r, c);
@@ -121,7 +145,15 @@ test.describe('Toolbar actions', () => {
   });
 
   test('Check Word marks wrong cells', async ({gamePage}) => {
-    const {clickCell, typeLetter, openActionMenu, clickAction, findFirstWhiteCell, consoleErrors, page} = gamePage;
+    const {
+      clickCell,
+      typeLetter,
+      openActionMenu,
+      clickAction,
+      findFirstWhiteCell,
+      consoleErrors,
+      page,
+    } = gamePage;
 
     const {r, c} = await findFirstWhiteCell();
     await clickCell(r, c);

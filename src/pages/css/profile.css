@@ -63,6 +63,15 @@
   margin-top: 2px;
 }
 
+.profile--stats-section-title {
+  margin: 4px 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .profile--history {
   margin-top: 24px;
 }
@@ -155,7 +164,8 @@
   }
 
   .profile--history-table th:nth-child(2),
-  .profile--history-table td:nth-child(2) {
+  .profile--history-table td:nth-child(2),
+  .profile--history-table .profile--day-col {
     display: none;
   }
 
@@ -224,6 +234,10 @@
 
 .dark .profile--stat-card--sub {
   color: rgba(255, 255, 255, 0.35);
+}
+
+.dark .profile--stats-section-title {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .dark .profile--history h3 {

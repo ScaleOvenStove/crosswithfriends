@@ -1,12 +1,14 @@
 import moment from 'moment';
 import {PuzzleJson} from '@shared/types';
 import {pool} from './pool';
+import {dayOfWeekExtract} from './sql_helpers';
 
 export type UserSolveHistoryItem = {
   pid: string;
   gid: string;
   title: string;
   size: string;
+  dow: string | null;
   time: number;
   solvedAt: string;
   playerCount: number;
@@ -20,9 +22,20 @@ export type SizeStats = {
   avgTime: number;
 };
 
+export type DayOfWeekStats = {
+  day: string;
+  count: number;
+  avgTime: number;
+};
+
 export async function getUserSolveStats(
   userId: string
-): Promise<{totalSolved: number; bySize: SizeStats[]; history: UserSolveHistoryItem[]}> {
+): Promise<{
+  totalSolved: number;
+  bySize: SizeStats[];
+  byDay: DayOfWeekStats[];
+  history: UserSolveHistoryItem[];
+}> {
   // Summary stats by grid size — count distinct puzzles, use best time per puzzle for avg
   const statsResult = await pool.query(
     `SELECT size, COUNT(*)::int AS count, ROUND(AVG(best_time))::int AS avg_time
@@ -51,6 +64,30 @@ export async function getUserSolveStats(
     avgTime: r.avg_time,
   }));
 
+  // Stats by day of week — group by day extracted from puzzle title
+  const dayResult = await pool.query(
+    `SELECT dow, COUNT(*)::int AS count, ROUND(AVG(best_time))::int AS avg_time
+     FROM (
+       SELECT DISTINCT ON (ps.pid)
+         ps.pid,
+         ps.time_taken_to_solve AS best_time,
+         ${dayOfWeekExtract('p')} AS dow
+       FROM puzzle_solves ps
+       JOIN puzzles p ON ps.pid = p.pid
+       WHERE ps.user_id = $1
+       ORDER BY ps.pid, ps.time_taken_to_solve ASC
+     ) best_solves
+     WHERE dow IS NOT NULL
+     GROUP BY dow`,
+    [userId]
+  );
+
+  const byDay: DayOfWeekStats[] = dayResult.rows.map((r: any) => ({
+    day: r.dow,
+    count: r.count,
+    avgTime: r.avg_time,
+  }));
+
   // Recent solve history with puzzle info
   const historyResult = await pool.query(
     `SELECT
@@ -59,7 +96,8 @@ export async function getUserSolveStats(
        GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
          || 'x' ||
        LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-         AS size
+         AS size,
+       ${dayOfWeekExtract('p')} AS dow
      FROM puzzle_solves ps
      JOIN puzzles p ON ps.pid = p.pid
      WHERE ps.user_id = $1
@@ -109,6 +147,7 @@ export async function getUserSolveStats(
       gid: r.gid,
       title: r.title || 'Untitled',
       size: r.size,
+      dow: r.dow || null,
       time: Number(r.time_taken_to_solve),
       solvedAt: r.solved_time ? r.solved_time.toISOString() : '',
       playerCount: pc,
@@ -117,7 +156,7 @@ export async function getUserSolveStats(
     };
   });
 
-  return {totalSolved, bySize, history};
+  return {totalSolved, bySize, byDay, history};
 }
 
 export type InProgressGameItem = {

@@ -69,10 +69,14 @@ describe('getUserSolveStats', () => {
     resetPoolMocks();
   });
 
-  it('returns {totalSolved, bySize, history} structure', async () => {
+  it('returns {totalSolved, bySize, byDay, history} structure', async () => {
     // Stats query
     pool.query.mockResolvedValueOnce({
       rows: [{size: '15x15', count: 5, avg_time: 300}],
+    });
+    // Day stats query
+    pool.query.mockResolvedValueOnce({
+      rows: [{dow: 'Mon', count: 3, avg_time: 120}],
     });
     // History query
     pool.query.mockResolvedValueOnce({
@@ -82,7 +86,9 @@ describe('getUserSolveStats', () => {
     const result = await getUserSolveStats('user-1');
     expect(result).toHaveProperty('totalSolved');
     expect(result).toHaveProperty('bySize');
+    expect(result).toHaveProperty('byDay');
     expect(result).toHaveProperty('history');
+    expect(result.byDay).toEqual([{day: 'Mon', count: 3, avgTime: 120}]);
   });
 
   it('sums count across sizes for totalSolved', async () => {
@@ -92,7 +98,8 @@ describe('getUserSolveStats', () => {
         {size: '15x15', count: 7, avg_time: 300},
       ],
     });
-    pool.query.mockResolvedValueOnce({rows: []});
+    pool.query.mockResolvedValueOnce({rows: []}); // day stats
+    pool.query.mockResolvedValueOnce({rows: []}); // history
 
     const result = await getUserSolveStats('user-1');
     expect(result.totalSolved).toBe(10);
@@ -101,6 +108,7 @@ describe('getUserSolveStats', () => {
 
   it('defaults title to "Untitled" and playerCount to 1', async () => {
     pool.query.mockResolvedValueOnce({rows: []}); // stats
+    pool.query.mockResolvedValueOnce({rows: []}); // day stats
     pool.query.mockResolvedValueOnce({
       rows: [
         {
@@ -111,6 +119,7 @@ describe('getUserSolveStats', () => {
           player_count: null,
           title: null,
           size: '5x5',
+          dow: null,
         },
       ],
     }); // history
@@ -118,10 +127,34 @@ describe('getUserSolveStats', () => {
     const result = await getUserSolveStats('user-1');
     expect(result.history[0].title).toBe('Untitled');
     expect(result.history[0].playerCount).toBe(1);
+    expect(result.history[0].dow).toBeNull();
+  });
+
+  it('includes dow field in history items', async () => {
+    pool.query.mockResolvedValueOnce({rows: []}); // stats
+    pool.query.mockResolvedValueOnce({rows: []}); // day stats
+    pool.query.mockResolvedValueOnce({
+      rows: [
+        {
+          pid: 'p1',
+          gid: 'g1',
+          time_taken_to_solve: 200,
+          solved_time: new Date('2026-01-15'),
+          player_count: 1,
+          title: 'Monday Puzzle',
+          size: '5x5',
+          dow: 'Mon',
+        },
+      ],
+    }); // history
+
+    const result = await getUserSolveStats('user-1');
+    expect(result.history[0].dow).toBe('Mon');
   });
 
   it('fetches co-solvers for collaborative games (player_count > 1)', async () => {
     pool.query.mockResolvedValueOnce({rows: []}); // stats
+    pool.query.mockResolvedValueOnce({rows: []}); // day stats
     pool.query.mockResolvedValueOnce({
       rows: [
         {
@@ -132,6 +165,7 @@ describe('getUserSolveStats', () => {
           player_count: 3,
           title: 'Collab Puzzle',
           size: '15x15',
+          dow: null,
         },
       ],
     }); // history

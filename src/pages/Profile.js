@@ -57,23 +57,43 @@ function CollabTag({playerCount, coSolvers, anonCount}) {
   );
 }
 
+const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 function StatsCards({stats}) {
-  const {totalSolved, bySize} = stats;
+  const {totalSolved, bySize, byDay} = stats;
+
+  const sortedByDay = byDay ? DAY_ORDER.map((d) => byDay.find((s) => s.day === d)).filter(Boolean) : [];
 
   return (
-    <div className="profile--stats-grid">
-      <div className="profile--stat-card">
-        <div className="profile--stat-card--value">{totalSolved}</div>
-        <div className="profile--stat-card--label">Puzzles Solved</div>
-      </div>
-      {bySize.map((s) => (
-        <div key={s.size} className="profile--stat-card">
-          <div className="profile--stat-card--value">{s.count}</div>
-          <div className="profile--stat-card--label">{s.size}</div>
-          <div className="profile--stat-card--sub">avg {formatTime(s.avgTime)}</div>
+    <>
+      <div className="profile--stats-grid">
+        <div className="profile--stat-card">
+          <div className="profile--stat-card--value">{totalSolved}</div>
+          <div className="profile--stat-card--label">Puzzles Solved</div>
         </div>
-      ))}
-    </div>
+        {bySize.map((s) => (
+          <div key={s.size} className="profile--stat-card">
+            <div className="profile--stat-card--value">{s.count}</div>
+            <div className="profile--stat-card--label">{s.size}</div>
+            <div className="profile--stat-card--sub">avg {formatTime(s.avgTime)}</div>
+          </div>
+        ))}
+      </div>
+      {sortedByDay.length > 0 && (
+        <>
+          <h3 className="profile--stats-section-title">By Day of Week</h3>
+          <div className="profile--stats-grid">
+            {sortedByDay.map((s) => (
+              <div key={s.day} className="profile--stat-card">
+                <div className="profile--stat-card--value">{s.count}</div>
+                <div className="profile--stat-card--label">{s.day}</div>
+                <div className="profile--stat-card--sub">avg {formatTime(s.avgTime)}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
@@ -88,6 +108,7 @@ function HistoryTable({history}) {
           <tr>
             <th>Puzzle</th>
             <th>Size</th>
+            <th className="profile--day-col">Day</th>
             <th>Time</th>
             <th>Date</th>
             <th>Actions</th>
@@ -105,6 +126,7 @@ function HistoryTable({history}) {
                 />
               </td>
               <td>{item.size}</td>
+              <td className="profile--day-col">{item.dow || '\u2014'}</td>
               <td>{formatTime(item.time)}</td>
               <td>{formatDate(item.solvedAt)}</td>
               <td className="profile--actions">

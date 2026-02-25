@@ -4,6 +4,7 @@ import Joi from 'joi';
 import * as uuid from 'uuid';
 import {PuzzleJson, ListPuzzleRequestFilters, AddPuzzleResult} from '@shared/types';
 import {pool} from './pool';
+import {dayOfWeekExtract} from './sql_helpers';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
@@ -69,19 +70,8 @@ const buildTypeFilterClause = (typeFilter: ListPuzzleRequestFilters['typeFilter'
   return `AND (${conditions.join(' OR ')})`;
 };
 
-// Case-insensitive day extraction with support for various abbreviations (Mon, Tues, Weds, Thurs, etc.)
-const DAY_EXTRACT = `
-  CASE
-    WHEN UPPER(content->'info'->>'title') ~ '\\m(MONDAY|MON)\\M' THEN 'Mon'
-    WHEN UPPER(content->'info'->>'title') ~ '\\m(TUESDAY|TUE|TUES)\\M' THEN 'Tue'
-    WHEN UPPER(content->'info'->>'title') ~ '\\m(WEDNESDAY|WED|WEDS)\\M' THEN 'Wed'
-    WHEN UPPER(content->'info'->>'title') ~ '\\m(THURSDAY|THU|THURS)\\M' THEN 'Thu'
-    WHEN UPPER(content->'info'->>'title') ~ '\\m(FRIDAY|FRI)\\M' THEN 'Fri'
-    WHEN UPPER(content->'info'->>'title') ~ '\\m(SATURDAY|SAT)\\M' THEN 'Sat'
-    WHEN UPPER(content->'info'->>'title') ~ '\\m(SUNDAY|SUN)\\M' THEN 'Sun'
-    ELSE NULL
-  END
-`;
+// Day-of-week extraction from puzzle titles — no alias needed here since queries reference `content` directly
+const DAY_EXTRACT = dayOfWeekExtract('');
 
 const buildDayOfWeekFilterClause = (
   dayFilter: ListPuzzleRequestFilters['dayOfWeekFilter'],

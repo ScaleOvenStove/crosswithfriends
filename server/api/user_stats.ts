@@ -32,7 +32,7 @@ router.get('/:userId', async (req, res, next) => {
       return;
     }
 
-    const {totalSolved, bySize, history} = await getUserSolveStats(userId);
+    const {totalSolved, bySize, byDay, history} = await getUserSolveStats(userId);
 
     let uploads: Awaited<ReturnType<typeof getUserUploadedPuzzles>> = [];
     try {
@@ -55,7 +55,7 @@ router.get('/:userId', async (req, res, next) => {
         displayName: user.display_name,
         createdAt: user.created_at,
       },
-      stats: {totalSolved, bySize},
+      stats: {totalSolved, bySize, byDay},
       history,
       uploads,
       inProgress,
