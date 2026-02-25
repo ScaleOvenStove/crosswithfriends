@@ -104,6 +104,21 @@ yarn build
 
 A pre-commit hook (via Husky + lint-staged) automatically lints and formats staged files on commit.
 
+**E2E tests (Playwright):**
+
+```sh
+yarn test:e2e                # Run against production (all browsers)
+yarn test:e2e:chromium       # Quick single-browser run
+
+# Run against a different environment
+BASE_URL=https://testing.crosswithfriends.com yarn test:e2e
+
+# Run against local dev server (auto-starts if not already running)
+BASE_URL=http://localhost:3020 yarn test:e2e
+```
+
+First-time setup: `npx playwright install` to download browser binaries.
+
 ## Database Scripts
 
 Scripts in `server/jobs/` for database maintenance:

@@ -19,6 +19,18 @@ yarn test -- --testPathPattern=path     # Run a single frontend test file
 yarn test:server -- --testPathPattern=path  # Run a single server test file
 ```
 
+### E2E Tests (Playwright)
+```sh
+yarn test:e2e                           # All browsers against production
+yarn test:e2e:chromium                  # Quick single-browser run
+BASE_URL=https://testing.crosswithfriends.com yarn test:e2e  # Against testing env
+BASE_URL=http://localhost:3020 yarn test:e2e  # Against local dev server
+yarn test:e2e:headed                    # Debug with visible browsers
+yarn test:e2e:ui                        # Playwright UI mode
+npx playwright install                  # First-time: install browser binaries
+```
+E2E tests live in `e2e/` and cover smoke tests: page rendering, navigation, puzzle list, dark mode, and game page loading. Configurable via `BASE_URL` env var (defaults to `https://crosswithfriends.com`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server via `yarn start` (or reuses one already running).
+
 ### Quality Checks
 ```sh
 npx eslint . --ext .js,.jsx,.ts,.tsx    # Lint (CI enforces --max-warnings 0)
