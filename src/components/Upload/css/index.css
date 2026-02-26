@@ -30,3 +30,138 @@
   font-size: 18px;
 }
 
+/* Upload Modal */
+.upload-modal--overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+}
+
+.upload-modal {
+  background: #fff;
+  border-radius: 5px;
+  padding: 20px 30px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.upload-modal--icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  border: 3px solid;
+}
+
+.upload-modal--icon-success {
+  color: #4caf50;
+  border-color: #4caf50;
+}
+
+.upload-modal--icon-error {
+  color: #f44336;
+  border-color: #f44336;
+}
+
+.upload-modal--icon-warning {
+  color: #ff9800;
+  border-color: #ff9800;
+}
+
+.upload-modal--icon-info {
+  color: #2196f3;
+  border-color: #2196f3;
+}
+
+.upload-modal--title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.upload-modal--content {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.upload-modal--content a {
+  color: #2196f3;
+}
+
+.upload-modal--content p {
+  margin: 8px 0;
+}
+
+.upload-modal--checkbox-row {
+  margin-top: 12px;
+}
+
+.upload-modal--checkbox-row label {
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-modal--checkbox-row input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.upload-modal--buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.upload-modal--button {
+  padding: 8px 24px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.upload-modal--button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-modal--button-confirm {
+  background-color: var(--main-blue, #2196f3);
+  color: #fff;
+}
+
+.upload-modal--button-confirm:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.upload-modal--button-cancel {
+  background-color: #e8e8e8;
+  color: #333;
+}
+
+.upload-modal--button-cancel:hover {
+  background-color: #d5d5d5;
+}

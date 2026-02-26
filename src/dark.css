@@ -414,6 +414,50 @@
   accent-color: #6aa9f4;
 }
 
+/* Upload Modal */
+.dark .upload-modal {
+  background-color: #1e1e1e;
+  border: 1px solid #444;
+}
+
+.dark .upload-modal--title {
+  color: var(--dark-primary-text);
+}
+
+.dark .upload-modal--content {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dark .upload-modal--content a {
+  color: #6aa9f4;
+}
+
+.dark .upload-modal--button-confirm {
+  background-color: var(--dark-blue-1);
+  color: var(--dark-primary-text);
+}
+
+.dark .upload-modal--button-confirm:hover:not(:disabled) {
+  background-color: #2d6da3;
+}
+
+.dark .upload-modal--button-cancel {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dark .upload-modal--button-cancel:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark .upload-modal--checkbox-row label {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dark .upload-modal--checkbox-row input[type='checkbox'] {
+  accent-color: #6aa9f4;
+}
+
 /* Chat header (puzzle instructions / description) */
 .dark .chat--header--subtitle {
   color: rgba(255, 255, 255, 0.6);

@@ -4,8 +4,6 @@ import './css/fileUploader.css';
 import React, {Component} from 'react';
 import Dropzone from 'react-dropzone';
 import {MdFileUpload} from 'react-icons/md';
-import swal from '@sweetalert/with-react';
-
 import {hasShape} from '../../lib/jsUtils';
 import PUZtoJSON from '../../lib/converter/PUZtoJSON';
 import iPUZtoJSON from '../../lib/converter/iPUZtoJSON';
@@ -115,7 +113,7 @@ export default class FileUploader extends Component {
     const file = acceptedFiles[0];
     const fileType = file.name.split('.').pop();
     const reader = new FileReader();
-    const {success, fail} = this.props;
+    const {success, fail, onError} = this.props;
     reader.addEventListener('loadend', () => {
       try {
         const puzzle = attemptPuzzleConversion(reader.result, fileType);
@@ -125,21 +123,11 @@ export default class FileUploader extends Component {
           fail();
         }
       } catch (e) {
-        let defaultTitle = 'Something went wrong';
-        let defaultText = `The error message was: ${e.message}`;
-        let defaultIcon = 'warning';
-
-        if (e?.errorTitle) defaultTitle = e.errorTitle;
-        if (e?.errorText) defaultText = e.errorText;
-        if (e?.errorIcon) defaultIcon = e.errorIcon;
-
-        swal({
-          title: defaultTitle,
-          text: defaultText,
-          icon: defaultIcon,
-          buttons: 'OK',
-          dangerMode: true,
-        });
+        const title = e?.errorTitle || 'Something went wrong';
+        const text = e?.errorText || `The error message was: ${e.message}`;
+        if (onError) {
+          onError({title, text});
+        }
       }
       window.URL.revokeObjectURL(acceptedFiles[0].preview);
     });
