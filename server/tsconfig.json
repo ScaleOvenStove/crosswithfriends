@@ -13,6 +13,12 @@
       "@lib/*": ["../src/lib/*"]
     }
   },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    }
+  },
   "include": [".", "../src/lib", "../src/shared"],
   "exclude": ["../src/**/__tests__/**"]
 }
