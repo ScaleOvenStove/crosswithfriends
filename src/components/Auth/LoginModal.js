@@ -1,5 +1,5 @@
 import React, {useState, useContext, useCallback} from 'react';
-import {useHistory} from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 import Dialog from '@material-ui/core/Dialog';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -20,7 +20,7 @@ export default function LoginModal({open, onClose}) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const {handleLoginSuccess} = useContext(AuthContext);
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const resetForm = useCallback(() => {
     setEmail('');
@@ -94,8 +94,8 @@ export default function LoginModal({open, onClose}) {
 
   const handleForgotPassword = useCallback(() => {
     handleClose();
-    history.push('/forgot-password');
-  }, [handleClose, history]);
+    navigate('/forgot-password');
+  }, [handleClose, navigate]);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>

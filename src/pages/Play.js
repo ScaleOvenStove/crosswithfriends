@@ -11,7 +11,9 @@ import {getUser, BattleModel} from '../store';
 import redirect from '../lib/redirect';
 import {createGame} from '../api/create_game';
 
-export default class Play extends Component {
+import withRouter from '../lib/withRouter';
+
+class Play extends Component {
   constructor() {
     super();
     this.state = {
@@ -168,3 +170,5 @@ export default class Play extends Component {
     );
   }
 }
+
+export default withRouter(Play);

@@ -2,8 +2,7 @@ import React, {Dispatch, SetStateAction, useCallback, useEffect, useMemo, useSta
 import {useUpdateEffect} from 'react-use';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import {RouteComponentProps} from 'react-router';
+import {useParams} from 'react-router-dom';
 
 import {makeStyles} from '@material-ui/core';
 import type {Socket} from 'socket.io-client';
@@ -99,8 +98,8 @@ const useTimer = (interval = 1000): number => {
   return time;
 };
 
-const Room: React.FC<RouteComponentProps<{rid: string}>> = (props) => {
-  const rid = props.match.params.rid;
+const Room: React.FC = () => {
+  const {rid} = useParams<'rid'>() as {rid: string};
   const socket = useSocket();
   const [events, setEvents] = useState<RoomEvent[]>([]);
   const roomState = useRoomState(events);

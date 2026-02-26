@@ -31,7 +31,9 @@ const formatTime = (seconds) => {
   }
   return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 };
-export default class Replay extends Component {
+import withRouter from '../lib/withRouter';
+
+class Replay extends Component {
   static contextType = AuthContext;
 
   constructor() {
@@ -701,3 +703,5 @@ export default class Replay extends Component {
     );
   }
 }
+
+export default withRouter(Replay);

@@ -33,7 +33,9 @@ function renderTeam(team, idx) {
   );
 }
 
-export default class Battle extends Component {
+import withRouter from '../lib/withRouter';
+
+class Battle extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -205,3 +207,5 @@ export default class Battle extends Component {
     );
   }
 }
+
+export default withRouter(Battle);

@@ -1,5 +1,5 @@
 import React, {useEffect, useContext, useState} from 'react';
-import {Link, useHistory, useLocation} from 'react-router-dom';
+import {Link, useNavigate, useLocation} from 'react-router-dom';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Typography from '@material-ui/core/Typography';
 import AuthContext from '../../lib/AuthContext';
@@ -7,7 +7,7 @@ import {getMe} from '../../api/auth';
 
 export default function GoogleCallback() {
   const {handleLoginSuccess} = useContext(AuthContext);
-  const history = useHistory();
+  const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState('');
 
@@ -38,10 +38,10 @@ export default function GoogleCallback() {
       } catch (e) {
         setError('Authentication failed');
       } finally {
-        history.replace('/');
+        navigate('/', {replace: true});
       }
     })();
-  }, [location.search, handleLoginSuccess, history]);
+  }, [location.search, handleLoginSuccess, navigate]);
 
   if (error) {
     return (

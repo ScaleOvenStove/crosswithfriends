@@ -23,7 +23,9 @@ import {SERVER_URL} from '../api/constants';
 
 import nameGenerator from '../lib/nameGenerator';
 
-export default class Game extends Component {
+import withRouter from '../lib/withRouter';
+
+class Game extends Component {
   static contextType = AuthContext;
 
   constructor(props) {
@@ -618,3 +620,5 @@ export default class Game extends Component {
     );
   }
 }
+
+export default withRouter(Game);

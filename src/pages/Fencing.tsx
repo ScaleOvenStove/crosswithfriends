@@ -1,12 +1,11 @@
 import React from 'react';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import {RouteComponentProps} from 'react-router';
+import {useParams} from 'react-router-dom';
 
 import {Fencing} from '../components/Fencing/Fencing';
 
-const FencingWrapper: React.FC<RouteComponentProps<{gid: string}>> = (props) => {
-  const gid = props.match.params.gid;
+const FencingWrapper: React.FC = () => {
+  const {gid} = useParams<'gid'>();
 
-  return <Fencing gid={gid} />;
+  return <Fencing gid={gid!} />;
 };
 export default FencingWrapper;

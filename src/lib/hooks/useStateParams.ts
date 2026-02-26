@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {useHistory} from 'react-router-dom';
+import {useNavigate, useLocation} from 'react-router-dom';
 
 function useStateParams<T>(
   initialState: T,
@@ -7,8 +7,9 @@ function useStateParams<T>(
   serialize: (state: T) => string,
   deserialize: (state: string) => T
 ): [T, (state: T) => void] {
-  const history = useHistory();
-  const search = new URLSearchParams(history.location.search);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const search = new URLSearchParams(location.search);
 
   const existingValue = search.get(paramsName);
   const [state, setState] = useState<T>(existingValue ? deserialize(existingValue) : initialState);
@@ -22,10 +23,11 @@ function useStateParams<T>(
 
   const onChange = (s: T) => {
     setState(s);
-    const searchParams = new URLSearchParams(history.location.search);
+    // Read current URL directly — location from useLocation() may be stale
+    // when multiple filters update in quick succession
+    const searchParams = new URLSearchParams(window.location.search);
     searchParams.set(paramsName, serialize(s));
-    const pathname = history.location.pathname;
-    history.push({pathname, search: searchParams.toString()});
+    navigate({pathname: window.location.pathname, search: searchParams.toString()}, {replace: true});
   };
 
   return [state, onChange];

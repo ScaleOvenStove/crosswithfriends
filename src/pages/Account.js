@@ -3,7 +3,7 @@ import './css/account.css';
 
 import React, {useContext, useState, useEffect} from 'react';
 import {Helmet} from 'react-helmet';
-import {useLocation, useHistory, Link} from 'react-router-dom';
+import {useLocation, useNavigate, Link} from 'react-router-dom';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
@@ -513,7 +513,7 @@ export default function Account() {
   const {isAuthenticated, user, accessToken, refreshUser, handleLogout} = useContext(AuthContext);
   const [showLogin, setShowLogin] = useState(false);
   const location = useLocation();
-  const history = useHistory();
+  const navigate = useNavigate();
   const [flash, setFlash] = useState(null);
 
   // Handle flash messages from URL params (e.g., after Google link redirect)
@@ -524,10 +524,10 @@ export default function Account() {
     if (errorParam) setFlash({type: 'error', text: errorParam});
     if (successParam) setFlash({type: 'success', text: successParam});
     if (errorParam || successParam) {
-      history.replace('/account');
+      navigate('/account', {replace: true});
       if (successParam) refreshUser();
     }
-  }, [location.search, history, refreshUser]);
+  }, [location.search, navigate, refreshUser]);
 
   return (
     <div className="account">
@@ -569,7 +569,7 @@ export default function Account() {
               accessToken={accessToken}
               onDeleted={() => {
                 handleLogout();
-                history.push('/');
+                navigate('/');
               }}
             />
           </>

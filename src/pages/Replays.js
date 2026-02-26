@@ -54,7 +54,9 @@ function getChatters(game) {
   return [];
 }
 
-export default class Replays extends Component {
+import withRouter from '../lib/withRouter';
+
+class Replays extends Component {
   constructor() {
     super();
     this.state = {
@@ -302,3 +304,5 @@ export default class Replays extends Component {
     );
   }
 }
+
+export default withRouter(Replays);

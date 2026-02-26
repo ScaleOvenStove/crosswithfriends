@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-no-bind, consistent-return, no-nested-ternary */
 import React, {useContext, useState, useEffect, useRef} from 'react';
 import {Helmet} from 'react-helmet';
-import {useLocation, useHistory, Link} from 'react-router-dom';
+import {useLocation, useNavigate, Link} from 'react-router-dom';
 import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Typography from '@material-ui/core/Typography';
@@ -13,7 +13,7 @@ import {verifyEmail, resendVerification} from '../api/auth';
 export default function VerifyEmail() {
   const {user, accessToken, refreshUser} = useContext(AuthContext);
   const location = useLocation();
-  const history = useHistory();
+  const navigate = useNavigate();
   const token = new URLSearchParams(location.search).get('token');
 
   const [status, setStatus] = useState(token ? 'verifying' : 'idle'); // verifying | success | error | idle
@@ -83,7 +83,7 @@ export default function VerifyEmail() {
                 Email verified!
               </Typography>
               <Typography style={{marginBottom: 24}}>Your email has been verified successfully.</Typography>
-              <Button variant="contained" color="primary" onClick={() => history.push('/')}>
+              <Button variant="contained" color="primary" onClick={() => navigate('/')}>
                 Go to Home
               </Button>
             </>
@@ -97,7 +97,7 @@ export default function VerifyEmail() {
                 {error || 'The link may be expired or invalid.'}
               </Typography>
               {user && !user.emailVerified && (
-                <Button variant="contained" color="primary" onClick={() => history.push('/verify-email')}>
+                <Button variant="contained" color="primary" onClick={() => navigate('/verify-email')}>
                   Request a new link
                 </Button>
               )}

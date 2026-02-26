@@ -2,7 +2,7 @@ import './css/profile.css';
 
 import React, {useContext, useState, useEffect} from 'react';
 import {Helmet} from 'react-helmet';
-import {useParams, useHistory, Link} from 'react-router-dom';
+import {useParams, useNavigate, Link} from 'react-router-dom';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import {MdPeople} from 'react-icons/md';
 import {FaPlay} from 'react-icons/fa';
@@ -228,7 +228,7 @@ function UploadsTable({uploads}) {
 
 export default function Profile() {
   const {userId: paramUserId} = useParams();
-  const history = useHistory();
+  const navigate = useNavigate();
   const {isAuthenticated, user, accessToken} = useContext(AuthContext);
 
   const [data, setData] = useState(null);
@@ -239,9 +239,9 @@ export default function Profile() {
   // If visiting /profile with no userId, redirect to own profile
   useEffect(() => {
     if (!paramUserId && isAuthenticated && user?.id) {
-      history.replace(`/profile/${user.id}`);
+      navigate(`/profile/${user.id}`, {replace: true});
     }
-  }, [paramUserId, isAuthenticated, user, history]);
+  }, [paramUserId, isAuthenticated, user, navigate]);
 
   const targetUserId = paramUserId || user?.id;
 
