@@ -61,9 +61,10 @@ async function backfill() {
     for (const {gid, pid} of games) {
       try {
         // Get all events for this game in order
-        const {
-          rows: eventRows,
-        } = await pool.query(`SELECT event_payload FROM game_events WHERE gid = $1 ORDER BY ts ASC`, [gid]);
+        const {rows: eventRows} = await pool.query(
+          `SELECT event_payload FROM game_events WHERE gid = $1 ORDER BY ts ASC`,
+          [gid]
+        );
 
         if (eventRows.length === 0) {
           console.log(`  ${gid}: no events, skipping`);

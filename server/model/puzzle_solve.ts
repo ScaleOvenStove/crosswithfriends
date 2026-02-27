@@ -27,9 +27,7 @@ export type DayOfWeekStats = {
   avgTime: number;
 };
 
-export async function getUserSolveStats(
-  userId: string
-): Promise<{
+export async function getUserSolveStats(userId: string): Promise<{
   totalSolved: number;
   bySize: SizeStats[];
   byDay: DayOfWeekStats[];

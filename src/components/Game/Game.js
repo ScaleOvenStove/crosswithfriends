@@ -297,18 +297,8 @@ export default class Game extends Component {
       return <div>Loading...</div>;
     }
 
-    const {
-      grid,
-      circles,
-      shades,
-      cursors,
-      pings,
-      users,
-      solved,
-      solution,
-      themeColor,
-      optimisticCounter,
-    } = this.game;
+    const {grid, circles, shades, cursors, pings, users, solved, solution, themeColor, optimisticCounter} =
+      this.game;
     const clues = {
       ...this.game.clues,
     };

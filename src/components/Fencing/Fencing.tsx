@@ -209,9 +209,10 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
     },
     [sendEvent]
   );
-  const handleUpdateDisplayName = useCallback((_userId: string, name: string) => changeName(name), [
-    changeName,
-  ]);
+  const handleUpdateDisplayName = useCallback(
+    (_userId: string, name: string) => changeName(name),
+    [changeName]
+  );
   const fencingScoreboard = (
     <FencingScoreboard
       gameState={gameState}

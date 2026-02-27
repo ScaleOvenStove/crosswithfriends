@@ -102,18 +102,21 @@ async function runServer() {
     );
   }
   // Clean up expired/revoked tokens every hour
-  setInterval(async () => {
-    try {
-      const deleted = await cleanupExpiredTokens();
-      if (deleted > 0) console.log(`Cleaned up ${deleted} expired refresh tokens`);
-      const deletedEmail = await cleanupExpiredEmailTokens();
-      if (deletedEmail > 0) console.log(`Cleaned up ${deletedEmail} expired email verification tokens`);
-      const deletedReset = await cleanupExpiredResetTokens();
-      if (deletedReset > 0) console.log(`Cleaned up ${deletedReset} expired password reset tokens`);
-    } catch (err) {
-      console.error('Token cleanup error:', err);
-    }
-  }, 60 * 60 * 1000);
+  setInterval(
+    async () => {
+      try {
+        const deleted = await cleanupExpiredTokens();
+        if (deleted > 0) console.log(`Cleaned up ${deleted} expired refresh tokens`);
+        const deletedEmail = await cleanupExpiredEmailTokens();
+        if (deletedEmail > 0) console.log(`Cleaned up ${deletedEmail} expired email verification tokens`);
+        const deletedReset = await cleanupExpiredResetTokens();
+        if (deletedReset > 0) console.log(`Cleaned up ${deletedReset} expired password reset tokens`);
+      } catch (err) {
+        console.error('Token cleanup error:', err);
+      }
+    },
+    60 * 60 * 1000
+  );
 
   server.listen(port, () => console.log(`Listening on port ${port}`));
   process.once('SIGUSR2', () => {

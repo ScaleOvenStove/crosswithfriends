@@ -15,7 +15,7 @@ export const getOppositeDirection = (direction) =>
   ({
     across: 'down',
     down: 'across',
-  }[direction]);
+  })[direction];
 
 export class GridWrapper {
   constructor(grid) {
@@ -219,8 +219,10 @@ export class GridWrapper {
 
   getCrossingWords(r, c) {
     const writableLocations = this.getWritableLocations();
-    const isSameWord = (direction) => ({i, j}) =>
-      this.getParent(r, c, direction) === this.getParent(i, j, direction);
+    const isSameWord =
+      (direction) =>
+      ({i, j}) =>
+        this.getParent(r, c, direction) === this.getParent(i, j, direction);
 
     const across = _.filter(writableLocations, isSameWord('across'));
     const down = _.filter(writableLocations, isSameWord('down'));

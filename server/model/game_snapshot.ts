@@ -17,11 +17,10 @@ export async function saveGameSnapshot(
 export async function getGameSnapshot(
   gid: string
 ): Promise<{gid: string; pid: string; snapshot: object; replayRetained: boolean} | null> {
-  const {
-    rows,
-  } = await pool.query(`SELECT gid, pid, snapshot, replay_retained FROM game_snapshots WHERE gid = $1`, [
-    gid,
-  ]);
+  const {rows} = await pool.query(
+    `SELECT gid, pid, snapshot, replay_retained FROM game_snapshots WHERE gid = $1`,
+    [gid]
+  );
   if (rows.length === 0) return null;
   return {
     gid: rows[0].gid,

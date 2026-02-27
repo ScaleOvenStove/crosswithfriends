@@ -51,8 +51,8 @@ class Game extends Component {
           // name generator
           localStorage.getItem(this.usernameKey)
         : localStorage.getItem('username_default') !== null
-        ? localStorage.getItem('username_default')
-        : nameGenerator();
+          ? localStorage.getItem('username_default')
+          : nameGenerator();
   }
 
   get usernameKey() {

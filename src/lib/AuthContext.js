@@ -41,12 +41,15 @@ export function AuthProvider({children}) {
   // Refresh access token before it expires (~14 min)
   useEffect(() => {
     if (accessToken) {
-      refreshTimerRef.current = setTimeout(async () => {
-        const result = await refreshAccessToken();
-        if (result) {
-          setAccessToken(result.accessToken);
-        }
-      }, 14 * 60 * 1000);
+      refreshTimerRef.current = setTimeout(
+        async () => {
+          const result = await refreshAccessToken();
+          if (result) {
+            setAccessToken(result.accessToken);
+          }
+        },
+        14 * 60 * 1000
+      );
     }
     return () => {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);

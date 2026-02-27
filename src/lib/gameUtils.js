@@ -5,7 +5,7 @@ export const getOppositeDirection = (direction) =>
   ({
     across: 'down',
     down: 'across',
-  }[direction]);
+  })[direction];
 
 export const makeEmptyGame = () => ({
   gid: undefined,

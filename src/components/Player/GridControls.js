@@ -281,15 +281,8 @@ export default class GridControls extends Component {
       $: 'end',
     };
 
-    const {
-      onVimNormal,
-      onVimInsert,
-      vimInsert,
-      onVimCommand,
-      vimCommand,
-      onPressEnter,
-      onPressPeriod,
-    } = this.props;
+    const {onVimNormal, onVimInsert, vimInsert, onVimCommand, vimCommand, onPressEnter, onPressPeriod} =
+      this.props;
     if (key in actionKeys) {
       this.handleAction(actionKeys[key], shiftKey);
       return true;
@@ -428,16 +421,19 @@ export default class GridControls extends Component {
       return undefined;
     }
     if (!this.nextTime) this.nextTime = Date.now();
-    setTimeout(() => {
-      let rebusFlag = isRebus;
-      if (letter === '/') rebusFlag = true;
-      const {r: selR, c: selC} = this.props.selected;
-      const value = this.props.grid[selR][selC].value;
-      if (!rebusFlag) {
-        this.goToNextEmptyCell({nextClueIfFilled});
-      }
-      this.props.updateGrid(selR, selC, rebusFlag ? (value || '').substr(0, 10) + letter : letter);
-    }, Math.max(0, this.nextTime - Date.now()));
+    setTimeout(
+      () => {
+        let rebusFlag = isRebus;
+        if (letter === '/') rebusFlag = true;
+        const {r: selR, c: selC} = this.props.selected;
+        const value = this.props.grid[selR][selC].value;
+        if (!rebusFlag) {
+          this.goToNextEmptyCell({nextClueIfFilled});
+        }
+        this.props.updateGrid(selR, selC, rebusFlag ? (value || '').substr(0, 10) + letter : letter);
+      },
+      Math.max(0, this.nextTime - Date.now())
+    );
     this.nextTime = Math.max(this.nextTime, Date.now()) + 30;
     return undefined;
   }
