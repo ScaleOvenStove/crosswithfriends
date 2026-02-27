@@ -1,3 +1,3 @@
 while true; do
-  yarn servebackend
+  pnpm servebackend
 done

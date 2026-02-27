@@ -6,7 +6,7 @@ Hosted at [crosswithfriends.com](https://www.crosswithfriends.com).
 
 ## Tech Stack
 
-- **Frontend:** React (CRA), Material UI v4, TypeScript/JavaScript
+- **Frontend:** React 19, Vite, TypeScript/JavaScript
 - **Backend:** Express, Socket.IO (real-time gameplay), PostgreSQL
 - **Auth:** Google OAuth, email/password with JWT sessions
 - **Infrastructure:** Render (hosting + managed Postgres)
@@ -55,51 +55,52 @@ Hosted at [crosswithfriends.com](https://www.crosswithfriends.com).
    git clone https://github.com/ScaleOvenStove/crosswithfriends.git
    cd crosswithfriends
    nvm install && nvm use
-   yarn
+   corepack enable
+   pnpm install
    ```
 
 2. Start the dev server:
 
    ```sh
-   yarn start
+   pnpm start
    ```
 
-   This is all you need for **frontend development**. The CRA dev server automatically proxies `/api/*` requests to the production backend — no local server or database required.
+   This is all you need for **frontend development**. The Vite dev server automatically proxies `/api/*` requests to the production backend — no local server or database required.
 
 3. **(Optional) Full-stack development** — if you need to work on the backend:
 
    Copy `server/.env.example` to `server/.env.local` and fill in your Postgres credentials, then:
 
    ```sh
-   REACT_APP_USE_LOCAL_SERVER=true yarn start
+   VITE_USE_LOCAL_SERVER=1 pnpm start
    ```
 
 ## Development Workflow
 
-This project uses ESLint, Prettier, and Jest. CI runs all checks on every pull request.
+This project uses ESLint, Prettier, and Vitest. CI runs all checks on every pull request.
 
 **Run tests:**
 
 ```sh
-yarn test
+pnpm test
 ```
 
 **Lint:**
 
 ```sh
-npx eslint . --ext .js,.jsx,.ts,.tsx
+pnpm eslint --max-warnings 0 src/ server/
 ```
 
 **Check formatting:**
 
 ```sh
-npx prettier --check .
+pnpm prettier --check .
 ```
 
 **Production build:**
 
 ```sh
-yarn build
+pnpm build
 ```
 
 A pre-commit hook (via Husky + lint-staged) automatically lints and formats staged files on commit.
@@ -107,19 +108,20 @@ A pre-commit hook (via Husky + lint-staged) automatically lints and formats stag
 **E2E tests (Playwright):**
 
 ```sh
-yarn test:e2e                # Run against production (all browsers)
-yarn test:e2e:chromium       # Quick single-browser run
+pnpm test:e2e                # Run against production (all browsers)
+pnpm test:e2e:chromium       # Quick single-browser run
 
 # Run against a different environment
-BASE_URL=https://testing.crosswithfriends.com yarn test:e2e
+BASE_URL=https://testing.crosswithfriends.com pnpm test:e2e
 
 # Run against local dev server (auto-starts if not already running)
-BASE_URL=http://localhost:3020 yarn test:e2e
+BASE_URL=http://localhost:3020 pnpm test:e2e
 ```
 
 First-time setup: `npx playwright install` to download browser binaries.
 
 Tests are organized in two layers:
+
 - **Smoke tests** — page rendering, navigation, puzzle list, dark mode, game page loading
 - **Gameplay tests** — grid interactions (cell selection, letter entry, keyboard navigation), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions
 
