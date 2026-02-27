@@ -1,8 +1,7 @@
 import './css/index.css';
 import React, {Component} from 'react';
 import _ from 'lodash';
-import Flex from 'react-flexview';
-import Linkify from 'react-linkify';
+import Linkify from 'linkify-react';
 import {Link} from 'react-router-dom';
 import {MdClose} from 'react-icons/md';
 import Emoji from '../common/Emoji';
@@ -163,9 +162,9 @@ export default class Chat extends Component {
   renderToolbar() {
     if (!this.props.mobile) return null;
     return (
-      <Flex className="toolbar--mobile" vAlignContent="center">
+      <div className="flex flex--align-center toolbar--mobile">
         <Link to="/">Cross with Friends</Link> {this.renderGameButton()}
-      </Flex>
+      </div>
     );
   }
 
@@ -405,9 +404,9 @@ export default class Chat extends Component {
     }
 
     return (
-      <Flex shrink={0}>
+      <div className="flex--shrink-0">
         <MobileKeyboard layout="uppercase" />
-      </Flex>
+      </div>
     );
   }
 
@@ -426,7 +425,7 @@ export default class Chat extends Component {
   render() {
     const messages = Chat.mergeMessages(this.props.data, this.props.opponentData);
     return (
-      <Flex column grow={1}>
+      <div className="flex--column flex--grow">
         {this.renderToolbar()}
         <div className="chat">
           {this.renderChatHeader()}
@@ -488,7 +487,7 @@ export default class Chat extends Component {
           </div>
           {this.renderChatBar()}
         </div>
-      </Flex>
+      </div>
     );
   }
 }

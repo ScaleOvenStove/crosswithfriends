@@ -1,4 +1,3 @@
-import moment from 'moment';
 import _ from 'lodash';
 
 /** Status effect helpers * */
@@ -42,7 +41,7 @@ const revealSquare = ({selected, gameModel}) => {
 
 /** Duration helpers * */
 
-const secondsSince = (t) => moment.duration(moment(Date.now()).diff(moment(t))).asSeconds();
+const secondsSince = (t) => (Date.now() - t) / 1000;
 
 export const timeLeft = (powerup) => {
   const {type, used} = powerup;

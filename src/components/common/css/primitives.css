@@ -229,3 +229,34 @@
 .dark .text-success {
   color: #66bb6a;
 }
+
+/* ===== Flex utilities (replaces react-flexview) ===== */
+/* min-width/min-height: 0 matches react-flexview default behavior,
+   allowing flex children to shrink below content size (enables text-overflow: ellipsis etc.) */
+.flex {
+  display: flex;
+  min-width: 0;
+}
+
+.flex--column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.flex--grow {
+  flex-grow: 1;
+}
+
+.flex--shrink-0 {
+  flex-shrink: 0;
+}
+
+.flex--center {
+  justify-content: center;
+  align-items: center;
+}
+
+.flex--align-center {
+  align-items: center;
+}

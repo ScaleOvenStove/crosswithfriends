@@ -1,7 +1,6 @@
 import './css/mobileGridControls.css';
 
 import React, {useEffect} from 'react';
-import Flex from 'react-flexview';
 import {MdKeyboardArrowLeft, MdKeyboardArrowRight} from 'react-icons/md';
 import _ from 'lodash';
 import Clue from './ClueText';
@@ -382,9 +381,9 @@ export default class MobileGridControls extends GridControls {
           className="mobile-grid-controls--zoom-container"
           ref={this.zoomContainer}
         >
-          <Flex grow={1} className="mobile-grid-controls--zoom-content" style={style}>
+          <div className="flex--grow mobile-grid-controls--zoom-content" style={style}>
             {this.props.children}
-          </Flex>
+          </div>
         </div>
       </div>
     );
@@ -392,7 +391,7 @@ export default class MobileGridControls extends GridControls {
 
   renderClueBar() {
     return (
-      <Flex className="mobile-grid-controls--clue-bar-container">
+      <div className="flex mobile-grid-controls--clue-bar-container">
         <div ref={this.leftArrowRef} style={{display: 'flex'}}>
           <MdKeyboardArrowLeft className="mobile-grid-controls--intra-clue left" onClick={this.keepFocus} />
         </div>
@@ -414,16 +413,16 @@ export default class MobileGridControls extends GridControls {
               <div className="mobile-grid-controls--clue-bar--number">
                 <Clue text={getClueAbbreviation(this.mainClue)} />
               </div>
-              <Flex className="mobile-grid-controls--clue-bar--text" grow={1}>
+              <div className="flex flex--grow mobile-grid-controls--clue-bar--text">
                 <Clue text={this.getClueText(this.mainClue)} />
-              </Flex>
+              </div>
             </div>
           </div>
         </div>
         <div ref={this.rightArrowRef} style={{display: 'flex'}}>
           <MdKeyboardArrowRight className="mobile-grid-controls--intra-clue left" onClick={this.keepFocus} />
         </div>
-      </Flex>
+      </div>
     );
   }
 

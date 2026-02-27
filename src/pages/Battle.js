@@ -1,10 +1,8 @@
 import './css/battle.css';
-import 'react-flexview/lib/flexView.css';
 
 import React, {Component} from 'react';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet';
-import Flex from 'react-flexview';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
 import {BattleModel} from '../store';
@@ -13,23 +11,23 @@ import {isMobile} from '../lib/jsUtils';
 
 function renderPlayer(player, idx) {
   return (
-    <Flex className="battle--player" key={idx}>
+    <div className="flex battle--player" key={idx}>
       {' '}
       {player.name}{' '}
-    </Flex>
+    </div>
   );
 }
 
 function renderTeam(team, idx) {
   return (
-    <Flex className="battle--team" key={idx}>
-      <Flex className="battle--team-name">
+    <div className="flex battle--team" key={idx}>
+      <div className="flex battle--team-name">
         {' '}
         Team
         {Number(idx) + 1}
-      </Flex>
+      </div>
       {_.map(team, renderPlayer)}
-    </Flex>
+    </div>
   );
 }
 
@@ -137,28 +135,34 @@ class Battle extends Component {
       disabled,
     });
     return (
-      <Flex className="battle--selector">
-        <Flex className="battle--buttons">
-          <Flex
-            className={buttonClass}
-            hAlignContent="center"
+      <div className="flex battle--selector">
+        <div className="flex battle--buttons">
+          <div
+            className={`flex ${buttonClass}`}
+            style={{justifyContent: 'center'}}
+            role={disabled ? undefined : 'button'}
+            tabIndex={disabled ? undefined : 0}
             onClick={disabled ? undefined : this.handleSelectTeam0}
+            onKeyDown={disabled ? undefined : this.handleSelectTeam0}
           >
             Team 1
-          </Flex>
-          <Flex
-            className={buttonClass}
-            hAlignContent="center"
+          </div>
+          <div
+            className={`flex ${buttonClass}`}
+            style={{justifyContent: 'center'}}
+            role={disabled ? undefined : 'button'}
+            tabIndex={disabled ? undefined : 0}
             onClick={disabled ? undefined : this.handleSelectTeam1}
+            onKeyDown={disabled ? undefined : this.handleSelectTeam1}
           >
             Team 2
-          </Flex>
-        </Flex>
-        <Flex className="battle--name">
+          </div>
+        </div>
+        <div className="flex battle--name">
           <input className="battle--input" placeholder="Name..." onChange={this.handleNameInputChange} />
-        </Flex>
+        </div>
         {this.renderTeams()}
-      </Flex>
+      </div>
     );
   }
 
@@ -166,29 +170,34 @@ class Battle extends Component {
     const numTeams = Math.max(_.max(_.map(this.state.players, 'team')), 2);
     const teams = _.map(_.range(numTeams), (team) => _.filter(this.state.players, {team}));
 
-    return <Flex className="battle--teams">{_.map(teams, renderTeam)}</Flex>;
+    return <div className="flex battle--teams">{_.map(teams, renderTeam)}</div>;
   }
 
   renderPreGameLobby() {
     return (
-      <Flex className="battle--selector">
-        <Flex className="battle--teams">(This starts the game for all players)</Flex>
-        <Flex className="battle--buttons">
-          <Flex className="battle--button" hAlignContent="center" onClick={this.handleStart}>
+      <div className="flex battle--selector">
+        <div className="flex battle--teams">(This starts the game for all players)</div>
+        <div className="flex battle--buttons">
+          <div
+            className="flex battle--button"
+            style={{justifyContent: 'center'}}
+            role="button"
+            tabIndex={0}
+            onClick={this.handleStart}
+            onKeyDown={this.handleStart}
+          >
             Start
-          </Flex>
-        </Flex>
+          </div>
+        </div>
         {this.renderTeams()}
-      </Flex>
+      </div>
     );
   }
 
   render() {
     return (
-      <Flex
-        className={classnames('battle', {mobile: this.mobile})}
-        column
-        grow={1}
+      <div
+        className={`flex--column flex--grow ${classnames('battle', {mobile: this.mobile})}`}
         style={{
           width: '100%',
           height: '100%',
@@ -197,13 +206,13 @@ class Battle extends Component {
         <Helmet>
           <title>Down For A Battle</title>
         </Helmet>
-        <Flex className="battle--main" grow={1}>
-          <Flex column shrink={0}>
+        <div className="flex flex--grow battle--main">
+          <div className="flex--column flex--shrink-0">
             {!_.isNumber(this.state.team) && this.renderTeamSelector()}
             {_.isNumber(this.state.team) && !this.state.startedAt && this.renderPreGameLobby()}
-          </Flex>
-        </Flex>
-      </Flex>
+          </div>
+        </div>
+      </div>
     );
   }
 }

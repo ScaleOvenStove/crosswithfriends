@@ -44,18 +44,6 @@ button {
   --pencil-color: #888888; /* must be 3 or 6 digit hex */
 }
 
-.swal-modal {
-  will-change: unset !important;
-}
-
-.swal-text--no-margin {
-  margin: 0 !important;
-}
-
-.swal-text--text-align-center {
-  text-align: center !important;
-}
-
 #unlistedRow {
   margin-top: 10px;
 }

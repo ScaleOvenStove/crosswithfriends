@@ -1,12 +1,11 @@
 import './css/index.css';
 import React, {Component} from 'react';
-import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo} from 'react-icons/md';
+import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo, MdErrorOutline} from 'react-icons/md';
 import {AiOutlineMenuFold, AiOutlineMenuUnfold} from 'react-icons/ai';
 import {RiPaintFill, RiPaintLine} from 'react-icons/ri';
-import Flex from 'react-flexview';
 import {Link} from 'react-router-dom';
-import swal from '@sweetalert/with-react';
 import Clock from './Clock';
+import ConfirmDialog from '../common/ConfirmDialog';
 import ActionMenu from './ActionMenu';
 import Popup from './Popup';
 import {isMobile} from '../../lib/jsUtils';
@@ -36,20 +35,17 @@ function handlePencilColorPickerChange(e) {
   localStorage.setItem(pencilColorKey, color);
 }
 
-function confirmResetPuzzle(callback) {
-  swal({
-    title: `Are you sure you want to reset the entire puzzle?`,
-    icon: 'warning',
-    buttons: true,
-    dangerMode: true,
-  }).then((confirmed) => {
-    if (confirmed) {
-      callback();
-    }
-  });
-}
-
 export default class Toolbar extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      revealDialogOpen: false,
+      revealScope: null,
+      resetDialogOpen: false,
+      resetCallback: null,
+    };
+  }
+
   // eslint-disable-next-line class-methods-use-this
   componentDidMount() {
     document.documentElement.style.setProperty(
@@ -170,8 +166,8 @@ export default class Toolbar extends Component {
         actions={{
           Square: this.reset.bind(this, 'square'),
           Word: this.reset.bind(this, 'word'),
-          Puzzle: confirmResetPuzzle.bind(this, () => this.reset('puzzle')),
-          'Puzzle and Timer': this.resetPuzzleAndTimer.bind(this),
+          Puzzle: () => this.openResetDialog(() => this.reset('puzzle')),
+          'Puzzle and Timer': () => this.openResetDialog(() => this.resetPuzzleAndTimer()),
         }}
       />
     );
@@ -214,10 +210,11 @@ export default class Toolbar extends Component {
     if (contest && onUnmarkSolved) {
       actions['Unmark as Solved'] = onUnmarkSolved;
     }
-    actions['Reset this game'] = confirmResetPuzzle.bind(this, () => {
-      this.reset('puzzle', true);
-      this.props.onResetClock();
-    });
+    actions['Reset this game'] = () =>
+      this.openResetDialog(() => {
+        this.reset('puzzle', true);
+        this.props.onResetClock();
+      });
     actions['Create new game link'] = () => window.open(`/beta/play/${this.props.pid}?new=1`, '_blank');
     return <ActionMenu label="Play Again" onBlur={this.handleBlur} actions={actions} />;
   }
@@ -464,18 +461,19 @@ export default class Toolbar extends Component {
   }
 
   reveal(scopeString) {
-    swal({
-      title: `Are you sure you want to show the ${scopeString}?`,
-      text: `All players will be able to see the ${scopeString}'s answer.`,
-      icon: 'warning',
-      buttons: true,
-      dangerMode: true,
-    }).then((shouldReveal) => {
-      if (shouldReveal) {
-        this.props.onReveal(scopeString);
-      }
-    });
+    this.setState({revealDialogOpen: true, revealScope: scopeString});
   }
+
+  handleRevealConfirm = () => {
+    const {revealScope} = this.state;
+    if (revealScope) {
+      this.props.onReveal(revealScope);
+    }
+  };
+
+  handleRevealDialogChange = (open) => {
+    if (!open) this.setState({revealDialogOpen: false, revealScope: null});
+  };
 
   reset(scopeString, force = false) {
     this.props.onReset(scopeString, force);
@@ -485,11 +483,22 @@ export default class Toolbar extends Component {
     this.props.onKeybind(mode);
   }
 
+  openResetDialog(callback) {
+    this.setState({resetDialogOpen: true, resetCallback: callback});
+  }
+
+  handleResetConfirm = () => {
+    const {resetCallback} = this.state;
+    if (resetCallback) resetCallback();
+  };
+
+  handleResetDialogChange = (open) => {
+    if (!open) this.setState({resetDialogOpen: false, resetCallback: null});
+  };
+
   resetPuzzleAndTimer() {
-    confirmResetPuzzle(() => {
-      this.reset('puzzle');
-      this.props.onResetClock();
-    });
+    this.reset('puzzle');
+    this.props.onResetClock();
   }
 
   renderSaveReplay() {
@@ -534,6 +543,34 @@ export default class Toolbar extends Component {
     );
   }
 
+  renderDialogs() {
+    const {revealDialogOpen, revealScope, resetDialogOpen} = this.state;
+    return (
+      <>
+        <ConfirmDialog
+          open={revealDialogOpen}
+          onOpenChange={this.handleRevealDialogChange}
+          title={`Are you sure you want to show the ${revealScope}?`}
+          icon={<MdErrorOutline />}
+          onConfirm={this.handleRevealConfirm}
+          confirmLabel="Reveal"
+          danger
+        >
+          <p>All players will be able to see the {revealScope}&apos;s answer.</p>
+        </ConfirmDialog>
+        <ConfirmDialog
+          open={resetDialogOpen}
+          onOpenChange={this.handleResetDialogChange}
+          title="Are you sure you want to reset the entire puzzle?"
+          icon={<MdErrorOutline />}
+          onConfirm={this.handleResetConfirm}
+          confirmLabel="Reset"
+          danger
+        />
+      </>
+    );
+  }
+
   render() {
     const {
       mobile,
@@ -550,73 +587,79 @@ export default class Toolbar extends Component {
 
     if (mobile) {
       return (
-        <Flex className="toolbar--mobile" vAlignContent="center">
-          <Flex className="toolbar--mobile--top" grow={1} vAlignContent="center">
-            <Link to="/">CWF</Link>{' '}
-            {!expandMenu ? (
-              <>
-                <Clock
-                  v2={this.props.v2}
-                  startTime={startTime}
-                  stopTime={stopTime}
-                  pausedTime={pausedTime}
-                  replayMode={replayMode}
-                  isPaused={this.props.isPaused || !startTime}
-                  onStart={onStartClock}
-                  onPause={onPauseClock}
-                />
-                {!solved && !replayMode && !contest && this.renderCheckMenu()}
-                {!solved && !replayMode && !contest && this.renderRevealMenu()}
-                {!solved && !replayMode && contest && this.renderMarkSolvedButton()}
-                {solved && !replayMode && this.renderReplayLink()}
-                {solved && !replayMode && this.renderSaveReplay()}
-              </>
-            ) : (
-              <>
-                {!solved && !replayMode && this.renderResetMenu()}
-                {solved && !replayMode && this.renderPlayAgainLink()}
-                {this.renderColorAttributionToggle()}
-                {this.renderListViewButton()}
-                {!contest && this.renderAutocheck()}
-                {!replayMode && this.renderExtrasMenu()}
-                {this.renderChatButton()}
-              </>
-            )}
-            {this.renderExpandMenuButton()}
-          </Flex>
-        </Flex>
+        <>
+          <div className="flex flex--align-center toolbar--mobile">
+            <div className="flex flex--grow flex--align-center toolbar--mobile--top">
+              <Link to="/">CWF</Link>{' '}
+              {!expandMenu ? (
+                <>
+                  <Clock
+                    v2={this.props.v2}
+                    startTime={startTime}
+                    stopTime={stopTime}
+                    pausedTime={pausedTime}
+                    replayMode={replayMode}
+                    isPaused={this.props.isPaused || !startTime}
+                    onStart={onStartClock}
+                    onPause={onPauseClock}
+                  />
+                  {!solved && !replayMode && !contest && this.renderCheckMenu()}
+                  {!solved && !replayMode && !contest && this.renderRevealMenu()}
+                  {!solved && !replayMode && contest && this.renderMarkSolvedButton()}
+                  {solved && !replayMode && this.renderReplayLink()}
+                  {solved && !replayMode && this.renderSaveReplay()}
+                </>
+              ) : (
+                <>
+                  {!solved && !replayMode && this.renderResetMenu()}
+                  {solved && !replayMode && this.renderPlayAgainLink()}
+                  {this.renderColorAttributionToggle()}
+                  {this.renderListViewButton()}
+                  {!contest && this.renderAutocheck()}
+                  {!replayMode && this.renderExtrasMenu()}
+                  {this.renderChatButton()}
+                </>
+              )}
+              {this.renderExpandMenuButton()}
+            </div>
+          </div>
+          {this.renderDialogs()}
+        </>
       );
     }
 
     return (
-      <div className="toolbar">
-        <div className="toolbar--timer">
-          <Clock
-            v2={this.props.v2}
-            replayMode={replayMode}
-            startTime={startTime}
-            stopTime={stopTime}
-            pausedTime={pausedTime}
-            isPaused={this.props.isPaused || !startTime}
-            onStart={onStartClock}
-            onPause={onPauseClock}
-          />
+      <>
+        <div className="toolbar">
+          <div className="toolbar--timer">
+            <Clock
+              v2={this.props.v2}
+              replayMode={replayMode}
+              startTime={startTime}
+              stopTime={stopTime}
+              pausedTime={pausedTime}
+              isPaused={this.props.isPaused || !startTime}
+              onStart={onStartClock}
+              onPause={onPauseClock}
+            />
+          </div>
+          {!solved && !replayMode && !contest && this.renderCheckMenu()}
+          {!solved && !replayMode && !contest && this.renderRevealMenu()}
+          {!solved && !replayMode && <div className="toolbar--menu reset">{this.renderResetMenu()}</div>}
+          {!solved && !replayMode && contest && this.renderMarkSolvedButton()}
+          {solved && !replayMode && contest && this.renderUnmarkSolvedButton()}
+          {solved && !replayMode && this.renderReplayLink()}
+          {solved && !replayMode && this.renderSaveReplay()}
+          {this.renderColorAttributionToggle()}
+          {this.renderListViewButton()}
+          {!replayMode && this.renderPencil()}
+          {!solved && !replayMode && !contest && this.renderAutocheck()}
+          {!replayMode && this.renderExtrasMenu()}
+          {solved && !replayMode && this.renderPlayAgainLink()}
+          {!replayMode && this.renderInfo()}
         </div>
-        {!solved && !replayMode && !contest && this.renderCheckMenu()}
-        {!solved && !replayMode && !contest && this.renderRevealMenu()}
-        {!solved && !replayMode && <div className="toolbar--menu reset">{this.renderResetMenu()}</div>}
-        {!solved && !replayMode && contest && this.renderMarkSolvedButton()}
-        {solved && !replayMode && contest && this.renderUnmarkSolvedButton()}
-        {solved && !replayMode && this.renderReplayLink()}
-        {solved && !replayMode && this.renderSaveReplay()}
-        {this.renderColorAttributionToggle()}
-        {this.renderListViewButton()}
-        {!replayMode && this.renderPencil()}
-        {!solved && !replayMode && !contest && this.renderAutocheck()}
-        {!replayMode && this.renderExtrasMenu()}
-        {solved && !replayMode && this.renderPlayAgainLink()}
-        {!replayMode && this.renderInfo()}
-      </div>
+        {this.renderDialogs()}
+      </>
     );
   }
 }

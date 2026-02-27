@@ -1,10 +1,7 @@
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
 /* eslint-disable consistent-return */
-import 'react-flexview/lib/flexView.css';
-
 import React, {Component} from 'react';
-import Flex from 'react-flexview';
 import _ from 'lodash';
 import Confetti from './Confetti.js';
 
@@ -464,18 +461,18 @@ export default class Game extends Component {
   render() {
     const padding = this.props.mobile ? 0 : 20;
     return (
-      <Flex column grow={1}>
+      <div className="flex--column flex--grow">
         {this.renderToolbar()}
-        <Flex
-          grow={1}
+        <div
+          className="flex flex--grow"
           style={{
             padding,
           }}
         >
           {this.renderPlayer()}
-        </Flex>
+        </div>
         {this.game.solved && <Confetti />}
-      </Flex>
+      </div>
     );
   }
 }

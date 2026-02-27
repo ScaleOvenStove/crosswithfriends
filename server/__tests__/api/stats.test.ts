@@ -1,4 +1,3 @@
-import moment from 'moment';
 import {computePuzzleStats} from '../../api/stats';
 import type {SolvedPuzzleType} from '../../model/puzzle_solve';
 
@@ -8,7 +7,7 @@ function makeSolve(overrides: Partial<SolvedPuzzleType> = {}): SolvedPuzzleType 
     gid: 'g1',
     title: 'Test Puzzle',
     size: '15x15',
-    solved_time: moment('2026-01-15'),
+    solved_time: new Date('2026-01-15'),
     time_taken_to_solve: 300,
     revealed_squares_count: 0,
     checked_squares_count: 0,

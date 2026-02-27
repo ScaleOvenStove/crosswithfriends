@@ -1,4 +1,3 @@
-import moment from 'moment';
 import {PuzzleJson} from '@shared/types';
 import {pool} from './pool';
 import {dayOfWeekExtract} from './sql_helpers';
@@ -252,7 +251,7 @@ export async function backfillSolvesForDfacId(userId: string, dfacId: string): P
 export type SolvedPuzzleType = {
   pid: string;
   gid: string;
-  solved_time: moment.Moment;
+  solved_time: Date;
   time_taken_to_solve: number;
   revealed_squares_count: number;
   checked_squares_count: number;
@@ -264,7 +263,7 @@ type RawFetchedPuzzleSolve = {
   pid: string;
   gid: string;
   content: PuzzleJson;
-  solved_time: moment.Moment;
+  solved_time: Date;
   time_taken_to_solve: number;
   event_type?: string;
   event_payload?: {
@@ -323,13 +322,13 @@ export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[
         gid: puzzle.gid,
         title,
         size: `${width}x${length}`,
-        solved_time: moment(puzzle.solved_time, 'YYYY-MM-DD'),
+        solved_time: new Date(puzzle.solved_time),
         time_taken_to_solve: Number(puzzle.time_taken_to_solve),
         revealed_squares_count: (revealedSquareByPuzzle.get(puzzle.pid) || new Set()).size,
         checked_squares_count: (checkedSquareByPuzzle.get(puzzle.pid) || new Set()).size,
       };
     })
-    .sort((a, b) => b.solved_time.utc().valueOf() - a.solved_time.utc().valueOf());
+    .sort((a, b) => b.solved_time.getTime() - a.solved_time.getTime());
   const ms = Date.now() - startTime;
   console.log(`getPuzzleSolves took ${ms}ms for ${gids.length} gids`);
   return puzzleSolves;

@@ -3,15 +3,12 @@ import './css/replays.css';
 import {Helmet} from 'react-helmet';
 import _ from 'lodash';
 import React, {Component} from 'react';
-import Flex from 'react-flexview';
-
-import Timestamp from 'react-timestamp';
 import Promise from 'bluebird';
 import HistoryWrapper from '../lib/wrappers/HistoryWrapper';
 import Nav from '../components/common/Nav';
 import {PuzzleModel} from '../store';
 import {db} from '../actions';
-// const Timestamp = require('react-timestamp');
+import {formatTimestamp} from '../lib/formatTimestamp';
 
 const TimeFormatter = ({millis}) =>
   millis ? (
@@ -208,9 +205,7 @@ class Replays extends Component {
               {v2 ? '(beta)' : ''}
             </a>
           </td>
-          <td>
-            <Timestamp time={startTime} />
-          </td>
+          <td>{formatTimestamp(startTime)}</td>
           <td>
             <TimeFormatter millis={time} />
           </td>
@@ -264,7 +259,7 @@ class Replays extends Component {
   render() {
     const {limit} = this.state;
     return (
-      <Flex column className="replays">
+      <div className="flex--column replays">
         <Nav />
         <Helmet>
           <title>{this.pid ? `Replays ${this.pid}: ${this.getPuzzleTitle()}` : `Last ${limit} games`}</title>
@@ -286,7 +281,7 @@ class Replays extends Component {
           </div>
         </div>
 
-        <Flex className="limit--container" shrink={0} hAlignContent="center" vAlignContent="center">
+        <div className="flex flex--shrink-0 flex--center limit--container">
           <span className="limit--text">
             Limit:
             {limit}
@@ -299,8 +294,8 @@ class Replays extends Component {
           <button className="limit--button" data-amount="50" onClick={this.handleIncreaseLimit}>
             ++
           </button>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
     );
   }
 }

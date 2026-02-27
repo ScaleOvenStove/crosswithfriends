@@ -1,5 +1,4 @@
 import React from 'react';
-import Flex from 'react-flexview';
 import SimpleKeyboard from 'react-simple-keyboard';
 import 'react-simple-keyboard/build/css/index.css';
 import './css/mobileKeyboard.css';
@@ -98,7 +97,7 @@ export default class MobileKeyboard extends React.PureComponent {
 
   render() {
     return (
-      <Flex grow={1} onTouchStart={this.handleTouchStart}>
+      <div className="flex--grow" onTouchStart={this.handleTouchStart}>
         <SimpleKeyboard
           layout={{
             default: ['Q W E R T Y U I O P', 'A S D F G H J K L', '{more} Z X C V B N M {del}'],
@@ -128,7 +127,7 @@ export default class MobileKeyboard extends React.PureComponent {
           useTouchEvents
           layoutName={this.state.layout}
         />
-      </Flex>
+      </div>
     );
   }
 }

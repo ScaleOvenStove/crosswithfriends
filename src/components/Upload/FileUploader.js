@@ -1,8 +1,8 @@
 /* eslint-disable max-classes-per-file */
 import './css/fileUploader.css';
 
-import React, {Component} from 'react';
-import Dropzone from 'react-dropzone';
+import React, {useCallback} from 'react';
+import {useDropzone} from 'react-dropzone';
 import {MdFileUpload} from 'react-icons/md';
 import {hasShape} from '../../lib/jsUtils';
 import PUZtoJSON from '../../lib/converter/PUZtoJSON';
@@ -108,50 +108,49 @@ function attemptPuzzleConversion(readerResult, fileType) {
   }
 }
 
-export default class FileUploader extends Component {
-  handleDrop = (acceptedFiles) => {
-    const file = acceptedFiles[0];
-    const fileType = file.name.split('.').pop();
-    const reader = new FileReader();
-    const {success, fail, onError} = this.props;
-    reader.addEventListener('loadend', () => {
-      try {
-        const puzzle = attemptPuzzleConversion(reader.result, fileType);
-        if (validPuzzle(puzzle)) {
-          success(puzzle);
-        } else {
-          fail();
+export default function FileUploader({success, fail, onError, v2}) {
+  const handleDrop = useCallback(
+    (acceptedFiles) => {
+      const file = acceptedFiles[0];
+      const fileType = file.name.split('.').pop();
+      const reader = new FileReader();
+      reader.addEventListener('loadend', () => {
+        try {
+          const puzzle = attemptPuzzleConversion(reader.result, fileType);
+          if (validPuzzle(puzzle)) {
+            success(puzzle);
+          } else {
+            fail();
+          }
+        } catch (e) {
+          const title = e?.errorTitle || 'Something went wrong';
+          const text = e?.errorText || `The error message was: ${e.message}`;
+          if (onError) {
+            onError({title, text});
+          }
         }
-      } catch (e) {
-        const title = e?.errorTitle || 'Something went wrong';
-        const text = e?.errorText || `The error message was: ${e.message}`;
-        if (onError) {
-          onError({title, text});
-        }
-      }
-      window.URL.revokeObjectURL(acceptedFiles[0].preview);
-    });
-    reader.readAsArrayBuffer(file);
-  };
+      });
+      reader.readAsArrayBuffer(file);
+    },
+    [success, fail, onError]
+  );
 
-  render() {
-    const {v2} = this.props;
-    return (
-      <Dropzone
-        className="file-uploader"
-        onDrop={this.handleDrop}
-        activeStyle={{
-          outline: '3px solid var(--main-blue)',
-          outlineOffset: '-10px',
-        }}
-      >
-        <div className={`file-uploader--wrapper ${v2 ? 'v2' : ''}`}>
-          <div className="file-uploader--box">
-            <MdFileUpload className="file-uploader--box--icon" />
-            Import .puz or .ipuz file
-          </div>
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop: handleDrop});
+
+  /* eslint-disable react/jsx-props-no-spreading -- idiomatic react-dropzone v14 API */
+  return (
+    <div
+      {...getRootProps({
+        className: `file-uploader${isDragActive ? ' file-uploader--active' : ''}`,
+      })}
+    >
+      <input {...getInputProps()} />
+      <div className={`file-uploader--wrapper ${v2 ? 'v2' : ''}`}>
+        <div className="file-uploader--box">
+          <MdFileUpload className="file-uploader--box--icon" />
+          Import .puz or .ipuz file
         </div>
-      </Dropzone>
-    );
-  }
+      </div>
+    </div>
+  );
 }

@@ -1,6 +1,5 @@
 import React, {Component} from 'react';
 import _ from 'lodash';
-import Flex from 'react-flexview';
 import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {Link} from 'react-router-dom';
@@ -70,17 +69,18 @@ export default class Entry extends Component<EntryProps> {
         to={`/beta/play/${pid}${fencing ? '?fencing=1' : ''}`}
         style={{textDecoration: 'none', color: 'initial'}}
       >
-        <Flex className="entry" column onClick={handleClick} onMouseLeave={handleMouseLeave}>
-          <Flex className="entry--top--left">
-            <Flex grow={0}>
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- interactive via parent Link */}
+        <div className="flex--column entry" onClick={handleClick} onMouseLeave={handleMouseLeave}>
+          <div className="flex entry--top--left">
+            <div style={{minWidth: 0}}>
               <p
                 style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}
                 title={displayName}
               >
                 {displayName}
               </p>
-            </Flex>
-            <Flex>
+            </div>
+            <div className="flex">
               {status === 'started' && !this.props.contest && (
                 <MdRadioButtonUnchecked className="entry--icon" />
               )}
@@ -89,25 +89,25 @@ export default class Entry extends Component<EntryProps> {
               {status !== 'started' && status !== 'solved' && fencing && (
                 <GiCrossedSwords className="entry--icon fencing" />
               )}
-            </Flex>
-          </Flex>
-          <Flex className="entry--main">
-            <Flex grow={0}>
+            </div>
+          </div>
+          <div className="flex entry--main">
+            <div style={{minWidth: 0}}>
               <p style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}} title={title}>
                 {title}
               </p>
-            </Flex>
-          </Flex>
-          <Flex className="entry--details">
+            </div>
+          </div>
+          <div className="flex entry--details">
             <p>
               Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
             </p>
-            <Flex>
+            <div className="flex">
               {this.props.contest && <span className="entry--contest">Contest</span>}
               {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
-            </Flex>
-          </Flex>
-        </Flex>
+            </div>
+          </div>
+        </div>
       </Link>
     );
   }

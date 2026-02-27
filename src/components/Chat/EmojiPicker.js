@@ -1,6 +1,5 @@
 import React from 'react';
 
-import Flex from 'react-flexview';
 import _ from 'lodash';
 import Emoji from '../common/Emoji';
 
@@ -186,7 +185,7 @@ export default class EmojiPicker extends React.Component {
     const patternStyle = {fontWeight: 'bold'};
     const hintStyle = {marginLeft: 20};
     return (
-      <Flex style={headerStyle}>
+      <div className="flex" style={headerStyle}>
         <span>
           <span style={patternStyle}>&quot;{`:${pattern}`}&quot;</span>
         </span>
@@ -202,7 +201,7 @@ export default class EmojiPicker extends React.Component {
             <Kbd>esc</Kbd> to dismiss
           </span>
         </span>
-      </Flex>
+      </div>
     );
   }
 
@@ -259,14 +258,15 @@ export default class EmojiPicker extends React.Component {
 
   render() {
     return (
-      <Flex
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- mouseDown prevents blur, not interactive
+      <div
+        className="flex--column"
         style={{backgroundColor: 'white', color: 'var(--main-gray-1)'}}
-        column
         onMouseDown={this.handleMouseDown}
       >
         {this.renderHeader()}
         {this.renderMatches()}
-      </Flex>
+      </div>
     );
   }
 }

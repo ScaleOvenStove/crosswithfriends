@@ -1,7 +1,6 @@
 // eslint-disable-next-line max-classes-per-file
 import './css/replay.css';
 import React, {Component} from 'react';
-import Flex from 'react-flexview';
 import {Helmet} from 'react-helmet';
 import {MdPlayArrow, MdPause, MdChevronLeft, MdChevronRight} from 'react-icons/md';
 import _ from 'lodash';
@@ -663,7 +662,7 @@ class Replay extends Component {
 
   render() {
     return (
-      <Flex column className="replay">
+      <div className="flex--column replay">
         {!isMobile() && <Nav />}
         <Helmet>
           <title>{`Replay ${this.gid}: ${this.getPuzzleTitle()}`}</title>
@@ -680,24 +679,23 @@ class Replay extends Component {
           </div>
         )}
         {this.renderToolbar()}
-        <Flex
-          grow={1}
-          column
+        <div
+          className="flex--column flex--grow"
           style={{
             padding: isMobile() ? 0 : 10,
             border: '1px solid #E2E2E2',
           }}
         >
-          <Flex grow={1} style={{padding: isMobile() ? 0 : 20, overflow: 'auto'}}>
+          <div className="flex flex--grow" style={{padding: isMobile() ? 0 : 20, overflow: 'auto'}}>
             {this.renderPlayer()}
-          </Flex>
+          </div>
           <div className="replay--controls-container">{this.renderControls()}</div>
-        </Flex>
+        </div>
         {/* Controls:
       Playback scrubber
       Playback speed toggle
       Skip inactivity checkbox */}
-      </Flex>
+      </div>
     );
   }
 }

@@ -3,7 +3,6 @@ import * as uuid from 'uuid';
 import React, {useState, useEffect, useCallback} from 'react';
 import {useUpdateEffect} from 'react-use';
 import {Helmet} from 'react-helmet';
-import Flex from 'react-flexview';
 import type {Socket} from 'socket.io-client';
 import {useSocket} from '../../sockets/useSocket';
 import {emitAsync} from '../../sockets/emitAsync';
@@ -225,9 +224,9 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
     />
   );
   return (
-    <Flex column style={{flex: 1}}>
+    <div className="flex--column" style={{flex: 1}}>
       <Nav hidden={false} divRef={null} linkStyle={null} mobile={null} />
-      <Flex style={{flex: 1, overflow: 'auto'}}>
+      <div className="flex" style={{flex: 1, overflow: 'auto'}}>
         <div className="fencing--container">
           <Helmet title={`Fencing ${gid}`} />
           <div style={{flex: 1}}>
@@ -251,7 +250,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
             </FencingCountdown>
           </div>
         </div>
-        <Flex column style={{flexBasis: 500}}>
+        <div className="flex--column" style={{flexBasis: 500}}>
           {!gameState.loaded && <div>Loading your game...</div>}
           {gameState.game && (
             <Chat
@@ -272,9 +271,9 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
               onUpdateDisplayName={handleUpdateDisplayName}
             />
           )}
-        </Flex>
-      </Flex>
+        </div>
+      </div>
       {isGameComplete && <Confetti />}
-    </Flex>
+    </div>
   );
 };

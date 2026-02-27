@@ -3,7 +3,6 @@ import _ from 'lodash';
 import {fetchStats} from '../api/stats';
 import {ListPuzzleStatsResponse} from '../shared/types';
 import {getUser} from '../store/user';
-import Flex from 'react-flexview';
 import {Helmet} from 'react-helmet';
 import Nav from '../components/common/Nav';
 import {formatMilliseconds} from '../components/Toolbar/Clock';
@@ -26,7 +25,7 @@ const Stats: React.FC<{}> = () => {
   }, [user]);
 
   return (
-    <Flex column className="replays">
+    <div className="flex--column replays">
       <Nav hidden={false} divRef={null} linkStyle={null} mobile={null} />
       <Helmet>
         <title>Stats</title>
@@ -101,7 +100,7 @@ const Stats: React.FC<{}> = () => {
           </tbody>
         </table>
       </div>
-    </Flex>
+    </div>
   );
 };
 

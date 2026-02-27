@@ -1,7 +1,5 @@
 import './css/powerups.css';
 import React from 'react';
-import Flex from 'react-flexview';
-
 import _ from 'lodash';
 import Emoji from './Emoji';
 import powerups, {hasExpired, inUse, timeLeft} from '../../lib/powerups';
@@ -47,32 +45,34 @@ export default class Powerups extends React.Component {
     const timeSecs = format(secsLeft % 60);
 
     return (
-      <Flex
+      <div
         key={type}
-        column
-        className="powerups--powerup"
+        className="flex--column powerups--powerup"
+        style={{alignItems: 'center'}}
         data-powerup-type={inuse ? undefined : type}
+        role={inuse ? undefined : 'button'}
+        tabIndex={inuse ? undefined : 0}
         onClick={inuse ? undefined : this.handlePowerupClick}
-        hAlignContent="center"
+        onKeyDown={inuse ? undefined : this.handlePowerupClick}
       >
-        <Flex className="powerups--label">{name}</Flex>
-        <Flex className={className}>
-          <Flex column>
+        <div className="flex powerups--label">{name}</div>
+        <div className={`flex ${className}`}>
+          <div className="flex--column">
             <Emoji emoji={icon} big className="powerups--eemoji" />
             <div className="powerups--info" style={{opacity: inuse ? 1 : 0}}>
               {timeMins}:{timeSecs}
             </div>
-          </Flex>
+          </div>
           {count > 1 && <div className="powerups--count">{count}</div>}
-        </Flex>
-      </Flex>
+        </div>
+      </div>
     );
   }
 
   render() {
     return (
-      <Flex className="powerups--main">
-        <Flex className="powerups--header">POWERUPS</Flex>
+      <div className="flex powerups--main">
+        <div className="flex powerups--header">POWERUPS</div>
         {_.values(_.groupBy(this.props.powerups, 'type'))
           .map((powerupGroup) => powerupGroup.filter((powerup) => !hasExpired(powerup)))
           .map(
@@ -80,7 +80,7 @@ export default class Powerups extends React.Component {
               // only render the first powerup of a given type
               powerupGroup.length > 0 && this.renderPowerup(powerupGroup[0], powerupGroup.length)
           )}
-      </Flex>
+      </div>
     );
   }
 }

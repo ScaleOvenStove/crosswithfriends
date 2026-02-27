@@ -2,7 +2,6 @@ import './css/welcome.css';
 
 import React, {Component} from 'react';
 import {Helmet} from 'react-helmet';
-import Flex from 'react-flexview';
 import {
   MdSearch,
   MdCheckBoxOutlineBlank,
@@ -298,7 +297,7 @@ export default class Welcome extends Component {
     const checkboxGroup = (header, items, showQuickToggle = false) => {
       const collapsed = collapsedFilters[header];
       return (
-        <Flex column style={groupStyle} className="checkbox-group">
+        <div className="flex--column checkbox-group" style={groupStyle}>
           <span
             role="button"
             tabIndex={0}
@@ -359,17 +358,17 @@ export default class Welcome extends Component {
                 <span>{name}</span>
               </label>
             ))}
-        </Flex>
+        </div>
       );
     };
 
     return (
-      <Flex className="filters" column hAlignContent="left" shrink={0}>
+      <div className="flex--column flex--shrink-0 filters">
         {checkboxGroup('Size', sizeFilter)}
         {checkboxGroup('Type', typeFilter)}
         {checkboxGroup('Day', dayOfWeekFilter, true)}
         {checkboxGroup('Status', statusFilter)}
-      </Flex>
+      </div>
     );
   }
 
@@ -431,15 +430,15 @@ export default class Welcome extends Component {
   };
 
   renderSearch() {
-    const hAlignContent = this.mobile ? 'right' : 'left';
     const grow = this.mobile ? 0 : 1;
     return (
-      <Flex className="welcome--searchbar--container" shrink={0} hAlignContent={hAlignContent}>
-        <Flex
-          vAlignContent="center"
-          style={this.searchStyle}
-          grow={grow}
-          className="welcome--searchbar--wrapper"
+      <div
+        className="flex flex--shrink-0 welcome--searchbar--container"
+        style={{justifyContent: this.mobile ? 'flex-end' : 'flex-start'}}
+      >
+        <div
+          className="flex flex--align-center welcome--searchbar--wrapper"
+          style={{...this.searchStyle, flexGrow: grow}}
         >
           <MdSearch className="welcome--searchicon" onTouchEnd={this.handleSearchIconTouchEnd} />
           <input
@@ -452,7 +451,7 @@ export default class Welcome extends Component {
             defaultValue={this.props.search}
             className="welcome--searchbar"
           />
-        </Flex>
+        </div>
         {this.mobile && (
           <button
             className="mobile-filter-button"
@@ -462,15 +461,15 @@ export default class Welcome extends Component {
             <MdFilterList />
           </button>
         )}
-      </Flex>
+      </div>
     );
   }
 
   renderQuickUpload() {
     return (
-      <Flex className="quickplay" style={{width: 200}}>
+      <div className="flex quickplay" style={{width: 200}}>
         <Upload v2 fencing={this.props.fencing} onCreate={this.handleCreatePuzzle} />
-      </Flex>
+      </div>
     );
   }
 
@@ -485,26 +484,26 @@ export default class Welcome extends Component {
           onClick={this.closeMobileSidebar}
           onKeyDown={this.handleCloseSidebarKeyDown}
         />
-        <Flex className={classnames('mobile-sidebar', {open: mobileSidebarOpen})} column>
-          <Flex className="mobile-sidebar--header" vAlignContent="center">
+        <div className={classnames('flex--column mobile-sidebar', {open: mobileSidebarOpen})}>
+          <div className="flex flex--align-center mobile-sidebar--header">
             <span>Filters</span>
             <MdClose className="mobile-sidebar--close" onClick={this.closeMobileSidebar} />
-          </Flex>
-          <Flex column grow={1} style={{overflowY: 'auto'}}>
+          </div>
+          <div className="flex--column flex--grow" style={{overflowY: 'auto'}}>
             {this.renderFilters()}
             <WelcomeVariantsControl fencing={this.props.fencing} />
-          </Flex>
-          <Flex className="quickplay" style={{width: '100%'}}>
+          </div>
+          <div className="flex quickplay" style={{width: '100%'}}>
             <Upload v2 fencing={this.props.fencing} onCreate={this.handleCreatePuzzle} />
-          </Flex>
-        </Flex>
+          </div>
+        </div>
       </>
     );
   }
 
   render() {
     return (
-      <Flex className={classnames('welcome', {mobile: this.mobile})} column grow={1}>
+      <div className={classnames('flex--column flex--grow welcome', {mobile: this.mobile})}>
         <Helmet>
           <title>Cross with Friends</title>
         </Helmet>
@@ -517,21 +516,21 @@ export default class Welcome extends Component {
             divRef={this.nav}
           />
         </div>
-        <Flex grow={1} basis={1}>
+        <div className="flex flex--grow" style={{flexBasis: 1}}>
           {this.showingSidebar && (
-            <Flex className="welcome--sidebar" column shrink={0}>
+            <div className="flex--column flex--shrink-0 welcome--sidebar">
               {this.renderFilters()}
               <WelcomeVariantsControl fencing={this.props.fencing} />
               {!this.mobile && this.renderQuickUpload()}
-            </Flex>
+            </div>
           )}
-          <Flex className="welcome--main" column grow={1}>
+          <div className="flex--column flex--grow welcome--main">
             {this.renderSearch()}
             {this.renderPuzzles()}
-          </Flex>
-        </Flex>
+          </div>
+        </div>
         {this.mobile && this.renderMobileSidebar()}
-      </Flex>
+      </div>
     );
   }
 }

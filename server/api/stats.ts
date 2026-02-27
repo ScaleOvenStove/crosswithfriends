@@ -64,7 +64,7 @@ router.post<{gids: string[]}, ListPuzzleStatsResponse, ListPuzzleStatsRequest>(
       gameId: solve.gid,
       title: solve.title,
       size: solve.size,
-      dateSolved: solve.solved_time.format('YYYY-MM-DD'),
+      dateSolved: solve.solved_time.toISOString().slice(0, 10),
       solveTime: solve.time_taken_to_solve,
       checkedSquareCount: solve.checked_squares_count,
       revealedSquareCount: solve.revealed_squares_count,

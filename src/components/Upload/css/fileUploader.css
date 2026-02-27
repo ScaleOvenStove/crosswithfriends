@@ -32,6 +32,11 @@
   margin: 8px;
 }
 
+.file-uploader--active {
+  outline: 3px solid var(--main-blue);
+  outline-offset: -10px;
+}
+
 .file-uploader--wrapper.v2 {
   background-color: white;
 }

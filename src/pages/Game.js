@@ -1,11 +1,8 @@
 /* eslint-disable no-nested-ternary, class-methods-use-this, consistent-return, react/jsx-no-bind */
-import 'react-flexview/lib/flexView.css';
-
 import React, {Component} from 'react';
 import _ from 'lodash';
 import querystring from 'querystring';
 import {Helmet} from 'react-helmet';
-import Flex from 'react-flexview';
 import Nav from '../components/common/Nav';
 
 import {GameModel, getUser, BattleModel} from '../store';
@@ -514,12 +511,10 @@ class Game extends Component {
     const desktopContent = (
       <>
         <Nav />
-        <Flex grow={1} style={{overflow: 'auto'}}>
-          <Flex column shrink={0}>
-            {this.showingGame && this.renderGame()}
-          </Flex>
-          <Flex grow={1}>{this.showingChat && this.renderChat()}</Flex>
-        </Flex>
+        <div className="flex flex--grow" style={{overflow: 'auto'}}>
+          <div className="flex--column flex--shrink-0">{this.showingGame && this.renderGame()}</div>
+          <div className="flex flex--grow">{this.showingChat && this.renderChat()}</div>
+        </div>
         {powerups && <Powerups powerups={powerups} handleUsePowerup={this.handleUsePowerup} />}
       </>
     );
@@ -529,10 +524,8 @@ class Game extends Component {
 
   render() {
     return (
-      <Flex
-        className="room"
-        column
-        grow={1}
+      <div
+        className="flex--column flex--grow room"
         style={{
           width: '100%',
           height: '100%',
@@ -616,7 +609,7 @@ class Game extends Component {
           </div>
         )}
         {this.renderContent()}
-      </Flex>
+      </div>
     );
   }
 }

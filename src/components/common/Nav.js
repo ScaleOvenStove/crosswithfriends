@@ -4,39 +4,12 @@ import {Link} from 'react-router-dom';
 import React, {useCallback, useContext, useEffect, useRef, useState} from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
-import swal from '@sweetalert/with-react';
 import {FaSun, FaMoon, FaDesktop, FaUserCircle} from 'react-icons/fa';
+import {MdInfoOutline} from 'react-icons/md';
 import GlobalContext from '../../lib/GlobalContext';
 import AuthContext from '../../lib/AuthContext';
 import LoginModal from '../Auth/LoginModal';
-
-function showInfo() {
-  swal({
-    title: 'crosswithfriends.com',
-    icon: 'info',
-    content: (
-      <div className="swal-text swal-text--no-margin">
-        <p>
-          Cross with Friends is an online website for sharing crosswords and playing collaboratively with
-          friends in real time. Join the&nbsp;
-          <a href="https://discord.gg/RmjCV8EZ73" target="_blank" rel="noreferrer">
-            community Discord
-          </a>
-          &nbsp;for more discussion.
-        </p>
-        <hr className="info--hr" />
-        <p>
-          Cross with Friends is open to contributions from developers of any level or experience. For more
-          information or to report any issues, check out the project on&nbsp;
-          <a href="https://github.com/ScaleOvenStove/crosswithfriends" target="_blank" rel="noreferrer">
-            GitHub
-          </a>
-          .
-        </p>
-      </div>
-    ),
-  });
-}
+import InfoDialog from './InfoDialog';
 
 function darkModeIcon(darkModePreference) {
   if (darkModePreference === '1') return <FaMoon />;
@@ -55,6 +28,7 @@ function UserMenu() {
   const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
   const [open, setOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -87,7 +61,7 @@ function UserMenu() {
 
   const handleShowAbout = useCallback(() => {
     setOpen(false);
-    showInfo();
+    setShowAbout(true);
   }, []);
 
   const handleLogoutClick = useCallback(() => {
@@ -196,6 +170,30 @@ function UserMenu() {
         </div>
       )}
       <LoginModal open={showLogin} onClose={handleCloseLogin} />
+      <InfoDialog
+        open={showAbout}
+        onOpenChange={setShowAbout}
+        title="crosswithfriends.com"
+        icon={<MdInfoOutline />}
+      >
+        <p>
+          Cross with Friends is an online website for sharing crosswords and playing collaboratively with
+          friends in real time. Join the&nbsp;
+          <a href="https://discord.gg/RmjCV8EZ73" target="_blank" rel="noreferrer">
+            community Discord
+          </a>
+          &nbsp;for more discussion.
+        </p>
+        <hr />
+        <p>
+          Cross with Friends is open to contributions from developers of any level or experience. For more
+          information or to report any issues, check out the project on&nbsp;
+          <a href="https://github.com/ScaleOvenStove/crosswithfriends" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+          .
+        </p>
+      </InfoDialog>
     </div>
   );
 }

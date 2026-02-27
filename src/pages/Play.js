@@ -2,7 +2,7 @@ import React, {Component} from 'react';
 import {Helmet} from 'react-helmet';
 import _ from 'lodash';
 import querystring from 'querystring';
-import Timestamp from 'react-timestamp';
+import {formatTimestamp} from '../lib/formatTimestamp';
 import {Link} from 'react-router-dom';
 
 import Nav from '../components/common/Nav';
@@ -143,9 +143,7 @@ class Play extends Component {
               }
               return (
                 <tr key={gid}>
-                  <td>
-                    <Timestamp time={time} />
-                  </td>
+                  <td>{formatTimestamp(time)}</td>
                   <td>
                     <Link to={href}>Game {gid}</Link>
                   </td>
