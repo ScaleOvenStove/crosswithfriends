@@ -10,6 +10,7 @@ import GridObject from '../../lib/wrappers/GridWrapper';
 const RunOnce = ({effect}) => {
   useEffect(() => {
     effect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
 };

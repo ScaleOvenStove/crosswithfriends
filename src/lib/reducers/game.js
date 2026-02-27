@@ -400,7 +400,7 @@ export const reduce = (game, action, options = {}) => {
     } else {
       result = tick(result, timestamp, isPause);
     }
-  } catch (e) {
+  } catch (_e) {
     console.error('Error handling action', action);
   }
   return result;

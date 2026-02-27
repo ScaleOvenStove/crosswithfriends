@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import clsx from 'clsx';
 import Emoji from '../common/Emoji';
 import powerups from '../../lib/powerups';
-// eslint-disable-next-line import/no-cycle
+
 import {Ping, CellStyles} from './types';
 import './css/cell.css';
 import {CellData, Cursor} from '../../shared/types';

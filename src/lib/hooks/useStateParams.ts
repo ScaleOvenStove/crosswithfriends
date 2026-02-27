@@ -19,6 +19,7 @@ function useStateParams<T>(
     if (existingValue && deserialize(existingValue) !== state) {
       setState(deserialize(existingValue));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingValue]);
 
   const onChange = (s: T) => {

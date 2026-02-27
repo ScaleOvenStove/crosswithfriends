@@ -17,7 +17,7 @@ const gridToTextGrid = (grid) => grid.map((row) => row.map((cell) => (cell.black
 const f = () => ({
   fromPuz: (blob) => {
     const {grid, clues, circles} = Puz.decode(blob);
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
     return intermediate({
       info: {},
       grid,

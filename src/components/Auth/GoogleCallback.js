@@ -1,4 +1,4 @@
-import React, {useEffect, useContext, useState} from 'react';
+import {useEffect, useContext, useState} from 'react';
 import {Link, useNavigate, useLocation} from 'react-router-dom';
 import AuthContext from '../../lib/AuthContext';
 import {getMe} from '../../api/auth';
@@ -33,7 +33,7 @@ export default function GoogleCallback() {
         } else {
           setError('Failed to retrieve user info');
         }
-      } catch (e) {
+      } catch (_e) {
         setError('Authentication failed');
       } finally {
         navigate('/', {replace: true});

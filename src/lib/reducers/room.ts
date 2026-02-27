@@ -61,7 +61,7 @@ export const roomReducer = (room: RoomState, event: RoomEvent): RoomState => {
     }
     console.error('event', event.type, 'not found');
     return room;
-  } catch (e) {
+  } catch (_e) {
     console.error('Error handling event', event);
     return room;
   }

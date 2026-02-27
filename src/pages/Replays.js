@@ -2,7 +2,7 @@ import './css/replays.css';
 
 import {Helmet} from 'react-helmet-async';
 import _ from 'lodash';
-import React, {Component} from 'react';
+import {Component} from 'react';
 import Promise from 'bluebird';
 import HistoryWrapper from '../lib/wrappers/HistoryWrapper';
 import Nav from '../components/common/Nav';

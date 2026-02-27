@@ -1,9 +1,9 @@
 import './css/battle.css';
 
-import React, {Component} from 'react';
+import {Component} from 'react';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet-async';
-// eslint-disable-next-line import/no-extraneous-dependencies
+
 import classnames from 'classnames';
 import {BattleModel} from '../store';
 import redirect from '../lib/redirect';
@@ -61,7 +61,7 @@ class Battle extends Component {
       !this.state.redirecting
     ) {
       const self = this.state.games[this.state.team];
-      // eslint-disable-next-line react/no-did-update-set-state
+
       this.setState({redirecting: true}, () => redirect(`/beta/game/${self}`));
     }
   }

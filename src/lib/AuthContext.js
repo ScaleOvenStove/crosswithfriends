@@ -1,4 +1,4 @@
-import React, {createContext, useState, useEffect, useCallback, useRef} from 'react';
+import {createContext, useState, useEffect, useCallback, useRef} from 'react';
 import {refreshAccessToken, logout as apiLogout, getMe, linkIdentity} from '../api/auth';
 import {setSocketAuthToken} from '../sockets/getSocket';
 import getLocalId from '../localAuth';
@@ -30,7 +30,7 @@ export function AuthProvider({children}) {
             linkIdentity(result.accessToken, getLocalId()).catch(() => {});
           }
         }
-      } catch (e) {
+      } catch (_e) {
         // No valid session, stay as guest
       } finally {
         setLoading(false);

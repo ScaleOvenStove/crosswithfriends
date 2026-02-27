@@ -37,7 +37,6 @@ async function backfill() {
   let totalFailed = 0;
   let round = 0;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     round += 1;
     // Find solved games that don't have snapshots yet and still have events

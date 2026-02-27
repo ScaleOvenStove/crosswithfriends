@@ -1,5 +1,4 @@
 /* eslint-disable react/jsx-no-bind */
-import React from 'react';
 
 export default function UploadModal({
   open,

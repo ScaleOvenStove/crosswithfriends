@@ -56,6 +56,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
   const socket = useSocket();
 
   const eventsHook = useGameEvents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   async function sendEvent(event: GameEvent) {
     (event as any).timestamp = {
       '.sv': 'timestamp',
@@ -98,6 +99,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
       });
       setHasRevealedAll(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGameComplete, hasRevealedAll, gameState.loaded, gameState.started]);
   useUpdateEffect(() => {
     if (isInitialized) {

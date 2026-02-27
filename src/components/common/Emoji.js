@@ -1,4 +1,3 @@
-import React from 'react';
 import * as emojiLib from '../../lib/emoji';
 
 export default function Emoji({emoji, big}) {

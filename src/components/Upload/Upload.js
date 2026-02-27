@@ -1,6 +1,6 @@
 import './css/index.css';
 
-import React, {Component} from 'react';
+import {Component} from 'react';
 import actions from '../../actions';
 import FileUploader from './FileUploader';
 import UploadModal from './UploadModal';

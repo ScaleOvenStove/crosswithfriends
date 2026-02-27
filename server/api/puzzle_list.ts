@@ -1,8 +1,7 @@
-import {ListPuzzleResponse} from '@shared/types';
+import {ListPuzzleResponse, ListPuzzleRequestFilters} from '@shared/types';
 import express from 'express';
 import _ from 'lodash';
 import {listPuzzles} from '../model/puzzle';
-import {ListPuzzleRequestFilters} from '../../src/shared/types';
 import {optionalAuth} from '../auth/middleware';
 
 const router = express.Router();

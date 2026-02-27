@@ -1,14 +1,14 @@
 import EventEmitter from 'events';
-// eslint-disable-next-line import/no-extraneous-dependencies
+
 import async from 'async';
 import _ from 'lodash';
 import {db} from './firebase';
-// eslint-disable-next-line import/no-cycle
+
 import actions from '../actions';
 
 import powerupData from '../lib/powerups';
 import GridObject from '../lib/wrappers/GridWrapper';
-// eslint-disable-next-line import/no-cycle
+
 import {PuzzleModel} from '.';
 
 const STARTING_POWERUPS = 1;

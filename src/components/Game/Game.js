@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
 /* eslint-disable consistent-return */
-import React, {Component} from 'react';
+import {Component} from 'react';
 import _ from 'lodash';
 import Confetti from './Confetti.js';
 
@@ -38,7 +38,7 @@ export default class Game extends Component {
     let vimMode = false;
     try {
       vimMode = JSON.parse(localStorage.getItem(vimModeKey)) || false;
-    } catch (e) {
+    } catch (_e) {
       console.error('Failed to parse local storage vim mode!');
     }
     // with body { overflow: hidden }, it should disable swipe-to-scroll on iOS safari)
@@ -52,7 +52,7 @@ export default class Game extends Component {
       if (storedValue != null) {
         skipFilledSquares = JSON.parse(localStorage.getItem(skipFilledSquaresKey));
       }
-    } catch (e) {
+    } catch (_e) {
       console.error('Failed to parse local storage: skipFilledSquares');
     }
     this.setState({skipFilledSquares});
@@ -63,7 +63,7 @@ export default class Game extends Component {
       if (storedValue != null) {
         autoAdvanceCursor = JSON.parse(storedValue);
       }
-    } catch (e) {
+    } catch (_e) {
       console.error('Failed to parse local storage: autoAdvanceCursor');
     }
     this.setState({autoAdvanceCursor});

@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import {useCallback} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import './css/confirmDialog.css';
 

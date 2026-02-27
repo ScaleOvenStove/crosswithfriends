@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
 import classnames from 'classnames';
 import {createRoot} from 'react-dom/client';
 import React from 'react';

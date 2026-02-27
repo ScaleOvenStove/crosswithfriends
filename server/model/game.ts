@@ -1,5 +1,4 @@
 import _ from 'lodash';
-// @ts-ignore
 import {makeGrid} from '../gameUtils';
 import {pool} from './pool';
 import {getPuzzle} from './puzzle';

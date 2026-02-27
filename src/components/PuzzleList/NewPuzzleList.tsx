@@ -79,6 +79,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
     return scrollTop + clientHeight + buffer > scrollHeight;
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchMore = React.useCallback(
     _.throttle(
       async (
@@ -120,6 +121,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
     // it is debatable if we want to blank out the current puzzles here or not,
     // for now we only change the puzzles when the reload happens.
     fetchMore([], 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(props.filter), props.uploadedPuzzles, !!accessToken]);
 
   const handleScroll = useCallback(async () => {

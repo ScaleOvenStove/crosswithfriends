@@ -1,6 +1,5 @@
 import './css/legal.css';
 
-import React from 'react';
 import {Helmet} from 'react-helmet-async';
 import Nav from '../components/common/Nav';
 import Footer from '../components/common/Footer';

@@ -1,8 +1,8 @@
 import './css/nav.css';
 
 import {Link} from 'react-router-dom';
-import React, {useCallback, useContext, useEffect, useRef, useState} from 'react';
-// eslint-disable-next-line import/no-extraneous-dependencies
+import {useCallback, useContext, useEffect, useRef, useState} from 'react';
+
 import classnames from 'classnames';
 import {FaSun, FaMoon, FaDesktop, FaUserCircle} from 'react-icons/fa';
 import {MdInfoOutline} from 'react-icons/md';

@@ -1,7 +1,6 @@
-/* eslint-disable max-classes-per-file */
 import './css/fileUploader.css';
 
-import React, {useCallback} from 'react';
+import {useCallback} from 'react';
 import {useDropzone} from 'react-dropzone';
 import {MdFileUpload} from 'react-icons/md';
 import {hasShape} from '../../lib/jsUtils';

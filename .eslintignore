@@ -1,7 +1,0 @@
-backfills/
-build/
-e2e/
-jest.config.server.js
-middleware.ts
-prettier.config.js
-utils/

@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import {Component} from 'react';
 import _ from 'lodash';
 import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';

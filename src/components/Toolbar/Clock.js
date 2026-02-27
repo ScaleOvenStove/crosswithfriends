@@ -1,5 +1,5 @@
 import './css/clock.css';
-import React, {Component} from 'react';
+import {Component} from 'react';
 import {getTime} from '../../store/firebase';
 import {MAX_CLOCK_INCREMENT} from '../../lib/timing';
 

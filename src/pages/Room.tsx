@@ -69,6 +69,7 @@ const Room: React.FC = () => {
       emitAsync(socket, 'room_event', {rid, event});
     }
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   async function setGame(gid: string) {
     if (socket) {
       const event = SetGameRoomEvent(gid);

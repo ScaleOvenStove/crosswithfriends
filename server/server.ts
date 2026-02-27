@@ -64,7 +64,6 @@ app.use('/api', apiRouter);
 
 // ======== Error Handling Middleware ==========
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = err.statusCode || 500;
   console.error(`[API Error] ${req.method} ${req.path}:`, err.message || err);
@@ -77,7 +76,7 @@ function logAllEvents(log: typeof console.log) {
   io.on('*', (event: any, ...args: any) => {
     try {
       log(`[${event}]`, _.truncate(JSON.stringify(args), {length: 100}));
-    } catch (e) {
+    } catch (_e) {
       log(`[${event}]`, args);
     }
   });

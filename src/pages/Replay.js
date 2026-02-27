@@ -1,4 +1,3 @@
-// eslint-disable-next-line max-classes-per-file
 import './css/replay.css';
 import React, {Component} from 'react';
 import {Helmet} from 'react-helmet-async';
@@ -157,7 +156,7 @@ class Replay extends Component {
         const hasSnapshot = data.type !== 'solution_only';
         this.setState({replayRetained: data.replayRetained || false, hasSnapshot});
       }
-    } catch (e) {
+    } catch (_e) {
       // Snapshot may not exist yet — that's fine
     }
   };

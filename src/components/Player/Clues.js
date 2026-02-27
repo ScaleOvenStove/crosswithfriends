@@ -1,5 +1,5 @@
 import './css/clues.css';
-import React, {Component} from 'react';
+import {Component} from 'react';
 import ClueText from './ClueText';
 
 export default class Clues extends Component {

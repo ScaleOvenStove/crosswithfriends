@@ -1,5 +1,5 @@
 import './css/Popup.css';
-import React, {Component} from 'react';
+import {Component} from 'react';
 
 /*
  * Summary of Popup component

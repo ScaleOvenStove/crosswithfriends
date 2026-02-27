@@ -316,7 +316,7 @@ export async function recordSolve(
       await client.query(`UPDATE puzzles SET times_solved = times_solved + 1 WHERE pid = $1`, [pid]);
     }
     await client.query('COMMIT');
-  } catch (e) {
+  } catch (_e) {
     await client.query('ROLLBACK');
   } finally {
     client.release();

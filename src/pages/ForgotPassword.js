@@ -1,5 +1,5 @@
 /* eslint-disable react/jsx-no-bind */
-import React, {useState} from 'react';
+import {useState} from 'react';
 import {Helmet} from 'react-helmet-async';
 import {Link} from 'react-router-dom';
 import Nav from '../components/common/Nav';

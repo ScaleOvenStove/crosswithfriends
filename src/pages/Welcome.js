@@ -12,7 +12,7 @@ import {
   MdClose,
 } from 'react-icons/md';
 import _ from 'lodash';
-// eslint-disable-next-line import/no-extraneous-dependencies
+
 import classnames from 'classnames';
 import Nav from '../components/common/Nav';
 import Upload from '../components/Upload';

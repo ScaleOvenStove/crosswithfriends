@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-no-bind */
 import './css/account.css';
 
-import React, {useContext, useState, useEffect} from 'react';
+import {useContext, useState, useEffect} from 'react';
 import {Helmet} from 'react-helmet-async';
 import {useLocation, useNavigate, Link} from 'react-router-dom';
 import Nav from '../components/common/Nav';
@@ -400,7 +400,7 @@ function DeleteAccountSection({user, accessToken, onDeleted}) {
       if (stats?.stats?.totalSolved != null) {
         setSolveCount(stats.stats.totalSolved);
       }
-    } catch (e) {
+    } catch (_e) {
       // Non-critical — just won't show count
     }
   };

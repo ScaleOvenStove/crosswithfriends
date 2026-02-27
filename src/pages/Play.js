@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import {Component} from 'react';
 import {Helmet} from 'react-helmet-async';
 import _ from 'lodash';
 import querystring from 'querystring';

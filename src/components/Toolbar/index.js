@@ -1,5 +1,5 @@
 import './css/index.css';
-import React, {Component} from 'react';
+import {Component} from 'react';
 import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo, MdErrorOutline} from 'react-icons/md';
 import {AiOutlineMenuFold, AiOutlineMenuUnfold} from 'react-icons/ai';
 import {RiPaintFill, RiPaintLine} from 'react-icons/ri';

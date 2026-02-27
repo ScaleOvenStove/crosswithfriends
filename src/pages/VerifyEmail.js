@@ -1,5 +1,5 @@
 /* eslint-disable react/jsx-no-bind, consistent-return, no-nested-ternary */
-import React, {useContext, useState, useEffect, useRef} from 'react';
+import {useContext, useState, useEffect, useRef} from 'react';
 import {Helmet} from 'react-helmet-async';
 import {useLocation, useNavigate, Link} from 'react-router-dom';
 import Nav from '../components/common/Nav';
@@ -35,6 +35,7 @@ export default function VerifyEmail() {
         setError(e.message);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]); // intentionally only re-run when token changes
 
   // Cooldown timer for resend button

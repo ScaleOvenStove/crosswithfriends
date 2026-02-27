@@ -1,5 +1,3 @@
-import React from 'react';
-
 import useStateParams from '../lib/hooks/useStateParams';
 import Welcome from './Welcome';
 

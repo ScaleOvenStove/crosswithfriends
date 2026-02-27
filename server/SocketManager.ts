@@ -17,7 +17,7 @@ function assignTimestamp(event: SocketEvent) {
       return Date.now();
     }
     const result = event.constructor();
-    // eslint-disable-next-line guard-for-in
+
     for (const key in event) {
       result[key] = assignTimestamp(event[key]);
     }

@@ -1,6 +1,6 @@
 /* eslint no-continue: "off", no-underscore-dangle: "off" */
 import _ from 'lodash';
-// eslint-disable-next-line import/no-cycle
+
 import * as gameUtils from '../gameUtils';
 
 function safe_while(condition, step, cap = 500) {

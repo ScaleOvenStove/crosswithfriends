@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import {Component} from 'react';
 import Confetti from 'react-confetti';
 
 export default class ConfettiWrapper extends Component {

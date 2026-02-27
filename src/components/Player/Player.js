@@ -95,7 +95,6 @@ export default class Player extends Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.currentCursor && this.props.currentCursor !== prevProps.currentCursor) {
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         selected: {
           r: this.props.currentCursor.r,
@@ -206,7 +205,7 @@ export default class Player extends Component {
       this.setState(
         {
           selected,
-          // eslint-disable-next-line react/no-access-state-in-setstate
+
           direction: gameUtils.getOppositeDirection(this.state.direction),
         },
         () => {

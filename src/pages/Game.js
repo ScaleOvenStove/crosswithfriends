@@ -1,5 +1,5 @@
 /* eslint-disable no-nested-ternary, class-methods-use-this, consistent-return, react/jsx-no-bind */
-import React, {Component} from 'react';
+import {Component} from 'react';
 import _ from 'lodash';
 import querystring from 'querystring';
 import {Helmet} from 'react-helmet-async';

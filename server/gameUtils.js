@@ -315,7 +315,6 @@ export class GridWrapper {
     let nextNumber = 1;
     for (const [r, c, cell] of this.items()) {
       if (!this.isWhite(r, c)) {
-        // eslint-disable-next-line no-continue
         continue;
       } else if (this.isStartOfClue(r, c, 'across') || this.isStartOfClue(r, c, 'down')) {
         cell.number = nextNumber;

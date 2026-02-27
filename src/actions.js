@@ -1,6 +1,6 @@
 import {gameWords} from './lib/names';
 import firebase from './store/firebase';
-// eslint-disable-next-line import/no-cycle
+
 import {GameModel, PuzzleModel} from './store';
 import {incrementGid, incrementPid} from './api/counters';
 
