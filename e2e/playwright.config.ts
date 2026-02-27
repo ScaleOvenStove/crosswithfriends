@@ -40,7 +40,7 @@ export default defineConfig({
   ...(isLocal
     ? {
         webServer: {
-          command: 'yarn start',
+          command: 'pnpm start',
           url: BASE_URL,
           reuseExistingServer: true,
           timeout: 60_000,

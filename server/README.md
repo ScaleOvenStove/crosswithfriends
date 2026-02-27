@@ -8,24 +8,23 @@
 ### http server (host = downforacross.com)
 
 - Prod: Hosts are both api.foracross.com/
-- Staging: Hosted at api-staging.foracross.com, or `localhost:3021` if running `yarn devbackend` locally.
+- Staging: Hosted at api-staging.foracross.com, or `localhost:3021` if running `pnpm devbackend` locally.
 
 ### websocket server
 
 - Prod: TBD, probably downforacross.com/ws??, probably a separate process
 - Dev: localhost:3020 (using [CRA proxy](https://create-react-app.dev/docs/proxying-api-requests-in-development/))
 - Responsibilities
-
   - MVP: Handle pub/sub for game events
 
 ## client config
 
 - Production build has `SERVER_URL = "https://api.foracross.com"`
-  - This is `yarn build`, used by vercel for both production and preview deployments
-- Development build (e.g. `yarn start`) has `SERVER_URL = "https://api-staging.foracross.com"`.
-  - This is `yarn start`
+  - This is `pnpm build`, used by vercel for both production and preview deployments
+- Development build (e.g. `pnpm start`) has `SERVER_URL = "https://api-staging.foracross.com"`.
+  - This is `pnpm start`
 - Development with `process.env.REACT_APP_USE_LOCAL_SERVER=1` has `SERVER_URL = localhost:3021`
-  - This is `yarn devfrontend`
+  - This is `pnpm devfrontend`
 
 ### Database
 
@@ -46,7 +45,7 @@ CREATE TABLE game_events(
 
 ### Getting Started
 
-Important: If you aren't making changes to `server/server.js`, you don't need to run the backend locally. In this case, just run `yarn start`.
+Important: If you aren't making changes to `server/server.js`, you don't need to run the backend locally. In this case, just run `pnpm start`.
 
 #### Run your local db
 
@@ -79,7 +78,7 @@ psql dfac < create_game_events.sql
 
 #### Run your local websocket server
 
-`yarn devbackend`
+`pnpm devbackend`
 
 This command expects PostgreSQL connection variables to be set and a postgres server running.
 
@@ -91,7 +90,7 @@ This will run a backend server on `localhost:3021`
 
 #### Run your local frontend server
 
-`yarn devfrontend`
+`pnpm devfrontend`
 
 This will run a frontend server on localhost:3020, that talks to your server on `localhost:3021`.
 
@@ -175,7 +174,7 @@ For local development, SendGrid is **optional** — emails are logged to the con
 SENDGRID_API_KEY=SG.your-api-key-here
 ```
 
-**Important:** The env file must be `server/.env.local` (not the root `.env.local`), because `yarn devbackend` loads env from that path. Restart the backend after adding/changing env vars.
+**Important:** The env file must be `server/.env.local` (not the root `.env.local`), because `pnpm devbackend` loads env from that path. Restart the backend after adding/changing env vars.
 
 ### Database Tables
 
