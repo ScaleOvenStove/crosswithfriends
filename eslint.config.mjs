@@ -148,6 +148,7 @@ export default tseslint.config(
             '**/*.spec.{js,jsx,ts,tsx}',
             '**/vite.config.ts',
             '**/vitest.config.ts',
+            '**/pwa-assets.config.ts',
             '**/eslint.config.mjs',
             '**/jest.config.server.js',
           ],
