@@ -391,6 +391,10 @@
   border-color: #f0a050;
 }
 
+.dark .entry--icon.fencing {
+  fill: #8a9bb0;
+}
+
 /* File Uploader */
 .dark .file-uploader--wrapper {
   background-color: rgba(255, 255, 255, 0.05);

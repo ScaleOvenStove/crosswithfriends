@@ -86,9 +86,7 @@ export default class Entry extends Component<EntryProps> {
               )}
               {status === 'started' && this.props.contest && <GiCrossedSwords className="entry--icon" />}
               {status === 'solved' && <MdCheckCircle className="entry--icon" />}
-              {status !== 'started' && status !== 'solved' && fencing && (
-                <GiCrossedSwords className="entry--icon fencing" />
-              )}
+              {fencing && <GiCrossedSwords className="entry--icon fencing" />}
             </div>
           </div>
           <div className="flex entry--main">
