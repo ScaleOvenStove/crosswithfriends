@@ -68,7 +68,7 @@ export default class EditableSpan extends PureComponent {
     if (this.props.hidden) return;
     if (this.text === val) return;
     // set text while retaining cursor position
-    this.span.current.innerHTML = val;
+    this.span.current.textContent = val;
   }
 
   handleFocus = () => {
