@@ -10,7 +10,6 @@
   },
   "include": [
     "eslint.config.mjs",
-    "pwa-assets.config.ts",
     "src",
     "vite.config.ts",
     "vitest.config.ts"
