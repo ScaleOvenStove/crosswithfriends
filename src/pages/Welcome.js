@@ -35,12 +35,12 @@ export default class Welcome extends Component {
       userHistory: {},
       collapsedFilters: {},
       mobileSidebarOpen: false,
+      uploadedPuzzles: 0,
     };
     this.loading = false;
     this.mobile = isMobile();
     this.searchInput = React.createRef();
     this.nav = React.createRef();
-    this.uploadedPuzzles = 0;
   }
 
   componentDidMount() {
@@ -117,7 +117,7 @@ export default class Welcome extends Component {
     return (
       <PuzzleList
         fencing={this.props.fencing}
-        uploadedPuzzles={this.uploadedPuzzles}
+        uploadedPuzzles={this.state.uploadedPuzzles}
         userHistory={userHistory}
         sizeFilter={this.props.sizeFilter}
         statusFilter={this.props.statusFilter}
@@ -130,7 +130,7 @@ export default class Welcome extends Component {
   }
 
   handleCreatePuzzle = () => {
-    this.uploadedPuzzles += 1;
+    this.setState((prev) => ({uploadedPuzzles: prev.uploadedPuzzles + 1}));
   };
 
   handleFilterChange = (header, name, on) => {
