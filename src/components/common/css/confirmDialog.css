@@ -27,6 +27,11 @@
   color: var(--dark-primary-text);
 }
 
+.dark .confirm-dialog--panel code {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--dark-primary-text);
+}
+
 .confirm-dialog--title {
   margin: 0 0 12px;
   font-size: 18px;

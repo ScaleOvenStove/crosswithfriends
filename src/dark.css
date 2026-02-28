@@ -26,6 +26,15 @@
   background-color: var(--dark-blue-2) !important;
 }
 
+.dark .player--main--vim-bar {
+  background-color: var(--dark-blue-2);
+  color: var(--dark-primary-text);
+}
+
+.dark .player--main--vim-bar--input {
+  color: var(--dark-primary-text);
+}
+
 .dark .mobile-grid-controls--clue-bar {
   background-color: var(--dark-blue-2);
 }
