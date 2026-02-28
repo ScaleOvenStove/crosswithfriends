@@ -106,6 +106,10 @@ export default function LoginModal({open, onClose}) {
   );
 
   const handleInteractOutside = useCallback((e) => {
+    const target = e.detail?.originalEvent?.target;
+    // Allow overlay clicks to close the dialog; block everything else
+    // (e.g. password-manager extension popups) from dismissing it.
+    if (target?.classList?.contains('login-modal--overlay')) return;
     e.preventDefault();
   }, []);
 
