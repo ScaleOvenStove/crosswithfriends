@@ -6,6 +6,7 @@ import {Helmet} from 'react-helmet-async';
 import Nav from '../components/common/Nav';
 
 import {GameModel, getUser, BattleModel} from '../store';
+import {getTime} from '../store/firebase';
 import HistoryWrapper from '../lib/wrappers/HistoryWrapper';
 import GameComponent from '../components/Game';
 import MobilePanel from '../components/common/MobilePanel';
@@ -125,6 +126,10 @@ class Game extends Component {
     });
     this.gameModel.on('wsCreateEvent', (event) => {
       this.historyWrapper.setCreateEvent(event);
+      // If loaded from a snapshot (already solved), don't re-record the solve
+      if (this.game.solved) {
+        this.lastRecordedSolve = this.state.gid;
+      }
       if (this._connectionTimer) clearTimeout(this._connectionTimer);
       this.setState({connectionFailed: false});
       this.handleUpdate();
@@ -356,6 +361,10 @@ class Game extends Component {
       });
     }
     if (this.game.solved) {
+      // Wait for optimistic events to be confirmed before saving the snapshot,
+      // because optimistic processing skips clock tick() — saving now would
+      // capture an incomplete totalTime.
+      if (this.historyWrapper.optimisticEvents.length > 0) return;
       if (this.lastRecordedSolve === this.state.gid) return;
       this.lastRecordedSolve = this.state.gid;
       if (this.gameModel.puzzleModel) {
@@ -367,16 +376,26 @@ class Game extends Component {
       // double log to postgres
       const authToken = this.context?.accessToken || null;
       const playerCount = Object.keys(this.game.users || {}).length || 1;
+      // Compute the true total time: if the clock hasn't been ticked yet
+      // (e.g. optimistic event just confirmed), add the unaccounted elapsed time.
+      const gameClock = this.game.clock;
+      const unaccountedTime =
+        gameClock.paused || !gameClock.lastUpdated ? 0 : getTime() - gameClock.lastUpdated;
+      const solvedClock = {
+        ...gameClock,
+        totalTime: gameClock.totalTime + Math.max(0, unaccountedTime),
+        paused: true,
+      };
       const snapshot = {
         grid: this.game.grid,
         users: this.game.users,
-        clock: this.game.clock,
+        clock: solvedClock,
         chat: this.game.chat,
       };
       await recordSolve(
         this.game.pid,
         this.state.gid,
-        this.game.clock.totalTime,
+        solvedClock.totalTime,
         authToken,
         playerCount,
         snapshot

@@ -11,12 +11,16 @@ export async function getGameEvents(gid: string) {
   const ms = Date.now() - startTime;
   console.log(`getGameEvents(${gid}) took ${ms}ms`);
 
-  // If a snapshot exists, overlay the solved state onto the create event.
-  // Snapshots are the authoritative final state for solved games.
+  // If a snapshot exists and replay was NOT retained, overlay the solved state
+  // onto the create event and return only that. Snapshots are the authoritative
+  // final state — replaying history events on top causes clock drift because
+  // the reducer re-accumulates time during replay.
+  // When replay_retained is true, return all events unmodified so that replay
+  // pages can reconstruct the full game history.
   const createEvent = events.find((e: any) => e.type === 'create');
   if (createEvent) {
     const snapshot = await getGameSnapshot(gid);
-    if (snapshot) {
+    if (snapshot && !snapshot.replayRetained) {
       const game = createEvent.params.game;
       const snap = snapshot.snapshot as any;
       if (snap.grid) game.grid = snap.grid;
@@ -24,6 +28,8 @@ export async function getGameEvents(gid: string) {
       if (snap.clock) game.clock = snap.clock;
       if (snap.chat) game.chat = snap.chat;
       game.solved = true;
+      if (game.contest) game.contestSolved = true;
+      return [createEvent];
     }
   }
 
