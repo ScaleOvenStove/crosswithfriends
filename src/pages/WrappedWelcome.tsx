@@ -135,8 +135,10 @@ const WrappedWelcome = (props: UseFencing) => {
 
   // Persist the home page URL (with filter query params) so the nav link
   // can return users to their last filter state instead of bare "/"
+  // Keyed by variant so normal and fencing modes don't cross-contaminate.
+  const storageKey = props.fencing ? 'cwf:homeUrl:fencing' : 'cwf:homeUrl';
   useEffect(() => {
-    sessionStorage.setItem('cwf:homeUrl', window.location.pathname + window.location.search);
+    sessionStorage.setItem(storageKey, window.location.pathname + window.location.search);
   });
 
   const welcomeProps = {
