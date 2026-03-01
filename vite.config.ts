@@ -103,7 +103,7 @@ export default defineConfig({
           if (id.includes('/@sentry/')) return 'vendor-sentry';
           if (id.includes('/socket.io-client/') || id.includes('/engine.io-')) return 'vendor-socketio';
           if (id.includes('/@radix-ui/')) return 'vendor-radix';
-          return 'vendor-misc';
+          return undefined;
         },
       },
     },
