@@ -8,7 +8,7 @@ import {dayOfWeekExtract} from './sql_helpers';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
-export async function getPuzzle(pid: string): Promise<PuzzleJson> {
+export async function getPuzzle(pid: string): Promise<PuzzleJson | null> {
   const startTime = Date.now();
   const {rows} = await pool.query(
     `
@@ -20,7 +20,8 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson> {
   );
   const ms = Date.now() - startTime;
   console.log(`getPuzzle (${pid}) took ${ms}ms`);
-  return _.first(rows)!.content;
+  const row = _.first(rows);
+  return row ? row.content : null;
 }
 
 const GRID_MAX_DIM = `GREATEST(jsonb_array_length(content->'grid'), jsonb_array_length(content->'grid'->0))`;
@@ -333,6 +334,7 @@ export async function recordSolve(
 
 export async function getPuzzleInfo(pid: string) {
   const puzzle = await getPuzzle(pid);
+  if (!puzzle) return null;
   const {info = {}} = puzzle;
   return info;
 }

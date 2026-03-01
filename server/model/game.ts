@@ -79,6 +79,7 @@ export async function addGameEvent(gid: string, event: GameEvent) {
 
 export async function addInitialGameEvent(gid: string, pid: string) {
   const puzzle = await getPuzzle(pid);
+  if (!puzzle) throw new Error(`Puzzle not found: ${pid}`);
   console.log('got puzzle', puzzle);
   const {
     info = {},

@@ -27,6 +27,10 @@ router.post<{}, AddPuzzleResponse, AddPuzzleRequest>('/', async (req, res) => {
 router.get<{pid: string}>('/:pid/info', async (req, res, next) => {
   try {
     const info = await getPuzzleInfo(req.params.pid);
+    if (!info) {
+      res.status(404).json({error: 'Puzzle not found'});
+      return;
+    }
     res.json(info);
   } catch (e) {
     next(e);

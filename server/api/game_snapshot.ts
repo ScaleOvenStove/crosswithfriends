@@ -31,6 +31,10 @@ router.get('/:gid', async (req, res, next) => {
 
     const {pid, solved_time, time_taken_to_solve, player_count} = solveResult.rows[0];
     const puzzle = await getPuzzle(pid);
+    if (!puzzle) {
+      res.status(404).json({error: 'Puzzle not found'});
+      return;
+    }
     res.json({
       type: 'solution_only',
       gid,
