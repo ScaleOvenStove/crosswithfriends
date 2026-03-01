@@ -389,7 +389,6 @@ const checkSolved = (game) => ({
 export const reduce = (game, action, options = {}) => {
   const {timestamp, type, params} = action;
   if (!(type in reducers)) {
-    console.error('action', type, 'not found');
     return game;
   }
   let result = game;
