@@ -7,7 +7,7 @@
 }
 
 .popup-menu--content tr:nth-child(even) {
-  background-color: #ffffff;
+  background-color: #fff;
 }
 
 .popup-menu table > th > td {
@@ -41,7 +41,7 @@
 }
 
 .popup-menu--content li:last-child {
-  padding-bottom: 0px;
+  padding-bottom: 0;
 }
 
 .active .popup-menu--content {

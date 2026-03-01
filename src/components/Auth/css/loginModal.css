@@ -4,7 +4,7 @@
 .login-modal--overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgb(0 0 0 / 50%);
   z-index: 1300;
 }
 
@@ -21,8 +21,10 @@
   max-height: 85vh;
   overflow-y: auto;
   z-index: 1300;
-  box-shadow: 0px 11px 15px -7px rgba(0, 0, 0, 0.2), 0px 24px 38px 3px rgba(0, 0, 0, 0.14),
-    0px 9px 46px 8px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 11px 15px -7px rgb(0 0 0 / 20%),
+    0 24px 38px 3px rgb(0 0 0 / 14%),
+    0 9px 46px 8px rgb(0 0 0 / 12%);
 }
 
 .dark .login-modal--panel {
@@ -47,17 +49,17 @@
   font-family: inherit;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.02857em;
+  letter-spacing: 0.0286em;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: rgba(0, 0, 0, 0.54);
+  color: rgb(0 0 0 / 54%);
   cursor: pointer;
   text-align: center;
 }
 
 .login-modal--tab:hover {
-  color: rgba(0, 0, 0, 0.87);
+  color: rgb(0 0 0 / 87%);
 }
 
 .login-modal--tab[data-state='active'] {
@@ -66,7 +68,7 @@
 }
 
 .dark .login-modal--tab {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .login-modal--tab:hover {

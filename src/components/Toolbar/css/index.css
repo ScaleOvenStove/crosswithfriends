@@ -1,6 +1,6 @@
 code {
   font-family: monospace;
-  background-color: rgb(223, 223, 223);
+  background-color: rgb(223 223 223);
 }
 
 .toolbar {
@@ -10,7 +10,6 @@ code {
   border-top: 1px solid #e2e2e2;
   border-left: 1px solid #e2e2e2;
   border-bottom: 1px solid #e2e2e2;
-
   display: flex;
   flex-direction: row;
   justify-content: space-around;
@@ -21,7 +20,7 @@ code {
 
 .toolbar button {
   color: var(--main-gray-1);
-  padding: 7px 10px 7px 10px;
+  padding: 7px 10px;
   border-radius: 5px;
   background-color: white;
   border: none;
@@ -105,13 +104,14 @@ code {
 .toolbar--mobile .toolbar--autocheck {
   color: var(--main-gray-2);
 }
+
 .toolbar--mobile .toolbar--autocheck.on .fa-check-square {
   color: white !important;
 }
 
 .toolbar--mobile {
   height: 48px;
-  padding: 0 16px 0 16px;
+  padding: 0 16px;
   background-color: var(--main-blue);
   justify-content: space-between;
   font-size: 14pt;
@@ -175,7 +175,7 @@ code {
 }
 
 .toolbar--mobile .toolbar--save-replay {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 20%);
   color: white;
   font-size: 12px;
   padding: 6px 12px;
@@ -184,7 +184,7 @@ code {
 }
 
 .toolbar--mobile .toolbar--replay-saved {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
   font-size: 11px;
 }
 
@@ -219,7 +219,7 @@ code {
 }
 
 .toolbar--mobile .toolbar--mark-solved {
-  background: rgba(76, 175, 80, 0.9);
+  background: rgb(76 175 80 / 90%);
   font-size: 12px;
   padding: 6px 12px;
   height: auto;
@@ -228,7 +228,7 @@ code {
 }
 
 .toolbar--mobile .toolbar--unmark-solved {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 20%);
   font-size: 12px;
   padding: 6px 12px;
   height: auto;

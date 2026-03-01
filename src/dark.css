@@ -83,11 +83,12 @@
 }
 
 .dark .cell--shade {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgb(255 255 255 / 25%);
 }
 
 .dark .clues--list--scroll {
   background-color: var(--dark-background-1);
+  border-top-color: #555;
 }
 
 .dark .clues--list--scroll--clue.selected {
@@ -104,15 +105,11 @@
 }
 
 .dark .chat--system-message {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.dark .clues--list--scroll {
-  border-top-color: #555;
+  color: rgb(255 255 255 / 60%);
 }
 
 .dark .clues--list--scroll--clue.complete {
-  color: rgba(255, 255, 255, 0.47);
+  color: rgb(255 255 255 / 47%);
 }
 
 .dark .list-view--list--title {
@@ -124,7 +121,7 @@
 }
 
 .dark .toolbar button {
-  background-color: rgba(0, 0, 0, 0);
+  background-color: rgb(0 0 0 / 0%);
   color: var(--dark-primary-text);
 }
 
@@ -156,7 +153,7 @@
 }
 
 .dark .cell.selected .cell--wrapper {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgb(0 0 0 / 10%);
 }
 
 .dark .cell.good .cell--value {
@@ -164,11 +161,11 @@
 }
 
 .dark .cell.bad .cell--value {
-  color: rgb(244, 67, 54);
+  color: rgb(244 67 54);
 }
 
 .dark .cell.revealed .cell--value {
-  color: rgb(102, 187, 106);
+  color: rgb(102 187 106);
 }
 
 .dark input {
@@ -181,6 +178,7 @@
 
 .dark ::selection {
   background-color: #555;
+
   /* WebKit/Blink Browsers */
 }
 
@@ -210,19 +208,16 @@
 
 .dark .entry {
   color: var(--dark-primary-text);
+  background-color: var(--dark-background-1);
+  border-color: rgb(255 255 255 / 30%);
 }
 
 .dark .file-uploader--wrapper.v2 {
-  background-color: rgba(0, 0, 0, 0);
+  background-color: rgb(0 0 0 / 0%);
 }
 
 .dark .filters .checkmark {
   background-color: transparent !important;
-}
-
-.dark .entry {
-  background-color: var(--dark-background-1);
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .dark .mobile-sidebar {
@@ -243,7 +238,7 @@
 }
 
 .dark .filter-quick-toggle {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .filter-quick-toggle--link {
@@ -271,7 +266,7 @@
 }
 
 .dark .upload-modal--content {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgb(255 255 255 / 75%);
 }
 
 .dark .upload-modal--content a {
@@ -288,16 +283,16 @@
 }
 
 .dark .upload-modal--button-cancel {
-  background-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.75);
+  background-color: rgb(255 255 255 / 12%);
+  color: rgb(255 255 255 / 75%);
 }
 
 .dark .upload-modal--button-cancel:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgb(255 255 255 / 20%);
 }
 
 .dark .upload-modal--checkbox-row label {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgb(255 255 255 / 75%);
 }
 
 .dark .upload-modal--checkbox-row input[type='checkbox'] {
@@ -306,11 +301,11 @@
 
 /* Chat header (puzzle instructions / description) */
 .dark .chat--header--subtitle {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(255 255 255 / 60%);
 }
 
 .dark .chat--header--description {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
 }
 
 /* Toolbar Popup Menu */
@@ -320,11 +315,11 @@
 }
 
 .dark .popup-menu--content tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255 255 255 / 5%);
 }
 
 .dark .popup-menu--content code {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgb(255 255 255 / 15%);
   color: var(--dark-primary-text);
 }
 
@@ -339,7 +334,7 @@
 
 /* Toolbar Action Menu */
 .dark .action-menu {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .action-menu--button {
@@ -362,11 +357,11 @@
 
 /* Toolbar extras */
 .dark .toolbar code {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgb(255 255 255 / 12%);
 }
 
 .dark .toolbar button:hover {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgb(255 255 255 / 12%);
 }
 
 /* Contest puzzle buttons */
@@ -397,8 +392,8 @@
 
 /* File Uploader */
 .dark .file-uploader--wrapper {
-  background-color: rgba(255, 255, 255, 0.05);
-  outline-color: rgba(255, 255, 255, 0.3);
+  background-color: rgb(255 255 255 / 5%);
+  outline-color: rgb(255 255 255 / 30%);
 }
 
 .dark .file-uploader--box {
@@ -407,7 +402,7 @@
 
 /* Powerups */
 .dark .powerups--main {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255 255 255 / 5%);
 }
 
 .dark .powerups--count {
@@ -420,19 +415,19 @@
 }
 
 .dark input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgb(255 255 255 / 30%);
 }
 
 /* Misc */
 .dark .info--hr {
-  border-top-color: rgba(255, 255, 255, 0.1);
+  border-top-color: rgb(255 255 255 / 10%);
 }
 
 :root {
-  --dark-blue-1: rgb(36, 79, 115);
+  --dark-blue-1: rgb(36 79 115);
   --dark-blue-2: #183a60;
-  --dark-primary-text: rgba(255, 255, 255, 0.87);
+  --dark-primary-text: rgb(255 255 255 / 87%);
   --dark-background: #121212;
-  --dark-background-1: rgba(255, 255, 255, 0.05);
-  --dark-background-2: rgba(255, 255, 255, 0.12);
+  --dark-background-1: rgb(255 255 255 / 5%);
+  --dark-background-2: rgb(255 255 255 / 12%);
 }

@@ -17,7 +17,7 @@
   position: absolute;
   bottom: 3px;
   left: 0;
-  padding: 10px 10px 0px 10px;
+  padding: 10px 10px 0;
   color: #444;
   font-weight: bold;
   font-size: 12px;
@@ -26,9 +26,9 @@
 
 .grid-controls:focus .grid--cover {
   display: none;
+
   /* just to be safe */
   z-index: -3;
   font-size: 1px;
-
   opacity: 0;
 }

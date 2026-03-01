@@ -9,12 +9,14 @@
   display: flex;
   flex-direction: row;
   justify-content: space-around;
+
   /* width: 150px; [> TODO: remove this non-flex layout <] */
 }
 
 .upload--main--upload {
   display: flex;
   flex-direction: column;
+
   /* flex-basis: 150px; */
 }
 
@@ -33,11 +35,8 @@
 /* Upload Modal */
 .upload-modal--overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  inset: 0;
+  background-color: rgb(0 0 0 / 40%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,7 +50,7 @@
   max-width: 480px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 15%);
 }
 
 .upload-modal--icon {

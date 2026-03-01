@@ -1,5 +1,5 @@
 .replays {
-  font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
+  font-family: 'avenir next', avenir, Nunito, 'helvetica neue', Helvetica, arial, sans-serif;
   height: 100%;
   width: 100%;
   min-width: min-content;
@@ -28,7 +28,7 @@
 }
 
 .replays .limit--container {
-  margin: 35px 0 0 0;
+  margin: 35px 0 0;
 }
 
 .replays .limit--text {
@@ -36,10 +36,10 @@
 }
 
 .replays .limit--button {
-  margin: 0 5px 0 5px;
+  margin: 0 5px;
   text-align: left;
   border-radius: 3px;
-  padding: 8px 15px 8px 15px;
+  padding: 8px 15px;
   border-top: 1px solid var(--main-gray-2);
   border-left: 1px solid var(--main-gray-2);
   border-bottom: 1px solid var(--main-gray-2);
@@ -50,7 +50,7 @@
 .replays .limit--button:hover {
   transition: all ease-in 0.2s;
   color: #111;
-  background-color: #dddddd;
+  background-color: #ddd;
 }
 
 .replays .scrub.active {
@@ -87,7 +87,7 @@
 
 .replays .main-table td {
   border-bottom: 1px solid #e2e2e2;
-  padding: 12px 0 12px 0;
+  padding: 12px 0;
 }
 
 .replays .main-table td a {
@@ -104,7 +104,7 @@
 }
 
 .dark .replays .header--subtitle {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(255 255 255 / 60%);
 }
 
 .dark .replays .scrub.active {
@@ -122,7 +122,7 @@
 }
 
 .dark .replays .main-table tr:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255 255 255 / 5%);
 }
 
 .dark .replays .main-table td {

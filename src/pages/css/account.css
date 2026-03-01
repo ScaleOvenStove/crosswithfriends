@@ -89,7 +89,7 @@
 }
 
 .dark .account-verify-banner {
-  background-color: rgba(230, 81, 0, 0.15);
+  background-color: rgb(230 81 0 / 15%);
   color: #ffb74d;
 }
 
@@ -98,7 +98,7 @@
 }
 
 .dark .account--main a {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
 }
 
 .dark .account--main a:hover {

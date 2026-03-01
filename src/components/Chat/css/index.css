@@ -12,7 +12,7 @@
 }
 
 .chat.mobile {
-  padding: 0px;
+  padding: 0;
 }
 
 .chat--header {
@@ -84,7 +84,9 @@
 .chat--messages {
   /* flex: 1; */
   overflow: auto;
+
   /* width: 100%; */
+
   /* max-height: 550px; */
   min-height: 1px;
   display: flex;
@@ -113,6 +115,7 @@
   white-space: nowrap;
   margin-left: 10px;
   color: var(--main-gray-2);
+
   /* background-color: var(--main-gray-1); */
 }
 
@@ -145,7 +148,7 @@
 
 .chat--bar {
   width: 100%;
-  padding: 20px 0px 20px 0px;
+  padding: 20px 0;
   position: relative;
 }
 
@@ -155,7 +158,7 @@
 
 .chat--bar--input--mobile {
   width: 100%;
-  border: 1px solid #dddddd;
+  border: 1px solid #ddd;
   height: 24px;
   font-size: 14px;
 }
@@ -167,7 +170,6 @@
 
 .copyButton:hover {
   cursor: pointer;
-  -webkit-filter: brightness(70%);
   filter: brightness(70%);
 }
 
@@ -178,10 +180,12 @@
 .flashBlue {
   animation: flash-blue-keyframes 0.5s;
 }
+
 @keyframes flash-blue-keyframes {
   0% {
     color: var(--main-blue);
   }
+
   100% {
     color: var(--main-gray-1);
   }

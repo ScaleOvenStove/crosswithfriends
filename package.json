@@ -109,6 +109,8 @@
     "jsdom": "^26",
     "lint-staged": "^10.5.3",
     "prettier": "^3",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^36.0.1",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript-eslint": "^8",
@@ -134,7 +136,9 @@
     "test:e2e:headed": "npx playwright test --config=e2e/playwright.config.ts --headed",
     "test:e2e:ui": "npx playwright test --config=e2e/playwright.config.ts --ui",
     "test:e2e:chromium": "npx playwright test --config=e2e/playwright.config.ts --project=chromium",
-    "test:e2e:report": "npx playwright show-report e2e/playwright-report"
+    "test:e2e:report": "npx playwright show-report e2e/playwright-report",
+    "stylelint": "stylelint \"src/**/*.css\"",
+    "stylelint:fix": "stylelint \"src/**/*.css\" --fix"
   },
   "lint-staged": {
     "!(backfills|utils|e2e)/**/*.{js,jsx,ts,tsx}": [
@@ -142,6 +146,10 @@
       "prettier --write"
     ],
     "(backfills|utils)/**/*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ],
+    "src/**/*.css": [
+      "stylelint --max-warnings=0",
       "prettier --write"
     ]
   }

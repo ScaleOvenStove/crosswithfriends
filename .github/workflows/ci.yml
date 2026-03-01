@@ -28,6 +28,29 @@ jobs:
       - name: Run ESLint
         run: pnpm eslint --max-warnings 0 src/ server/
 
+  stylelint:
+    name: Stylelint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Stylelint
+        run: pnpm stylelint
+
   format:
     name: Prettier
     runs-on: ubuntu-latest
@@ -145,7 +168,7 @@ jobs:
 
   build:
     name: Build
-    needs: [lint, format, test-frontend, test-server, typecheck-frontend, typecheck-server]
+    needs: [lint, stylelint, format, test-frontend, test-server, typecheck-frontend, typecheck-server]
     runs-on: ubuntu-latest
 
     steps:

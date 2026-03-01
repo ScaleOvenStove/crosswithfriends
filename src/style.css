@@ -13,15 +13,15 @@ input,
   flex: 1;
   min-height: 0;
   margin: 0;
-  font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
+  font-family: 'avenir next', avenir, Nunito, 'helvetica neue', Helvetica, arial, sans-serif;
 }
 
 button {
   margin: 0;
-  font-family: 'avenir next', avenir, 'Nunito', 'helvetica neue', 'Helvetica', 'arial', sans-serif;
+  font-family: 'avenir next', avenir, Nunito, 'helvetica neue', Helvetica, arial, sans-serif;
 }
 
-@media only screen and (max-width: 768px) {
+@media only screen and (width <= 768px) {
   body,
   html {
     overflow: hidden;
@@ -37,17 +37,17 @@ button {
   --main-gray-2: #ccc;
   --main-gray-3: #f0f0f0;
   --main-blue: #6aa9f4;
-  --main-blue-2: rgba(110, 198, 255, 1);
+  --main-blue-2: rgb(110 198 255 / 100%);
   --main-blue-3: #dcefff;
-  --main-green-1: rgba(31, 255, 61, 0.3);
-  --main-green-2: rgba(31, 255, 61, 1);
-  --pencil-color: #888888; /* must be 3 or 6 digit hex */
+  --main-green-1: rgb(31 255 61 / 30%);
+  --main-green-2: rgb(31 255 61 / 100%);
+  --pencil-color: #888; /* must be 3 or 6 digit hex */
 }
 
-#unlistedRow {
+#unlisted-row {
   margin-top: 10px;
 }
 
-#unlistedRow input {
+#unlisted-row input {
   display: inline-block;
 }

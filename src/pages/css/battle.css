@@ -33,11 +33,9 @@
   border-radius: 5px;
   padding: 10px;
   border: 1px solid var(--main-blue);
-
   justify-self: center;
   margin-left: 20px;
   margin-right: 20px;
-
   font-weight: bold;
   font-size: 75px;
   color: var(--main-blue);
@@ -60,12 +58,10 @@
 
 .battle--input {
   padding: 10px;
-
   justify-self: center;
   margin-top: 20px;
   margin-left: 20px;
   margin-right: 20px;
-
   font-weight: bold;
   font-size: 30px;
 }
@@ -102,6 +98,6 @@
 }
 
 .dark .battle--button.disabled {
-  color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.2);
+  color: rgb(255 255 255 / 20%);
+  border-color: rgb(255 255 255 / 20%);
 }

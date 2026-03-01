@@ -9,7 +9,6 @@
   justify-content: center;
   color: #c87e25;
   font-weight: bold;
-
   writing-mode: vertical-lr;
 }
 
@@ -30,7 +29,6 @@
   justify-self: center;
   margin-left: 20px;
   margin-right: 20px;
-
   flex-direction: column;
 }
 
@@ -49,8 +47,8 @@
   width: 20px;
   height: 20px;
   text-align: center;
-  top: 0px;
-  right: 0px;
+  top: 0;
+  right: 0;
   vertical-align: middle;
   color: white;
 }
@@ -72,6 +70,6 @@ span {
   border-radius: 50%;
   padding-bottom: 0.2px;
   padding-right: 0.1px;
-  border: 10px solid #339966 !important;
+  border: 10px solid #396 !important;
   box-sizing: border-box;
 }

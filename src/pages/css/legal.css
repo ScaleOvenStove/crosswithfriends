@@ -65,11 +65,11 @@
 
 .dark .legal--content p,
 .dark .legal--content li {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgb(255 255 255 / 75%);
 }
 
 .dark .legal--effective-date {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .legal--content a {

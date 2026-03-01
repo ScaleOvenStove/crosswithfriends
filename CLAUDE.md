@@ -40,6 +40,8 @@ E2E tests live in `e2e/` with two layers. **Smoke tests**: page rendering, navig
 
 ```sh
 pnpm eslint --max-warnings 0 src/ server/  # Lint (CI enforces --max-warnings 0)
+pnpm stylelint                          # CSS lint
+pnpm stylelint:fix                      # CSS lint with autofix
 pnpm prettier --check .                 # Format check
 pnpm prettier --write .                 # Auto-fix formatting
 pnpm tsc --noEmit                       # Frontend type check
@@ -53,12 +55,13 @@ pnpm preview                            # Serve production build locally
 All of these must pass before merging to master:
 
 1. ESLint (zero warnings)
-2. Prettier
-3. Frontend tests
-4. Server tests
-5. Frontend TypeCheck
-6. Server TypeCheck
-7. Build
+2. Stylelint
+3. Prettier
+4. Frontend tests
+5. Server tests
+6. Frontend TypeCheck
+7. Server TypeCheck
+8. Build
 
 ## Architecture
 
@@ -78,7 +81,8 @@ All of these must pass before merging to master:
 - **Dark mode variables**: `--dark-background` (#121212), `--dark-background-1` (rgba 0.05), `--dark-background-2` (rgba 0.12), `--dark-primary-text` (rgba 0.87), `--dark-blue-1`, `--dark-blue-2`.
 - **Styling**: Plain CSS + Radix UI primitives (`@radix-ui/react-dialog`, `@radix-ui/react-tabs`) for accessible Dialog/Tabs. Shared CSS primitives in `src/components/common/css/primitives.css`. `react-icons` for icons. Prettier: 110 char width, single quotes, no bracket spacing.
 - **ESLint**: Flat config (`eslint.config.mjs`). Many a11y rules are warnings (not errors) due to legacy code. `--max-warnings 0` in CI means new warnings fail the build.
-- **Pre-commit hook**: lint-staged runs ESLint + Prettier on staged files automatically.
+- **Stylelint**: Config in `stylelint.config.mjs`, extends `stylelint-config-standard`. `selector-class-pattern` and `no-descending-specificity` are disabled for project conventions.
+- **Pre-commit hook**: lint-staged runs ESLint + Prettier on staged JS/TS files, and Stylelint + Prettier on staged CSS files.
 - **Package manager**: pnpm (managed via corepack). Run `corepack enable` once, then use `pnpm install`.
 
 ## Deployment

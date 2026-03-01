@@ -11,7 +11,7 @@
   display: inline-block;
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
+  border: 3px solid rgb(0 0 0 / 10%);
   border-top-color: #1976d2;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -24,7 +24,7 @@
 }
 
 .dark .spinner {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgb(255 255 255 / 10%);
   border-top-color: #6aa9f4;
 }
 
@@ -38,19 +38,19 @@
   font-family: inherit;
   font-weight: 500;
   line-height: 1.75;
-  letter-spacing: 0.02857em;
+  letter-spacing: 0.0286em;
   text-transform: uppercase;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   background: transparent;
-  color: rgba(0, 0, 0, 0.87);
+  color: rgb(0 0 0 / 87%);
   transition: background-color 0.15s;
   min-width: 64px;
 }
 
 .btn:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: rgb(0 0 0 / 4%);
 }
 
 .btn:disabled {
@@ -65,8 +65,8 @@
 
 .btn--contained {
   background-color: #e0e0e0;
-  color: rgba(0, 0, 0, 0.87);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  color: rgb(0 0 0 / 87%);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
 }
 
 .btn--contained:hover {
@@ -83,17 +83,17 @@
 }
 
 .btn--contained.btn--primary:disabled {
-  background-color: rgba(0, 0, 0, 0.12);
-  color: rgba(0, 0, 0, 0.26);
+  background-color: rgb(0 0 0 / 12%);
+  color: rgb(0 0 0 / 26%);
 }
 
 .btn--outlined {
-  border: 1px solid rgba(0, 0, 0, 0.23);
+  border: 1px solid rgb(0 0 0 / 23%);
   background: transparent;
 }
 
 .btn--outlined:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: rgb(0 0 0 / 4%);
 }
 
 .btn--danger {
@@ -115,7 +115,7 @@
 }
 
 .dark .btn:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgb(255 255 255 / 8%);
 }
 
 .dark .btn--contained.btn--primary {
@@ -123,12 +123,12 @@
 }
 
 .dark .btn--contained.btn--primary:disabled {
-  background-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.3);
+  background-color: rgb(255 255 255 / 12%);
+  color: rgb(255 255 255 / 30%);
 }
 
 .dark .btn--outlined {
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgb(255 255 255 / 30%);
 }
 
 /* ===== Form fields (replaces MUI TextField) ===== */
@@ -141,7 +141,7 @@
 .form-field label {
   display: block;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.54);
+  color: rgb(0 0 0 / 54%);
   margin-bottom: 4px;
 }
 
@@ -151,11 +151,11 @@
   font-size: 16px;
   font-family: inherit;
   border: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+  border-bottom: 1px solid rgb(0 0 0 / 42%);
   outline: none;
   background: transparent;
   box-sizing: border-box;
-  color: rgba(0, 0, 0, 0.87);
+  color: rgb(0 0 0 / 87%);
 }
 
 .form-field input:focus {
@@ -165,7 +165,7 @@
 
 .form-field--helper {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.54);
+  color: rgb(0 0 0 / 54%);
   margin-top: 3px;
 }
 
@@ -176,12 +176,12 @@
 
 /* Dark mode form fields */
 .dark .form-field label {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .form-field input {
   color: var(--dark-primary-text);
-  border-bottom-color: rgba(255, 255, 255, 0.3);
+  border-bottom-color: rgb(255 255 255 / 30%);
 }
 
 .dark .form-field input:focus {
@@ -189,7 +189,7 @@
 }
 
 .dark .form-field--helper {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgb(255 255 255 / 40%);
 }
 
 /* ===== Typography utilities (replaces MUI Typography) ===== */
@@ -198,7 +198,7 @@
 }
 
 .text-secondary {
-  color: rgba(0, 0, 0, 0.54);
+  color: rgb(0 0 0 / 54%);
 }
 
 .text-success {
@@ -223,7 +223,7 @@
 }
 
 .dark .text-secondary {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .text-success {
@@ -231,6 +231,7 @@
 }
 
 /* ===== Flex utilities (replaces react-flexview) ===== */
+
 /* min-width/min-height: 0 matches react-flexview default behavior,
    allowing flex children to shrink below content size (enables text-overflow: ellipsis etc.) */
 .flex {

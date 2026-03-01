@@ -65,6 +65,7 @@
   color: var(--main-gray-1);
   margin-left: 10px;
 }
+
 .scrub--speed--option.selected {
   color: var(--main-blue);
 }
@@ -117,7 +118,7 @@
 }
 
 .dark .replay .header--subtitle {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(255 255 255 / 60%);
 }
 
 .dark .replay .scrub.active {
@@ -130,11 +131,11 @@
 }
 
 .dark .replay--control-icons {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .scrub--speed--option {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .scrub--speed--option.selected {
@@ -142,9 +143,9 @@
 }
 
 .dark .replay--unavailable {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .replay--save-status {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }

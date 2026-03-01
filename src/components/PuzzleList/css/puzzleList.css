@@ -6,6 +6,7 @@
 .entry--icon {
   fill: #6aa9f4;
 }
+
 .entry--icon.fencing {
   fill: #353d46;
   margin-left: 4px;
@@ -61,7 +62,7 @@
 
 .dark .puzzlelist--error--message,
 .dark .puzzlelist--error--discord {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
 }
 
 .dark .puzzlelist--error--retry {

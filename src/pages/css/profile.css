@@ -140,7 +140,7 @@
   display: none;
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .profile--actions {
     white-space: nowrap;
     font-size: 12px;
@@ -216,12 +216,12 @@
 }
 
 .dark .profile--member-since {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .profile--stat-card {
   border-color: #444;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255 255 255 / 5%);
 }
 
 .dark .profile--stat-card--value {
@@ -229,15 +229,15 @@
 }
 
 .dark .profile--stat-card--label {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .profile--stat-card--sub {
-  color: rgba(255, 255, 255, 0.35);
+  color: rgb(255 255 255 / 35%);
 }
 
 .dark .profile--stats-section-title {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .profile--history h3 {
@@ -245,17 +245,17 @@
 }
 
 .dark .profile--history-table th {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
   border-bottom-color: #444;
 }
 
 .dark .profile--history-table td {
   color: var(--dark-primary-text);
-  border-bottom-color: rgba(255, 255, 255, 0.1);
+  border-bottom-color: rgb(255 255 255 / 10%);
 }
 
 .dark .profile--history-table tr:hover td {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255 255 255 / 5%);
 }
 
 .dark .profile--collab-tag {
@@ -276,7 +276,7 @@
 
 .dark .profile--empty,
 .dark .profile--not-found {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 /* Verification warning banner */
@@ -295,7 +295,7 @@
 }
 
 .dark .profile--verify-banner {
-  background-color: rgba(230, 81, 0, 0.15);
+  background-color: rgb(230 81 0 / 15%);
   color: #ffb74d;
 }
 

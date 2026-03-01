@@ -35,8 +35,7 @@
 
 .list-view--list--clue {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
   padding-top: 5px;
   padding-bottom: 5px;
   border-left: 5px solid transparent;

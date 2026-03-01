@@ -5,8 +5,8 @@
 
 .grid--cell {
   position: relative;
-  padding: 0px;
-  margin: 0px;
-  border: 1px solid #aaaaaa;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #aaa;
   box-sizing: border-box;
 }
