@@ -1,6 +1,6 @@
 import {defineConfig, devices} from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'https://crosswithfriends.com';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3020';
 const isLocal = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
 
 export default defineConfig({

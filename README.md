@@ -109,14 +109,14 @@ A pre-commit hook (via Husky + lint-staged) automatically lints and formats stag
 **E2E tests (Playwright):**
 
 ```sh
-pnpm test:e2e                # Run against production (all browsers)
+pnpm test:e2e                # Run against local dev server (all browsers)
 pnpm test:e2e:chromium       # Quick single-browser run
+
+# Run against production explicitly
+pnpm test:e2e:prod
 
 # Run against a different environment
 BASE_URL=https://testing.crosswithfriends.com pnpm test:e2e
-
-# Run against local dev server (auto-starts if not already running)
-BASE_URL=http://localhost:3020 pnpm test:e2e
 ```
 
 First-time setup: `npx playwright install` to download browser binaries.

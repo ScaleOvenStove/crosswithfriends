@@ -141,6 +141,8 @@
     "test:e2e:headed": "npx playwright test --config=e2e/playwright.config.ts --headed",
     "test:e2e:ui": "npx playwright test --config=e2e/playwright.config.ts --ui",
     "test:e2e:chromium": "npx playwright test --config=e2e/playwright.config.ts --project=chromium",
+    "test:e2e:prod": "cross-env BASE_URL=https://crosswithfriends.com npx playwright test --config=e2e/playwright.config.ts",
+    "test:e2e:chromium:prod": "cross-env BASE_URL=https://crosswithfriends.com npx playwright test --config=e2e/playwright.config.ts --project=chromium",
     "test:e2e:report": "npx playwright show-report e2e/playwright-report",
     "stylelint": "stylelint \"src/**/*.css\"",
     "stylelint:fix": "stylelint \"src/**/*.css\" --fix"
