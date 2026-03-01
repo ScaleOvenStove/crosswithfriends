@@ -1,8 +1,17 @@
 .editable-span:hover {
-  background-color: rgb(255 255 255 / 70%);
+  background-color: rgb(0 0 0 / 5%);
 }
 
 .editable-span:focus {
-  background-color: rgb(255 255 255 / 99%);
-  outline: none;
+  background-color: rgb(0 0 0 / 8%);
+  outline: 1px solid rgb(0 0 0 / 20%);
+}
+
+/* Dark mode */
+.dark .editable-span:hover {
+  background-color: rgb(255 255 255 / 10%);
+}
+
+.dark .editable-span:focus {
+  background-color: rgb(255 255 255 / 15%);
 }

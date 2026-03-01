@@ -12,3 +12,8 @@
 .fencing-countdown--timer {
   font-size: 150%;
 }
+
+/* Dark mode */
+.dark .fencing-countdown {
+  color: var(--dark-primary-text);
+}

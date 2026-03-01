@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import * as uuid from 'uuid';
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {useUpdateEffect} from 'react-use';
 import {Helmet} from 'react-helmet-async';
 import type {Socket} from 'socket.io-client';
@@ -22,6 +22,7 @@ import Nav from '../common/Nav';
 import Chat from '../Chat';
 import {FencingCountdown} from './FencingCountdown';
 import Confetti from '../Game/Confetti.js';
+import InfoDialog from '../common/InfoDialog';
 
 function subscribeToGameEvents(socket: Socket | undefined, gid: string, eventsHook: GameEventsHook) {
   let connected = false;
@@ -215,6 +216,21 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
     (_userId: string, name: string) => changeName(name),
     [changeName]
   );
+  const [showFencingInfo, setShowFencingInfo] = useState(false);
+  const handleShowFencingInfo = useCallback(() => setShowFencingInfo(true), []);
+  const fencingInfoDialog = useMemo(
+    () => (
+      <InfoDialog open={showFencingInfo} onOpenChange={setShowFencingInfo} title="Fencing Mode" icon={null}>
+        <ul style={{margin: 0, paddingLeft: 20, lineHeight: 1.6}}>
+          <li>Teams race to fill in the crossword grid.</li>
+          <li>Correct letters score points for your team.</li>
+          <li>Wrong guesses count against you.</li>
+          <li>The team with the most correct cells wins!</li>
+        </ul>
+      </InfoDialog>
+    ),
+    [showFencingInfo]
+  );
   const fencingScoreboard = (
     <FencingScoreboard
       gameState={gameState}
@@ -258,7 +274,22 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
           {gameState.game && (
             <Chat
               isFencing
-              subheader={<div className="fencing--scoreboard-container">{fencingScoreboard}</div>}
+              subheader={
+                <>
+                  <div className="fencing--mode-header">
+                    <span className="fencing--mode-label">Fencing Mode</span>
+                    <button
+                      className="fencing--mode-info"
+                      onClick={handleShowFencingInfo}
+                      aria-label="Fencing mode info"
+                    >
+                      &#9432;
+                    </button>
+                  </div>
+                  {fencingInfoDialog}
+                  <div className="fencing--scoreboard-container">{fencingScoreboard}</div>
+                </>
+              }
               info={gameState.game.info}
               teams={gameState.teams}
               path={`/fencing/${gid}`}

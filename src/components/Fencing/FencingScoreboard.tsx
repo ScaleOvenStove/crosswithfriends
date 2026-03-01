@@ -23,7 +23,11 @@ export const FencingScoreboard: React.FC<{
     [props]
   );
   // TODO buttons need to be icons / dropdown menu once team names are editable
-  const spectateButton = <button onClick={handleSpectate}>Leave Team</button>;
+  const spectateButton = (
+    <button className="btn btn--small btn--contained" onClick={handleSpectate}>
+      Leave Team
+    </button>
+  );
 
   // Determine if the game is complete and which team won
   // should be able to handle ties with any number of teams
@@ -70,7 +74,11 @@ export const FencingScoreboard: React.FC<{
           )}
           {currentUser?.teamId === team.id && spectateButton}
           {currentUser?.teamId === 0 && (
-            <button data-team-id={team.id} onClick={handleJoinTeam}>
+            <button
+              className="btn btn--small btn--contained btn--primary"
+              data-team-id={team.id}
+              onClick={handleJoinTeam}
+            >
               Join Team
             </button>
           )}
@@ -88,7 +96,10 @@ export const FencingScoreboard: React.FC<{
       nameEl: (
         <span className="fencing-scoreboard--user-name">
           {user.id === props.currentUserId ? (
-            <EditableSpan value={user.displayName} onChange={props.changeName} />
+            <>
+              <span className="fencing-scoreboard--you-label">You are </span>
+              <EditableSpan value={user.displayName} onChange={props.changeName} />
+            </>
           ) : (
             <span>{user.displayName}</span>
           )}

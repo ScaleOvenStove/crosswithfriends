@@ -27,8 +27,31 @@
   justify-content: space-between;
 }
 
+.fencing-scoreboard--you-label {
+  color: var(--main-gray-1);
+  font-size: 13px;
+  margin-right: 4px;
+}
+
 .fencing-scoreboard--win-indicator {
   margin-left: 8px;
   color: #4caf50;
   font-weight: bold;
+}
+
+/* Dark mode */
+.dark .fencing-scoreboard--container {
+  color: var(--dark-primary-text);
+}
+
+.dark .fencing-scoreboard--container th {
+  color: rgb(255 255 255 / 60%);
+}
+
+.dark .fencing-scoreboard--current-user {
+  background-color: var(--dark-blue-2);
+}
+
+.dark .fencing-scoreboard--you-label {
+  color: rgb(255 255 255 / 50%);
 }

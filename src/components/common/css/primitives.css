@@ -118,8 +118,23 @@
   background-color: rgb(255 255 255 / 8%);
 }
 
+.dark .btn--contained {
+  background-color: rgb(255 255 255 / 12%);
+  color: var(--dark-primary-text);
+  box-shadow: none;
+}
+
+.dark .btn--contained:hover {
+  background-color: rgb(255 255 255 / 18%);
+}
+
 .dark .btn--contained.btn--primary {
+  background-color: #1976d2;
   color: #fff;
+}
+
+.dark .btn--contained.btn--primary:hover {
+  background-color: #1565c0;
 }
 
 .dark .btn--contained.btn--primary:disabled {
@@ -129,6 +144,19 @@
 
 .dark .btn--outlined {
   border-color: rgb(255 255 255 / 30%);
+}
+
+.dark .btn--outlined:hover {
+  background-color: rgb(255 255 255 / 8%);
+}
+
+.dark .btn--contained.btn--danger {
+  background-color: #d32f2f;
+  color: #fff;
+}
+
+.dark .btn--contained.btn--danger:hover {
+  background-color: #b71c1c;
 }
 
 /* ===== Form fields (replaces MUI TextField) ===== */

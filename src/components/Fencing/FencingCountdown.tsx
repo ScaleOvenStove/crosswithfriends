@@ -37,7 +37,9 @@ export const FencingCountdown: React.FC<{
   if (notStarted) {
     return (
       <div className="fencing-countdown">
-        <button onClick={props.playerActions.startGame}>Start Game (wait for everyone to join!)</button>
+        <button className="btn btn--contained btn--primary" onClick={props.playerActions.startGame}>
+          Start Game (wait for everyone to join!)
+        </button>
       </div>
     );
   }

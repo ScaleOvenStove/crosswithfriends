@@ -12,7 +12,9 @@ export const FencingToolbar: React.FC<{toolbarActions: ToolbarActions}> = (props
 
   return (
     <div>
-      <button onMouseDown={handleMouseDown}>Reveal Cell</button>
+      <button className="btn btn--small btn--contained" onMouseDown={handleMouseDown}>
+        Reveal Cell
+      </button>
     </div>
   );
 };

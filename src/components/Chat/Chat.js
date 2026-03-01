@@ -182,7 +182,11 @@ export default class Chat extends Component {
             X
           </a>
         )}
-        {isFencing && <a href={normalUrl}>Leave Fencing</a>}
+        {isFencing && (
+          <a href={normalUrl} className="fencing--leave-link">
+            Leave Fencing
+          </a>
+        )}
       </div>
     );
   }
