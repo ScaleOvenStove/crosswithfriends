@@ -1,6 +1,6 @@
 import {defineConfig, devices} from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'https://crosswithfriends.com';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3020';
 const isLocal = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
 
 export default defineConfig({
@@ -9,7 +9,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: [['html', {open: 'never'}]],
   timeout: 30_000,
   expect: {
     timeout: 10_000,

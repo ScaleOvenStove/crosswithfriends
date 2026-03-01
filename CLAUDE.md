@@ -24,17 +24,19 @@ pnpm test:server -- --testPathPattern=path  # Run a single server test file
 
 ### E2E Tests (Playwright)
 
+Use `pnpm test:e2e:chromium` for routine agent validation checks. Run `pnpm test:e2e` only when explicitly asked for full cross-browser coverage.
+
 ```sh
-pnpm test:e2e                           # All browsers against production
-pnpm test:e2e:chromium                  # Quick single-browser run
+pnpm test:e2e:chromium                  # Default for agent checks (Chromium only, local dev server)
+pnpm test:e2e                           # All browsers against local dev server (use only when requested)
+pnpm test:e2e:prod                      # All browsers against production
 BASE_URL=https://testing.crosswithfriends.com pnpm test:e2e  # Against testing env
-BASE_URL=http://localhost:3020 pnpm test:e2e  # Against local dev server
 pnpm test:e2e:headed                    # Debug with visible browsers
 pnpm test:e2e:ui                        # Playwright UI mode
 npx playwright install                  # First-time: install browser binaries
 ```
 
-E2E tests live in `e2e/` with two layers. **Smoke tests**: page rendering, navigation, puzzle list, dark mode, game page loading. **Gameplay tests**: grid interactions (cell selection, letter entry, arrow keys, direction toggle, Tab/Backspace), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions. Configurable via `BASE_URL` env var (defaults to `https://crosswithfriends.com`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server via `pnpm start` (or reuses one already running). Shared fixtures in `e2e/fixtures/` (`base.ts` for smoke, `game.ts` for gameplay).
+E2E tests live in `e2e/` with two layers. **Smoke tests**: page rendering, navigation, puzzle list, dark mode, game page loading. **Gameplay tests**: grid interactions (cell selection, letter entry, arrow keys, direction toggle, Tab/Backspace), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions. Configurable via `BASE_URL` env var (defaults to `http://localhost:3020`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server via `pnpm start` (or reuses one already running). Shared fixtures in `e2e/fixtures/` (`base.ts` for smoke, `game.ts` for gameplay).
 
 ### Quality Checks
 
