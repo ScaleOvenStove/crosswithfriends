@@ -68,7 +68,7 @@ export default class Clock extends Component {
     }
 
     this.setState({
-      clock: formatMilliseconds(clock),
+      clock: formatMilliseconds(Math.max(0, clock)),
     });
   }
 

@@ -59,6 +59,7 @@ const reducers = {
       users = {},
       solved = false,
       contest = false,
+      contestSolved = false,
       themeColor = MAIN_BLUE_3,
       // themeColor = GREENISH,
     } = params.game;
@@ -77,7 +78,7 @@ const reducers = {
       clock,
       solved,
       contest,
-      contestSolved: false,
+      contestSolved,
       cursors,
       users,
       themeColor,
