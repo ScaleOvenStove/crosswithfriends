@@ -33,6 +33,7 @@ services:
       - PGUSER=postgres
       - PGPASSWORD=postgres
       - JWT_SECRET=change-me-to-a-random-secret
+      - PGSSL=disable
       - FRONTEND_URL=http://localhost:3021
     depends_on:
       db:
