@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 
+import path from 'path';
 import http from 'http';
 import {Server} from 'socket.io';
 import _ from 'lodash';
@@ -61,6 +62,15 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.use('/api', apiRouter);
+
+// Optionally serve the built frontend (used in Docker / self-hosted setups)
+if (process.env.SERVE_STATIC) {
+  const buildPath = path.join(__dirname, '..', 'build');
+  app.use(express.static(buildPath));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+}
 
 // ======== Error Handling Middleware ==========
 

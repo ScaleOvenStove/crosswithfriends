@@ -14,9 +14,13 @@ function getServerUrl() {
 export const SERVER_URL = getServerUrl();
 
 // Socket.IO always connects directly to backend (WebSocket, token auth, no cookies)
-export const SOCKET_HOST = import.meta.env.VITE_USE_LOCAL_SERVER
-  ? 'http://localhost:3021'
-  : REMOTE_SERVER_URL;
+// Self-hosted (Docker): use same-origin since backend serves everything
+function getSocketHost() {
+  if (import.meta.env.VITE_USE_LOCAL_SERVER) return 'http://localhost:3021';
+  if (import.meta.env.VITE_SELF_HOSTED) return window.location.origin;
+  return REMOTE_SERVER_URL;
+}
+export const SOCKET_HOST = getSocketHost();
 
 console.log('--------------------------------------------------------------------------------');
 console.log('Frontend API Protocol:', window.location.protocol);

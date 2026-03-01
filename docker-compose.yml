@@ -1,0 +1,43 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        VITE_SELF_HOSTED: 'true'
+    ports:
+      - '3021:3021'
+    environment:
+      - NODE_ENV=production
+      - PORT=3021
+      - SERVE_STATIC=true
+      - PGHOST=db
+      - PGPORT=5432
+      - PGDATABASE=dfac
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - JWT_SECRET=change-me-to-a-random-secret
+      - FRONTEND_URL=http://localhost:3021
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=dfac
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./server/sql:/sql
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/01-init-db.sh
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d dfac']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
