@@ -1,6 +1,5 @@
 // ========== GET /api/puzzlelist ============
 
-// eslint-disable-next-line import/no-extraneous-dependencies
 import qs from 'qs';
 import {ListPuzzleRequest, ListPuzzleResponse} from '../shared/types';
 import {SERVER_URL} from './constants';
