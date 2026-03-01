@@ -82,6 +82,30 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: 'hidden',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('node_modules/firebase/') || id.includes('node_modules/@firebase/'))
+            return 'vendor-firebase';
+          if (id.includes('/lodash/')) return 'vendor-lodash';
+          if (
+            id.includes('/react-dom/') ||
+            id.includes('/react/') ||
+            id.includes('/react-router-dom/') ||
+            id.includes('/react-router/') ||
+            id.includes('/react-helmet-async/') ||
+            id.includes('/classnames/')
+          ) {
+            return 'vendor-react';
+          }
+          if (id.includes('/@sentry/')) return 'vendor-sentry';
+          if (id.includes('/socket.io-client/') || id.includes('/engine.io-')) return 'vendor-socketio';
+          if (id.includes('/@radix-ui/')) return 'vendor-radix';
+          return 'vendor-misc';
+        },
+      },
+    },
   },
   define: {
     // Bridge: partyParrot.js has 108 occurrences of process.env.PUBLIC_URL

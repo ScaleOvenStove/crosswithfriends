@@ -25,24 +25,23 @@ import {HelmetProvider} from 'react-helmet-async';
 import useMediaQuery from './lib/hooks/useMediaQuery';
 import {BrowserRouter as Router, Route, Routes, Navigate, useLocation} from 'react-router-dom';
 import {isMobile} from './lib/jsUtils';
-import {
-  Account,
-  Battle,
-  Game,
-  Play,
-  Privacy,
-  Profile,
-  Replay,
-  Replays,
-  Room,
-  Fencing,
-  Terms,
-  WrappedWelcome,
-  VerifyEmail,
-  ForgotPassword,
-  ResetPassword,
-  Help,
-} from './pages';
+// Eager-loaded pages (critical path)
+import {Game, Room, WrappedWelcome} from './pages';
+
+// Lazy-loaded pages (loaded on demand when route is visited)
+const Account = React.lazy(() => import('./pages/Account'));
+const Battle = React.lazy(() => import('./pages/Battle'));
+const Fencing = React.lazy(() => import('./pages/Fencing'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const Help = React.lazy(() => import('./pages/Help'));
+const Play = React.lazy(() => import('./pages/Play'));
+const Privacy = React.lazy(() => import('./pages/Privacy'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const Replay = React.lazy(() => import('./pages/Replay'));
+const Replays = React.lazy(() => import('./pages/Replays'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
+const Terms = React.lazy(() => import('./pages/Terms'));
+const VerifyEmail = React.lazy(() => import('./pages/VerifyEmail'));
 import GlobalContext from './lib/GlobalContext';
 import AuthContext, {AuthProvider} from './lib/AuthContext';
 import GoogleCallback from './components/Auth/GoogleCallback';
@@ -118,36 +117,38 @@ const Root = () => {
           <GlobalContext value={{toggleMolesterMoons, darkModePreference}}>
             <div className={classnames('router-wrapper', {mobile: isMobile(), dark: darkMode})}>
               <VerificationGate>
-                <Routes>
-                  <Route path="/auth/google/callback" element={<GoogleCallback />} />
-                  <Route path="/verify-email" element={<VerifyEmail />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/" element={<WrappedWelcome />} />
-                  <Route path="/fencing" element={<WrappedWelcome fencing />} />
-                  {/* <Route path="/stats" element={<Stats />} /> */}
-                  <Route path="/game/:gid" element={<Game />} />
-                  <Route path="/embed/game/:gid" element={<Game />} />
-                  <Route path="/room/:rid" element={<Room />} />
-                  <Route path="/embed/room/:rid" element={<Room />} />
-                  <Route path="/replay/:gid" element={<Replay />} />
-                  <Route path="/beta/replay/:gid" element={<Replay />} />
-                  <Route path="/replays/:pid" element={<Replays />} />
-                  <Route path="/replays" element={<Replays />} />
-                  <Route path="/beta" element={<WrappedWelcome />} />
-                  <Route path="/beta/game/:gid" element={<Game />} />
-                  <Route path="/beta/battle/:bid" element={<Battle />} />
-                  <Route path="/beta/play/:pid" element={<Play />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/help" element={<Help />} />
-                  <Route path="/account" element={<Account />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/profile/:userId" element={<Profile />} />
-                  <Route path="/fencing/:gid" element={<Fencing />} />
-                  <Route path="/beta/fencing/:gid" element={<Fencing />} />
-                  <Route path="/discord" element={<DiscordRedirect />} />
-                </Routes>
+                <React.Suspense fallback={null}>
+                  <Routes>
+                    <Route path="/auth/google/callback" element={<GoogleCallback />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/" element={<WrappedWelcome />} />
+                    <Route path="/fencing" element={<WrappedWelcome fencing />} />
+                    {/* <Route path="/stats" element={<Stats />} /> */}
+                    <Route path="/game/:gid" element={<Game />} />
+                    <Route path="/embed/game/:gid" element={<Game />} />
+                    <Route path="/room/:rid" element={<Room />} />
+                    <Route path="/embed/room/:rid" element={<Room />} />
+                    <Route path="/replay/:gid" element={<Replay />} />
+                    <Route path="/beta/replay/:gid" element={<Replay />} />
+                    <Route path="/replays/:pid" element={<Replays />} />
+                    <Route path="/replays" element={<Replays />} />
+                    <Route path="/beta" element={<WrappedWelcome />} />
+                    <Route path="/beta/game/:gid" element={<Game />} />
+                    <Route path="/beta/battle/:bid" element={<Battle />} />
+                    <Route path="/beta/play/:pid" element={<Play />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/help" element={<Help />} />
+                    <Route path="/account" element={<Account />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/profile/:userId" element={<Profile />} />
+                    <Route path="/fencing/:gid" element={<Fencing />} />
+                    <Route path="/beta/fencing/:gid" element={<Fencing />} />
+                    <Route path="/discord" element={<DiscordRedirect />} />
+                  </Routes>
+                </React.Suspense>
               </VerificationGate>
             </div>
           </GlobalContext>

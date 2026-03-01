@@ -1,3 +1,6 @@
+# MCP config (contains auth tokens)
+.mcp.json
+
 # See https://help.github.com/ignore-files/ for more about ignoring files.
 
 # Lock files (project uses pnpm)
