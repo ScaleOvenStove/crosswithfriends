@@ -7,7 +7,7 @@ services:
     ports:
       - '3021:3021'
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3021
       - SERVE_STATIC=true
       - PGHOST=db

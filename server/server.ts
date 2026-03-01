@@ -67,7 +67,7 @@ app.use('/api', apiRouter);
 if (process.env.SERVE_STATIC) {
   const buildPath = path.join(__dirname, '..', 'build');
   app.use(express.static(buildPath));
-  app.get('*', (_req, res) => {
+  app.get(/^\/(?!api\/).*/, (_req, res) => {
     res.sendFile(path.join(buildPath, 'index.html'));
   });
 }
