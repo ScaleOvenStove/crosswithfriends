@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "^20.0.0"
+    "node": "^22.0.0"
   },
   "packageManager": "pnpm@10.30.3",
   "dependencies": {
@@ -14,7 +14,7 @@
     "@sentry/react": "^10.40.0",
     "@types/lodash": "^4.14.150",
     "@types/morgan": "^1.9.2",
-    "@types/node": "^14.14.14",
+    "@types/node": "^22.0.0",
     "@types/querystringify": "^2.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -85,7 +85,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.9",
-    "@types/express": "^4.17.11",
+    "@types/express": "^5.0.0",
     "@types/jest": "^29.5.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/passport": "^1.0.17",
@@ -111,6 +111,7 @@
     "husky": "^9",
     "jest": "^29",
     "jsdom": "^26",
+    "kill-port": "^2.0.1",
     "lint-staged": "^10.5.3",
     "prettier": "^3",
     "stylelint": "^16.26.1",
@@ -123,11 +124,11 @@
     "vitest": "^2"
   },
   "scripts": {
-    "start": "vite --port 3020",
-    "devfrontend": "cross-env VITE_USE_LOCAL_SERVER=1 vite --port 3020",
-    "devfrontendprod": "cross-env VITE_ENV=production VITE_USE_LOCAL_SERVER=1 vite --port 3020",
-    "devbackend": "dotenv -e server/.env.local -- cross-env PORT=3021 nodemon --watch server -e \"ts\" --exec \"npx ts-node -P server/tsconfig.json server/server.ts\"",
-    "devbackendprod": "source .env.prod; PORT=3021 nodemon --watch server -e \"ts\" --exec \"npx ts-node -P server/tsconfig.json server/server.ts\"",
+    "start": "vite --port 3020 --strictPort",
+    "devfrontend": "pnpm exec kill-port 3020 && cross-env VITE_USE_LOCAL_SERVER=1 vite --port 3020 --strictPort",
+    "devfrontendprod": "pnpm exec kill-port 3020 && cross-env VITE_ENV=production VITE_USE_LOCAL_SERVER=1 vite --port 3020 --strictPort",
+    "devbackend": "pnpm exec kill-port 3021 && dotenv -e server/.env.local -- cross-env PORT=3021 nodemon --watch server -e \"ts\" --exec \"npx ts-node -P server/tsconfig.json server/server.ts\"",
+    "devbackendprod": "pnpm exec kill-port 3021 && dotenv -e .env.prod -- cross-env PORT=3021 nodemon --watch server -e \"ts\" --exec \"npx ts-node -P server/tsconfig.json server/server.ts\"",
     "servebackendprod": "while true; do env $(cat .env.prod | xargs)  NODE_ENV=production PORT=3021 ts-node -P server/tsconfig.json server/server.ts || true; done",
     "servebackendstaging": "while true; do env $(cat .env.staging | xargs)  NODE_ENV=production PORT=4021 ts-node -P server/tsconfig.json server/server.ts || true; done",
     "build": "vite build",
