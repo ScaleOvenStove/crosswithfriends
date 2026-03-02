@@ -143,6 +143,43 @@ If you notice a bug or have a feature request, feel free to open an issue.
 
 Join the [Discord](https://discord.gg/RmjCV8EZ73) for discussion.
 
+## Self-Hosting with Docker
+
+Cross with Friends publishes Docker images to GitHub Container Registry on every push to `master`.
+
+### Quick start (pre-built image)
+
+No need to clone the repo — just download the compose file and run:
+
+```sh
+curl -O https://raw.githubusercontent.com/ScaleOvenStove/crosswithfriends/master/docker-compose.ghcr.yml
+docker compose -f docker-compose.ghcr.yml up
+```
+
+The app will be available at `http://localhost:3021`. The database is automatically initialized on first start.
+
+### Build from source
+
+```sh
+git clone https://github.com/ScaleOvenStove/crosswithfriends.git
+cd crosswithfriends
+docker compose up --build
+```
+
+### Configuration
+
+Both compose files set default Postgres credentials and a placeholder `JWT_SECRET`. For production use, update the environment variables in the compose file — at minimum:
+
+- `JWT_SECRET` — set to a random secret string
+- `PGPASSWORD` / `POSTGRES_PASSWORD` — set matching values for app and db services
+- `FRONTEND_URL` — set to your public URL (used for CORS and email links)
+
+Optional variables for full functionality:
+
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` — Google OAuth login
+- `SENDGRID_API_KEY` — email verification (emails are logged to console without this)
+- `SENTRY_DSN` — error tracking
+
 ## Tips
 
 Developing for mobile web:

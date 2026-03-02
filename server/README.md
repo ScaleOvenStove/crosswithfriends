@@ -2,50 +2,43 @@
 
 ### Main website
 
-- Prod: statically hosted via `serve`, host = downforacross.com
+- Prod: hosted on Render, host = crosswithfriends.com
 - Dev: localhost:3020
 
-### http server (host = downforacross.com)
+### HTTP server
 
-- Prod: Hosts are both api.foracross.com/
-- Staging: Hosted at api-staging.foracross.com, or `localhost:3021` if running `pnpm devbackend` locally.
+- Prod: Render Web Service at `downforacross-com.onrender.com`, proxied via same-origin `/api/*` rewrite
+- Dev: `localhost:3021` when running `pnpm devbackend`
 
-### websocket server
+### WebSocket server (Socket.IO)
 
-- Prod: TBD, probably downforacross.com/ws??, probably a separate process
-- Dev: localhost:3020 (using [CRA proxy](https://create-react-app.dev/docs/proxying-api-requests-in-development/))
-- Responsibilities
-  - MVP: Handle pub/sub for game events
+- Prod: connects directly to backend URL
+- Dev: proxied through Vite dev server at localhost:3020
+- Responsibilities: pub/sub for game events, cursor sync, pings
 
-## client config
+## Client config
 
-- Production build has `SERVER_URL = "https://api.foracross.com"`
-  - This is `pnpm build`, used by vercel for both production and preview deployments
-- Development build (e.g. `pnpm start`) has `SERVER_URL = "https://api-staging.foracross.com"`.
-  - This is `pnpm start`
-- Development with `process.env.REACT_APP_USE_LOCAL_SERVER=1` has `SERVER_URL = localhost:3021`
+- Production build has `SERVER_URL = ""` (same-origin, proxied through Render's rewrite rules)
+  - Built via `pnpm build`
+- Development build (`pnpm start`) proxies `/api/*` to the production backend
+- Development with `VITE_USE_LOCAL_SERVER=1` has `SERVER_URL = "http://localhost:3021"`
   - This is `pnpm devfrontend`
 
 ### Database
 
-All game events are stored in postgres
-Postgres schemas:
+All game events are stored in PostgreSQL. Key tables:
 
-```
-CREATE DATABASE dfac;
-\c dfac;
-CREATE TABLE game_events(
-  gid text,
-  uid text,
-  ts timestamp without time zone,
-  event_type text,
-  event_payload json
-);
-```
+- `game_events` — move history (cell updates, checks, reveals)
+- `game_snapshots` — solved grid state
+- `games` — game metadata
+- `puzzles` — puzzle data
+- `users` — user accounts
+
+Schema scripts are in `server/sql/`. Run `create_fresh_db.sql` to create all tables.
 
 ### Getting Started
 
-Important: If you aren't making changes to `server/server.js`, you don't need to run the backend locally. In this case, just run `pnpm start`.
+If you aren't making changes to the backend, you don't need to run it locally. Just run `pnpm start` — it proxies API calls to the production backend.
 
 #### Run your local db
 
@@ -62,31 +55,21 @@ Important: If you aren't making changes to `server/server.js`, you don't need to
 psql -c 'create database dfac'
 ```
 
-(`createdb` if this fails)
+(`createdb dfac` if this fails)
 
 2. Create the tables
 
 ```
-./create_fresh_dbs.sh
+psql dfac < server/sql/create_fresh_db.sql
 ```
 
-Or if you want to do it manually, run the sql in sql/ like
-
-```
-psql dfac < create_game_events.sql
-```
-
-#### Run your local websocket server
+#### Run your local backend server
 
 `pnpm devbackend`
 
-This command expects PostgreSQL connection variables to be set and a postgres server running.
+This expects PostgreSQL connection variables. Copy `server/.env.example` to `server/.env.local` and fill in your credentials. The server loads this automatically via dotenv.
 
-**Option A — dotenv (recommended):** Copy `server/.env.example` to `server/.env.local` and fill in your credentials. The server loads this automatically via dotenv.
-
-**Option B — direnv:** Copy `.envrc.template` to `.envrc` and fill in your credentials (requires [direnv](https://direnv.net/)).
-
-This will run a backend server on `localhost:3021`
+This will run a backend server on `localhost:3021`.
 
 #### Run your local frontend server
 
@@ -178,7 +161,7 @@ SENDGRID_API_KEY=SG.your-api-key-here
 
 ### Database Tables
 
-Auth requires these tables (all created via `create_fresh_dbs.sh`):
+Auth requires these tables (all created via `create_fresh_db.sql`):
 
 - `users` — user accounts (email, password hash, Google OAuth, display name)
 - `refresh_tokens` — JWT refresh token storage
