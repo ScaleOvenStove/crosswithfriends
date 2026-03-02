@@ -69,8 +69,8 @@
     "overrides": {
       "@types/react": "^19.0.0",
       "@types/react-dom": "^19.0.0",
-      "esbuild": ">=0.25.0",
-      "serialize-javascript": ">=7.0.3"
+      "esbuild": "^0.25.0",
+      "serialize-javascript": "^7.0.3"
     },
     "onlyBuiltDependencies": [
       "bcrypt",
