@@ -83,7 +83,7 @@
 }
 
 .dark .cell--shade {
-  background-color: rgb(255 255 255 / 25%);
+  background-color: rgb(255 255 255 / 25%) !important;
 }
 
 .dark .clues--list--scroll {
