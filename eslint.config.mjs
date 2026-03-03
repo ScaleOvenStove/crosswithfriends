@@ -159,6 +159,14 @@ export default tseslint.config(
     },
   },
 
+  // ── Server jobs overrides ──
+  {
+    files: ['server/jobs/**'],
+    rules: {
+      'import/no-extraneous-dependencies': 'off',
+    },
+  },
+
   // ── Prettier (must be last) ──
   prettier,
 );

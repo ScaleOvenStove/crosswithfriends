@@ -16,7 +16,7 @@
 //     GRACE_DAYS=14 node server/jobs/cleanup_game_events.js
 
 const path = require('path');
-require('dotenv').config({path: path.resolve(__dirname, '..', '.env.local')}); // eslint-disable-line import/no-extraneous-dependencies
+require('dotenv').config({path: path.resolve(__dirname, '..', '.env.local')});
 
 const {Pool} = require('pg');
 
