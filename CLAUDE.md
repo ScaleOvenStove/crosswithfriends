@@ -19,7 +19,7 @@ pnpm test                               # Frontend tests (Vitest, single run)
 pnpm test:watch                         # Frontend tests in watch mode
 pnpm test:server --ci                   # Server tests (Jest with ts-jest, separate config)
 pnpm vitest run -- path                 # Run a single frontend test file
-pnpm test:server -- --testPathPattern=path  # Run a single server test file
+pnpm test:server -- --testPathPatterns=path  # Run a single server test file
 ```
 
 ### E2E Tests (Playwright)
