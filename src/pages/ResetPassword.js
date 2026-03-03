@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-no-bind */
 import {useState} from 'react';
 import {Helmet} from 'react-helmet-async';
-import {useLocation, Link} from 'react-router-dom';
+import {useLocation, Link} from 'react-router';
 import Nav from '../components/common/Nav';
 import Footer from '../components/common/Footer';
 import {resetPassword} from '../api/auth';

@@ -5,7 +5,7 @@ import {Helmet} from 'react-helmet-async';
 import _ from 'lodash';
 import qs from 'qs';
 import {formatTimestamp} from '../lib/formatTimestamp';
-import {Link} from 'react-router-dom';
+import {Link} from 'react-router';
 
 import Nav from '../components/common/Nav';
 import ConfirmDialog from '../components/common/ConfirmDialog';

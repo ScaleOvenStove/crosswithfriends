@@ -23,7 +23,7 @@ import React from 'react';
 import {HelmetProvider} from 'react-helmet-async';
 
 import useMediaQuery from './lib/hooks/useMediaQuery';
-import {BrowserRouter as Router, Route, Routes, Navigate, useLocation} from 'react-router-dom';
+import {BrowserRouter as Router, Route, Routes, Navigate, useLocation} from 'react-router';
 import {isMobile} from './lib/jsUtils';
 // Eager-loaded pages (critical path)
 import {Game, Room, WrappedWelcome} from './pages';

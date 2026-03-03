@@ -1,4 +1,4 @@
-import {useParams, useLocation} from 'react-router-dom';
+import {useParams, useLocation} from 'react-router';
 
 export default function withRouter(Component) {
   function WrappedComponent(props) {

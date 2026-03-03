@@ -1,6 +1,6 @@
 import './css/nav.css';
 
-import {Link} from 'react-router-dom';
+import {Link} from 'react-router';
 import {useCallback, useContext, useEffect, useRef, useState} from 'react';
 
 import classnames from 'classnames';

@@ -2,7 +2,7 @@ import './css/index.css';
 import React, {Component} from 'react';
 import _ from 'lodash';
 import Linkify from 'linkify-react';
-import {Link} from 'react-router-dom';
+import {Link} from 'react-router';
 import {MdClose} from 'react-icons/md';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '../../lib/emoji';

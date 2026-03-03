@@ -3,7 +3,7 @@ import {Component} from 'react';
 import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo, MdErrorOutline} from 'react-icons/md';
 import {AiOutlineMenuFold, AiOutlineMenuUnfold} from 'react-icons/ai';
 import {RiPaintFill, RiPaintLine} from 'react-icons/ri';
-import {Link} from 'react-router-dom';
+import {Link} from 'react-router';
 import Clock from './Clock';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ActionMenu from './ActionMenu';

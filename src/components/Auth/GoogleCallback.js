@@ -1,5 +1,5 @@
 import {useEffect, useContext, useState} from 'react';
-import {Link, useNavigate, useLocation} from 'react-router-dom';
+import {Link, useNavigate, useLocation} from 'react-router';
 import AuthContext from '../../lib/AuthContext';
 import {getMe} from '../../api/auth';
 

@@ -2,7 +2,7 @@ import React, {Dispatch, SetStateAction, useCallback, useEffect, useMemo, useSta
 import {useUpdateEffect} from 'react-use';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet-async';
-import {useParams} from 'react-router-dom';
+import {useParams} from 'react-router';
 
 import type {Socket} from 'socket.io-client';
 import {RoomEvent, SetGameRoomEvent, UserPingRoomEvent} from '../shared/roomEvents';

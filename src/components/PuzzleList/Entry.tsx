@@ -2,7 +2,7 @@ import {Component} from 'react';
 import _ from 'lodash';
 import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';
-import {Link} from 'react-router-dom';
+import {Link} from 'react-router';
 
 export interface EntryProps {
   info: {

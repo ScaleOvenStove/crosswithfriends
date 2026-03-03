@@ -2,8 +2,8 @@ import {vi} from 'vitest';
 import React from 'react';
 import Entry, {EntryProps} from '../Entry';
 
-// Mock react-router-dom Link to avoid router context requirement
-vi.mock('react-router-dom', () => ({
+// Mock react-router Link to avoid router context requirement
+vi.mock('react-router', () => ({
   Link: ({children, to, ...rest}: any) => React.createElement('a', {href: to, ...rest}, children),
 }));
 
