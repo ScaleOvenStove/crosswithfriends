@@ -43,7 +43,7 @@
     "react-use": "^15.3.8",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "typescript": "~5.8.3",
+    "typescript": "~5.9.3",
     "utility-types": "^3.11.0",
     "uuid": "^11.1.0"
   },

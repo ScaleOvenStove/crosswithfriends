@@ -40,7 +40,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:16
+    image: postgres:18
     environment:
       - POSTGRES_DB=dfac
       - POSTGRES_USER=postgres
