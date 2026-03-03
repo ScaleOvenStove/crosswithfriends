@@ -3,7 +3,7 @@ import './css/nav.css';
 import {Link} from 'react-router';
 import {useCallback, useContext, useEffect, useRef, useState} from 'react';
 
-import classnames from 'classnames';
+import clsx from 'clsx';
 import {FaSun, FaMoon, FaDesktop, FaUserCircle} from 'react-icons/fa';
 import {MdInfoOutline} from 'react-icons/md';
 import GlobalContext from '../../lib/GlobalContext';
@@ -207,7 +207,7 @@ export default function Nav({hidden, mobile, linkStyle, divRef}) {
   const storageKey = fencing ? 'cwf:homeUrl:fencing' : 'cwf:homeUrl';
   const homePath = isHome ? cleanHome : sessionStorage.getItem(storageKey) || cleanHome;
   return (
-    <div className={classnames('nav', {mobile})} ref={divRef}>
+    <div className={clsx('nav', {mobile})} ref={divRef}>
       <div className="nav--left" style={linkStyle}>
         <Link to={homePath}>Cross with Friends</Link>
       </div>

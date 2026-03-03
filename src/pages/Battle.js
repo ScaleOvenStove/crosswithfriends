@@ -4,7 +4,7 @@ import {Component} from 'react';
 import _ from 'lodash';
 import {Helmet} from 'react-helmet-async';
 
-import classnames from 'classnames';
+import clsx from 'clsx';
 import {BattleModel} from '../store';
 import redirect from '../lib/redirect';
 import {isMobile} from '../lib/jsUtils';
@@ -131,7 +131,7 @@ class Battle extends Component {
 
   renderTeamSelector() {
     const disabled = !this.state.name; // both undefined & '' are falsy
-    const buttonClass = classnames('battle--button', {
+    const buttonClass = clsx('battle--button', {
       disabled,
     });
     return (
@@ -197,7 +197,7 @@ class Battle extends Component {
   render() {
     return (
       <div
-        className={`flex--column flex--grow ${classnames('battle', {mobile: this.mobile})}`}
+        className={`flex--column flex--grow ${clsx('battle', {mobile: this.mobile})}`}
         style={{
           width: '100%',
           height: '100%',

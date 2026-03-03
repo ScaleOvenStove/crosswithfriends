@@ -137,6 +137,7 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'off',
 
       // Import rules
+      'import/no-named-as-default': 'off',
       'import/no-named-as-default-member': 'off',
       'import/no-extraneous-dependencies': [
         'error',

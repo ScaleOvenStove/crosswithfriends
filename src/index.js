@@ -17,7 +17,7 @@ if (sentryDsn) {
   });
 }
 
-import classnames from 'classnames';
+import clsx from 'clsx';
 import {createRoot} from 'react-dom/client';
 import React from 'react';
 import {HelmetProvider} from 'react-helmet-async';
@@ -115,7 +115,7 @@ const Root = () => {
       <Router>
         <AuthProvider>
           <GlobalContext value={{toggleMolesterMoons, darkModePreference}}>
-            <div className={classnames('router-wrapper', {mobile: isMobile(), dark: darkMode})}>
+            <div className={clsx('router-wrapper', {mobile: isMobile(), dark: darkMode})}>
               <VerificationGate>
                 <React.Suspense fallback={null}>
                   <Routes>

@@ -94,8 +94,7 @@ export default defineConfig({
             id.includes('/react/') ||
             id.includes('/scheduler/') ||
             id.includes('/react-router/') ||
-            id.includes('/react-helmet-async/') ||
-            id.includes('/classnames/')
+            id.includes('/react-helmet-async/')
           ) {
             return 'vendor-react';
           }

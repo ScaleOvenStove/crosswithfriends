@@ -13,7 +13,7 @@ import {
 } from 'react-icons/md';
 import _ from 'lodash';
 
-import classnames from 'classnames';
+import clsx from 'clsx';
 import Nav from '../components/common/Nav';
 import Upload from '../components/Upload';
 import {getUser} from '../store';
@@ -480,11 +480,11 @@ export default class Welcome extends Component {
         <div
           role="button"
           tabIndex={0}
-          className={classnames('mobile-sidebar-overlay', {open: mobileSidebarOpen})}
+          className={clsx('mobile-sidebar-overlay', {open: mobileSidebarOpen})}
           onClick={this.closeMobileSidebar}
           onKeyDown={this.handleCloseSidebarKeyDown}
         />
-        <div className={classnames('flex--column mobile-sidebar', {open: mobileSidebarOpen})}>
+        <div className={clsx('flex--column mobile-sidebar', {open: mobileSidebarOpen})}>
           <div className="flex flex--align-center mobile-sidebar--header">
             <span>Filters</span>
             <MdClose className="mobile-sidebar--close" onClick={this.closeMobileSidebar} />
@@ -503,7 +503,7 @@ export default class Welcome extends Component {
 
   render() {
     return (
-      <div className={classnames('flex--column flex--grow welcome', {mobile: this.mobile})}>
+      <div className={clsx('flex--column flex--grow welcome', {mobile: this.mobile})}>
         <Helmet>
           <title>Cross with Friends</title>
         </Helmet>

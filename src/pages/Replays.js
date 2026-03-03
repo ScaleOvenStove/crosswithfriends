@@ -3,7 +3,7 @@ import './css/replays.css';
 import {Helmet} from 'react-helmet-async';
 import _ from 'lodash';
 import {Component} from 'react';
-import Promise from 'bluebird';
+
 import HistoryWrapper from '../lib/wrappers/HistoryWrapper';
 import Nav from '../components/common/Nav';
 import {PuzzleModel} from '../store';
@@ -133,12 +133,14 @@ class Replays extends Component {
         .once('value')
         .then((snapshot) => {
           const gid = Number(snapshot.val());
-          Promise.map(_.range(gid - 1, gid - limit - 1, -1), (g) =>
-            db
-              .ref('/game')
-              .child(g)
-              .once('value')
-              .then((gameSnapshot) => ({...gameSnapshot.val(), gid: g}))
+          Promise.all(
+            _.range(gid - 1, gid - limit - 1, -1).map((g) =>
+              db
+                .ref('/game')
+                .child(g)
+                .once('value')
+                .then((gameSnapshot) => ({...gameSnapshot.val(), gid: g}))
+            )
           ).then((rawGames) => {
             const games = _.map(_.keys(rawGames), (g) => Replays.processGame(rawGames[g], rawGames[g].gid));
             this.setState({
