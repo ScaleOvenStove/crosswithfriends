@@ -31,7 +31,11 @@ const hexToRgb = (hex) =>
   _.map([hex.substring(1, 3), hex.substring(3, 5), hex.substring(5, 7)], (x) => parseInt(x, 16));
 
 const rgbToHex = (r, g, b) => {
-  const [R, G, B] = _.map([r, g, b], (x) => Math.round(x).toString(16).padStart(2, '0').substring(0, 2));
+  const [R, G, B] = _.map([r, g, b], (x) =>
+    Math.max(0, Math.min(255, Math.round(x)))
+      .toString(16)
+      .padStart(2, '0')
+  );
   return `#${R}${G}${B}`;
 };
 
