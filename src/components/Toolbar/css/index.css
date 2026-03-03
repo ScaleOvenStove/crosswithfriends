@@ -98,7 +98,7 @@ code {
   cursor: pointer;
 }
 
-.toolbar--pencil.on .fa-pencil {
+.toolbar--pencil.on .toolbar--icon-pencil {
   color: var(--main-blue) !important;
 }
 
@@ -106,11 +106,11 @@ code {
   color: var(--main-blue) !important;
 }
 
-.toolbar--list-view.on .fa-list {
+.toolbar--list-view.on .toolbar--icon-list {
   color: var(--main-blue) !important;
 }
 
-.toolbar--autocheck.on .fa-check-square {
+.toolbar--autocheck.on .toolbar--icon-autocheck {
   color: var(--main-blue) !important;
 }
 
@@ -118,7 +118,7 @@ code {
   color: var(--main-gray-2);
 }
 
-.toolbar--mobile .toolbar--autocheck.on .fa-check-square {
+.toolbar--mobile .toolbar--autocheck.on .toolbar--icon-autocheck {
   color: white !important;
 }
 

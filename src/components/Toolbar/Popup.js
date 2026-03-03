@@ -40,10 +40,11 @@ export default class Popup extends Component {
       <div className={`${this.state.active ? 'active ' : ''}popup-menu`} onBlur={this.handleBlur}>
         <button
           tabIndex={-1}
-          className={`popup-menu--button fa ${this.props.icon ? this.props.icon : ''}`}
+          className="popup-menu--button"
           onMouseDown={handleMouseDown}
           onClick={this.handleClick}
         >
+          {this.props.icon}
           {this.props.label ? this.props.label : ''}
         </button>
         <div className="popup-menu--content">{this.props.children}</div>

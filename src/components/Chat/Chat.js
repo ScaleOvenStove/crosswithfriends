@@ -4,6 +4,7 @@ import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
 import {MdClose} from 'react-icons/md';
+import {FaClone} from 'react-icons/fa6';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '../../lib/emoji';
 import nameGenerator, {isFromNameGenerator} from '../../lib/nameGenerator';
@@ -458,8 +459,8 @@ export default class Chat extends Component {
                   {this.url}
                 </b>
 
-                <i
-                  className="fa fa-clone copyButton"
+                <FaClone
+                  className="copyButton"
                   title="Copy to Clipboard"
                   role="button"
                   tabIndex={0}
@@ -484,7 +485,7 @@ export default class Chat extends Component {
                     <wbr />
                   </i>
 
-                  <i className="fa fa-clone copyButton" title="Copy to Clipboard" />
+                  <FaClone className="copyButton" title="Copy to Clipboard" />
                 </div>
               </div>
             )}

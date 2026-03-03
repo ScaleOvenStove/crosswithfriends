@@ -2,6 +2,7 @@ import React, {useCallback, useState} from 'react';
 import {Link} from 'react-router';
 import clsx from 'clsx';
 import {MdInfoOutline} from 'react-icons/md';
+import {FaCircleInfo} from 'react-icons/fa6';
 import './css/welcomeVariantsControl.css';
 import InfoDialog from './common/InfoDialog';
 
@@ -46,7 +47,7 @@ export const WelcomeVariantsControl: React.FC<{
           role="button"
           tabIndex={0}
         >
-          <i className="fa fa-info-circle" />
+          <FaCircleInfo />
         </span>
       </span>
       <InfoDialog

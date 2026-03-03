@@ -3,6 +3,7 @@ import {Component} from 'react';
 import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo, MdErrorOutline} from 'react-icons/md';
 import {AiOutlineMenuFold, AiOutlineMenuUnfold} from 'react-icons/ai';
 import {RiPaintFill, RiPaintLine} from 'react-icons/ri';
+import {FaList, FaPencil, FaSquareCheck, FaCircleInfo} from 'react-icons/fa6';
 import {Link} from 'react-router';
 import Clock from './Clock';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -295,7 +296,7 @@ export default class Toolbar extends Component {
         onMouseDown={handleMouseDown}
         title="List View"
       >
-        <i className="fa fa-list" />
+        <FaList className="toolbar--icon-list" />
       </div>
     );
   }
@@ -325,7 +326,7 @@ export default class Toolbar extends Component {
         onMouseDown={handleMouseDown}
         title="Shortcut: ."
       >
-        <i className="fa fa-pencil" />
+        <FaPencil className="toolbar--icon-pencil" />
         {pencilMode && (
           <div className="toolbar--pencil-color-picker-container">
             <div
@@ -359,7 +360,7 @@ export default class Toolbar extends Component {
         onMouseDown={handleMouseDown}
         title="Autocheck"
       >
-        <i className="fa fa-check-square" />
+        <FaSquareCheck className="toolbar--icon-autocheck" />
       </div>
     );
   }
@@ -367,7 +368,7 @@ export default class Toolbar extends Component {
   renderInfo() {
     return (
       <div className="toolbar--info">
-        <Popup icon="fa-info-circle" onBlur={this.handleBlur}>
+        <Popup icon={<FaCircleInfo />} onBlur={this.handleBlur}>
           <h3>How to Enter Answers</h3>
           <ul>
             <li>

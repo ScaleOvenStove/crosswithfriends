@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as _ from 'lodash';
 import clsx from 'clsx';
+import {FaNoteSticky} from 'react-icons/fa6';
 import Emoji from '../common/Emoji';
 import powerups from '../../lib/powerups';
 
@@ -109,13 +110,13 @@ export default class Cell extends React.Component<Props> {
     );
   }
 
-  handleFlipClick: React.MouseEventHandler<HTMLElement> = (e) => {
+  handleFlipClick: React.MouseEventHandler<Element> = (e) => {
     e.stopPropagation();
     const {onFlipColor} = this.props;
     if (onFlipColor) onFlipColor(this.props.r, this.props.c);
   };
 
-  handleFlipKeyDown: React.KeyboardEventHandler<HTMLElement> = (e) => {
+  handleFlipKeyDown: React.KeyboardEventHandler<Element> = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.stopPropagation();
       const {onFlipColor} = this.props;
@@ -127,8 +128,8 @@ export default class Cell extends React.Component<Props> {
     const {canFlipColor} = this.props;
     if (canFlipColor) {
       return (
-        <i
-          className="cell--flip fa fa-small fa-sticky-note"
+        <FaNoteSticky
+          className="cell--flip"
           role="button"
           tabIndex={0}
           onClick={this.handleFlipClick}
