@@ -6,7 +6,7 @@ import * as uuid from 'uuid';
 import * as colors from '../lib/colors';
 import {emitAsync, emitAsyncWithTimeout} from '../sockets/emitAsync';
 import {getSocket} from '../sockets/getSocket';
-import {db, SERVER_TIME} from './firebase';
+import {db} from './firebase';
 
 // ============ Serialize / Deserialize Helpers ========== //
 
@@ -36,7 +36,6 @@ export default class Game extends EventEmitter {
     this.eventsRef = this.ref.child('events');
     this.createEvent = null;
     this.syncState = null; // null | 'retrying' | 'failed'
-    this.checkArchive();
   }
 
   get gid() {
@@ -163,50 +162,14 @@ export default class Game extends EventEmitter {
     });
   }
 
-  // Firebase Code
-
-  checkArchive() {
-    this.ref.child('archivedEvents').once('value', (snapshot) => {
-      const archiveInfo = snapshot.val();
-      if (!archiveInfo) {
-        return;
-      }
-      const {unarchivedAt} = archiveInfo;
-      if (!unarchivedAt) {
-        if (window.confirm('Unarchive game?')) {
-          this.unarchive();
-        }
-      }
-    });
-  }
-
-  unarchive() {
-    this.ref.child('archivedEvents').once('value', async (snapshot) => {
-      const archiveInfo = snapshot.val();
-      if (!archiveInfo) {
-        return;
-      }
-      const {url} = archiveInfo;
-      if (url) {
-        const events = await (await fetch(url)).json();
-        this.ref.child('archivedEvents/unarchivedAt').set(SERVER_TIME);
-        this.ref.child('events').set(events);
-      }
-    });
-  }
-
   async attach() {
     const websocketPromise = this.connectToWebsocket().then(() => this.subscribeToWebsocketEvents());
     await websocketPromise;
   }
 
-  detach() {
-    this.eventsRef.off('child_added');
-  }
-
   updateCell(r, c, id, color, pencil, value, autocheck) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'updateCell',
       params: {
         cell: {r, c},
@@ -221,10 +184,10 @@ export default class Game extends EventEmitter {
 
   updateCursor(r, c, id) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'updateCursor',
       params: {
-        timestamp: SERVER_TIME,
+        timestamp: Date.now(),
         cell: {r, c},
         id,
       },
@@ -233,10 +196,10 @@ export default class Game extends EventEmitter {
 
   addPing(r, c, id) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'addPing',
       params: {
-        timestamp: SERVER_TIME,
+        timestamp: Date.now(),
         cell: {r, c},
         id,
       },
@@ -245,7 +208,7 @@ export default class Game extends EventEmitter {
 
   updateDisplayName(id, displayName) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'updateDisplayName',
       params: {
         id,
@@ -256,7 +219,7 @@ export default class Game extends EventEmitter {
 
   updateColor(id, color) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'updateColor',
       params: {
         id,
@@ -267,18 +230,18 @@ export default class Game extends EventEmitter {
 
   updateClock(action) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'updateClock',
       params: {
         action,
-        timestamp: SERVER_TIME,
+        timestamp: Date.now(),
       },
     });
   }
 
   check(scope) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'check',
       params: {
         scope,
@@ -288,7 +251,7 @@ export default class Game extends EventEmitter {
 
   reveal(scope) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'reveal',
       params: {
         scope,
@@ -298,7 +261,7 @@ export default class Game extends EventEmitter {
 
   reset(scope, force) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'reset',
       params: {
         scope,
@@ -309,7 +272,7 @@ export default class Game extends EventEmitter {
 
   markSolved() {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'markSolved',
       params: {},
     });
@@ -317,7 +280,7 @@ export default class Game extends EventEmitter {
 
   unmarkSolved() {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'unmarkSolved',
       params: {},
     });
@@ -325,7 +288,7 @@ export default class Game extends EventEmitter {
 
   chat(username, id, text) {
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'chat',
       params: {
         text,
@@ -334,7 +297,7 @@ export default class Game extends EventEmitter {
       },
     });
     this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'sendChatMessage', // send to fencing too
       params: {
         message: text,
@@ -384,7 +347,7 @@ export default class Game extends EventEmitter {
     this.ref.child('pid').set(pid);
     await this.eventsRef.set({});
     await this.addEvent({
-      timestamp: SERVER_TIME,
+      timestamp: Date.now(),
       type: 'create',
       params: {
         pid,

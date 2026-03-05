@@ -1,6 +1,5 @@
 import EventEmitter from 'events';
-import _ from 'lodash';
-import {db, getTime} from './firebase';
+import {db} from './firebase';
 import {makeGrid} from '../lib/gameUtils';
 
 // a wrapper class that models Puzzle
@@ -23,19 +22,6 @@ export default class Puzzle extends EventEmitter {
     this.ref.off('value');
   }
 
-  logSolve(gid, stats) {
-    const statsPath = `/stats/${this.pid}`;
-    const statsRef = db.ref(statsPath);
-    const puzzlelistPath = `/puzzlelist/${this.pid}`;
-    const puzzlelistRef = db.ref(puzzlelistPath);
-    statsRef.child('solves').child(gid).set(stats);
-    statsRef.once('value').then((snapshot) => {
-      const solveStats = snapshot.val();
-      const numSolves = _.keys(solveStats.solves).length;
-      puzzlelistRef.child('stats/numSolves').set(numSolves);
-    });
-  }
-
   toGame() {
     const {info, circles = [], shades = [], images = {}, grid: solution, pid} = this.data;
     const gridObject = makeGrid(solution, false, images);
@@ -51,7 +37,7 @@ export default class Puzzle extends EventEmitter {
       solution,
       pid,
       grid,
-      createTime: getTime(),
+      createTime: Date.now(),
       startTime: null,
       chat: {
         users: [],

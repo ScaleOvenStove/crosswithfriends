@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import firebase, {db, getTime} from './firebase';
+import firebase, {db} from './firebase';
 import getLocalId from '../localAuth';
 import {pickDistinctColor} from '../lib/colorAssignment';
 
@@ -64,7 +64,7 @@ export default class User extends EventEmitter {
   }
 
   joinGame(gid, {pid = -1, solved = false, v2 = false}) {
-    const time = getTime();
+    const time = Date.now();
     // safe to call this multiple times
     return this.ref.child('history').child(gid).set({
       pid,
@@ -93,13 +93,6 @@ export default class User extends EventEmitter {
           solved: true,
         };
       });
-  }
-
-  recordUsername(username) {
-    this.ref
-      .child('names')
-      .child(username)
-      .transaction((count = 0) => count + 1);
   }
 }
 

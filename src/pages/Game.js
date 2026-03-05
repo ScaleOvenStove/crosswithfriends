@@ -7,7 +7,6 @@ import {Helmet} from 'react-helmet-async';
 import Nav from '../components/common/Nav';
 
 import {GameModel, getUser} from '../store';
-import {getTime} from '../store/firebase';
 import HistoryWrapper from '../lib/wrappers/HistoryWrapper';
 import GameComponent from '../components/Game';
 import MobilePanel from '../components/common/MobilePanel';
@@ -86,7 +85,6 @@ class Game extends Component {
   }
 
   initializeGame() {
-    if (this.gameModel) this.gameModel.detach();
     this.gameModel = new GameModel(`/game/${this.state.gid}`);
     this.historyWrapper = new HistoryWrapper();
     this.gameModel.on('wsCreateEvent', (event) => {
@@ -190,7 +188,6 @@ class Game extends Component {
   componentWillUnmount() {
     if (this._retryTimer) clearInterval(this._retryTimer);
     if (this._connectionTimer) clearTimeout(this._connectionTimer);
-    if (this.gameModel) this.gameModel.detach();
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -305,20 +302,14 @@ class Game extends Component {
       if (this.historyWrapper.optimisticEvents.length > 0) return;
       if (this.lastRecordedSolve === this.state.gid) return;
       this.lastRecordedSolve = this.state.gid;
-      if (this.gameModel.puzzleModel) {
-        this.gameModel.puzzleModel.logSolve(this.state.gid, {
-          solved: true,
-          totalTime: this.game.clock.totalTime,
-        });
-      }
-      // double log to postgres
+      // log to postgres
       const authToken = this.context?.accessToken || null;
       const playerCount = Object.keys(this.game.users || {}).length || 1;
       // Compute the true total time: if the clock hasn't been ticked yet
       // (e.g. optimistic event just confirmed), add the unaccounted elapsed time.
       const gameClock = this.game.clock;
       const unaccountedTime =
-        gameClock.paused || !gameClock.lastUpdated ? 0 : getTime() - gameClock.lastUpdated;
+        gameClock.paused || !gameClock.lastUpdated ? 0 : Date.now() - gameClock.lastUpdated;
       const solvedClock = {
         ...gameClock,
         totalTime: gameClock.totalTime + Math.max(0, unaccountedTime),

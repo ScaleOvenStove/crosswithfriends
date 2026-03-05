@@ -2,7 +2,6 @@
 import './css/index.css';
 
 import React, {Component} from 'react';
-import {getTime} from '../../store/firebase';
 import {lazy} from '../../lib/jsUtils';
 
 import GridObject from '../../lib/wrappers/GridWrapper';
@@ -395,7 +394,7 @@ export default class Player extends Component {
     const size = this.size;
     const {cellStyle = {}} = gridStyle;
 
-    const currentTime = getTime();
+    const currentTime = Date.now();
     const cursors = allCursors
       .filter((cursor) => cursor.id !== id)
       .map((cursor) => ({

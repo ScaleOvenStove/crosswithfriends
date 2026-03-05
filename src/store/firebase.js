@@ -4,7 +4,6 @@ import 'firebase/database';
 
 import 'firebase/auth';
 
-const offline = false;
 const CONFIGS = {
   production: {
     apiKey: 'AIzaSyCe4BWm9kbjXFwlZcmq4x8DvLD3TDoinhA',
@@ -29,19 +28,6 @@ const config = CONFIGS[import.meta.env.VITE_ENV || import.meta.env.MODE];
 firebase.initializeApp(config);
 const db = firebase.database();
 
-const SERVER_TIME = firebase.database.ServerValue.TIMESTAMP;
-
-const offsetRef = firebase.database().ref('.info/serverTimeOffset');
-let offset = 0;
-offsetRef.once('value', (result) => {
-  offset = result.val();
-});
-
-function getTime() {
-  return new Date().getTime() + offset;
-}
-export {db, SERVER_TIME};
-
-export {offline, getTime};
+export {db};
 
 export default firebase;

@@ -1,6 +1,5 @@
 import './css/clock.css';
 import {Component} from 'react';
-import {getTime} from '../../store/firebase';
 import {MAX_CLOCK_INCREMENT} from '../../lib/timing';
 
 export const formatMilliseconds = (ms) => {
@@ -48,7 +47,7 @@ export default class Clock extends Component {
     const {pausedTime} = this.props;
     const start = this.props.startTime;
     const stop = this.props.stopTime;
-    const now = getTime();
+    const now = Date.now();
 
     let clock = 0; // start with pausedTime
     if (pausedTime) {
@@ -75,7 +74,7 @@ export default class Clock extends Component {
   get isCapped() {
     if (!this.props.v2) return false;
     const start = this.props.startTime;
-    const now = getTime();
+    const now = Date.now();
     return now > start + MAX_CLOCK_INCREMENT;
   }
 
