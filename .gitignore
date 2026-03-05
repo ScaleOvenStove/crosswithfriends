@@ -48,4 +48,4 @@ test-results/
 
 # Claude Code
 .claude/
-DEPENDENCY_AUDIT.md
+.planning/
