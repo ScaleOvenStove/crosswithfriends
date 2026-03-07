@@ -10,16 +10,13 @@ import {dismissGameForUser, undismissGameForUser} from '../model/game_dismissal'
 
 const router = express.Router();
 
-router.post<{}, CreateGameResponse, CreateGameRequest>('/', async (req, res, next) => {
+router.post<{}, CreateGameResponse | {error: string}, CreateGameRequest>('/', async (req, res, next) => {
   try {
-    console.log('got req', req.headers, req.body);
     const gid = await addInitialGameEvent(req.body.gid, req.body.pid);
-    res.json({
-      gid,
-    });
+    res.json({gid});
   } catch (e) {
     if (e instanceof Error && e.message.startsWith('Puzzle not found')) {
-      res.status(404).json({error: e.message} as any);
+      res.status(404).json({error: e.message});
     } else {
       next(e);
     }
@@ -27,7 +24,6 @@ router.post<{}, CreateGameResponse, CreateGameRequest>('/', async (req, res, nex
 });
 
 router.get<{gid: string}, GetGameResponse>('/:gid', async (req, res) => {
-  console.log('got req', req.headers, req.body);
   try {
     const {gid} = req.params;
 
