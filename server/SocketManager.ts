@@ -77,7 +77,11 @@ class SocketManager {
       });
 
       socket.on('game_event', async (message, ack) => {
-        const event = message.event;
+        const event = message?.event;
+        if (!event || typeof event.type !== 'string') {
+          console.error('Invalid game_event: missing event or type');
+          return;
+        }
         // Replace Firebase-style sentinel timestamps with real server time
         if (typeof event.timestamp !== 'number') {
           event.timestamp = Date.now();
@@ -107,7 +111,15 @@ class SocketManager {
       });
 
       socket.on('room_event', async (message, ack) => {
-        await this.addRoomEvent(message.rid, message.event);
+        const event = message?.event;
+        if (!event || typeof event.type !== 'string') {
+          console.error('Invalid room_event: missing event or type');
+          return;
+        }
+        if (typeof event.timestamp !== 'number') {
+          event.timestamp = Date.now();
+        }
+        await this.addRoomEvent(message.rid, event);
         ack();
       });
     });
