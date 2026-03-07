@@ -27,6 +27,8 @@
 .dark .confirm-dialog--panel {
   background-color: #1e1e1e;
   color: var(--dark-primary-text);
+  box-shadow: 0 8px 32px rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 18%);
 }
 
 .dark .confirm-dialog--panel code {
