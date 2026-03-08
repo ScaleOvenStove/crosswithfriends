@@ -105,9 +105,8 @@ export default class Clock extends Component {
     const solved = this.isSolved;
     const isPaused = this.isPaused;
     const StatusIcon = isPaused ? FaPause : FaStopwatch;
-    let titleStr = 'Click to pause';
-    if (solved) titleStr = 'Solve time';
-    else if (isPaused) titleStr = 'Click to unpause';
+    // eslint-disable-next-line no-nested-ternary
+    const titleStr = solved ? 'Solve time' : isPaused ? 'Click to unpause' : 'Click to pause';
     return (
       <div
         className={`clock${isPaused ? ' clock--paused' : ''}${solved ? ' clock--solved' : ''}`}
