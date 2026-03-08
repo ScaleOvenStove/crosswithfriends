@@ -22,11 +22,6 @@ export default class User extends EventEmitter {
     });
   }
 
-  logIn() {
-    const provider = new firebase.auth.FacebookAuthProvider();
-    this.auth.signInWithPopup(provider);
-  }
-
   get ref() {
     return db.ref(`user/${this.id}`);
   }

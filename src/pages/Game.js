@@ -6,13 +6,14 @@ import qs from 'qs';
 import {Helmet} from 'react-helmet-async';
 import Nav from '../components/common/Nav';
 
-import {GameModel, getUser} from '../store';
+import {GameModel} from '../store';
 import HistoryWrapper from '../lib/wrappers/HistoryWrapper';
 import GameComponent from '../components/Game';
 import MobilePanel from '../components/common/MobilePanel';
 import Chat from '../components/Chat';
 import {isMobile} from '../lib/jsUtils';
 import {pickDistinctColor} from '../lib/colorAssignment';
+import getLocalId from '../localAuth';
 
 import {recordSolve} from '../api/puzzle.ts';
 import AuthContext from '../lib/AuthContext';
@@ -78,10 +79,7 @@ class Game extends Component {
   }
 
   initializeUser() {
-    this.user = getUser();
-    this.user.onAuth(() => {
-      this.forceUpdate();
-    });
+    this.userId = getLocalId();
   }
 
   initializeGame() {
@@ -95,11 +93,6 @@ class Game extends Component {
       }
       if (this._connectionTimer) clearTimeout(this._connectionTimer);
       this.setState({connectionFailed: false});
-      // Re-add to Firebase history so the game appears on the Play page
-      const pid = event.params?.pid;
-      if (pid) {
-        this.user.joinGame(this.state.gid, {pid, solved: !!event.params?.game?.solved, v2: true});
-      }
       this.handleUpdate();
     });
     this.gameModel.on('wsEvent', (event) => {
@@ -170,7 +163,7 @@ class Game extends Component {
 
   componentDidMount() {
     this.initializeGame();
-    this.handleUpdateDisplayName(this.user.id, this.initialUsername);
+    this.handleUpdateDisplayName(this.userId, this.initialUsername);
     this.maybeUndismiss();
   }
 
@@ -283,18 +276,11 @@ class Game extends Component {
     }
   );
 
-  handleChange = _.debounce(async ({isEdit = false} = {}) => {
+  handleChange = _.debounce(async () => {
     if (!this.gameModel || !this.historyWrapper.ready) {
       return;
     }
 
-    if (isEdit) {
-      await this.user.joinGame(this.state.gid, {
-        pid: this.game.pid,
-        solved: false,
-        v2: true,
-      });
-    }
     if (this.game.solved) {
       // Wait for optimistic events to be confirmed before saving the snapshot,
       // because optimistic processing skips clock tick() — saving now would
@@ -330,7 +316,6 @@ class Game extends Component {
         snapshot
       );
       this.setState({replayRetained: false});
-      this.user.markSolved(this.state.gid);
     }
   });
 
@@ -367,7 +352,7 @@ class Game extends Component {
     }
 
     const {mobile} = this.state;
-    const {id} = this.user;
+    const id = this.userId;
     const color = this.userColor;
     return (
       <GameComponent
@@ -400,7 +385,7 @@ class Game extends Component {
       return;
     }
 
-    const {id} = this.user;
+    const id = this.userId;
     const color = this.userColor;
     const {mobile} = this.state;
     return (

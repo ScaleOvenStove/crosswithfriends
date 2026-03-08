@@ -16,7 +16,6 @@ import _ from 'lodash';
 import clsx from 'clsx';
 import Nav from '../components/common/Nav';
 import Upload from '../components/Upload';
-import {getUser} from '../store';
 import PuzzleList from '../components/PuzzleList';
 import {WelcomeVariantsControl} from '../components/WelcomeVariantsControl';
 import {isMobile, colorAverage} from '../lib/jsUtils';
@@ -32,7 +31,6 @@ export default class Welcome extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      userHistory: {},
       collapsedFilters: {},
       mobileSidebarOpen: false,
       uploadedPuzzles: 0,
@@ -44,23 +42,7 @@ export default class Welcome extends Component {
   }
 
   componentDidMount() {
-    this.initializeUser();
     this.navHeight = this.nav.current.getBoundingClientRect().height;
-  }
-
-  componentWillUnmount() {
-    this.user.offAuth(this.handleAuth);
-  }
-
-  handleAuth = () => {
-    this.user.listUserHistory().then((userHistory) => {
-      this.setState({userHistory});
-    });
-  };
-
-  initializeUser() {
-    this.user = getUser();
-    this.user.onAuth(this.handleAuth);
   }
 
   get showingSidebar() {
@@ -113,12 +95,11 @@ export default class Welcome extends Component {
   };
 
   renderPuzzles() {
-    const {userHistory} = this.state;
     return (
       <PuzzleList
         fencing={this.props.fencing}
         uploadedPuzzles={this.state.uploadedPuzzles}
-        userHistory={userHistory}
+        userHistory={{}}
         sizeFilter={this.props.sizeFilter}
         statusFilter={this.props.statusFilter}
         typeFilter={this.props.typeFilter}

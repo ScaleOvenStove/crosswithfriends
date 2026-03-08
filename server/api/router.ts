@@ -11,6 +11,7 @@ import authRouter from './auth';
 import userStatsRouter from './user_stats';
 import gameSnapshotRouter from './game_snapshot';
 import gameProgressRouter from './game_progress';
+import userGamesRouter from './user_games';
 // import statsRouter from './stats';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.use('/game', gameRouter);
 router.use('/record_solve', recordSolveRouter);
 router.use('/stats', statsRouter);
 router.use('/user-stats', userStatsRouter);
+router.use('/user-games', userGamesRouter);
 router.use('/game-snapshot', gameSnapshotRouter);
 router.use('/game-progress', gameProgressRouter);
 router.use('/oembed', oEmbedRouter);

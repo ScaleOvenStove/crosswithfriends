@@ -1,9 +1,11 @@
 import * as Sentry from '@sentry/react';
 import _ from 'lodash';
-import React, {useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useContext, useEffect, useRef, useState} from 'react';
 import {PuzzleJson, PuzzleStatsJson, ListPuzzleRequestFilters} from '../../shared/types';
 import {fetchPuzzleList} from '../../api/puzzle_list';
 import {getUserStats} from '../../api/user_stats';
+import {fetchGuestPuzzleStatuses} from '../../api/user_games';
+import getLocalId from '../../localAuth';
 import AuthContext from '../../lib/AuthContext';
 import './css/puzzleList.css';
 import Entry, {EntryProps} from './Entry';
@@ -32,36 +34,35 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch solve statuses from PostgreSQL for authenticated users (cross-device support)
+  // Fetch puzzle statuses from PostgreSQL
   const [pgStatuses, setPgStatuses] = useState<PuzzleStatuses>({});
   useEffect(() => {
-    if (!user?.id || !accessToken) {
-      setPgStatuses({});
-      return;
+    let stale = false;
+    if (user?.id && accessToken) {
+      // Authenticated: fetch from user stats endpoint
+      getUserStats(user.id, accessToken).then((stats) => {
+        if (stale || !stats) return;
+        const statuses: PuzzleStatuses = {};
+        (stats.history || []).forEach((item) => {
+          statuses[item.pid] = 'solved';
+        });
+        (stats.inProgress || []).forEach((item) => {
+          if (!statuses[item.pid]) statuses[item.pid] = 'started';
+        });
+        setPgStatuses(statuses);
+      });
+    } else {
+      // Guest: fetch by dfac_id
+      const dfacId = getLocalId();
+      fetchGuestPuzzleStatuses(dfacId).then((statuses) => {
+        if (stale) return;
+        setPgStatuses(statuses);
+      });
     }
-    getUserStats(user.id, accessToken).then((stats) => {
-      if (!stats) return;
-      const statuses: PuzzleStatuses = {};
-      (stats.history || []).forEach((item) => {
-        statuses[item.pid] = 'solved';
-      });
-      (stats.inProgress || []).forEach((item) => {
-        if (!statuses[item.pid]) statuses[item.pid] = 'started';
-      });
-      setPgStatuses(statuses);
-    });
+    return () => {
+      stale = true;
+    };
   }, [user?.id, accessToken]);
-
-  // Merge Firebase statuses with PostgreSQL statuses (PG takes precedence for 'solved')
-  const mergedStatuses = useMemo(() => {
-    const merged = {...props.puzzleStatuses};
-    Object.entries(pgStatuses).forEach(([pid, status]) => {
-      if (status === 'solved' || !merged[pid]) {
-        merged[pid] = status;
-      }
-    });
-    return merged;
-  }, [props.puzzleStatuses, pgStatuses]);
   const [fullyLoaded, setFullyLoaded] = useState<boolean>(false);
   const [page, setPage] = useState<number>(0);
   const pageSize = 50;
@@ -152,7 +153,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         author: puzzle.content.info.author,
         pid: puzzle.pid,
         stats: puzzle.stats,
-        status: mergedStatuses[puzzle.pid],
+        status: pgStatuses[puzzle.pid],
         fencing: props.fencing,
         isPublic: puzzle.isPublic,
         contest: puzzle.content.contest,

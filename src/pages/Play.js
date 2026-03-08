@@ -10,11 +10,11 @@ import {Link} from 'react-router';
 import Nav from '../components/common/Nav';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import actions from '../actions';
-import {getUser} from '../store';
 import redirect from '../lib/redirect';
 import {createGame, dismissGame} from '../api/create_game';
 import {fetchPuzzleInfo} from '../api/puzzle';
-import {fetchGameProgress} from '../api/game_progress';
+import {fetchUserGames} from '../api/user_games';
+import getLocalId from '../localAuth';
 import AuthContext from '../lib/AuthContext';
 
 import withRouter from '../lib/withRouter';
@@ -24,11 +24,10 @@ class Play extends Component {
   constructor() {
     super();
     this.state = {
-      userHistory: null,
+      games: null,
       creating: false,
       puzzleInfo: null,
       abandonGid: null,
-      gameProgress: {},
     };
     this._handleNewGame = this.create.bind(this);
     this._handleNewFencingGame = this.createFencing.bind(this);
@@ -38,17 +37,19 @@ class Play extends Component {
   }
 
   componentDidMount() {
-    this.user = getUser();
-    this.user.onAuth(() => {
-      this.user.listUserHistory().then((userHistory) => {
-        this.setState({userHistory: userHistory || {}});
-        this.fetchProgress(userHistory || {});
-      });
-    });
+    this._lastAccessToken = this.context?.accessToken ?? null;
+    this.loadGames();
 
     fetchPuzzleInfo(this.pid).then((info) => {
       if (info) this.setState({puzzleInfo: info});
     });
+  }
+
+  async loadGames() {
+    const accessToken = this.context?.accessToken;
+    const dfacId = getLocalId();
+    const games = await fetchUserGames(this.pid, accessToken, dfacId);
+    this.setState({games});
   }
 
   get pid() {
@@ -68,8 +69,15 @@ class Play extends Component {
   }
 
   componentDidUpdate() {
-    const {games} = this;
-    if (!games) return; // history not loaded yet
+    // Re-fetch when auth context hydrates after mount
+    const currentToken = this.context?.accessToken ?? null;
+    if (currentToken !== this._lastAccessToken) {
+      this._lastAccessToken = currentToken;
+      this.loadGames();
+    }
+
+    const {games} = this.state;
+    if (!games) return; // not loaded yet
     const shouldAutocreate = !this.state.creating && (games.length === 0 || this.is_new || this.is_fencing);
     if (shouldAutocreate) {
       this.create();
@@ -92,31 +100,12 @@ class Play extends Component {
     }
   }
 
-  get games() {
-    const {userHistory} = this.state;
-    if (!userHistory) {
-      return null;
-    }
-
-    return _.keys(userHistory)
-      .filter((gid) => userHistory[gid].pid === this.pid)
-      .map((gid) => ({
-        ...userHistory[gid],
-        gid,
-      }));
-  }
-
   create() {
     this.setState({
       creating: true,
     });
     actions.getNextGid(async (gid) => {
       await createGame({gid, pid: this.pid});
-      await this.user.joinGame(gid, {
-        pid: this.pid,
-        solved: false,
-        v2: true,
-      });
       redirect(this.is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`);
     });
   }
@@ -125,11 +114,6 @@ class Play extends Component {
     this.setState({creating: true});
     actions.getNextGid(async (gid) => {
       await createGame({gid, pid: this.pid});
-      await this.user.joinGame(gid, {
-        pid: this.pid,
-        solved: false,
-        v2: true,
-      });
       redirect(`/fencing/${gid}`);
     });
   }
@@ -147,24 +131,12 @@ class Play extends Component {
     if (!abandonGid) return;
     const accessToken = this.context?.accessToken;
     if (accessToken) {
-      // Authenticated: use per-user Postgres dismissal (reversible)
       await dismissGame(abandonGid, accessToken);
     }
-    // Always remove from Firebase history so the Play page updates
-    await this.user.removeGame(abandonGid);
-    const userHistory = await this.user.listUserHistory();
-    this.setState({userHistory: userHistory || {}, abandonGid: null});
-  }
-
-  fetchProgress(userHistory) {
-    const pid = this.pid;
-    const inProgressGids = _.keys(userHistory).filter(
-      (gid) => userHistory[gid].pid === pid && !userHistory[gid].solved
-    );
-    if (inProgressGids.length === 0) return;
-    fetchGameProgress(inProgressGids).then((progress) => {
-      this.setState({gameProgress: progress});
-    });
+    // Re-fetch games from API (dismissed games are excluded server-side for auth'd users)
+    // For guests, the game will still appear since there's no server-side dismissal
+    await this.loadGames();
+    this.setState({abandonGid: null});
   }
 
   renderMain() {
@@ -172,11 +144,11 @@ class Play extends Component {
       return <div className="play">Creating game...</div>;
     }
 
-    if (!this.games) {
+    if (!this.state.games) {
       return <div className="play">Loading...</div>;
     }
 
-    const sortedGames = _.sortBy(this.games, (g) => -(g.time || 0));
+    const sortedGames = _.sortBy(this.state.games, (g) => -(g.time || 0));
 
     return (
       <div className="play">
@@ -193,7 +165,7 @@ class Play extends Component {
         )}
         <table className="play--table">
           <tbody>
-            {sortedGames.map(({gid, time, v2, solved}) => {
+            {sortedGames.map(({gid, time, v2, solved, percentComplete}) => {
               let href;
               if (!v2) {
                 href = `/game/${gid}`;
@@ -205,8 +177,8 @@ class Play extends Component {
               let statusLabel = 'In progress';
               if (solved) {
                 statusLabel = 'Solved';
-              } else if (this.state.gameProgress[gid] != null) {
-                statusLabel = `${this.state.gameProgress[gid]}%`;
+              } else if (percentComplete != null && percentComplete > 0) {
+                statusLabel = `${percentComplete}%`;
               }
               return (
                 <tr key={gid}>

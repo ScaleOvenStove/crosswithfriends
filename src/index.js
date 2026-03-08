@@ -140,7 +140,6 @@ const Root = () => {
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/" element={<WrappedWelcome />} />
                     <Route path="/fencing" element={<WrappedWelcome fencing />} />
-                    {/* <Route path="/stats" element={<Stats />} /> */}
                     <Route path="/game/:gid" element={<Game />} />
                     <Route path="/embed/game/:gid" element={<Game />} />
                     <Route path="/room/:rid" element={<Room />} />
