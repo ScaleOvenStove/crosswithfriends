@@ -33,15 +33,13 @@ test.describe('Puzzle list', () => {
     await page.locator('input.welcome--searchbar').fill('mini');
     await responsePromise;
 
-    // Wait for DOM to update with filtered results
-    await expect(page.locator('.entry').first()).toBeVisible({timeout: 10_000});
+    // Wait for DOM to actually reflect the filtered results (not stale entries)
+    await expect(page.locator('.entry--top--left').first()).toContainText('Mini', {timeout: 10_000});
 
     // Every visible entry title/author should match 'mini'
-    const entries = page.locator('.entry');
-    const count = await entries.count();
-    expect(count).toBeGreaterThan(0);
-    for (let i = 0; i < count; i++) {
-      const text = (await entries.nth(i).textContent()) ?? '';
+    const allText = await page.locator('.entry').allTextContents();
+    expect(allText.length).toBeGreaterThan(0);
+    for (const text of allText) {
       expect(text.toLowerCase()).toContain('mini');
     }
 
@@ -68,8 +66,13 @@ test.describe('Puzzle list', () => {
     // Verify the API request sent the correct filter
     expect(response.url()).toContain('filter%5BsizeFilter%5D%5BMidi%5D=false');
 
-    // Verify the DOM updated with filtered results
+    // Verify no Midi puzzles appear in the filtered results
     await expect(page.locator('.entry').first()).toBeVisible({timeout: 10_000});
+    const sizes = await page.locator('.entry--top--left').allTextContents();
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const text of sizes) {
+      expect(text).not.toContain('Midi');
+    }
 
     assertNoFatalErrors(consoleErrors);
   });
