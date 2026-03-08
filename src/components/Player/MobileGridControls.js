@@ -624,7 +624,6 @@ export default class MobileGridControls extends GridControls {
         {this.renderClueBar()}
         {this.renderGridContent()}
         {this.renderMobileInputs()}
-        {/* {this.renderMobileKeyboard()} */}
         {this.props.enableDebug && (this.state.dbgstr || 'No message')}
         <RunOnce effect={this.boundCenterGridX} />
       </div>

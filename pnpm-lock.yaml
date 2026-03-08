@@ -109,9 +109,6 @@ importers:
       react-router:
         specifier: ^7.13.1
         version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      react-simple-keyboard:
-        specifier: ^3.8.165
-        version: 3.8.165(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       socket.io:
         specifier: ^4.8.3
         version: 4.8.3
@@ -8446,15 +8443,6 @@ packages:
       react-dom:
         optional: true
 
-  react-simple-keyboard@3.8.165:
-    resolution:
-      {
-        integrity: sha512-MnRDIPkJgsqNIfupaf3twVy+XWoPDM5Ar7dzmO3KApdys21lF7L3Xr8EeUFqJ5LSiHpKMGUcwi8wul909+mM0w==,
-      }
-    peerDependencies:
-      react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
   react-style-singleton@2.2.3:
     resolution:
       {
@@ -15756,11 +15744,6 @@ snapshots:
       react: 19.2.4
       set-cookie-parser: 2.7.2
     optionalDependencies:
-      react-dom: 19.2.4(react@19.2.4)
-
-  react-simple-keyboard@3.8.165(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
-    dependencies:
-      react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
 
   react-style-singleton@2.2.3(@types/react@19.2.14)(react@19.2.4):

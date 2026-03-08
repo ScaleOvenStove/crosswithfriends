@@ -10,7 +10,6 @@ import * as emojiLib from '../../lib/emoji';
 import nameGenerator, {isFromNameGenerator} from '../../lib/nameGenerator';
 import ChatBar from './ChatBar';
 import EditableSpan from '../common/EditableSpan';
-import MobileKeyboard from '../Player/MobileKeyboard';
 import ColorPicker from './ColorPicker.tsx';
 import {formatMilliseconds} from '../Toolbar/Clock';
 
@@ -396,18 +395,6 @@ export default class Chat extends Component {
           {this.renderMessageText(message.text)}
         </div>
         <div className="chat--message--timestamp">{Chat.renderMessageTimestamp(timestamp)}</div>
-      </div>
-    );
-  }
-
-  renderMobileKeyboard() {
-    if (!this.props.mobile) {
-      return null;
-    }
-
-    return (
-      <div className="flex--shrink-0">
-        <MobileKeyboard layout="uppercase" />
       </div>
     );
   }
