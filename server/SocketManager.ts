@@ -6,26 +6,6 @@ import {addGameEvent, GameEvent, getGameEvents} from './model/game';
 import {addRoomEvent, getRoomEvents} from './model/room';
 import {verifyAccessToken} from './auth/jwt';
 
-interface SocketEvent {
-  [key: string]: any;
-}
-
-// Look for { .sv: 'timestamp' } and relpcae with Date.now()
-function assignTimestamp(event: SocketEvent) {
-  if (event && typeof event === 'object') {
-    if (event['.sv'] === 'timestamp') {
-      return Date.now();
-    }
-    const result = event.constructor();
-
-    for (const key in event) {
-      result[key] = assignTimestamp(event[key]);
-    }
-    return result;
-  }
-  return event;
-}
-
 // Event types that are broadcast to connected clients but NOT persisted to the database.
 // updateCursor and addPing are high-frequency and only meaningful in real-time.
 // updateDisplayName and updateColor are persisted so players remain visible on reload.
@@ -40,18 +20,16 @@ class SocketManager {
     this.io = io;
   }
 
-  async addGameEvent(gid: string, event: SocketEvent) {
-    const gameEvent: GameEvent = assignTimestamp(event);
-    if (!EPHEMERAL_EVENT_TYPES.has(gameEvent.type)) {
-      await addGameEvent(gid, gameEvent);
+  async addGameEvent(gid: string, event: GameEvent) {
+    if (!EPHEMERAL_EVENT_TYPES.has(event.type)) {
+      await addGameEvent(gid, event);
     }
-    this.io.to(`game-${gid}`).emit('game_event', gameEvent);
+    this.io.to(`game-${gid}`).emit('game_event', event);
   }
 
-  async addRoomEvent(rid: string, event: SocketEvent) {
-    const roomEvent: RoomEvent = assignTimestamp(event);
-    await addRoomEvent(rid, roomEvent);
-    this.io.to(`room-${rid}`).emit('room_event', roomEvent);
+  async addRoomEvent(rid: string, event: RoomEvent) {
+    await addRoomEvent(rid, event);
+    this.io.to(`room-${rid}`).emit('room_event', event);
   }
 
   listen() {
@@ -99,7 +77,15 @@ class SocketManager {
       });
 
       socket.on('game_event', async (message, ack) => {
-        const event = message.event;
+        const event = message?.event;
+        if (!event || typeof event.type !== 'string') {
+          console.error('Invalid game_event: missing event or type');
+          return;
+        }
+        // Replace Firebase-style sentinel timestamps with real server time
+        if (typeof event.timestamp !== 'number') {
+          event.timestamp = Date.now();
+        }
         // Stamp verified user identity if authenticated
         if (socket.data.authUser) {
           event.verifiedUserId = socket.data.authUser.userId;
@@ -125,7 +111,15 @@ class SocketManager {
       });
 
       socket.on('room_event', async (message, ack) => {
-        await this.addRoomEvent(message.rid, message.event);
+        const event = message?.event;
+        if (!event || typeof event.type !== 'string') {
+          console.error('Invalid room_event: missing event or type');
+          return;
+        }
+        if (typeof event.timestamp !== 'number') {
+          event.timestamp = Date.now();
+        }
+        await this.addRoomEvent(message.rid, event);
         ack();
       });
     });

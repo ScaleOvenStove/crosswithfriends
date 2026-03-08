@@ -59,9 +59,7 @@ export const Fencing: React.FC<{gid: string}> = (props) => {
   const eventsHook = useGameEvents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   async function sendEvent(event: GameEvent) {
-    (event as any).timestamp = {
-      '.sv': 'timestamp',
-    };
+    (event as any).timestamp = Date.now();
     (event as any).id = uuid.v4();
     console.log('sending event', socket, event);
     eventsHook.addOptimisticEvent(event);
