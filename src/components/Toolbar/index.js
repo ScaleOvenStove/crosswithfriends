@@ -605,6 +605,7 @@ export default class Toolbar extends Component {
                     stopTime={stopTime}
                     pausedTime={pausedTime}
                     replayMode={replayMode}
+                    solved={solved}
                     isPaused={this.props.isPaused || !startTime}
                     onStart={onStartClock}
                     onPause={onPauseClock}
@@ -647,6 +648,7 @@ export default class Toolbar extends Component {
               startTime={startTime}
               stopTime={stopTime}
               pausedTime={pausedTime}
+              solved={solved}
               isPaused={this.props.isPaused || !startTime}
               onStart={onStartClock}
               onPause={onPauseClock}

@@ -1,6 +1,6 @@
 import './css/clock.css';
 import {Component} from 'react';
-import {FaPause, FaStopwatch} from 'react-icons/fa6';
+import {FaFlagCheckered, FaPause, FaStopwatch} from 'react-icons/fa6';
 import {MAX_CLOCK_INCREMENT} from '../../lib/timing';
 
 export const formatMilliseconds = (ms) => {
@@ -79,13 +79,19 @@ export default class Clock extends Component {
     return now > start + MAX_CLOCK_INCREMENT;
   }
 
+  get isSolved() {
+    return !!this.props.solved;
+  }
+
   get isPaused() {
     if (this.props.replayMode) return false;
+    if (this.isSolved) return false;
     // to this component, there's no difference between capped & paused
     return this.props.isPaused || this.isCapped;
   }
 
   togglePause() {
+    if (this.isSolved) return;
     const {onPause, onStart} = this.props;
     if (this.isPaused) {
       onStart();
@@ -96,18 +102,21 @@ export default class Clock extends Component {
 
   render() {
     const {clock} = this.state;
+    const solved = this.isSolved;
     const isPaused = this.isPaused;
-    const StatusIcon = isPaused ? FaPause : FaStopwatch;
-    const titleStr = isPaused ? 'Click to unpause' : 'Click to pause';
+    // eslint-disable-next-line no-nested-ternary
+    const StatusIcon = solved ? FaFlagCheckered : isPaused ? FaPause : FaStopwatch;
+    // eslint-disable-next-line no-nested-ternary
+    const titleStr = solved ? 'Solve time' : isPaused ? 'Click to unpause' : 'Click to pause';
     return (
       <div
-        className={`clock${isPaused ? ' clock--paused' : ''}`}
-        onClick={this._togglePause}
-        onKeyDown={this._handleKeyDown}
-        role="button"
-        tabIndex={0}
+        className={`clock${isPaused ? ' clock--paused' : ''}${solved ? ' clock--solved' : ''}`}
+        onClick={solved ? undefined : this._togglePause}
+        onKeyDown={solved ? undefined : this._handleKeyDown}
+        role={solved ? undefined : 'button'}
+        tabIndex={solved ? undefined : 0}
         title={titleStr}
-        aria-pressed={isPaused}
+        aria-pressed={solved ? undefined : isPaused}
       >
         <StatusIcon className="clock__icon" aria-hidden="true" />
         <span className="clock__value">{clock}</span>
