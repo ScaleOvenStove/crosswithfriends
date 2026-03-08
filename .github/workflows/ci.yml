@@ -166,9 +166,29 @@ jobs:
       - name: TypeCheck server
         run: pnpm tsc --noEmit -p server/tsconfig.json
 
+  lockfile:
+    name: Lockfile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Check lockfile is up to date
+        run: pnpm install --lockfile-only --ignore-scripts && git diff --exit-code pnpm-lock.yaml
+
   build:
     name: Build
-    needs: [lint, stylelint, format, test-frontend, test-server, typecheck-frontend, typecheck-server]
+    needs: [lint, stylelint, format, test-frontend, test-server, typecheck-frontend, typecheck-server, lockfile]
     runs-on: ubuntu-latest
 
     steps:
