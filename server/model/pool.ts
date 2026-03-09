@@ -23,6 +23,9 @@ export const pool = new pg.Pool({
 });
 
 // Set session timezone to UTC on every new connection
-pool.on('connect', async (client) => {
-  await client.query("SET timezone = 'UTC'");
+pool.on('connect', (client) => {
+  client.query("SET timezone = 'UTC'").catch((err) => {
+    console.error('Failed to set timezone for new connection. Releasing client.', err);
+    client.release(err);
+  });
 });
