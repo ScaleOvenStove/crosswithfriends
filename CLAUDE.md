@@ -75,7 +75,9 @@ All of these must pass before merging to master:
 
 **Shared code**: `src/shared/types.ts` has interfaces used by both frontend and backend. Path aliases `@shared/*` and `@lib/*` resolve to `src/shared/` and `src/lib/`.
 
-**Database**: PostgreSQL — key tables are `game_events` (move history), `game_snapshots` (solved grid state), `games`, `puzzles`, `users`. Schema scripts in `server/sql/`.
+**Database**: PostgreSQL — key tables are `game_events` (move history), `game_snapshots` (solved grid state), `puzzles`, `users`, `puzzle_solves` (solve records with times), `firebase_history` (legacy game data migrated from Firebase), `user_identity_map` (links user accounts to legacy dfac_ids), `game_dismissals` (user-dismissed in-progress games). Schema scripts in `server/sql/`, with `create_fresh_db.sql` as the entry point for new environments.
+
+**Rate limiting**: Auth endpoints use `express-rate-limit` with tiered limits — strict (10 req/15min) for login/signup, moderate (5 req/15min) for email-sending endpoints, and general (30 req/15min) for authenticated actions. Custom key generator falls back from user ID to normalized IP via `ipKeyGenerator`.
 
 ## Key Conventions
 
