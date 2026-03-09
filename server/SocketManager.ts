@@ -89,7 +89,7 @@ class SocketManager {
         } catch (err) {
           console.error(`[Socket] sync_all_game_events error for gid=${gid}:`, err);
           Sentry.captureException(err);
-          if (typeof ack === 'function') ack({error: 'internal error'});
+          if (typeof ack === 'function') ack([]);
         }
       });
 
@@ -98,26 +98,31 @@ class SocketManager {
           const event = message?.event;
           if (!event || typeof event.type !== 'string') {
             console.error('Invalid game_event: missing event or type');
+            if (typeof ack === 'function') ack({error: 'invalid event'});
             return;
           }
           if (typeof message.gid !== 'string' || !message.gid) {
             console.error('Invalid game_event: missing or invalid gid');
+            if (typeof ack === 'function') ack({error: 'invalid gid'});
             return;
           }
           // Replace non-numeric timestamps with real server time
           if (typeof event.timestamp !== 'number') {
             event.timestamp = Date.now();
           }
-          // Stamp verified user identity if authenticated
+          // Stamp verified user identity if authenticated, otherwise clear it
+          // to prevent unauthenticated users from spoofing verifiedUserId
           if (socket.data.authUser) {
             event.verifiedUserId = socket.data.authUser.userId;
+          } else {
+            delete event.verifiedUserId;
           }
           await this.addGameEvent(message.gid, event);
           if (typeof ack === 'function') ack();
         } catch (err) {
           console.error(`[Socket] game_event error:`, err);
           Sentry.captureException(err);
-          if (typeof ack === 'function') ack({error: 'internal error'});
+          // Don't ack — let client timeout trigger retry for transient failures
         }
       });
 
@@ -164,7 +169,7 @@ class SocketManager {
         } catch (err) {
           console.error(`[Socket] sync_all_room_events error for rid=${rid}:`, err);
           Sentry.captureException(err);
-          if (typeof ack === 'function') ack({error: 'internal error'});
+          if (typeof ack === 'function') ack([]);
         }
       });
 
@@ -173,10 +178,12 @@ class SocketManager {
           const event = message?.event;
           if (!event || typeof event.type !== 'string') {
             console.error('Invalid room_event: missing event or type');
+            if (typeof ack === 'function') ack({error: 'invalid event'});
             return;
           }
           if (typeof message.rid !== 'string' || !message.rid) {
             console.error('Invalid room_event: missing or invalid rid');
+            if (typeof ack === 'function') ack({error: 'invalid rid'});
             return;
           }
           if (typeof event.timestamp !== 'number') {
@@ -187,7 +194,7 @@ class SocketManager {
         } catch (err) {
           console.error(`[Socket] room_event error:`, err);
           Sentry.captureException(err);
-          if (typeof ack === 'function') ack({error: 'internal error'});
+          // Don't ack — let client timeout trigger retry for transient failures
         }
       });
     });

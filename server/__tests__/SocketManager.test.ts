@@ -111,7 +111,7 @@ describe('SocketManager', () => {
       const ack = jest.fn();
       await socketHandlers['game_event']({gid: 'g1', event: null}, ack);
 
-      expect(ack).not.toHaveBeenCalled();
+      expect(ack).toHaveBeenCalledWith({error: 'invalid event'});
       expect(pool.query).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -125,7 +125,7 @@ describe('SocketManager', () => {
       const ack = jest.fn();
       await socketHandlers['game_event']({gid: 'g1', event: {type: 123, timestamp: 1000}}, ack);
 
-      expect(ack).not.toHaveBeenCalled();
+      expect(ack).toHaveBeenCalledWith({error: 'invalid event'});
       expect(pool.query).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -142,7 +142,7 @@ describe('SocketManager', () => {
         ack
       );
 
-      expect(ack).not.toHaveBeenCalled();
+      expect(ack).toHaveBeenCalledWith({error: 'invalid gid'});
       expect(pool.query).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -222,8 +222,28 @@ describe('SocketManager', () => {
       );
 
       expect(Sentry.captureException).toHaveBeenCalledWith(dbError);
-      expect(ack).toHaveBeenCalledWith({error: 'internal error'});
+      expect(ack).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+
+    it('strips verifiedUserId from unauthenticated events', async () => {
+      (verifyAccessToken as jest.Mock).mockReturnValue(null);
+      const {io, socketHandlers} = createMockIo();
+
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      const ack = jest.fn();
+      const event = {
+        type: 'updateCell',
+        timestamp: 1700000000000,
+        params: {id: 'p1'},
+        verifiedUserId: 'spoofed',
+      } as any;
+      await socketHandlers['game_event']({gid: 'g1', event}, ack);
+
+      expect(event.verifiedUserId).toBeUndefined();
+      expect(ack).toHaveBeenCalled();
     });
 
     it('does not crash when ack is not provided', async () => {
@@ -279,7 +299,7 @@ describe('SocketManager', () => {
       await socketHandlers['sync_all_game_events']('g1', ack);
 
       expect(Sentry.captureException).toHaveBeenCalledWith(dbError);
-      expect(ack).toHaveBeenCalledWith({error: 'internal error'});
+      expect(ack).toHaveBeenCalledWith([]);
       consoleSpy.mockRestore();
     });
   });
@@ -318,7 +338,7 @@ describe('SocketManager', () => {
       const ack = jest.fn();
       await socketHandlers['room_event']({rid: 'r1', event: undefined}, ack);
 
-      expect(ack).not.toHaveBeenCalled();
+      expect(ack).toHaveBeenCalledWith({error: 'invalid event'});
       expect(pool.query).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -335,7 +355,7 @@ describe('SocketManager', () => {
         ack
       );
 
-      expect(ack).not.toHaveBeenCalled();
+      expect(ack).toHaveBeenCalledWith({error: 'invalid rid'});
       expect(pool.query).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -386,7 +406,7 @@ describe('SocketManager', () => {
       );
 
       expect(Sentry.captureException).toHaveBeenCalledWith(dbError);
-      expect(ack).toHaveBeenCalledWith({error: 'internal error'});
+      expect(ack).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
   });
@@ -417,7 +437,7 @@ describe('SocketManager', () => {
       await socketHandlers['sync_all_room_events']('r1', ack);
 
       expect(Sentry.captureException).toHaveBeenCalledWith(dbError);
-      expect(ack).toHaveBeenCalledWith({error: 'internal error'});
+      expect(ack).toHaveBeenCalledWith([]);
       consoleSpy.mockRestore();
     });
   });
