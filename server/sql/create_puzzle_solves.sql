@@ -24,6 +24,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS puzzle_solves_anon_game_idx
 CREATE INDEX IF NOT EXISTS puzzle_solves_user_id_idx
   ON puzzle_solves (user_id) WHERE user_id IS NOT NULL;
 
+-- Fast lookups by gid for solve checks, co-solver queries, and replay data
+CREATE INDEX IF NOT EXISTS puzzle_solves_gid_idx
+  ON puzzle_solves (gid);
+
+-- User solve history sorted by solved_time (for profile page)
+CREATE INDEX IF NOT EXISTS puzzle_solves_user_solved_time_idx
+  ON puzzle_solves (user_id, solved_time DESC)
+  WHERE user_id IS NOT NULL;
+
 -- GRANT ALL ON TABLE public.puzzle_solves TO dfac_staging;
 -- GRANT ALL ON TABLE public.puzzle_solves TO dfac_production;
 ALTER TABLE public.puzzle_solves
