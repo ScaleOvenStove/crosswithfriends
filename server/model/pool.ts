@@ -20,6 +20,10 @@ export const pool = new pg.Pool({
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
   ssl: getSslConfig(),
+  max: 20, // default was 10; increase headroom for concurrent requests
+  idleTimeoutMillis: 30000, // release idle connections after 30s
+  connectionTimeoutMillis: 5000, // fail fast if pool is exhausted
+  statement_timeout: 30000, // kill queries running longer than 30s
 });
 
 // Set session timezone to UTC on every new connection
