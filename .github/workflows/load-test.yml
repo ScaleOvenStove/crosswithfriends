@@ -72,7 +72,9 @@ jobs:
           PGUSER: dfacadmin
           PGPASSWORD: testpassword
           PGDATABASE: crosswithfriends
-        run: psql -f server/sql/create_fresh_db.sql
+        run: |
+          psql -f server/sql/create_fresh_db.sql
+          psql -f loadtest/seed.sql
 
       - name: Start backend server
         env:

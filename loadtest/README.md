@@ -20,10 +20,23 @@ echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.i
 sudo apt-get update && sudo apt-get install -y k6
 ```
 
+## Seed Data
+
+Load tests need realistic data to catch production-scale issues. A seed script creates
+~200 users, ~500 puzzles, ~2000 games with ~20K events, ~1500 solves, and ~1000 snapshots:
+
+```sh
+# After initializing an empty database:
+psql -f server/sql/create_fresh_db.sql
+psql -f loadtest/seed.sql
+```
+
+CI does this automatically. For local testing, seed your dev database once.
+
 ## Quick Start
 
 ```sh
-# Start the backend first
+# Start the backend first (seed the DB if you haven't already)
 pnpm devbackend
 
 # Run smoke tests (fast, 5 VUs, ~35 seconds)
@@ -54,10 +67,10 @@ pnpm loadtest:stress
 |---------|---------|-------------|
 | `BASE_URL` | `http://localhost:3021` | Target server |
 | `K6_PROFILE` | `smoke` | Test profile: `smoke`, `load`, or `stress` |
-| `TEST_USER_EMAIL` | — | Email for authenticated endpoint tests |
-| `TEST_USER_PASSWORD` | — | Password for authenticated endpoint tests |
-| `TEST_PID` | `1` | Puzzle ID to use in tests |
-| `TEST_GIDS` | `1,2,3` | Comma-separated game IDs for progress tests |
+| `TEST_USER_EMAIL` | `loadtest_user_1@test.example.com` | Email for authenticated tests |
+| `TEST_USER_PASSWORD` | `password123` | Password for authenticated tests |
+| `TEST_PID` | `lt-std-1` | Puzzle ID to use in tests |
+| `TEST_GIDS` | `lt-game-1,...` | Comma-separated game IDs for progress tests |
 
 ## Profiles
 

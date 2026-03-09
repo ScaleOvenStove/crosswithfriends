@@ -66,7 +66,10 @@ export default function () {
   {
     // Use placeholder gids — the endpoint returns {} for unknown gids, which
     // still exercises the query path. Replace with real gids for staging tests.
-    const gids = __ENV.TEST_GIDS ? __ENV.TEST_GIDS.split(',') : ['1', '2', '3'];
+    // Default gids from seed.sql (lt-game-1 through lt-game-2000)
+    const gids = __ENV.TEST_GIDS
+      ? __ENV.TEST_GIDS.split(',')
+      : ['lt-game-1', 'lt-game-50', 'lt-game-100', 'lt-game-500', 'lt-game-1000'];
     const res = http.post(
       `${BASE_URL}/api/game-progress`,
       JSON.stringify({gids}),
@@ -83,7 +86,8 @@ export default function () {
 
   // --- Puzzle info (lightweight, but high frequency) ---
   {
-    const pid = __ENV.TEST_PID || '1';
+    // Default pid from seed.sql
+    const pid = __ENV.TEST_PID || 'lt-std-1';
     const res = http.get(`${BASE_URL}/api/puzzle/${pid}/info`, {
       tags: {name: 'GET /api/puzzle/:pid/info'},
     });

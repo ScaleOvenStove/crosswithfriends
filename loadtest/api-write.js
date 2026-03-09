@@ -29,7 +29,7 @@ export const options = {
 };
 
 export default function () {
-  const pid = __ENV.TEST_PID || '1';
+  const pid = __ENV.TEST_PID || 'lt-std-1';
   const uniqueId = `k6-${__VU}-${__ITER}-${Date.now()}`;
 
   // --- Create game (counter increment + initial event insert) ---

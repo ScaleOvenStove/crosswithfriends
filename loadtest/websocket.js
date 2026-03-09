@@ -41,7 +41,10 @@ function encodeSocketIOEvent(event, data) {
 }
 
 export default function () {
-  const gids = __ENV.TEST_GIDS ? __ENV.TEST_GIDS.split(',') : ['test-game-1'];
+  // Default gids from seed.sql (lt-game-1 through lt-game-2000)
+  const gids = __ENV.TEST_GIDS
+    ? __ENV.TEST_GIDS.split(',')
+    : ['lt-game-1', 'lt-game-10', 'lt-game-50', 'lt-game-100'];
   const gid = gids[Math.floor(Math.random() * gids.length)];
   const socketUrl = `${WS_URL}/socket.io/?EIO=4&transport=websocket`;
 

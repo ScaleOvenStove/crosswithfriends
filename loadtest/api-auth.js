@@ -29,14 +29,9 @@ export const options = {
 };
 
 export function setup() {
-  const email = __ENV.TEST_USER_EMAIL;
-  const password = __ENV.TEST_USER_PASSWORD;
-  if (!email || !password) {
-    console.warn(
-      'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — auth tests will only exercise error paths'
-    );
-    return {token: null, hasCredentials: false};
-  }
+  // Defaults to seeded test user from seed.sql
+  const email = __ENV.TEST_USER_EMAIL || 'loadtest_user_1@test.example.com';
+  const password = __ENV.TEST_USER_PASSWORD || 'password123';
 
   // Login once in setup to get a token for the /me endpoint tests
   const res = http.post(
@@ -53,8 +48,9 @@ export function setup() {
 }
 
 export default function (data) {
-  const email = __ENV.TEST_USER_EMAIL || 'nonexistent@example.com';
-  const password = __ENV.TEST_USER_PASSWORD || 'wrongpassword';
+  // Default to seeded test user (seed.sql uses bcrypt hash of 'password123')
+  const email = __ENV.TEST_USER_EMAIL || 'loadtest_user_1@test.example.com';
+  const password = __ENV.TEST_USER_PASSWORD || 'password123';
 
   // --- Login attempt (exercises bcrypt + DB lookup) ---
   {
