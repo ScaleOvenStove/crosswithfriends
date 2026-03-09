@@ -13,7 +13,7 @@ const router = express.Router();
  *   get:
  *     tags: [Users]
  *     summary: Get user profile and stats
- *     description: Returns solve stats, history, uploads, and in-progress games for a user. Private profiles return {isPrivate: true} unless the requester is the owner.
+ *     description: "Returns solve stats, history, uploads, and in-progress games for a user. Private profiles return {isPrivate: true} unless the requester is the owner."
  *     security: [{bearerAuth: []}, {}]
  *     parameters:
  *       - in: path
