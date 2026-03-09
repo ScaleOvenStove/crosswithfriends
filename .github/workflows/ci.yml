@@ -186,9 +186,29 @@ jobs:
       - name: Check lockfile is up to date
         run: pnpm install --lockfile-only --ignore-scripts && git diff --exit-code pnpm-lock.yaml
 
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Check for known vulnerabilities
+        run: pnpm audit
+
   build:
     name: Build
-    needs: [lint, stylelint, format, test-frontend, test-server, typecheck-frontend, typecheck-server, lockfile]
+    needs: [lint, stylelint, format, test-frontend, test-server, typecheck-frontend, typecheck-server, lockfile, audit]
     runs-on: ubuntu-latest
 
     steps:
