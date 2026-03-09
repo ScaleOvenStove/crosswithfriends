@@ -261,7 +261,8 @@ describe('SocketManager', () => {
   describe('sync_all_game_events handler', () => {
     it('returns events on success', async () => {
       const eventPayload = {type: 'updateCell', timestamp: 1000, params: {}};
-      // getGameEvents does _.map(rows, 'event_payload'), then checks for 'create' event
+      // getGameEvents checks for snapshot first (returns null), then loads all events
+      pool.query.mockResolvedValueOnce({rows: []}); // getGameSnapshot → no snapshot
       pool.query.mockResolvedValueOnce({rows: [{event_payload: eventPayload}]});
 
       const {io, socketHandlers} = createMockIo();
