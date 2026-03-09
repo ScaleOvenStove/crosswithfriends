@@ -12,7 +12,7 @@ export async function getGameEvents(gid: string) {
   if (snapshot && !snapshot.replayRetained) {
     // Only fetch the create event — skip all updateCell/check/reveal/chat events
     const createRes = await pool.query(
-      "SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create' LIMIT 1",
+      "SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create' ORDER BY ts ASC LIMIT 1",
       [gid]
     );
     if (createRes.rows.length > 0) {
