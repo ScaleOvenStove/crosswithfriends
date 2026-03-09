@@ -71,13 +71,12 @@ describe('getUserSolveStats', () => {
   });
 
   it('returns {totalSolved, bySize, byDay, history} structure', async () => {
-    // Stats query
+    // Combined stats+day CTE query (size rows then day rows via UNION ALL)
     pool.query.mockResolvedValueOnce({
-      rows: [{size: '15x15', count: 5, avg_time: 300}],
-    });
-    // Day stats query
-    pool.query.mockResolvedValueOnce({
-      rows: [{dow: 'Mon', count: 3, avg_time: 120}],
+      rows: [
+        {stat_type: 'size', key: '15x15', count: 5, avg_time: 300},
+        {stat_type: 'day', key: 'Mon', count: 3, avg_time: 120},
+      ],
     });
     // History query
     pool.query.mockResolvedValueOnce({
@@ -93,13 +92,13 @@ describe('getUserSolveStats', () => {
   });
 
   it('sums count across sizes for totalSolved', async () => {
+    // Combined stats CTE returns both size rows
     pool.query.mockResolvedValueOnce({
       rows: [
-        {size: '5x5', count: 3, avg_time: 60},
-        {size: '15x15', count: 7, avg_time: 300},
+        {stat_type: 'size', key: '5x5', count: 3, avg_time: 60},
+        {stat_type: 'size', key: '15x15', count: 7, avg_time: 300},
       ],
     });
-    pool.query.mockResolvedValueOnce({rows: []}); // day stats
     pool.query.mockResolvedValueOnce({rows: []}); // history
 
     const result = await getUserSolveStats('user-1');
@@ -108,8 +107,7 @@ describe('getUserSolveStats', () => {
   });
 
   it('defaults title to "Untitled" and playerCount to 1', async () => {
-    pool.query.mockResolvedValueOnce({rows: []}); // stats
-    pool.query.mockResolvedValueOnce({rows: []}); // day stats
+    pool.query.mockResolvedValueOnce({rows: []}); // combined stats
     pool.query.mockResolvedValueOnce({
       rows: [
         {
@@ -132,8 +130,7 @@ describe('getUserSolveStats', () => {
   });
 
   it('includes dow field in history items', async () => {
-    pool.query.mockResolvedValueOnce({rows: []}); // stats
-    pool.query.mockResolvedValueOnce({rows: []}); // day stats
+    pool.query.mockResolvedValueOnce({rows: []}); // combined stats
     pool.query.mockResolvedValueOnce({
       rows: [
         {
@@ -154,8 +151,7 @@ describe('getUserSolveStats', () => {
   });
 
   it('fetches co-solvers for collaborative games (player_count > 1)', async () => {
-    pool.query.mockResolvedValueOnce({rows: []}); // stats
-    pool.query.mockResolvedValueOnce({rows: []}); // day stats
+    pool.query.mockResolvedValueOnce({rows: []}); // combined stats
     pool.query.mockResolvedValueOnce({
       rows: [
         {
@@ -170,13 +166,12 @@ describe('getUserSolveStats', () => {
         },
       ],
     }); // history
-    // Co-solver query
+    // Combined co-solver + count query (uses window function)
     pool.query.mockResolvedValueOnce({
-      rows: [{gid: 'g-collab', user_id: 'friend-1', display_name: 'Friend'}],
-    });
-    // Solver count query
-    pool.query.mockResolvedValueOnce({
-      rows: [{gid: 'g-collab', solver_count: 2}],
+      rows: [
+        {gid: 'g-collab', user_id: 'friend-1', display_name: 'Friend', solver_count: 2},
+        {gid: 'g-collab', user_id: 'user-1', display_name: 'Me', solver_count: 2},
+      ],
     });
 
     const result = await getUserSolveStats('user-1');

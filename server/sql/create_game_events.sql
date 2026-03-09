@@ -37,3 +37,6 @@ CREATE INDEX IF NOT EXISTS game_events_uid_idx
 
 CREATE INDEX IF NOT EXISTS game_events_payload_id_idx
     ON public.game_events (((event_payload->'params'->>'id')));
+
+CREATE INDEX IF NOT EXISTS game_events_gid_event_type_idx
+    ON public.game_events (gid, event_type);

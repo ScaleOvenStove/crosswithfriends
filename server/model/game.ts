@@ -5,19 +5,18 @@ import {getPuzzle} from './puzzle';
 import {getGameSnapshot} from './game_snapshot';
 
 export async function getGameEvents(gid: string) {
-  const res = await pool.query('SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC', [gid]);
-  const events = _.map(res.rows, 'event_payload');
-
-  // If a snapshot exists and replay was NOT retained, overlay the solved state
-  // onto the create event and return only that. Snapshots are the authoritative
-  // final state — replaying history events on top causes clock drift because
-  // the reducer re-accumulates time during replay.
-  // When replay_retained is true, return all events unmodified so that replay
-  // pages can reconstruct the full game history.
-  const createEvent = events.find((e: any) => e.type === 'create');
-  if (createEvent) {
-    const snapshot = await getGameSnapshot(gid);
-    if (snapshot && !snapshot.replayRetained) {
+  // Check for a snapshot FIRST — if a non-replay snapshot exists, we only need
+  // the create event (1 row) instead of loading the entire event history.
+  // This dramatically reduces I/O for solved games which may have thousands of events.
+  const snapshot = await getGameSnapshot(gid);
+  if (snapshot && !snapshot.replayRetained) {
+    // Only fetch the create event — skip all updateCell/check/reveal/chat events
+    const createRes = await pool.query(
+      "SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create' ORDER BY ts ASC LIMIT 1",
+      [gid]
+    );
+    if (createRes.rows.length > 0) {
+      const createEvent = createRes.rows[0].event_payload;
       const game = createEvent.params.game;
       const snap = snapshot.snapshot as any;
       if (snap.grid) game.grid = snap.grid;
@@ -30,7 +29,9 @@ export async function getGameEvents(gid: string) {
     }
   }
 
-  return events;
+  // No snapshot or replay retained — load all events
+  const res = await pool.query('SELECT event_payload FROM game_events WHERE gid=$1 ORDER BY ts ASC', [gid]);
+  return _.map(res.rows, 'event_payload');
 }
 
 export async function getGameInfo(gid: string) {

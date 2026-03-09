@@ -141,9 +141,16 @@ export async function listPuzzles(
     : 'is_public = true';
   const userIdParams = userId ? [userId] : [];
 
+  // Select only the JSONB fields the frontend needs (info, grid dimensions, contest flag)
+  // instead of the entire content column which includes clues, solution, circles, shades, and images.
+  // This dramatically reduces I/O and network transfer for the puzzle list page.
   const {rows} = await pool.query(
     `
-      SELECT pid, uploaded_at, is_public, content, times_solved
+      SELECT pid, uploaded_at, is_public, times_solved,
+        content->'info' AS info,
+        jsonb_array_length(content->'grid') AS grid_rows,
+        jsonb_array_length(content->'grid'->0) AS grid_cols,
+        (content->>'contest')::boolean AS contest
       FROM puzzles
       WHERE ${visibilityClause}
       ${sizeClause}
@@ -161,13 +168,26 @@ export async function listPuzzles(
       pid: string;
       uploaded_at: string;
       is_public: boolean;
-      content: PuzzleJson;
+      info: PuzzleJson['info'];
+      grid_rows: number;
+      grid_cols: number;
+      contest: boolean | null;
       times_solved: string;
       // NOTE: numeric returns as string in pg-promise
       // See https://stackoverflow.com/questions/39168501/pg-promise-returns-integers-as-strings
     }) => ({
-      ...row,
+      pid: row.pid,
+      is_public: row.is_public,
       times_solved: Number(row.times_solved),
+      // Reconstruct a minimal content object with just the fields the frontend uses:
+      // - info (title, author, type)
+      // - grid (only dimensions matter — build a skeleton array)
+      // - contest flag
+      content: {
+        info: row.info || {},
+        grid: Array.from({length: row.grid_rows || 0}, () => new Array(row.grid_cols || 0).fill('')),
+        contest: row.contest || undefined,
+      } as PuzzleJson,
     })
   );
   return puzzles;

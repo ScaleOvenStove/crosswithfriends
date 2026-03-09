@@ -1,4 +1,3 @@
-import {PuzzleJson} from '@shared/types';
 import {pool} from './pool';
 import {dayOfWeekExtract} from './sql_helpers';
 
@@ -33,106 +32,93 @@ export async function getUserSolveStats(userId: string): Promise<{
   byDay: DayOfWeekStats[];
   history: UserSolveHistoryItem[];
 }> {
-  // Summary stats by grid size — count distinct puzzles, use best time per puzzle for avg
-  const statsResult = await pool.query(
-    `SELECT size, COUNT(*)::int AS count, ROUND(AVG(best_time))::int AS avg_time
-     FROM (
-       SELECT DISTINCT ON (ps.pid)
-         ps.pid,
-         ps.time_taken_to_solve AS best_time,
+  // Run size+day stats query and history query in parallel.
+  // Both use lightweight JSONB extraction (no full content fetch).
+  const [combinedStatsResult, historyResult] = await Promise.all([
+    // Combined size + day stats in a single CTE to avoid scanning puzzle_solves twice
+    pool.query(
+      `WITH best_solves AS (
+        SELECT DISTINCT ON (ps.pid)
+          ps.pid,
+          ps.time_taken_to_solve AS best_time,
+          GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+            || 'x' ||
+          LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+            AS size,
+          ${dayOfWeekExtract('p')} AS dow
+        FROM puzzle_solves ps
+        JOIN puzzles p ON ps.pid = p.pid
+        WHERE ps.user_id = $1
+        ORDER BY ps.pid, ps.time_taken_to_solve ASC
+      ),
+      size_stats AS (
+        SELECT size, COUNT(*)::int AS count, ROUND(AVG(best_time))::int AS avg_time
+        FROM best_solves GROUP BY size ORDER BY count DESC
+      ),
+      day_stats AS (
+        SELECT dow, COUNT(*)::int AS count, ROUND(AVG(best_time))::int AS avg_time
+        FROM best_solves WHERE dow IS NOT NULL GROUP BY dow
+      )
+      SELECT 'size' AS stat_type, size AS key, count, avg_time FROM size_stats
+      UNION ALL
+      SELECT 'day' AS stat_type, dow AS key, count, avg_time FROM day_stats`,
+      [userId]
+    ),
+    // Recent solve history — only extract needed JSONB fields
+    pool.query(
+      `SELECT
+         ps.pid, ps.gid, ps.time_taken_to_solve, ps.solved_time, ps.player_count,
+         p.content->'info'->>'title' AS title,
          GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
            || 'x' ||
          LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-           AS size
-       FROM puzzle_solves ps
-       JOIN puzzles p ON ps.pid = p.pid
-       WHERE ps.user_id = $1
-       ORDER BY ps.pid, ps.time_taken_to_solve ASC
-     ) best_solves
-     GROUP BY size
-     ORDER BY count DESC`,
-    [userId]
-  );
-
-  const totalSolved = statsResult.rows.reduce((sum: number, r: any) => sum + r.count, 0);
-  const bySize: SizeStats[] = statsResult.rows.map((r: any) => ({
-    size: r.size,
-    count: r.count,
-    avgTime: r.avg_time,
-  }));
-
-  // Stats by day of week — group by day extracted from puzzle title
-  const dayResult = await pool.query(
-    `SELECT dow, COUNT(*)::int AS count, ROUND(AVG(best_time))::int AS avg_time
-     FROM (
-       SELECT DISTINCT ON (ps.pid)
-         ps.pid,
-         ps.time_taken_to_solve AS best_time,
+           AS size,
          ${dayOfWeekExtract('p')} AS dow
        FROM puzzle_solves ps
        JOIN puzzles p ON ps.pid = p.pid
        WHERE ps.user_id = $1
-       ORDER BY ps.pid, ps.time_taken_to_solve ASC
-     ) best_solves
-     WHERE dow IS NOT NULL
-     GROUP BY dow`,
-    [userId]
-  );
+       ORDER BY ps.solved_time DESC
+       LIMIT 100`,
+      [userId]
+    ),
+  ]);
 
-  const byDay: DayOfWeekStats[] = dayResult.rows.map((r: any) => ({
-    day: r.dow,
-    count: r.count,
-    avgTime: r.avg_time,
-  }));
+  // Parse combined stats result
+  const bySize: SizeStats[] = [];
+  const byDay: DayOfWeekStats[] = [];
+  let totalSolved = 0;
+  for (const r of combinedStatsResult.rows) {
+    if (r.stat_type === 'size') {
+      bySize.push({size: r.key, count: r.count, avgTime: r.avg_time});
+      totalSolved += r.count;
+    } else {
+      byDay.push({day: r.key, count: r.count, avgTime: r.avg_time});
+    }
+  }
 
-  // Recent solve history with puzzle info
-  const historyResult = await pool.query(
-    `SELECT
-       ps.pid, ps.gid, ps.time_taken_to_solve, ps.solved_time, ps.player_count,
-       p.content->'info'->>'title' AS title,
-       GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-         || 'x' ||
-       LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-         AS size,
-       ${dayOfWeekExtract('p')} AS dow
-     FROM puzzle_solves ps
-     JOIN puzzles p ON ps.pid = p.pid
-     WHERE ps.user_id = $1
-     ORDER BY ps.solved_time DESC
-     LIMIT 100`,
-    [userId]
-  );
-
-  // For collaborative solves, find co-solvers
+  // For collaborative solves, batch co-solver + count into a single query
   const collabGids = historyResult.rows.filter((r: any) => r.player_count > 1).map((r: any) => r.gid);
 
   const coSolverMap: Map<string, {userId: string; displayName: string}[]> = new Map();
   const solverCountMap: Map<string, number> = new Map();
 
   if (collabGids.length > 0) {
+    // Single query for both co-solvers and solver counts
     const coSolverResult = await pool.query(
-      `SELECT ps.gid, ps.user_id, u.display_name
+      `SELECT ps.gid, ps.user_id, u.display_name,
+              COUNT(*) OVER (PARTITION BY ps.gid) AS solver_count
        FROM puzzle_solves ps
        JOIN users u ON ps.user_id = u.id
-       WHERE ps.gid = ANY($1) AND ps.user_id IS NOT NULL AND ps.user_id != $2`,
-      [collabGids, userId]
-    );
-    for (const row of coSolverResult.rows) {
-      const list = coSolverMap.get(row.gid) || [];
-      list.push({userId: row.user_id, displayName: row.display_name});
-      coSolverMap.set(row.gid, list);
-    }
-
-    // Count total authenticated solvers per gid (including the requesting user)
-    const countResult = await pool.query(
-      `SELECT gid, COUNT(*)::int AS solver_count
-       FROM puzzle_solves
-       WHERE gid = ANY($1) AND user_id IS NOT NULL
-       GROUP BY gid`,
+       WHERE ps.gid = ANY($1) AND ps.user_id IS NOT NULL`,
       [collabGids]
     );
-    for (const row of countResult.rows) {
-      solverCountMap.set(row.gid, row.solver_count);
+    for (const row of coSolverResult.rows) {
+      solverCountMap.set(row.gid, Number(row.solver_count));
+      if (row.user_id !== userId) {
+        const list = coSolverMap.get(row.gid) || [];
+        list.push({userId: row.user_id, displayName: row.display_name});
+        coSolverMap.set(row.gid, list);
+      }
     }
   }
 
@@ -269,74 +255,67 @@ export type SolvedPuzzleType = {
   size: string;
 };
 
-type RawFetchedPuzzleSolve = {
-  pid: string;
-  gid: string;
-  content: PuzzleJson;
-  solved_time: Date;
-  time_taken_to_solve: number;
-  event_type?: string;
-  event_payload?: {
-    params?: {scope?: {r: number; c: number}[]};
-  };
-};
-
 export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[]> {
-  const {rows}: {rows: RawFetchedPuzzleSolve[]} = await pool.query(
-    `
-      SELECT
-        p.content,
-        ps.pid,
-        ps.gid,
-        ps.solved_time,
-        ps.time_taken_to_solve,
-        ge.event_type,
-        ge.event_payload
+  if (gids.length === 0) return [];
+
+  // Two separate queries instead of a cartesian JOIN:
+  // 1. Get solve records with lightweight puzzle metadata (no full content)
+  // 2. Get aggregated check/reveal counts per game
+
+  const [{rows: solveRows}, {rows: eventRows}] = await Promise.all([
+    pool.query(
+      `SELECT
+        ps.pid, ps.gid, ps.solved_time, ps.time_taken_to_solve,
+        p.content->'info'->>'title' AS title,
+        jsonb_array_length(p.content->'grid') AS grid_rows,
+        jsonb_array_length(p.content->'grid'->0) AS grid_cols
       FROM puzzle_solves ps
-      JOIN puzzles p on ps.pid = p.pid
-      LEFT JOIN game_events ge
-        ON ps.gid = ge.gid AND ge.event_type IN ('check', 'reveal')
+      JOIN puzzles p ON ps.pid = p.pid
       WHERE ps.gid = ANY($1)
-    `,
-    [gids]
-  );
-  const puzzleIds = new Map<string, RawFetchedPuzzleSolve>();
-  const revealedSquareByPuzzle = new Map<string, Set<string>>();
-  const checkedSquareByPuzzle = new Map<string, Set<string>>();
-  rows.forEach((row) => {
-    if (!puzzleIds.has(row.pid)) {
-      puzzleIds.set(row.pid, row);
-    }
-    const cells: string[] = row.event_payload?.params?.scope?.map((c) => JSON.stringify(c)) || [];
+      ORDER BY ps.solved_time DESC`,
+      [gids]
+    ),
+    pool.query(
+      `SELECT gid, event_type, event_payload->'params'->'scope' AS scope
+      FROM game_events
+      WHERE gid = ANY($1) AND event_type IN ('check', 'reveal')`,
+      [gids]
+    ),
+  ]);
 
+  // Build reveal/check sets per puzzle
+  const revealedSquareByGid = new Map<string, Set<string>>();
+  const checkedSquareByGid = new Map<string, Set<string>>();
+  for (const row of eventRows) {
+    const cells: string[] = (row.scope || []).map((c: {r: number; c: number}) => JSON.stringify(c));
     if (row.event_type === 'reveal') {
-      const revealedSquares = revealedSquareByPuzzle.get(row.pid) || new Set();
-      cells.forEach(revealedSquares.add, revealedSquares);
-      revealedSquareByPuzzle.set(row.pid, revealedSquares);
+      const set = revealedSquareByGid.get(row.gid) || new Set();
+      cells.forEach(set.add, set);
+      revealedSquareByGid.set(row.gid, set);
     } else if (row.event_type === 'check') {
-      const checkedSquares = checkedSquareByPuzzle.get(row.pid) || new Set();
-      cells.forEach(checkedSquares.add, checkedSquares);
-      checkedSquareByPuzzle.set(row.pid, checkedSquares);
+      const set = checkedSquareByGid.get(row.gid) || new Set();
+      cells.forEach(set.add, set);
+      checkedSquareByGid.set(row.gid, set);
     }
-  });
+  }
 
-  const puzzleSolves = Array.from(puzzleIds)
-    .map(([pid, puzzle]) => {
-      const title = puzzle.content.info.title;
-      const grid = puzzle.content.grid;
-      const width = grid.length;
-      const length = grid.length > 0 ? grid[0].length : 0;
-      return {
-        pid,
-        gid: puzzle.gid,
-        title,
-        size: `${width}x${length}`,
-        solved_time: new Date(puzzle.solved_time),
-        time_taken_to_solve: Number(puzzle.time_taken_to_solve),
-        revealed_squares_count: (revealedSquareByPuzzle.get(puzzle.pid) || new Set()).size,
-        checked_squares_count: (checkedSquareByPuzzle.get(puzzle.pid) || new Set()).size,
-      };
-    })
-    .sort((a, b) => b.solved_time.getTime() - a.solved_time.getTime());
+  // Deduplicate by pid (keep first seen)
+  const seen = new Set<string>();
+  const puzzleSolves: SolvedPuzzleType[] = [];
+  for (const row of solveRows) {
+    if (seen.has(row.pid)) continue;
+    seen.add(row.pid);
+    puzzleSolves.push({
+      pid: row.pid,
+      gid: row.gid,
+      title: row.title || 'Untitled',
+      size: `${row.grid_rows || 0}x${row.grid_cols || 0}`,
+      solved_time: new Date(row.solved_time),
+      time_taken_to_solve: Number(row.time_taken_to_solve),
+      revealed_squares_count: (revealedSquareByGid.get(row.gid) || new Set()).size,
+      checked_squares_count: (checkedSquareByGid.get(row.gid) || new Set()).size,
+    });
+  }
+
   return puzzleSolves;
 }
