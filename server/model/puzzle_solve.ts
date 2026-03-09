@@ -271,7 +271,8 @@ export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[
         jsonb_array_length(p.content->'grid'->0) AS grid_cols
       FROM puzzle_solves ps
       JOIN puzzles p ON ps.pid = p.pid
-      WHERE ps.gid = ANY($1)`,
+      WHERE ps.gid = ANY($1)
+      ORDER BY ps.solved_time DESC`,
       [gids]
     ),
     pool.query(
@@ -316,6 +317,5 @@ export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[
     });
   }
 
-  puzzleSolves.sort((a, b) => b.solved_time.getTime() - a.solved_time.getTime());
   return puzzleSolves;
 }
