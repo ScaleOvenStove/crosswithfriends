@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import bcrypt from 'bcrypt';
 import express from 'express';
 import Joi from 'joi';
-import rateLimit from 'express-rate-limit';
+import rateLimit, {ipKeyGenerator} from 'express-rate-limit';
 import passport from '../auth/passport';
 import {signAccessToken, verifyAccessToken} from '../auth/jwt';
 import {requireAuth} from '../auth/middleware';
@@ -76,8 +76,9 @@ const strictLimiter = rateLimit({
   message: {error: 'Too many requests, please try again later'},
 });
 
-// Key by user ID when authenticated, fall back to IP for unauthenticated requests
-const userOrIpKey = (req: express.Request) => req.authUser?.userId || req.ip || 'unknown';
+// Key by user ID when authenticated, fall back to normalized IP for unauthenticated requests.
+// ipKeyGenerator handles IPv6-mapped IPv4 addresses (e.g. ::ffff:127.0.0.1 → 127.0.0.1)
+const userOrIpKey = (req: express.Request) => req.authUser?.userId || ipKeyGenerator(req.ip || 'unknown');
 
 // Moderate limit for email-sending endpoints (verification, password reset)
 const emailLimiter = rateLimit({
