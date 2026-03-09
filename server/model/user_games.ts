@@ -7,24 +7,36 @@ export type PuzzleStatusMap = {[pid: string]: 'solved' | 'started'};
 /**
  * Get puzzle statuses (solved/started) for a guest user by dfac_id.
  * Returns a map of pid -> 'solved' | 'started'.
+ *
+ * Combines two data sources:
+ *  1. game_events (v2 games tracked in PG)
+ *  2. firebase_history (legacy games migrated from Firebase)
  */
 export async function getGuestPuzzleStatuses(dfacId: string): Promise<PuzzleStatusMap> {
-  // Use UNION to let Postgres use uid and payload_id indexes separately,
-  // then join create events and snapshots only on the distinct game IDs.
   const result = await pool.query(
-    `WITH user_gids AS (
-       SELECT gid FROM game_events WHERE uid = $1
-       UNION
-       SELECT gid FROM game_events WHERE (event_payload->'params'->>'id') = $1
-     )
-     SELECT
-       ce.event_payload->'params'->>'pid' AS pid,
-       CASE WHEN bool_or(gs.gid IS NOT NULL) THEN 'solved' ELSE 'started' END AS status
-     FROM user_gids ug
-     JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
-     LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
-     WHERE ce.event_payload->'params'->>'pid' IS NOT NULL
-     GROUP BY ce.event_payload->'params'->>'pid'`,
+    `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
+     FROM (
+       -- v2 games from game_events
+       SELECT
+         ce.event_payload->'params'->>'pid' AS pid,
+         gs.gid IS NOT NULL AS solved
+       FROM (
+         SELECT gid FROM game_events WHERE uid = $1
+         UNION
+         SELECT gid FROM game_events WHERE (event_payload->'params'->>'id') = $1
+       ) user_gids
+       JOIN game_events ce ON ce.gid = user_gids.gid AND ce.event_type = 'create'
+       LEFT JOIN game_snapshots gs ON gs.gid = user_gids.gid
+       WHERE ce.event_payload->'params'->>'pid' IS NOT NULL
+
+       UNION ALL
+
+       -- Legacy games from firebase_history
+       SELECT fh.pid::text AS pid, fh.solved
+       FROM firebase_history fh
+       WHERE fh.dfac_id = $1
+     ) combined
+     GROUP BY pid`,
     [dfacId]
   );
 
@@ -76,13 +88,11 @@ export async function getUserGamesForPuzzle(
   }
 
   // Find games where the user participated AND the game is for the requested puzzle.
-  // Uses the same CTE pattern as getInProgressGames() but:
-  //   - Filters by pid (via create event)
-  //   - Includes solved games (not just in-progress)
-  //   - Excludes dismissed games for authenticated users
+  // Combines game_events (v2) with firebase_history (legacy).
   const result = await pool.query(
     `WITH user_games AS (
-       SELECT gid, MAX(ts) AS last_activity
+       -- v2 games from game_events
+       SELECT gid, MAX(ts) AS last_activity, true AS v2, false AS fh_solved
        FROM (
          SELECT gid, ts FROM game_events WHERE uid = ANY($1)
          UNION ALL
@@ -90,17 +100,28 @@ export async function getUserGamesForPuzzle(
        ) all_events
        ${options.userId ? 'WHERE NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = all_events.gid AND gd.user_id = $3)' : ''}
        GROUP BY gid
+
+       UNION ALL
+
+       -- Legacy games from firebase_history
+       SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS last_activity, false AS v2, fh.solved AS fh_solved
+       FROM firebase_history fh
+       WHERE fh.dfac_id = ANY($1) AND fh.pid::text = $2
+         AND NOT EXISTS (
+           SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
+         )
+         ${options.userId ? 'AND NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = fh.gid AND gd.user_id = $3)' : ''}
      )
      SELECT
        ug.gid,
-       ce.event_payload->'params'->>'pid' AS pid,
-       CASE WHEN gs.gid IS NOT NULL THEN true ELSE false END AS solved,
+       COALESCE(ce.event_payload->'params'->>'pid', $2) AS pid,
+       CASE WHEN gs.gid IS NOT NULL OR ug.fh_solved THEN true ELSE false END AS solved,
        ug.last_activity,
-       true AS v2
+       ug.v2
      FROM user_games ug
-     JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
+     LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
      LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
-     WHERE ce.event_payload->'params'->>'pid' = $2
+     WHERE COALESCE(ce.event_payload->'params'->>'pid', $2) = $2
      ORDER BY ug.last_activity DESC`,
     options.userId ? [dfacIds, pid, options.userId] : [dfacIds, pid]
   );

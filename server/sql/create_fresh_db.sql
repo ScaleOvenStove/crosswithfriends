@@ -74,3 +74,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- 11. game_dismissals (depends on users)
 -- ============================================================
 \ir create_game_dismissals.sql
+
+-- ============================================================
+-- 12. firebase_history (no dependencies)
+-- ============================================================
+\ir create_firebase_history.sql

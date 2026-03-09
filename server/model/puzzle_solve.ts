@@ -181,6 +181,7 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
 
   // Find in-progress games:
   // - UNION of uid-based and payload-based lookups (each uses its own index)
+  // - Include unsolved firebase_history entries (legacy games not in game_events)
   // - Exclude solved games via NOT EXISTS on game_snapshots (PK lookup)
   // - Exclude user-dismissed games via NOT EXISTS on game_dismissals
   // - Join create event for pid, join puzzles for title and size
@@ -191,6 +192,14 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
          SELECT gid, ts FROM game_events WHERE uid = ANY($1)
          UNION ALL
          SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY($1)
+         UNION ALL
+         -- Legacy unsolved games from firebase_history not already in game_events
+         SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS ts
+         FROM firebase_history fh
+         WHERE fh.dfac_id = ANY($1) AND fh.solved = false
+           AND NOT EXISTS (
+             SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
+           )
        ) all_events
        WHERE NOT EXISTS (
          SELECT 1 FROM game_snapshots gs WHERE gs.gid = all_events.gid
@@ -204,16 +213,23 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
      )
      SELECT
        ug.gid,
-       ce.event_payload->'params'->>'pid' AS pid,
-       p.content->'info'->>'title' AS title,
-       GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-         || 'x' ||
-       LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-         AS size,
+       COALESCE(ce.event_payload->'params'->>'pid', fh.pid::text) AS pid,
+       COALESCE(p.content->'info'->>'title', p2.content->'info'->>'title', 'Untitled') AS title,
+       COALESCE(
+         GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+           || 'x' ||
+         LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text,
+         GREATEST(jsonb_array_length(p2.content->'grid'), jsonb_array_length(p2.content->'grid'->0))::text
+           || 'x' ||
+         LEAST(jsonb_array_length(p2.content->'grid'), jsonb_array_length(p2.content->'grid'->0))::text
+       ) AS size,
        ug.last_activity
      FROM user_games ug
-     JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
-     JOIN puzzles p ON p.pid = (ce.event_payload->'params'->>'pid')
+     LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
+     LEFT JOIN puzzles p ON p.pid = (ce.event_payload->'params'->>'pid')
+     LEFT JOIN firebase_history fh ON fh.gid = ug.gid AND fh.dfac_id = ANY($1)
+     LEFT JOIN puzzles p2 ON p2.pid = fh.pid::text
+     WHERE COALESCE(ce.event_payload->'params'->>'pid', fh.pid::text) IS NOT NULL
      ORDER BY ug.last_activity DESC`,
     [dfacIds, userId]
   );
