@@ -21,6 +21,10 @@ export const options = {
   stages: getStages(),
   thresholds: {
     ...strictThresholds,
+    // Override global http_req_duration — login calls (bcrypt + TLS) are
+    // intentionally slow and skew the aggregate. The per-endpoint custom
+    // metrics below are what actually matter.
+    http_req_duration: ['p(95)<500'],
     login_duration: ['p(95)<1500'],
     me_duration: ['p(95)<200'],
   },
