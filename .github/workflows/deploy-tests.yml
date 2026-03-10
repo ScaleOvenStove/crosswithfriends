@@ -28,18 +28,20 @@ jobs:
     name: Wait for deploy to be live
     runs-on: ubuntu-latest
     steps:
-      - name: Poll health endpoint
+      - name: Wait for new version to be deployed
         run: |
-          echo "Waiting for $BASE_URL to be reachable..."
-          for i in $(seq 1 60); do
-            if curl -sf "$BASE_URL/api/puzzle_list?page=0&pageSize=1" > /dev/null 2>&1; then
-              echo "Site is live"
+          EXPECTED_SHA="${GITHUB_SHA}"
+          echo "Waiting for $BASE_URL to serve commit $EXPECTED_SHA..."
+          for i in $(seq 1 120); do
+            DEPLOYED_SHA=$(curl -sf "$BASE_URL/api/version" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+            if [ "$DEPLOYED_SHA" = "$EXPECTED_SHA" ]; then
+              echo "New version is live!"
               exit 0
             fi
-            echo "Attempt $i — not ready yet"
-            sleep 5
+            echo "Attempt $i — got '$DEPLOYED_SHA', waiting for '$EXPECTED_SHA'"
+            sleep 10
           done
-          echo "Site did not become ready in time"
+          echo "Deploy did not complete within 20 minutes"
           exit 1
 
   seed-testing-db:
