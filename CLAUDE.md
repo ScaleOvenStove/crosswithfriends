@@ -36,6 +36,23 @@ pnpm test:e2e:ui                        # Playwright UI mode
 npx playwright install                  # First-time: install browser binaries
 ```
 
+### Load Tests (k6)
+
+Requires k6 installed (`brew install k6` on macOS). Start the backend first with `pnpm devbackend`.
+
+```sh
+pnpm loadtest                           # Smoke test: read-heavy API endpoints (default)
+pnpm loadtest:auth                      # Auth endpoint load test
+pnpm loadtest:ws                        # WebSocket/Socket.IO load test
+pnpm loadtest:write                     # Write-heavy endpoints (use staging DB only)
+pnpm loadtest:all                       # Run all suites sequentially
+pnpm loadtest:full                      # All suites with "load" profile (20-50 VUs)
+pnpm loadtest:stress                    # All suites with "stress" profile (up to 150 VUs)
+BASE_URL=https://testing.crosswithfriends.com pnpm loadtest:full  # Against staging
+```
+
+Load tests live in `loadtest/`. Configurable via `BASE_URL`, `K6_PROFILE` (smoke/load/stress), `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `TEST_PID`, `TEST_GIDS` env vars. CI runs smoke profile automatically on PRs that change `server/` or `loadtest/` files. Tests fail if p95 latency exceeds thresholds or error rate exceeds 1%.
+
 E2E tests live in `e2e/` with two layers. **Smoke tests**: page rendering, navigation, puzzle list, dark mode, game page loading. **Gameplay tests**: grid interactions (cell selection, letter entry, arrow keys, direction toggle, Tab/Backspace), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions. Configurable via `BASE_URL` env var (defaults to `http://localhost:3020`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server via `pnpm start` (or reuses one already running). Shared fixtures in `e2e/fixtures/` (`base.ts` for smoke, `game.ts` for gameplay).
 
 ### Quality Checks
