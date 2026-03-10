@@ -66,13 +66,6 @@ if (process.env.NODE_ENV === 'production') {
   app.use(morgan('tiny'));
 }
 
-app.get('/api/version', (_req, res) => {
-  res.json({
-    sha: process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || 'unknown',
-    env: process.env.NODE_ENV || 'development',
-  });
-});
-
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api', apiRouter);
 
