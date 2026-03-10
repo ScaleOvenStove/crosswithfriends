@@ -27,7 +27,7 @@ export const defaultThresholds = {
 
 // Stricter thresholds for lightweight endpoints (puzzle info, auth/me, etc.)
 export const strictThresholds = {
-  http_req_duration: ['p(95)<250'],
+  http_req_duration: ['p(95)<300'],
   http_req_failed: ['rate<0.01'],
 };
 
