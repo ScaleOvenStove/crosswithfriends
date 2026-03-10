@@ -4,21 +4,21 @@ name: Post-Deploy Tests (Testing)
 # after a deploy completes.
 #
 # Triggers:
-#   1. Manual — click "Run workflow" in GitHub Actions
-#   2. Render deploy hook — add a webhook in Render that calls:
-#        POST https://api.github.com/repos/<owner>/<repo>/dispatches
-#        { "event_type": "deploy-testing" }
-#      with a GitHub PAT that has repo scope.
+#   1. Automatically on push to master (same event that triggers Render deploy)
+#   2. Manual — click "Run workflow" in GitHub Actions
+#
+# The wait-for-deploy step polls the site until the new version is live,
+# so tests run against the freshly deployed code.
 #
 # Required GitHub Secrets:
 #   TESTING_DB_URL — Postgres connection string for the testing database
 #                    (e.g. postgres://user:pass@host:5432/dbname?sslmode=require)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [master]
 
-  repository_dispatch:
-    types: [deploy-testing]
+  workflow_dispatch:
 
 env:
   BASE_URL: https://testing.crosswithfriends.com
