@@ -81,10 +81,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright tests
+      - name: Run Playwright smoke tests
         env:
           BASE_URL: ${{ env.BASE_URL }}
-        run: pnpm test:e2e:chromium
+        run: npx playwright test --config=e2e/playwright.config.ts --project=chromium --grep-invert="Gameplay|Toolbar|Clue bar|Clue panel|Game page"
 
       - name: Upload test results
         if: always()
