@@ -80,6 +80,11 @@
   background-color: rgb(211 47 47 / 8%);
 }
 
+.play--error-message {
+  color: #e74c3c;
+  margin-bottom: 16px;
+}
+
 .play--actions {
   display: flex;
   gap: 8px;

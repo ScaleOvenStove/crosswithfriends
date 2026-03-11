@@ -156,7 +156,7 @@ class Play extends Component {
     if (this.state.error) {
       return (
         <div className="play">
-          <div style={{color: '#e74c3c', marginBottom: 16}}>
+          <div className="play--error-message">
             <strong>Error:</strong> {this.state.error}
           </div>
           <Link className="btn btn--contained btn--primary" to="/">

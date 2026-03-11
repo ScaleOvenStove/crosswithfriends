@@ -3,7 +3,7 @@
 -- "Game not found" errors or stale data issues.
 
 -- 1. Find games that have events but no 'create' event (orphaned games)
-SELECT DISTINCT ge.gid, COUNT(*) AS event_count, MIN(ge.ts) AS first_event, MAX(ge.ts) AS last_event
+SELECT ge.gid, COUNT(*) AS event_count, MIN(ge.ts) AS first_event, MAX(ge.ts) AS last_event
 FROM game_events ge
 WHERE NOT EXISTS (
   SELECT 1 FROM game_events ce WHERE ce.gid = ge.gid AND ce.event_type = 'create'
