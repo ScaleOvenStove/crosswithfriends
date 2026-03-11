@@ -62,20 +62,20 @@ export const test = base.extend<{gamePage: GameHelpers}>({
     };
 
     const findFirstWhiteCell = async (): Promise<{r: number; c: number}> => {
-      // Find the first cell that is NOT black
-      const allCells = page.locator('td.grid--cell');
-      const count = await allCells.count();
-      for (let i = 0; i < count; i++) {
-        const cell = allCells.nth(i);
-        const cellDiv = cell.locator('.cell');
-        const isBlack = await cellDiv.evaluate((el) => el.classList.contains('black'));
-        if (!isBlack) {
-          const rc = await cell.getAttribute('data-rc');
-          const [r, c] = rc!.split(' ').map(Number);
-          return {r, c};
+      // Single evaluate() call to avoid N round-trips over remote connections
+      const rc = await page.evaluate(() => {
+        const cells = document.querySelectorAll('td.grid--cell');
+        for (const cell of cells) {
+          const cellDiv = cell.querySelector('.cell');
+          if (cellDiv && !cellDiv.classList.contains('black')) {
+            return cell.getAttribute('data-rc');
+          }
         }
-      }
-      throw new Error('No white cells found in grid');
+        return null;
+      });
+      if (!rc) throw new Error('No white cells found in grid');
+      const [r, c] = rc.split(' ').map(Number);
+      return {r, c};
     };
 
     const clickCell = async (r: number, c: number): Promise<void> => {

@@ -1,0 +1,134 @@
+name: Post-Deploy Tests (Testing)
+
+# Runs Playwright E2E and k6 load tests against testing.crosswithfriends.com
+# after a deploy completes.
+#
+# Triggers:
+#   1. Automatically on push to master (same event that triggers Render deploy)
+#   2. Manual — click "Run workflow" in GitHub Actions
+#
+# The wait-for-deploy step polls the site until the new version is live,
+# so tests run against the freshly deployed code.
+#
+# Required GitHub Secrets:
+#   TESTING_DB_URL — Postgres connection string for the testing database
+#                    (e.g. postgres://user:pass@host:5432/dbname?sslmode=require)
+
+on:
+  push:
+    branches: [master]
+
+  workflow_dispatch:
+
+env:
+  BASE_URL: https://testing.crosswithfriends.com
+
+jobs:
+  wait-for-deploy:
+    name: Wait for deploy to be live
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for new version to be deployed
+        run: |
+          EXPECTED_SHA="${GITHUB_SHA}"
+          echo "Waiting for $BASE_URL to serve commit $EXPECTED_SHA..."
+          for i in $(seq 1 120); do
+            DEPLOYED_SHA=$(curl -sf "$BASE_URL/api/version" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+            if [ "$DEPLOYED_SHA" = "$EXPECTED_SHA" ]; then
+              echo "New version is live!"
+              exit 0
+            fi
+            echo "Attempt $i — got '$DEPLOYED_SHA', waiting for '$EXPECTED_SHA'"
+            sleep 10
+          done
+          echo "Deploy did not complete within 20 minutes"
+          exit 1
+
+  seed-testing-db:
+    name: Seed testing database
+    needs: wait-for-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Seed load test data
+        env:
+          DATABASE_URL: ${{ secrets.TESTING_DB_URL }}
+        run: psql "$DATABASE_URL" -f loadtest/seed.sql
+
+  playwright:
+    name: Playwright E2E
+    needs: wait-for-deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke tests
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+        run: npx playwright test --config=e2e/playwright.config.ts --project=chromium --grep-invert="Gameplay|Toolbar|Clue bar|Clue panel|Game page"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  load-tests:
+    name: k6 Load Tests (smoke)
+    needs: seed-testing-db
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Run API read tests
+        env:
+          K6_PROFILE: smoke
+          BASE_URL: ${{ env.BASE_URL }}
+        run: k6 run loadtest/api-read.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"
+
+      - name: Run API auth tests
+        env:
+          K6_PROFILE: smoke
+          BASE_URL: ${{ env.BASE_URL }}
+        run: k6 run loadtest/api-auth.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"
+
+      - name: Run API write tests
+        env:
+          K6_PROFILE: smoke
+          BASE_URL: ${{ env.BASE_URL }}
+        run: k6 run loadtest/api-write.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"
+
+      - name: Run WebSocket tests
+        env:
+          K6_PROFILE: smoke
+          BASE_URL: ${{ env.BASE_URL }}
+        run: k6 run loadtest/websocket.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"

@@ -138,10 +138,19 @@
     "test:e2e:chromium:prod": "cross-env BASE_URL=https://crosswithfriends.com npx playwright test --config=e2e/playwright.config.ts --project=chromium",
     "test:e2e:report": "npx playwright show-report e2e/playwright-report",
     "stylelint": "stylelint \"src/**/*.css\"",
-    "stylelint:fix": "stylelint \"src/**/*.css\" --fix"
+    "stylelint:fix": "stylelint \"src/**/*.css\" --fix",
+    "loadtest:seed": "psql -d ${PGDATABASE:-dfac} -f loadtest/seed.sql",
+    "loadtest": "pnpm loadtest:seed && k6 run loadtest/api-read.js",
+    "loadtest:auth": "pnpm loadtest:seed && k6 run loadtest/api-auth.js",
+    "loadtest:ws": "pnpm loadtest:seed && k6 run loadtest/websocket.js",
+    "loadtest:write": "pnpm loadtest:seed && k6 run loadtest/api-write.js",
+    "loadtest:all": "pnpm loadtest:seed && k6 run loadtest/api-read.js && k6 run loadtest/api-auth.js && k6 run loadtest/api-write.js && k6 run loadtest/websocket.js",
+    "loadtest:smoke": "K6_PROFILE=smoke pnpm loadtest:all",
+    "loadtest:full": "K6_PROFILE=load pnpm loadtest:all",
+    "loadtest:stress": "K6_PROFILE=stress pnpm loadtest:all"
   },
   "lint-staged": {
-    "!(backfills|utils|e2e)/**/*.{js,jsx,ts,tsx}": [
+    "!(backfills|utils|e2e|loadtest)/**/*.{js,jsx,ts,tsx}": [
       "eslint --max-warnings=0",
       "prettier --write"
     ],

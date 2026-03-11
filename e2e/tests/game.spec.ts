@@ -37,8 +37,8 @@ test.describe('Game page', () => {
     const firstPuzzleLink = page.locator('a[href*="/beta/play/"]').first();
     await firstPuzzleLink.click();
 
-    // Wait for page to settle
-    await page.waitForLoadState('networkidle');
+    // Wait for game page to load
+    await expect(page.locator('.room')).toBeVisible({timeout: 15_000});
 
     // Root should have content
     const rootContent = await page.locator('#root').innerHTML();

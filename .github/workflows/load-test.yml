@@ -1,0 +1,129 @@
+name: Load Tests
+
+# Runs on PRs to master (smoke profile) and manually with configurable profile.
+# Requires a running backend — uses docker-compose to spin up app + postgres.
+
+on:
+  pull_request:
+    branches: [master]
+    # Only run when backend code changes
+    paths:
+      - 'server/**'
+      - 'loadtest/**'
+      - 'docker-compose.yml'
+      - 'Dockerfile'
+
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Load test profile'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+      base_url:
+        description: 'Target URL (leave empty for local docker)'
+        required: false
+        type: string
+
+jobs:
+  load-test:
+    name: k6 Load Tests (${{ github.event.inputs.profile || 'smoke' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dfacadmin
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: crosswithfriends
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dfacadmin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize test database
+        env:
+          PGHOST: localhost
+          PGUSER: dfacadmin
+          PGPASSWORD: testpassword
+          PGDATABASE: crosswithfriends
+        run: |
+          psql -f server/sql/create_fresh_db.sql
+          psql -f loadtest/seed.sql
+
+      - name: Start backend server
+        env:
+          PGHOST: localhost
+          PGUSER: dfacadmin
+          PGPASSWORD: testpassword
+          PGDATABASE: crosswithfriends
+          JWT_SECRET: load-test-secret-key-not-for-production
+          NODE_ENV: test
+          PORT: 3021
+        run: |
+          npx ts-node -P server/tsconfig.json server/server.ts &
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3021/api/puzzle_list?page=0\&pageSize=1 > /dev/null 2>&1; then
+              echo "Server is ready"
+              break
+            fi
+            echo "Waiting for server... ($i)"
+            sleep 1
+          done
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Run API read tests
+        env:
+          K6_PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:3021' }}
+        run: k6 run loadtest/api-read.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"
+
+      - name: Run API auth tests
+        env:
+          K6_PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:3021' }}
+        run: k6 run loadtest/api-auth.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"
+
+      - name: Run API write tests
+        env:
+          K6_PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:3021' }}
+        run: k6 run loadtest/api-write.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"
+
+      - name: Run WebSocket tests
+        env:
+          K6_PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:3021' }}
+        run: k6 run loadtest/websocket.js --summary-trend-stats="avg,min,med,max,p(90),p(95),p(99)"
