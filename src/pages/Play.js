@@ -7,6 +7,7 @@ import qs from 'qs';
 import {formatTimestamp} from '../lib/formatTimestamp';
 import {Link} from 'react-router';
 
+import * as Sentry from '@sentry/react';
 import Nav from '../components/common/Nav';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import actions from '../actions';
@@ -28,6 +29,7 @@ class Play extends Component {
       creating: false,
       puzzleInfo: null,
       abandonGid: null,
+      error: null,
     };
     this._handleNewGame = this.create.bind(this);
     this._handleNewFencingGame = this.createFencing.bind(this);
@@ -53,7 +55,7 @@ class Play extends Component {
   }
 
   get pid() {
-    return Number(this.props.match.params.pid);
+    return this.props.match.params.pid;
   }
 
   get query() {
@@ -78,7 +80,8 @@ class Play extends Component {
 
     const {games} = this.state;
     if (!games) return; // not loaded yet
-    const shouldAutocreate = !this.state.creating && (games.length === 0 || this.is_new || this.is_fencing);
+    const shouldAutocreate =
+      !this.state.creating && !this.state.error && (games.length === 0 || this.is_new || this.is_fencing);
     if (shouldAutocreate) {
       this.create();
       return;
@@ -101,20 +104,30 @@ class Play extends Component {
   }
 
   create() {
-    this.setState({
-      creating: true,
-    });
+    this.setState({creating: true, error: null});
     actions.getNextGid(async (gid) => {
-      await createGame({gid, pid: this.pid});
-      redirect(this.is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`);
+      try {
+        await createGame({gid, pid: this.pid});
+        redirect(this.is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`);
+      } catch (e) {
+        console.error('Failed to create game:', e);
+        Sentry.captureException(e);
+        this.setState({creating: false, error: e.message || 'Failed to create game'});
+      }
     });
   }
 
   createFencing() {
-    this.setState({creating: true});
+    this.setState({creating: true, error: null});
     actions.getNextGid(async (gid) => {
-      await createGame({gid, pid: this.pid});
-      redirect(`/fencing/${gid}`);
+      try {
+        await createGame({gid, pid: this.pid});
+        redirect(`/fencing/${gid}`);
+      } catch (e) {
+        console.error('Failed to create fencing game:', e);
+        Sentry.captureException(e);
+        this.setState({creating: false, error: e.message || 'Failed to create game'});
+      }
     });
   }
 
@@ -140,6 +153,19 @@ class Play extends Component {
   }
 
   renderMain() {
+    if (this.state.error) {
+      return (
+        <div className="play">
+          <div style={{color: '#e74c3c', marginBottom: 16}}>
+            <strong>Error:</strong> {this.state.error}
+          </div>
+          <Link className="btn btn--contained btn--primary" to="/">
+            Back to Home
+          </Link>
+        </div>
+      );
+    }
+
     if (this.state.creating) {
       return <div className="play">Creating game...</div>;
     }

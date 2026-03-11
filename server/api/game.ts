@@ -44,8 +44,11 @@ router.post<{}, CreateGameResponse | {error: string}, CreateGameRequest>('/', as
     res.json({gid});
   } catch (e) {
     if (e instanceof Error && e.message.startsWith('Puzzle not found')) {
+      console.error(`[POST /api/game] ${e.message} (gid=${req.body.gid}, pid=${req.body.pid})`);
       res.status(404).json({error: e.message});
     } else {
+      console.error(`[POST /api/game] Unexpected error (gid=${req.body.gid}, pid=${req.body.pid}):`, e);
+      Sentry.captureException(e, {extra: {gid: req.body.gid, pid: req.body.pid}});
       next(e);
     }
   }
