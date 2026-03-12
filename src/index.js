@@ -15,6 +15,12 @@ if (sentryDsn) {
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
     ignoreErrors: [
+      // Network failures (Safari / Chrome / Firefox) — client-side connectivity issues
+      /^TypeError: Load failed$/,
+      /^TypeError: Failed to fetch$/,
+      /^TypeError: NetworkError when attempting to fetch resource\.$/,
+      /^TypeError: cancelled$/,
+      /Event delivery failed after all retries/,
       // Browser extensions
       /feature named .* was not found/,
       /Invalid call to runtime\.sendMessage/,

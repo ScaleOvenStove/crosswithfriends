@@ -57,24 +57,28 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
     };
     if (user?.id && accessToken) {
       // Authenticated: fetch from user stats endpoint
-      getUserStats(user.id, accessToken).then((stats) => {
-        if (stale || !stats) return;
-        const statuses: PuzzleStatuses = {};
-        (stats.history || []).forEach((item) => {
-          statuses[item.pid] = 'solved';
-        });
-        (stats.inProgress || []).forEach((item) => {
-          if (!statuses[item.pid]) statuses[item.pid] = 'started';
-        });
-        updateStatuses(statuses);
-      });
+      getUserStats(user.id, accessToken)
+        .then((stats) => {
+          if (stale || !stats) return;
+          const statuses: PuzzleStatuses = {};
+          (stats.history || []).forEach((item) => {
+            statuses[item.pid] = 'solved';
+          });
+          (stats.inProgress || []).forEach((item) => {
+            if (!statuses[item.pid]) statuses[item.pid] = 'started';
+          });
+          updateStatuses(statuses);
+        })
+        .catch(() => {});
     } else {
       // Guest: fetch by dfac_id
       const dfacId = getLocalId();
-      fetchGuestPuzzleStatuses(dfacId).then((statuses) => {
-        if (stale) return;
-        updateStatuses(statuses);
-      });
+      fetchGuestPuzzleStatuses(dfacId)
+        .then((statuses) => {
+          if (stale) return;
+          updateStatuses(statuses);
+        })
+        .catch(() => {});
     }
     return () => {
       stale = true;
