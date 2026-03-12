@@ -69,7 +69,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
           });
           updateStatuses(statuses);
         })
-        .catch(() => {});
+        .catch((err: unknown) => console.warn('Failed to fetch user stats:', err));
     } else {
       // Guest: fetch by dfac_id
       const dfacId = getLocalId();
@@ -78,7 +78,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
           if (stale) return;
           updateStatuses(statuses);
         })
-        .catch(() => {});
+        .catch((err: unknown) => console.warn('Failed to fetch guest puzzle statuses:', err));
     }
     return () => {
       stale = true;

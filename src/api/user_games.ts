@@ -14,21 +14,17 @@ export async function fetchUserGames(
   accessToken?: string | null,
   dfacId?: string
 ): Promise<UserGame[]> {
-  try {
-    const params = new URLSearchParams({pid: String(pid)});
-    if (dfacId) params.set('dfac_id', dfacId);
+  const params = new URLSearchParams({pid: String(pid)});
+  if (dfacId) params.set('dfac_id', dfacId);
 
-    const headers: Record<string, string> = {};
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  const headers: Record<string, string> = {};
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-    const resp = await fetch(`${SERVER_URL}/api/user-games?${params}`, {headers});
-    if (!resp.ok) return [];
+  const resp = await fetch(`${SERVER_URL}/api/user-games?${params}`, {headers});
+  if (!resp.ok) return [];
 
-    const data = await resp.json();
-    return data.games;
-  } catch {
-    return [];
-  }
+  const data = await resp.json();
+  return data.games;
 }
 
 export async function fetchGuestPuzzleStatuses(
@@ -40,7 +36,8 @@ export async function fetchGuestPuzzleStatuses(
 
     const data = await resp.json();
     return data.statuses;
-  } catch {
+  } catch (error) {
+    console.warn('Failed to fetch guest puzzle statuses:', error);
     return {};
   }
 }

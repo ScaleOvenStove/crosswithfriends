@@ -48,10 +48,15 @@ class Play extends Component {
   }
 
   async loadGames() {
-    const accessToken = this.context?.accessToken;
-    const dfacId = getLocalId();
-    const games = await fetchUserGames(this.pid, accessToken, dfacId);
-    this.setState({games});
+    try {
+      const accessToken = this.context?.accessToken;
+      const dfacId = getLocalId();
+      const games = await fetchUserGames(this.pid, accessToken, dfacId);
+      this.setState({games});
+    } catch (e) {
+      console.warn('Failed to load games:', e);
+      this.setState({error: 'Unable to load games. Please check your connection and try again.'});
+    }
   }
 
   get pid() {
