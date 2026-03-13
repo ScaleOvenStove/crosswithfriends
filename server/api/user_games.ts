@@ -50,6 +50,7 @@ router.get('/', optionalAuth, async (req, res, next) => {
     }
 
     const games = await getUserGamesForPuzzle(pid, {userId, dfacId});
+    res.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=120');
     res.json({games});
   } catch (e) {
     next(e);
@@ -89,6 +90,7 @@ router.get('/statuses', async (req, res, next) => {
     }
 
     const statuses = await getGuestPuzzleStatuses(dfacId);
+    res.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
     res.json({statuses});
   } catch (e) {
     next(e);

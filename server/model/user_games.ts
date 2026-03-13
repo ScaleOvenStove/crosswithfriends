@@ -15,8 +15,8 @@ export type UserGameItem = {
 
 // ---- In-memory TTL caches ----
 // Cache key format for userGamesForPuzzleCache: "pid:dfacId1,dfacId2:userId"
-const guestPuzzleStatusCache = new TTLCache<PuzzleStatusMap>({ttlMs: 60_000, maxSize: 500});
-const userGamesForPuzzleCache = new TTLCache<UserGameItem[]>({ttlMs: 60_000, maxSize: 500});
+const guestPuzzleStatusCache = new TTLCache<PuzzleStatusMap>({ttlMs: 5 * 60_000, maxSize: 2000});
+const userGamesForPuzzleCache = new TTLCache<UserGameItem[]>({ttlMs: 2 * 60_000, maxSize: 2000});
 
 export function clearUserGamesCache(): void {
   guestPuzzleStatusCache.clear();
@@ -43,44 +43,40 @@ export function invalidateUserGamesCacheForUser(dfacId: string): void {
  *  2. firebase_history (legacy games migrated from Firebase)
  */
 export async function getGuestPuzzleStatuses(dfacId: string): Promise<PuzzleStatusMap> {
-  const cached = guestPuzzleStatusCache.get(dfacId);
-  if (cached) return cached;
-
-  const result = await pool.query(
-    `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
-     FROM (
-       -- v2 games from game_events
-       SELECT
-         COALESCE(ce.event_payload->'params'->>'pid', gs.pid) AS pid,
-         gs.gid IS NOT NULL AS solved
+  return guestPuzzleStatusCache.getOrFetch(dfacId, async () => {
+    const result = await pool.query(
+      `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
        FROM (
-         SELECT gid FROM game_events WHERE uid = $1
-         UNION
-         SELECT gid FROM game_events WHERE (event_payload->'params'->>'id') = $1
-       ) user_gids
-       LEFT JOIN game_events ce ON ce.gid = user_gids.gid AND ce.event_type = 'create'
-       LEFT JOIN game_snapshots gs ON gs.gid = user_gids.gid
-       WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid) IS NOT NULL
+         -- v2 games from game_events
+         SELECT
+           COALESCE(ce.event_payload->'params'->>'pid', gs.pid) AS pid,
+           gs.gid IS NOT NULL AS solved
+         FROM (
+           SELECT gid FROM game_events WHERE uid = $1
+           UNION
+           SELECT gid FROM game_events WHERE (event_payload->'params'->>'id') = $1
+         ) user_gids
+         LEFT JOIN game_events ce ON ce.gid = user_gids.gid AND ce.event_type = 'create'
+         LEFT JOIN game_snapshots gs ON gs.gid = user_gids.gid
+         WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid) IS NOT NULL
 
-       UNION ALL
+         UNION ALL
 
-       -- Legacy games from firebase_history
-       SELECT fh.pid::text AS pid, fh.solved
-       FROM firebase_history fh
-       WHERE fh.dfac_id = $1
-     ) combined
-     GROUP BY pid`,
-    [dfacId]
-  );
+         -- Legacy games from firebase_history
+         SELECT fh.pid::text AS pid, fh.solved
+         FROM firebase_history fh
+         WHERE fh.dfac_id = $1
+       ) combined
+       GROUP BY pid`,
+      [dfacId]
+    );
 
-  const statuses: PuzzleStatusMap = {};
-  for (const row of result.rows as {pid: string; status: 'solved' | 'started'}[]) {
-    statuses[row.pid] = row.status;
-  }
-
-  guestPuzzleStatusCache.set(dfacId, statuses);
-
-  return statuses;
+    const statuses: PuzzleStatusMap = {};
+    for (const row of result.rows as {pid: string; status: 'solved' | 'started'}[]) {
+      statuses[row.pid] = row.status;
+    }
+    return statuses;
+  });
 }
 
 type UserGameRow = {
@@ -115,64 +111,60 @@ export async function getUserGamesForPuzzle(
   }
 
   const cacheKey = `${pid}:${dfacIds.sort().join(',')}:${options.userId || ''}`;
-  const cached = userGamesForPuzzleCache.get(cacheKey);
-  if (cached) return cached;
 
-  // Find games where the user participated AND the game is for the requested puzzle.
-  // Combines game_events (v2) with firebase_history (legacy).
-  // Pass pid as integer for firebase_history comparison (pid column is integer).
-  // If pid is non-numeric, pass null so the legacy branch returns no rows.
-  const pidInt = Number.isFinite(Number(pid)) ? Number(pid) : null;
-  const pidIntParam = options.userId ? '$4' : '$3';
-  const result = await pool.query(
-    `WITH user_games AS (
-       -- v2 games from game_events
-       SELECT gid, MAX(ts) AS last_activity, true AS v2, false AS fh_solved
-       FROM (
-         SELECT gid, ts FROM game_events WHERE uid = ANY($1)
+  return userGamesForPuzzleCache.getOrFetch(cacheKey, async () => {
+    // Find games where the user participated AND the game is for the requested puzzle.
+    // Combines game_events (v2) with firebase_history (legacy).
+    // Pass pid as integer for firebase_history comparison (pid column is integer).
+    // If pid is non-numeric, pass null so the legacy branch returns no rows.
+    const pidInt = Number.isFinite(Number(pid)) ? Number(pid) : null;
+    const pidIntParam = options.userId ? '$4' : '$3';
+    const result = await pool.query(
+      `WITH user_games AS (
+         -- v2 games from game_events
+         SELECT gid, MAX(ts) AS last_activity, true AS v2, false AS fh_solved
+         FROM (
+           SELECT gid, ts FROM game_events WHERE uid = ANY($1)
+           UNION ALL
+           SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY($1)
+         ) all_events
+         ${options.userId ? 'WHERE NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = all_events.gid AND gd.user_id = $3)' : ''}
+         GROUP BY gid
+
          UNION ALL
-         SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY($1)
-       ) all_events
-       ${options.userId ? 'WHERE NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = all_events.gid AND gd.user_id = $3)' : ''}
-       GROUP BY gid
 
-       UNION ALL
+         -- Legacy games from firebase_history
+         SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS last_activity, false AS v2, fh.solved AS fh_solved
+         FROM firebase_history fh
+         WHERE fh.dfac_id = ANY($1) AND fh.pid = ${pidIntParam}
+           AND NOT EXISTS (
+             SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
+           )
+           ${options.userId ? 'AND NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = fh.gid AND gd.user_id = $3)' : ''}
+       )
+       SELECT
+         ug.gid,
+         COALESCE(ce.event_payload->'params'->>'pid', gs.pid, $2) AS pid,
+         CASE WHEN gs.gid IS NOT NULL OR ug.fh_solved THEN true ELSE false END AS solved,
+         ug.last_activity,
+         ug.v2
+       FROM user_games ug
+       LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
+       LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
+       WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid, $2) = $2
+       ORDER BY ug.last_activity DESC`,
+      options.userId ? [dfacIds, pid, options.userId, pidInt] : [dfacIds, pid, pidInt]
+    );
 
-       -- Legacy games from firebase_history
-       SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS last_activity, false AS v2, fh.solved AS fh_solved
-       FROM firebase_history fh
-       WHERE fh.dfac_id = ANY($1) AND fh.pid = ${pidIntParam}
-         AND NOT EXISTS (
-           SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
-         )
-         ${options.userId ? 'AND NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = fh.gid AND gd.user_id = $3)' : ''}
-     )
-     SELECT
-       ug.gid,
-       COALESCE(ce.event_payload->'params'->>'pid', gs.pid, $2) AS pid,
-       CASE WHEN gs.gid IS NOT NULL OR ug.fh_solved THEN true ELSE false END AS solved,
-       ug.last_activity,
-       ug.v2
-     FROM user_games ug
-     LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
-     LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
-     WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid, $2) = $2
-     ORDER BY ug.last_activity DESC`,
-    options.userId ? [dfacIds, pid, options.userId, pidInt] : [dfacIds, pid, pidInt]
-  );
+    const rows: UserGameRow[] = result.rows;
 
-  const rows: UserGameRow[] = result.rows;
-
-  const items = rows.map((r) => ({
-    gid: r.gid,
-    pid: r.pid,
-    solved: r.solved,
-    time: r.last_activity ? new Date(r.last_activity).getTime() : 0,
-    v2: r.v2,
-    percentComplete: r.solved ? 100 : 0,
-  }));
-
-  userGamesForPuzzleCache.set(cacheKey, items);
-
-  return items;
+    return rows.map((r) => ({
+      gid: r.gid,
+      pid: r.pid,
+      solved: r.solved,
+      time: r.last_activity ? new Date(r.last_activity).getTime() : 0,
+      v2: r.v2,
+      percentComplete: r.solved ? 100 : 0,
+    }));
+  });
 }

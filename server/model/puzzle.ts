@@ -14,7 +14,7 @@ type PuzzleListRow = {pid: string; content: PuzzleJson; times_solved: number; is
 // ---- Puzzle list cache ----
 const puzzleListCache = new TTLCache<PuzzleListRow[]>({
   ttlMs: 5 * 60 * 1000, // 5 minutes
-  maxSize: 1000,
+  maxSize: 2000,
   sweepIntervalMs: 10 * 60 * 1000,
 });
 
@@ -141,44 +141,42 @@ export async function listPuzzles(
     is_public: boolean;
   }[]
 > {
-  // Check cache
   const cacheKey = buildCacheKey(filter, limit, offset, userId);
-  const cached = puzzleListCache.get(cacheKey);
-  if (cached) return cached;
 
-  const parametersForTitleAuthorFilter = filter.nameOrTitleFilter.split(/\s/).map((s) => `%${s}%`);
-  const parameterOffset = 3;
-  // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL clause, but will for multiple ANDs
-  // note this is not vulnerable to SQL injection because this string is just dynamically constructing params of the form $#
-  const parameterizedTitleAuthorFilter = parametersForTitleAuthorFilter
-    .map(
-      (_s, idx) =>
-        `AND ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${
-          idx + parameterOffset
-        }`
-    )
-    .join('\n');
+  return puzzleListCache.getOrFetch(cacheKey, async () => {
+    const parametersForTitleAuthorFilter = filter.nameOrTitleFilter.split(/\s/).map((s) => `%${s}%`);
+    const parameterOffset = 3;
+    // we create the query this way as POSTGRES optimizer does not use the index for an ILIKE ALL clause, but will for multiple ANDs
+    // note this is not vulnerable to SQL injection because this string is just dynamically constructing params of the form $#
+    const parameterizedTitleAuthorFilter = parametersForTitleAuthorFilter
+      .map(
+        (_s, idx) =>
+          `AND ((content -> 'info' ->> 'title') || ' ' || (content->'info'->>'author')) ILIKE $${
+            idx + parameterOffset
+          }`
+      )
+      .join('\n');
 
-  const sizeClause = buildSizeFilterClause(filter.sizeFilter);
-  const typeClause = buildTypeFilterClause(filter.typeFilter);
-  const dayParamOffset = parameterOffset + parametersForTitleAuthorFilter.length;
-  const {clause: dayClause, params: dayParams} = buildDayOfWeekFilterClause(
-    filter.dayOfWeekFilter,
-    dayParamOffset
-  );
+    const sizeClause = buildSizeFilterClause(filter.sizeFilter);
+    const typeClause = buildTypeFilterClause(filter.typeFilter);
+    const dayParamOffset = parameterOffset + parametersForTitleAuthorFilter.length;
+    const {clause: dayClause, params: dayParams} = buildDayOfWeekFilterClause(
+      filter.dayOfWeekFilter,
+      dayParamOffset
+    );
 
-  // If authenticated, also show the user's own unlisted puzzles
-  const userIdParamIndex = dayParamOffset + dayParams.length;
-  const visibilityClause = userId
-    ? `(is_public = true OR uploaded_by = $${userIdParamIndex})`
-    : 'is_public = true';
-  const userIdParams = userId ? [userId] : [];
+    // If authenticated, also show the user's own unlisted puzzles
+    const userIdParamIndex = dayParamOffset + dayParams.length;
+    const visibilityClause = userId
+      ? `(is_public = true OR uploaded_by = $${userIdParamIndex})`
+      : 'is_public = true';
+    const userIdParams = userId ? [userId] : [];
 
-  // Select only the JSONB fields the frontend needs (info, grid dimensions, contest flag)
-  // instead of the entire content column which includes clues, solution, circles, shades, and images.
-  // This dramatically reduces I/O and network transfer for the puzzle list page.
-  const {rows} = await pool.query(
-    `
+    // Select only the JSONB fields the frontend needs (info, grid dimensions, contest flag)
+    // instead of the entire content column which includes clues, solution, circles, shades, and images.
+    // This dramatically reduces I/O and network transfer for the puzzle list page.
+    const {rows} = await pool.query(
+      `
       SELECT pid, uploaded_at, is_public, times_solved,
         content->'info' AS info,
         jsonb_array_length(content->'grid') AS grid_rows,
@@ -194,38 +192,37 @@ export async function listPuzzles(
       LIMIT $1
       OFFSET $2
     `,
-    [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams, ...userIdParams]
-  );
-  const puzzles = rows.map(
-    (row: {
-      pid: string;
-      uploaded_at: string;
-      is_public: boolean;
-      info: PuzzleJson['info'];
-      grid_rows: number;
-      grid_cols: number;
-      contest: boolean | null;
-      times_solved: string;
-      // NOTE: numeric returns as string in pg-promise
-      // See https://stackoverflow.com/questions/39168501/pg-promise-returns-integers-as-strings
-    }) => ({
-      pid: row.pid,
-      is_public: row.is_public,
-      times_solved: Number(row.times_solved),
-      // Reconstruct a minimal content object with just the fields the frontend uses:
-      // - info (title, author, type)
-      // - grid (only dimensions matter — build a skeleton array)
-      // - contest flag
-      content: {
-        info: row.info || {},
-        grid: Array.from({length: row.grid_rows || 0}, () => new Array(row.grid_cols || 0).fill('')),
-        contest: row.contest || undefined,
-      } as PuzzleJson,
-    })
-  );
-  puzzleListCache.set(cacheKey, puzzles);
-
-  return puzzles;
+      [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams, ...userIdParams]
+    );
+    const puzzles = rows.map(
+      (row: {
+        pid: string;
+        uploaded_at: string;
+        is_public: boolean;
+        info: PuzzleJson['info'];
+        grid_rows: number;
+        grid_cols: number;
+        contest: boolean | null;
+        times_solved: string;
+        // NOTE: numeric returns as string in pg-promise
+        // See https://stackoverflow.com/questions/39168501/pg-promise-returns-integers-as-strings
+      }) => ({
+        pid: row.pid,
+        is_public: row.is_public,
+        times_solved: Number(row.times_solved),
+        // Reconstruct a minimal content object with just the fields the frontend uses:
+        // - info (title, author, type)
+        // - grid (only dimensions matter — build a skeleton array)
+        // - contest flag
+        content: {
+          info: row.info || {},
+          grid: Array.from({length: row.grid_rows || 0}, () => new Array(row.grid_cols || 0).fill('')),
+          contest: row.contest || undefined,
+        } as PuzzleJson,
+      })
+    );
+    return puzzles;
+  });
 }
 
 const string = () => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string

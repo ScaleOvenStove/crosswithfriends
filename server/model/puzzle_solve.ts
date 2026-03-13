@@ -3,7 +3,7 @@ import {dayOfWeekExtract} from './sql_helpers';
 import {TTLCache} from './ttl_cache';
 
 // ---- In-memory TTL cache for in-progress games ----
-const inProgressGamesCache = new TTLCache<InProgressGameItem[]>({ttlMs: 60_000, maxSize: 500});
+const inProgressGamesCache = new TTLCache<InProgressGameItem[]>({ttlMs: 2 * 60_000, maxSize: 2000});
 
 export function clearInProgressGamesCache(): void {
   inProgressGamesCache.clear();
@@ -164,84 +164,79 @@ export type InProgressGameItem = {
 };
 
 export async function getInProgressGames(userId: string): Promise<InProgressGameItem[]> {
-  const cached = inProgressGamesCache.get(userId);
-  if (cached) return cached;
+  return inProgressGamesCache.getOrFetch(userId, async () => {
+    // Look up the user's legacy dfac_id(s)
+    const idResult = await pool.query('SELECT dfac_id FROM user_identity_map WHERE user_id = $1', [userId]);
+    const dfacIds = idResult.rows.map((r: {dfac_id: string}) => r.dfac_id);
 
-  // Look up the user's legacy dfac_id(s)
-  const idResult = await pool.query('SELECT dfac_id FROM user_identity_map WHERE user_id = $1', [userId]);
-  const dfacIds = idResult.rows.map((r: {dfac_id: string}) => r.dfac_id);
+    if (dfacIds.length === 0) {
+      return [];
+    }
 
-  if (dfacIds.length === 0) {
-    return [];
-  }
-
-  // Find in-progress games:
-  // - UNION of uid-based and payload-based lookups (each uses its own index)
-  // - Include unsolved firebase_history entries (legacy games not in game_events)
-  // - Exclude solved games via NOT EXISTS on game_snapshots (PK lookup)
-  // - Exclude user-dismissed games via NOT EXISTS on game_dismissals
-  // - Join create event for pid, join puzzles for title and size
-  const result = await pool.query(
-    `WITH user_games AS (
-       SELECT gid, MAX(ts) AS last_activity
-       FROM (
-         SELECT gid, ts FROM game_events WHERE uid = ANY($1)
-         UNION ALL
-         SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY($1)
-         UNION ALL
-         -- Legacy unsolved games from firebase_history not already in game_events
-         SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS ts
-         FROM firebase_history fh
-         WHERE fh.dfac_id = ANY($1) AND fh.solved = false
-           AND NOT EXISTS (
-             SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
-           )
-       ) all_events
-       WHERE NOT EXISTS (
-         SELECT 1 FROM game_snapshots gs WHERE gs.gid = all_events.gid
+    // Find in-progress games:
+    // - UNION of uid-based and payload-based lookups (each uses its own index)
+    // - Include unsolved firebase_history entries (legacy games not in game_events)
+    // - Exclude solved games via NOT EXISTS on game_snapshots (PK lookup)
+    // - Exclude user-dismissed games via NOT EXISTS on game_dismissals
+    // - Join create event for pid, join puzzles for title and size
+    const result = await pool.query(
+      `WITH user_games AS (
+         SELECT gid, MAX(ts) AS last_activity
+         FROM (
+           SELECT gid, ts FROM game_events WHERE uid = ANY($1)
+           UNION ALL
+           SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY($1)
+           UNION ALL
+           -- Legacy unsolved games from firebase_history not already in game_events
+           SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS ts
+           FROM firebase_history fh
+           WHERE fh.dfac_id = ANY($1) AND fh.solved = false
+             AND NOT EXISTS (
+               SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
+             )
+         ) all_events
+         WHERE NOT EXISTS (
+           SELECT 1 FROM game_snapshots gs WHERE gs.gid = all_events.gid
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM game_dismissals gd WHERE gd.gid = all_events.gid AND gd.user_id = $2
+         )
+         GROUP BY gid
+         ORDER BY last_activity DESC
+         LIMIT 20
        )
-       AND NOT EXISTS (
-         SELECT 1 FROM game_dismissals gd WHERE gd.gid = all_events.gid AND gd.user_id = $2
-       )
-       GROUP BY gid
-       ORDER BY last_activity DESC
-       LIMIT 20
-     )
-     SELECT
-       ug.gid,
-       COALESCE(ce.event_payload->'params'->>'pid', fh.pid::text) AS pid,
-       COALESCE(p.content->'info'->>'title', p2.content->'info'->>'title', 'Untitled') AS title,
-       COALESCE(
-         GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-           || 'x' ||
-         LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text,
-         GREATEST(jsonb_array_length(p2.content->'grid'), jsonb_array_length(p2.content->'grid'->0))::text
-           || 'x' ||
-         LEAST(jsonb_array_length(p2.content->'grid'), jsonb_array_length(p2.content->'grid'->0))::text
-       ) AS size,
-       ug.last_activity
-     FROM user_games ug
-     LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
-     LEFT JOIN puzzles p ON p.pid = (ce.event_payload->'params'->>'pid')
-     LEFT JOIN firebase_history fh ON fh.gid = ug.gid AND fh.dfac_id = ANY($1)
-     LEFT JOIN puzzles p2 ON p2.pid = fh.pid::text
-     WHERE COALESCE(ce.event_payload->'params'->>'pid', fh.pid::text) IS NOT NULL
-     ORDER BY ug.last_activity DESC`,
-    [dfacIds, userId]
-  );
+       SELECT
+         ug.gid,
+         COALESCE(ce.event_payload->'params'->>'pid', fh.pid::text) AS pid,
+         COALESCE(p.content->'info'->>'title', p2.content->'info'->>'title', 'Untitled') AS title,
+         COALESCE(
+           GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
+             || 'x' ||
+           LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text,
+           GREATEST(jsonb_array_length(p2.content->'grid'), jsonb_array_length(p2.content->'grid'->0))::text
+             || 'x' ||
+           LEAST(jsonb_array_length(p2.content->'grid'), jsonb_array_length(p2.content->'grid'->0))::text
+         ) AS size,
+         ug.last_activity
+       FROM user_games ug
+       LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
+       LEFT JOIN puzzles p ON p.pid = (ce.event_payload->'params'->>'pid')
+       LEFT JOIN firebase_history fh ON fh.gid = ug.gid AND fh.dfac_id = ANY($1)
+       LEFT JOIN puzzles p2 ON p2.pid = fh.pid::text
+       WHERE COALESCE(ce.event_payload->'params'->>'pid', fh.pid::text) IS NOT NULL
+       ORDER BY ug.last_activity DESC`,
+      [dfacIds, userId]
+    );
 
-  const items = result.rows.map((r: any) => ({
-    gid: r.gid,
-    pid: r.pid,
-    title: r.title || 'Untitled',
-    size: r.size,
-    lastActivity: r.last_activity ? r.last_activity.toISOString() : '',
-    percentComplete: 0,
-  }));
-
-  inProgressGamesCache.set(userId, items);
-
-  return items;
+    return result.rows.map((r: any) => ({
+      gid: r.gid,
+      pid: r.pid,
+      title: r.title || 'Untitled',
+      size: r.size,
+      lastActivity: r.last_activity ? r.last_activity.toISOString() : '',
+      percentComplete: 0,
+    }));
+  });
 }
 
 export async function backfillSolvesForDfacId(userId: string, dfacId: string): Promise<number> {

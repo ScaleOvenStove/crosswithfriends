@@ -90,6 +90,7 @@ router.get<{}, ListPuzzleResponse>('/', optionalAuth, async (req, res, next) => 
       stats: {numSolves: puzzle.times_solved},
       isPublic: puzzle.is_public,
     }));
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json({
       puzzles,
     });

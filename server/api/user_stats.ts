@@ -91,6 +91,7 @@ router.get('/:userId', async (req, res, next) => {
       }
     }
 
+    res.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
     res.json({
       user: {
         displayName: user.display_name,
