@@ -3,7 +3,7 @@ import {dayOfWeekExtract} from './sql_helpers';
 import {TTLCache} from './ttl_cache';
 
 // ---- In-memory TTL cache for in-progress games ----
-const inProgressGamesCache = new TTLCache<InProgressGameItem[]>({ttlMs: 2 * 60_000, maxSize: 2000});
+const inProgressGamesCache = new TTLCache<InProgressGameItem[]>({ttlMs: 5 * 60_000, maxSize: 2_000});
 
 export function clearInProgressGamesCache(): void {
   inProgressGamesCache.clear();

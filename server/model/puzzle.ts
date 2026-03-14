@@ -14,7 +14,7 @@ type PuzzleListRow = {pid: string; content: PuzzleJson; times_solved: number; is
 // ---- Puzzle list cache ----
 const puzzleListCache = new TTLCache<PuzzleListRow[]>({
   ttlMs: 5 * 60 * 1000, // 5 minutes
-  maxSize: 2000,
+  maxSize: 5_000,
   sweepIntervalMs: 10 * 60 * 1000,
 });
 

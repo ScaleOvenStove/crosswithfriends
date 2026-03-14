@@ -2,6 +2,9 @@ import express from 'express';
 import {RecordSolveRequest, RecordSolveResponse} from '../../src/shared/types';
 import {recordSolve} from '../model/puzzle';
 import {saveGameSnapshot} from '../model/game_snapshot';
+import {invalidateInProgressCacheForUser} from '../model/puzzle_solve';
+import {invalidateUserGamesCacheForUser} from '../model/user_games';
+import {getDfacIdsForUser} from '../model/user';
 import {verifyAccessToken} from '../auth/jwt';
 
 const router = express.Router();
@@ -56,6 +59,12 @@ router.post<{pid: string}, RecordSolveResponse, RecordSolveRequest>('/:pid', asy
     await recordSolve(req.params.pid, gid, time_to_solve, userId, player_count);
     if (snapshot) {
       await saveGameSnapshot(gid, req.params.pid, snapshot, !!keep_replay);
+    }
+    // Invalidate caches so solved game disappears from in-progress lists
+    if (userId) {
+      invalidateInProgressCacheForUser(userId);
+      const dfacIds = await getDfacIdsForUser(userId);
+      for (const dfacId of dfacIds) invalidateUserGamesCacheForUser(dfacId);
     }
     res.json({});
   } catch (e) {
