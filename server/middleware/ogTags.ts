@@ -62,25 +62,51 @@ function buildOgHtml(info: InfoJson, canonicalUrl: string, ua: string): string {
 }
 
 /**
- * Cache for the SPA index.html content, loaded once at startup.
+ * Cache for the SPA index.html content.
  * When Render rewrites game/puzzle paths to the backend, non-bot requests
  * need to receive the SPA shell so the React app boots normally.
+ *
+ * Tries local files first (for SERVE_STATIC / dev), then fetches from FRONTEND_URL.
  */
-const spaHtmlCache: string | null = (() => {
-  // Try the production build directory first
+let spaHtmlCache: string | null = null;
+
+function loadLocalSpaHtml(): string | null {
   const buildIndex = path.join(__dirname, '..', '..', 'build', 'index.html');
   if (fs.existsSync(buildIndex)) {
     return fs.readFileSync(buildIndex, 'utf-8');
   }
-
-  // Fall back to the source index.html (dev mode)
   const srcIndex = path.join(__dirname, '..', '..', 'index.html');
   if (fs.existsSync(srcIndex)) {
     return fs.readFileSync(srcIndex, 'utf-8');
   }
+  return null;
+}
+
+async function getSpaHtml(): Promise<string | null> {
+  if (spaHtmlCache) return spaHtmlCache;
+
+  // Try local files first
+  const local = loadLocalSpaHtml();
+  if (local) {
+    spaHtmlCache = local;
+    return spaHtmlCache;
+  }
+
+  // Fetch from the frontend origin (Render static site)
+  if (BASE_URL) {
+    try {
+      const res = await fetch(BASE_URL);
+      if (res.ok) {
+        spaHtmlCache = await res.text();
+        return spaHtmlCache;
+      }
+    } catch (err) {
+      console.error('[OG Tags] Failed to fetch SPA HTML from', BASE_URL, err);
+    }
+  }
 
   return null;
-})();
+}
 
 /**
  * Middleware that intercepts game/puzzle URLs.
@@ -113,8 +139,14 @@ export function ogTagsMiddleware(req: Request, res: Response, next: NextFunction
 
   // Non-bot request — serve the SPA shell if available (for Render rewrite setup)
   // When SERVE_STATIC is set, Express static middleware handles this instead, so skip.
-  if (!process.env.SERVE_STATIC && spaHtmlCache) {
-    res.send(spaHtmlCache);
+  if (!process.env.SERVE_STATIC) {
+    getSpaHtml().then((html) => {
+      if (html) {
+        res.send(html);
+      } else {
+        next();
+      }
+    });
     return;
   }
 
