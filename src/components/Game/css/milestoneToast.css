@@ -1,13 +1,13 @@
 .milestone-toast {
   position: fixed;
-  top: 12px;
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
   background: rgb(0 0 0 / 80%);
   color: white;
-  padding: 10px 24px;
+  padding: 6px 18px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   z-index: 1000;
   pointer-events: none;
