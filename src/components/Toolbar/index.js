@@ -1,6 +1,13 @@
 import './css/index.css';
 import {Component} from 'react';
-import {MdBorderAll, MdChatBubble, MdList, MdSlowMotionVideo, MdErrorOutline} from 'react-icons/md';
+import {
+  MdBorderAll,
+  MdChatBubble,
+  MdChatBubbleOutline,
+  MdList,
+  MdSlowMotionVideo,
+  MdErrorOutline,
+} from 'react-icons/md';
 import {AiOutlineMenuFold, AiOutlineMenuUnfold} from 'react-icons/ai';
 import {RiPaintFill, RiPaintLine} from 'react-icons/ri';
 import {FaList, FaPencil, FaSquareCheck, FaCircleInfo} from 'react-icons/fa6';
@@ -306,6 +313,15 @@ export default class Toolbar extends Component {
 
   renderChatButton() {
     return <MdChatBubble onClick={this.handleToggleChat} className="toolbar--chat toolbar--mobile-icon" />;
+  }
+
+  renderDesktopChatToggle() {
+    const Icon = this.props.chatHidden ? MdChatBubbleOutline : MdChatBubble;
+    return (
+      <button onClick={this.handleToggleChat} title={this.props.chatHidden ? 'Show chat' : 'Hide chat'}>
+        <Icon />
+      </button>
+    );
   }
 
   renderExpandMenuButton() {
@@ -642,6 +658,9 @@ export default class Toolbar extends Component {
       <>
         <div className="toolbar">
           <div className="toolbar--timer">
+            {!solved && !replayMode && this.props.percentComplete > 0 && (
+              <span className="toolbar--progress">{this.props.percentComplete}%</span>
+            )}
             <Clock
               v2={this.props.v2}
               replayMode={replayMode}
@@ -653,9 +672,6 @@ export default class Toolbar extends Component {
               onStart={onStartClock}
               onPause={onPauseClock}
             />
-            {!solved && !replayMode && this.props.percentComplete > 0 && (
-              <div className="toolbar--progress">{this.props.percentComplete}%</div>
-            )}
           </div>
           {!solved && !replayMode && !contest && this.renderCheckMenu()}
           {!solved && !replayMode && !contest && this.renderRevealMenu()}
@@ -671,6 +687,7 @@ export default class Toolbar extends Component {
           {!replayMode && this.renderExtrasMenu()}
           {solved && !replayMode && this.renderPlayAgainLink()}
           {!replayMode && this.renderInfo()}
+          {this.renderDesktopChatToggle()}
         </div>
         {this.renderDialogs()}
       </>

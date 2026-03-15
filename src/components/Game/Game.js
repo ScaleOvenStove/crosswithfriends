@@ -379,7 +379,15 @@ export default class Game extends Component {
     };
     const cols = grid[0].length;
     const rows = grid.length;
-    const width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
+    let width;
+    if (this.props.mobile) {
+      width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
+    } else {
+      // Size grid to fill available viewport height (nav + toolbar + clue bar + padding ≈ 185px).
+      // This makes the grid as large as possible without overflowing the screen.
+      const availableHeight = window.innerHeight - 185;
+      width = Math.min((availableHeight * cols) / rows, screenWidth - 20);
+    }
     const minSize = this.props.mobile ? 1 : 20;
     const size = Math.max(minSize, width / cols);
     return (
@@ -489,6 +497,7 @@ export default class Game extends Component {
         onToggleAutocheck={this.handleToggleAutocheck}
         onToggleListView={this.handleToggleListView}
         onToggleChat={this.handleToggleChat}
+        chatHidden={this.props.chatHidden}
         onToggleExpandMenu={this.handleToggleExpandMenu}
         colorAttributionMode={this.state.colorAttributionMode}
         onToggleColorAttributionMode={() => {
@@ -508,7 +517,7 @@ export default class Game extends Component {
   }
 
   render() {
-    const padding = this.props.mobile ? 0 : 20;
+    const padding = this.props.mobile ? 0 : 12;
     return (
       <div className="flex--column flex--grow">
         {this.renderToolbar()}

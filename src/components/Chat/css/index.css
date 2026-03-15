@@ -6,7 +6,7 @@
   padding-left: 25px;
   padding-right: 25px;
   border-left: 1px solid #e2e2e2;
-  min-width: 300px;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
 }

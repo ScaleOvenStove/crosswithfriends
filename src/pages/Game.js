@@ -34,6 +34,7 @@ class Game extends Component {
       gid: undefined,
       mobile: isMobile(),
       mode: 'game',
+      chatHidden: localStorage.getItem('chat_hidden') === 'true',
       lastReadChat: 0,
       replayRetained: null, // null = no snapshot yet, false = snapshot exists but not retained, true = retained
       savingReplay: false,
@@ -236,7 +237,15 @@ class Game extends Component {
   }
 
   handleToggleChat = () => {
-    this.setState((prevState) => ({mode: prevState.mode === 'game' ? 'chat' : 'game'}));
+    if (this.state.mobile) {
+      this.setState((prevState) => ({mode: prevState.mode === 'game' ? 'chat' : 'game'}));
+    } else {
+      this.setState((prevState) => {
+        const chatHidden = !prevState.chatHidden;
+        localStorage.setItem('chat_hidden', String(chatHidden));
+        return {chatHidden};
+      });
+    }
   };
 
   handleChat = (username, id, message) => {
@@ -373,6 +382,7 @@ class Game extends Component {
         onChange={this.handleChange}
         onSolve={this.handleSolve}
         onToggleChat={this.handleToggleChat}
+        chatHidden={this.state.chatHidden}
         mobile={mobile}
         unreads={this.unreads}
         syncFailed={this.state.syncWarning === 'failed'}
@@ -436,12 +446,15 @@ class Game extends Component {
       </>
     );
 
+    const {chatHidden} = this.state;
     const desktopContent = (
       <>
         <Nav />
         <div className="flex flex--grow" style={{overflow: 'auto'}}>
-          <div className="flex--column flex--shrink-0">{this.showingGame && this.renderGame()}</div>
-          <div className="flex flex--grow">{this.showingChat && this.renderChat()}</div>
+          <div className="flex--column flex--shrink-0" style={chatHidden ? {margin: '0 auto'} : undefined}>
+            {this.showingGame && this.renderGame()}
+          </div>
+          {!chatHidden && <div className="flex flex--grow">{this.showingChat && this.renderChat()}</div>}
         </div>
       </>
     );

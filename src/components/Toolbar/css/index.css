@@ -4,8 +4,8 @@ code {
 }
 
 .toolbar {
-  font-size: 16pt;
-  padding: 15px 10px 13px 50px;
+  font-size: 14pt;
+  padding: 6px 10px 4px 50px;
   min-height: 20px;
   border-top: 1px solid #e2e2e2;
   border-left: 1px solid #e2e2e2;
@@ -33,13 +33,14 @@ code {
 }
 
 .toolbar--timer {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .toolbar--progress {
   font-size: 11px;
   color: var(--main-gray-1);
-  margin-top: 2px;
 }
 
 .toolbar--mobile .toolbar--progress {

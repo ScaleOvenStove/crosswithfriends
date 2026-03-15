@@ -1,7 +1,7 @@
 .clock {
   display: inline-flex;
   align-items: center;
-  font-size: 16pt;
+  font-size: 14pt;
   cursor: pointer;
   vertical-align: middle;
 }
