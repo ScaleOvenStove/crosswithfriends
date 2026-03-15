@@ -70,13 +70,21 @@ export default class Upload extends Component {
     }
     if (isPublic) {
       this.props.onCreate && this.props.onCreate();
+      const url = `/beta/play/${response.pid}${this.props.fencing ? '?fencing=1' : ''}`;
       this.setState({
-        modal: {type: 'success', message: 'You may now view your puzzle on the home page.'},
+        modal: {
+          type: 'success',
+          url,
+          message: 'Your puzzle may take a few minutes to appear on the home page for everyone.',
+        },
         uploading: false,
       });
     } else {
       const url = `/beta/play/${this.state.recentUnlistedPid}${this.props.fencing ? '?fencing=1' : ''}`;
-      this.setState({modal: {type: 'success', url}, uploading: false});
+      this.setState({
+        modal: {type: 'success', url, message: 'Successfully created an unlisted puzzle.'},
+        uploading: false,
+      });
     }
   };
 
@@ -130,16 +138,13 @@ export default class Upload extends Component {
             onConfirm={this.closeModal}
             confirmText="OK"
           >
-            {modal.url ? (
+            {modal.message && <p>{modal.message}</p>}
+            {modal.url && (
               <p>
-                Successfully created an unlisted puzzle. You may now visit the link{' '}
                 <a href={modal.url} style={{wordBreak: 'break-all'}}>
                   {modal.url}
-                </a>{' '}
-                to play the new puzzle.
+                </a>
               </p>
-            ) : (
-              <p>{modal.message}</p>
             )}
           </UploadModal>
         );
