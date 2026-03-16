@@ -12,8 +12,8 @@ if (sentryDsn) {
       Sentry.consoleLoggingIntegration({levels: ['warn', 'error']}),
     ],
     tracesSampleRate: 0.1,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0.5,
     ignoreErrors: [
       // Network failures (Safari / Chrome / Firefox) — client-side connectivity issues
       /^TypeError: Load failed$/,
