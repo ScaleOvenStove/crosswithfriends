@@ -9,9 +9,9 @@ if (sentryDsn) {
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(),
-      Sentry.consoleLoggingIntegration({levels: ['log', 'warn', 'error']}),
+      Sentry.consoleLoggingIntegration({levels: ['warn', 'error']}),
     ],
-    tracesSampleRate: 1.0,
+    tracesSampleRate: 0.1,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
     ignoreErrors: [
