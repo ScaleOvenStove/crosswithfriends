@@ -387,7 +387,10 @@ export default class Game extends Component {
       // Reserved space: nav (~41px) + toolbar (~30px) + clue bar (~44px) + padding (~24px) + margin (~46px)
       const DESKTOP_CHROME_HEIGHT = 185;
       const availableHeight = window.innerHeight - DESKTOP_CHROME_HEIGHT;
-      width = Math.min((availableHeight * cols) / rows, screenWidth - 20);
+      const viewportWidth = (availableHeight * cols) / rows;
+      // Cap at the old fixed sizing so zooming out shrinks the grid as expected
+      const fixedWidth = (35 * 15 * cols) / rows;
+      width = Math.min(viewportWidth, fixedWidth, screenWidth - 20);
     }
     const minSize = this.props.mobile ? 1 : 20;
     const size = Math.max(minSize, width / cols);
