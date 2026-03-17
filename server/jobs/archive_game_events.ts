@@ -88,42 +88,53 @@ async function cleanupSolvedGames(): Promise<CleanupStats> {
  * Category 2: Delete all events for abandoned games.
  * Abandoned = no snapshot, no puzzle_solves record, no activity for ABANDON_DAYS.
  */
+const ABANDONED_BATCH_SIZE = 500;
+
 async function cleanupAbandonedGames(): Promise<CleanupStats> {
   const stats: CleanupStats = {category: 'abandoned', gamesProcessed: 0, eventsDeleted: 0};
 
+  // Step 1: Find abandoned gids (separate lightweight query)
+  const {rows: abandonedGids} = await pool.query(
+    `SELECT ge.gid
+     FROM game_events ge
+     LEFT JOIN game_snapshots gs ON gs.gid = ge.gid
+     LEFT JOIN puzzle_solves ps ON ps.gid = ge.gid
+     WHERE gs.gid IS NULL AND ps.gid IS NULL
+     GROUP BY ge.gid
+     HAVING MAX(ge.ts) < NOW() - ($1 || ' days')::interval`,
+    [String(ABANDON_DAYS)]
+  );
+
+  stats.gamesProcessed = abandonedGids.length;
+  console.log(`  Found ${abandonedGids.length} abandoned games`);
+
   if (DRY_RUN) {
-    const {
-      rows: [{count}],
-    } = await pool.query(
-      `SELECT COUNT(*) FROM game_events ge
-       WHERE NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = ge.gid)
-         AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = ge.gid)
-         AND ge.gid IN (
-           SELECT gid FROM game_events
-           GROUP BY gid
-           HAVING MAX(ts) < NOW() - ($1 || ' days')::interval
-         )`,
-      [String(ABANDON_DAYS)]
+    const gids = abandonedGids.map((r) => r.gid);
+    if (gids.length > 0) {
+      const {
+        rows: [{count}],
+      } = await pool.query(`SELECT COUNT(*) FROM game_events WHERE gid = ANY($1)`, [gids]);
+      stats.eventsDeleted = Number(count);
+    }
+    console.log(
+      `  [DRY RUN] Would delete ${stats.eventsDeleted} events from ${stats.gamesProcessed} abandoned games`
     );
-    stats.eventsDeleted = Number(count);
-    console.log(`  [DRY RUN] Would delete ${count} events from abandoned games`);
     return stats;
   }
 
-  const result = await pool.query(
-    `DELETE FROM game_events ge
-     WHERE NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = ge.gid)
-       AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = ge.gid)
-       AND ge.gid IN (
-         SELECT gid FROM game_events
-         GROUP BY gid
-         HAVING MAX(ts) < NOW() - ($1 || ' days')::interval
-       )`,
-    [String(ABANDON_DAYS)]
-  );
-  stats.eventsDeleted = result.rowCount || 0;
-  console.log(`  Deleted ${stats.eventsDeleted} events from abandoned games`);
+  // Step 2: Delete in batches by gid
+  const gids = abandonedGids.map((r) => r.gid);
+  for (let i = 0; i < gids.length; i += ABANDONED_BATCH_SIZE) {
+    const batch = gids.slice(i, i + ABANDONED_BATCH_SIZE);
+    const result = await pool.query(`DELETE FROM game_events WHERE gid = ANY($1)`, [batch]);
+    const deleted = result.rowCount || 0;
+    stats.eventsDeleted += deleted;
+    console.log(
+      `  Batch ${Math.floor(i / ABANDONED_BATCH_SIZE) + 1}: deleted ${deleted} events (${batch.length} games)`
+    );
+  }
 
+  console.log(`  Deleted ${stats.eventsDeleted} events from ${stats.gamesProcessed} abandoned games`);
   return stats;
 }
 
