@@ -55,7 +55,7 @@
       "glob": "^13.0.6",
       "test-exclude>glob": "7",
       "undici": ">=7.24.0",
-      "flatted": ">=3.4.0",
+      "flatted": ">=3.4.2",
       "socket.io-parser": ">=4.2.6"
     },
     "onlyBuiltDependencies": [
