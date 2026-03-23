@@ -47,18 +47,23 @@ export async function getGuestPuzzleStatuses(dfacId: string): Promise<PuzzleStat
     const result = await pool.query(
       `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
        FROM (
-         -- v2 games from game_events
+         -- v2 games: find distinct gids for the user, then look up pid via
+         -- a LATERAL subquery (limited to 1 row) instead of a full self-join
          SELECT
-           COALESCE(ce.event_payload->'params'->>'pid', gs.pid) AS pid,
+           COALESCE(ce.pid, gs.pid) AS pid,
            gs.gid IS NOT NULL AS solved
          FROM (
-           SELECT gid FROM game_events WHERE uid = $1
-           UNION
-           SELECT gid FROM game_events WHERE (event_payload->'params'->>'id') = $1
-         ) user_gids
-         LEFT JOIN game_events ce ON ce.gid = user_gids.gid AND ce.event_type = 'create'
-         LEFT JOIN game_snapshots gs ON gs.gid = user_gids.gid
-         WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid) IS NOT NULL
+           SELECT DISTINCT gid FROM game_events
+           WHERE uid = $1 OR (event_payload->'params'->>'id') = $1
+         ) ug
+         LEFT JOIN LATERAL (
+           SELECT event_payload->'params'->>'pid' AS pid
+           FROM game_events
+           WHERE gid = ug.gid AND event_type = 'create'
+           LIMIT 1
+         ) ce ON true
+         LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
+         WHERE COALESCE(ce.pid, gs.pid) IS NOT NULL
 
          UNION ALL
 
