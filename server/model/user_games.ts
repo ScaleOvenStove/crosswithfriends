@@ -47,18 +47,20 @@ export async function getGuestPuzzleStatuses(dfacId: string): Promise<PuzzleStat
     const result = await pool.query(
       `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
        FROM (
-         -- v2 games from game_events
+         -- v2 games: single scan extracts gid + pid (from create events) via conditional aggregation,
+         -- avoiding a self-join back to game_events for the create event
          SELECT
-           COALESCE(ce.event_payload->'params'->>'pid', gs.pid) AS pid,
+           COALESCE(ug.pid, gs.pid) AS pid,
            gs.gid IS NOT NULL AS solved
          FROM (
-           SELECT gid FROM game_events WHERE uid = $1
-           UNION
-           SELECT gid FROM game_events WHERE (event_payload->'params'->>'id') = $1
-         ) user_gids
-         LEFT JOIN game_events ce ON ce.gid = user_gids.gid AND ce.event_type = 'create'
-         LEFT JOIN game_snapshots gs ON gs.gid = user_gids.gid
-         WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid) IS NOT NULL
+           SELECT gid,
+             MAX(CASE WHEN event_type = 'create' THEN event_payload->'params'->>'pid' END) AS pid
+           FROM game_events
+           WHERE uid = $1 OR (event_payload->'params'->>'id') = $1
+           GROUP BY gid
+         ) ug
+         LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
+         WHERE COALESCE(ug.pid, gs.pid) IS NOT NULL
 
          UNION ALL
 
