@@ -116,7 +116,10 @@ function GamePreferencesSection({preferences, savePreference, darkModePreference
       ))}
       <div className="account-pref-row">
         <span>Dark mode</span>
-        <button className="btn btn--small btn--outlined" onClick={toggleDarkMode}>
+        <button
+          className={`btn btn--small btn--toggle ${darkModePreference !== '0' ? 'btn--contained btn--primary' : 'btn--outlined'}`}
+          onClick={toggleDarkMode}
+        >
           {DARK_MODE_LABELS[darkModePreference] || 'Off'}
         </button>
       </div>
