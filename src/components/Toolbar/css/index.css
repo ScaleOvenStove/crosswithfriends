@@ -7,8 +7,6 @@ code {
   font-size: 14pt;
   padding: 6px 10px 4px 50px;
   min-height: 20px;
-  border-top: 1px solid #e2e2e2;
-  border-left: 1px solid #e2e2e2;
   border-bottom: 1px solid #e2e2e2;
   display: flex;
   flex-direction: row;
@@ -30,6 +28,11 @@ code {
 
 .toolbar button:hover {
   background-color: var(--main-gray-3);
+}
+
+.toolbar--chat-hidden {
+  border-left: 1px solid #e2e2e2;
+  border-right: 1px solid #e2e2e2;
 }
 
 .toolbar--timer {

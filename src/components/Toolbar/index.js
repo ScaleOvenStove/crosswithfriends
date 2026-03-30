@@ -656,7 +656,7 @@ export default class Toolbar extends Component {
 
     return (
       <>
-        <div className="toolbar">
+        <div className={`toolbar${this.props.chatHidden ? ' toolbar--chat-hidden' : ''}`}>
           <div className="toolbar--timer">
             {!solved && !replayMode && this.props.percentComplete > 0 && (
               <span className="toolbar--progress">{this.props.percentComplete}%</span>

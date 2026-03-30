@@ -126,11 +126,13 @@
 }
 
 .dark .toolbar {
-  border-right: none;
-  border-left: none;
-  border-top: none;
   border-bottom-color: #888;
   background-color: var(--dark-background-2);
+}
+
+.dark .toolbar--chat-hidden {
+  border-left: 1px solid #888;
+  border-right: 1px solid #888;
 }
 
 .dark .toolbar--mobile {
