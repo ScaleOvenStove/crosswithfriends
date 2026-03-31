@@ -398,8 +398,10 @@ export const reduce = (game, action, options = {}) => {
     result = reducers[type](result, params, timestamp);
 
     result = checkSolved(result);
-    const isPause =
-      (type === 'updateClock' && params && params.action === 'pause') || type === 'create' || result.solved;
+    const clockNeutral = type === 'updateDisplayName';
+    const isPause = clockNeutral
+      ? (result.clock?.paused ?? true)
+      : (type === 'updateClock' && params && params.action === 'pause') || type === 'create' || result.solved;
     if (options.isOptimistic) {
       result = incrementOptimisticCounter(result);
     } else {
