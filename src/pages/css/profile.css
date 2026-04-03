@@ -157,6 +157,13 @@
   opacity: 0.7;
 }
 
+.profile--original-title {
+  display: block;
+  font-size: 11px;
+  font-style: italic;
+  color: rgb(0 0 0 / 45%);
+}
+
 .profile--actions {
   white-space: nowrap;
   font-size: 13px;
@@ -310,6 +317,10 @@
 
 .dark .profile--collab-tag {
   color: #6aa9f4;
+}
+
+.dark .profile--original-title {
+  color: rgb(255 255 255 / 35%);
 }
 
 .dark .profile--replay-link {

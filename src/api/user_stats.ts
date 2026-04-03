@@ -9,6 +9,7 @@ export interface SolveHistoryItem {
   pid: string;
   gid: string;
   title: string;
+  originalTitle?: string;
   size: string;
   dow: string | null;
   time: number;
@@ -33,6 +34,7 @@ export interface DayOfWeekStats {
 export interface UploadedPuzzle {
   pid: string;
   title: string;
+  originalTitle?: string;
   uploadedAt: string;
   timesSolved: number;
   size: string;
@@ -43,6 +45,7 @@ export interface InProgressGame {
   gid: string;
   pid: string;
   title: string;
+  originalTitle?: string;
   size: string;
   lastActivity: string;
   percentComplete: number;

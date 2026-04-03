@@ -17,6 +17,7 @@ export type UserSolveHistoryItem = {
   pid: string;
   gid: string;
   title: string;
+  originalTitle?: string;
   size: string;
   dow: string | null;
   time: number;
@@ -92,7 +93,8 @@ export async function getUserSolveStats(userId: string): Promise<{
     pool.query(
       `SELECT
          ps.pid, ps.gid, ps.time_taken_to_solve, ps.solved_time, ps.player_count,
-         p.content->'info'->>'title' AS title,
+         COALESCE(p.content->'info'->>'titleOverride', p.content->'info'->>'title') AS title,
+         CASE WHEN p.content->'info'->>'titleOverride' IS NOT NULL THEN p.content->'info'->>'title' END AS original_title,
          GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
            || 'x' ||
          LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
@@ -160,6 +162,7 @@ export async function getUserSolveStats(userId: string): Promise<{
       pid: r.pid,
       gid: r.gid,
       title: r.title || 'Untitled',
+      originalTitle: r.original_title || undefined,
       size: r.size,
       dow: r.dow || null,
       time: Number(r.time_taken_to_solve),
@@ -188,6 +191,7 @@ export type InProgressGameItem = {
   gid: string;
   pid: string;
   title: string;
+  originalTitle?: string;
   size: string;
   lastActivity: string;
   percentComplete: number;
@@ -238,7 +242,8 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
        SELECT
          ug.gid,
          COALESCE(ce.event_payload->'params'->>'pid', fh.pid::text) AS pid,
-         COALESCE(p.content->'info'->>'title', p2.content->'info'->>'title', 'Untitled') AS title,
+         COALESCE(p.content->'info'->>'titleOverride', p.content->'info'->>'title', p2.content->'info'->>'titleOverride', p2.content->'info'->>'title', 'Untitled') AS title,
+         CASE WHEN COALESCE(p.content->'info'->>'titleOverride', p2.content->'info'->>'titleOverride') IS NOT NULL THEN COALESCE(p.content->'info'->>'title', p2.content->'info'->>'title') END AS original_title,
          COALESCE(
            GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
              || 'x' ||
@@ -262,6 +267,7 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
       gid: r.gid,
       pid: r.pid,
       title: r.title || 'Untitled',
+      originalTitle: r.original_title || undefined,
       size: r.size,
       lastActivity: r.last_activity ? r.last_activity.toISOString() : '',
       percentComplete: 0,
@@ -310,7 +316,7 @@ export async function getPuzzleSolves(gids: string[]): Promise<SolvedPuzzleType[
     pool.query(
       `SELECT
         ps.pid, ps.gid, ps.solved_time, ps.time_taken_to_solve,
-        p.content->'info'->>'title' AS title,
+        COALESCE(p.content->'info'->>'titleOverride', p.content->'info'->>'title') AS title,
         jsonb_array_length(p.content->'grid') AS grid_rows,
         jsonb_array_length(p.content->'grid'->0) AS grid_cols
       FROM puzzle_solves ps

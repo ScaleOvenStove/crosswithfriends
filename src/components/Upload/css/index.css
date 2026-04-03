@@ -127,6 +127,34 @@
   flex-shrink: 0;
 }
 
+.upload-modal--field {
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.upload-modal--field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.upload-modal--field-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.upload-modal--field-input:focus {
+  outline: none;
+  border-color: var(--main-blue, #2196f3);
+  box-shadow: 0 0 0 2px rgb(33 150 243 / 20%);
+}
+
 .upload-modal--buttons {
   display: flex;
   justify-content: center;

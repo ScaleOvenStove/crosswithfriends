@@ -36,6 +36,13 @@
   font-weight: 500;
 }
 
+.replay .header--original {
+  margin-top: 2px;
+  font-size: 11px;
+  font-style: italic;
+  color: rgb(0 0 0 / 45%);
+}
+
 .replay--controls-container {
   flex-shrink: 0;
   background: white;
@@ -131,6 +138,10 @@
 
 .dark .replay .header--subtitle {
   color: rgb(255 255 255 / 60%);
+}
+
+.dark .replay .header--original {
+  color: rgb(255 255 255 / 35%);
 }
 
 .dark .replay .scrub.active {

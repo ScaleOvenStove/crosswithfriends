@@ -18,6 +18,8 @@ export default class Upload extends Component {
       publicCheckboxChecked: false,
       modal: null, // null | {type: 'confirm'|'success'|'duplicate'|'fail'|'malformed'|'error', ...}
       uploading: false,
+      editTitle: '',
+      editAuthor: '',
     };
   }
 
@@ -30,15 +32,28 @@ export default class Upload extends Component {
       puzzle: {...puzzle},
       recentUnlistedPid: null,
       publicCheckboxChecked: false,
-      modal: {type: 'confirm', puzzleTitle: puzzle.info?.title || 'Untitled'},
+      editTitle: puzzle.info?.title || '',
+      editAuthor: puzzle.info?.author || '',
+      modal: {type: 'confirm'},
     });
   };
 
   create = async () => {
     this.setState({uploading: true});
     const isPublic = this.state.publicCheckboxChecked;
+    const {editTitle, editAuthor} = this.state;
+    const originalTitle = this.state.puzzle.info?.title || '';
+    const originalAuthor = this.state.puzzle.info?.author || '';
+    const info = {...this.state.puzzle.info};
+    if (editTitle.trim() !== originalTitle.trim()) {
+      info.titleOverride = editTitle.trim();
+    }
+    if (editAuthor.trim() !== originalAuthor.trim()) {
+      info.authorOverride = editAuthor.trim();
+    }
     const puzzle = {
       ...this.state.puzzle,
+      info,
       private: !isPublic,
     };
     // store in pg
@@ -101,6 +116,14 @@ export default class Upload extends Component {
     this.setState({publicCheckboxChecked: e.target.checked});
   };
 
+  handleChangeTitle = (e) => {
+    this.setState({editTitle: e.target.value});
+  };
+
+  handleChangeAuthor = (e) => {
+    this.setState({editAuthor: e.target.value});
+  };
+
   renderModal() {
     const {modal, uploading} = this.state;
     if (!modal) return null;
@@ -119,9 +142,33 @@ export default class Upload extends Component {
             loading={uploading}
           >
             <p>
-              You are about to upload the puzzle &quot;{modal.puzzleTitle}&quot;. This will create a shareable
-              game link, and anyone with the link will be able to solve it. Continue?
+              This will create a shareable game link, and anyone with the link will be able to solve it. You
+              can edit the title and author below before uploading.
             </p>
+            <div className="upload-modal--field">
+              <label className="upload-modal--field-label" htmlFor="upload-title">
+                Title
+              </label>
+              <input
+                id="upload-title"
+                className="upload-modal--field-input"
+                type="text"
+                value={this.state.editTitle}
+                onChange={this.handleChangeTitle}
+              />
+            </div>
+            <div className="upload-modal--field">
+              <label className="upload-modal--field-label" htmlFor="upload-author">
+                Author
+              </label>
+              <input
+                id="upload-author"
+                className="upload-modal--field-input"
+                type="text"
+                value={this.state.editAuthor}
+                onChange={this.handleChangeAuthor}
+              />
+            </div>
             <div className="upload-modal--checkbox-row">
               <label>
                 <input type="checkbox" onChange={this.handleChangePublicCheckbox} /> Also post this puzzle on

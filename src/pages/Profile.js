@@ -154,6 +154,9 @@ function HistoryTable({history}) {
             <tr key={`${item.pid}-${item.gid}`}>
               <td>
                 {item.title}
+                {item.originalTitle && (
+                  <span className="profile--original-title">Originally: {item.originalTitle}</span>
+                )}
                 <CollabTag
                   playerCount={item.playerCount}
                   coSolvers={item.coSolvers}
@@ -211,6 +214,9 @@ function InProgressTable({inProgress, onRemove}) {
                 <Link to={`/beta/play/${item.pid}`} style={{color: 'inherit'}}>
                   {item.title}
                 </Link>
+                {item.originalTitle && (
+                  <span className="profile--original-title">Originally: {item.originalTitle}</span>
+                )}
               </td>
               <td>{item.size}</td>
               <td>{item.percentComplete > 0 ? `${item.percentComplete}%` : '–'}</td>
@@ -263,6 +269,9 @@ function UploadsTable({uploads}) {
                 <Link to={`/beta/play/${item.pid}`} style={{color: 'inherit'}}>
                   {item.title}
                 </Link>
+                {item.originalTitle && (
+                  <span className="profile--original-title">Originally: {item.originalTitle}</span>
+                )}
               </td>
               <td>{item.size}</td>
               <td>{item.isPublic ? 'Public' : 'Unlisted'}</td>

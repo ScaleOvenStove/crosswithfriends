@@ -207,11 +207,21 @@ class Play extends Component {
         <div className="play--title">Your Games</div>
         {this.state.puzzleInfo && (
           <div className="play--puzzle-info">
-            {this.state.puzzleInfo.title && (
-              <div className="play--puzzle-title">{this.state.puzzleInfo.title}</div>
+            {(this.state.puzzleInfo.titleOverride || this.state.puzzleInfo.title) && (
+              <div className="play--puzzle-title">
+                {this.state.puzzleInfo.titleOverride || this.state.puzzleInfo.title}
+              </div>
             )}
-            {this.state.puzzleInfo.author && (
-              <div className="play--puzzle-author">{this.state.puzzleInfo.author}</div>
+            {(this.state.puzzleInfo.authorOverride || this.state.puzzleInfo.author) && (
+              <div className="play--puzzle-author">
+                {this.state.puzzleInfo.authorOverride || this.state.puzzleInfo.author}
+              </div>
+            )}
+            {(this.state.puzzleInfo.titleOverride || this.state.puzzleInfo.authorOverride) && (
+              <div className="play--puzzle-original">
+                Originally: {this.state.puzzleInfo.title}
+                {this.state.puzzleInfo.authorOverride ? ` by ${this.state.puzzleInfo.author}` : ''}
+              </div>
             )}
           </div>
         )}
@@ -277,8 +287,8 @@ class Play extends Component {
       <div>
         <Helmet>
           <title>
-            {this.state.puzzleInfo?.title
-              ? `${this.state.puzzleInfo.title} - Cross with Friends`
+            {this.state.puzzleInfo?.titleOverride || this.state.puzzleInfo?.title
+              ? `${this.state.puzzleInfo.titleOverride || this.state.puzzleInfo.title} - Cross with Friends`
               : 'Play - Cross with Friends'}
           </title>
         </Helmet>

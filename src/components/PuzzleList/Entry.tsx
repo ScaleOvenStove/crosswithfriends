@@ -11,6 +11,8 @@ export interface EntryProps {
   grid?: string[][];
   title: string;
   author: string;
+  originalTitle?: string;
+  originalAuthor?: string;
   pid: string;
   status: 'started' | 'solved' | undefined;
   stats: {
@@ -60,7 +62,7 @@ export default class Entry extends Component<EntryProps> {
   }
 
   render() {
-    const {title, author, pid, status, stats, fencing, isPublic} = this.props;
+    const {title, author, originalTitle, originalAuthor, pid, status, stats, fencing, isPublic} = this.props;
     const numSolvesOld = _.size(stats?.solves || []);
     const numSolves = numSolvesOld + (stats?.numSolves || 0);
     const displayName = _.compact([author.trim(), this.size]).join(' | ');
@@ -94,6 +96,15 @@ export default class Entry extends Component<EntryProps> {
               <p style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}} title={title}>
                 {title}
               </p>
+              {(originalTitle || originalAuthor) && (
+                <p
+                  className="entry--original"
+                  title={`Originally: ${originalTitle || title}${originalAuthor ? ` by ${originalAuthor}` : ''}`}
+                >
+                  Originally: {originalTitle || title}
+                  {originalAuthor ? ` by ${originalAuthor}` : ''}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex entry--details">

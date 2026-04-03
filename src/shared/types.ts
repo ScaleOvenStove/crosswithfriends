@@ -6,6 +6,8 @@ export interface InfoJson {
   author: string;
   copyright: string;
   description: string;
+  titleOverride?: string; // uploader-provided name that differs from the .puz/.ipuz file
+  authorOverride?: string; // uploader-provided author that differs from the .puz/.ipuz file
 }
 
 export interface CluesJson {

@@ -435,7 +435,7 @@ class Game extends Component {
     }
     const game = this.historyWrapper.getSnapshot();
     if (!game || !game.info) return '';
-    return game.info.title;
+    return game.info.titleOverride || game.info.title;
   }
 
   renderContent() {

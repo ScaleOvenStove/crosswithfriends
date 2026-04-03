@@ -170,8 +170,10 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
           type: puzzle.content.info.type!, // XXX not the best form
         },
         grid: puzzle.content.grid,
-        title: puzzle.content.info.title,
-        author: puzzle.content.info.author,
+        title: puzzle.content.info.titleOverride || puzzle.content.info.title,
+        author: puzzle.content.info.authorOverride || puzzle.content.info.author,
+        originalTitle: puzzle.content.info.titleOverride ? puzzle.content.info.title : undefined,
+        originalAuthor: puzzle.content.info.authorOverride ? puzzle.content.info.author : undefined,
         pid: puzzle.pid,
         stats: puzzle.stats,
         status: pgStatuses[puzzle.pid],
@@ -222,6 +224,8 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
             grid={entryProps.grid}
             title={entryProps.title}
             author={entryProps.author}
+            originalTitle={entryProps.originalTitle}
+            originalAuthor={entryProps.originalAuthor}
             pid={entryProps.pid}
             stats={entryProps.stats}
             status={entryProps.status}

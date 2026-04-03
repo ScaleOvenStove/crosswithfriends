@@ -138,6 +138,16 @@
   padding-top: 10px;
 }
 
+.entry--original {
+  font-size: 11px;
+  color: rgb(0 0 0 / 45%);
+  font-style: italic;
+  margin: 2px 0 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .entry--details {
   padding-top: 10px;
   justify-content: space-between;

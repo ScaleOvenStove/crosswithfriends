@@ -37,6 +37,13 @@
   font-weight: 500;
 }
 
+.chat--header--original {
+  margin-top: 4px;
+  font-size: 12px;
+  font-style: italic;
+  color: rgb(0 0 0 / 45%);
+}
+
 .chat--header--description {
   margin-top: 5px;
   margin-bottom: 2px;

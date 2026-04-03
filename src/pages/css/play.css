@@ -23,6 +23,13 @@
   color: #666;
 }
 
+.play--puzzle-original {
+  font-size: 11px;
+  font-style: italic;
+  color: rgb(0 0 0 / 45%);
+  margin-top: 2px;
+}
+
 .play--table {
   width: 100%;
   border-collapse: collapse;
@@ -101,6 +108,10 @@
 
 .dark .play--puzzle-author {
   color: #aaa;
+}
+
+.dark .play--puzzle-original {
+  color: rgb(255 255 255 / 35%);
 }
 
 .dark .play--table td {

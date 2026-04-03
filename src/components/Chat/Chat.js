@@ -105,7 +105,7 @@ export default class Chat extends Component {
 
   handleShareScoreClick = () => {
     const text = `${Object.keys(this.props.users).length > 1 ? 'We' : 'I'} solved ${
-      this.props.game.info.title
+      this.props.game.info.titleOverride || this.props.game.info.title
     } in ${formatMilliseconds(this.props.game.clock.totalTime)}!\n\n${Chat.serverUrl}/beta/play/${
       this.props.game.pid
     }`;
@@ -191,13 +191,22 @@ export default class Chat extends Component {
   renderChatHeader() {
     if (this.props.header) return this.props.header;
     const {info = {}, bid} = this.props;
-    const {title, description, author, type} = info;
+    const {title, description, author, type, titleOverride, authorOverride} = info;
+    const displayTitle = titleOverride || title;
+    const displayAuthor = authorOverride || author;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
+    const hasOverride = titleOverride || authorOverride;
 
     return (
       <div className="chat--header">
-        <div className="chat--header--title">{title}</div>
-        <div className="chat--header--subtitle">{type && `${type} | By ${author}`}</div>
+        <div className="chat--header--title">{displayTitle}</div>
+        <div className="chat--header--subtitle">{type && `${type} | By ${displayAuthor}`}</div>
+        {hasOverride && (
+          <div className="chat--header--original">
+            Originally: {title}
+            {authorOverride ? ` by ${author}` : ''}
+          </div>
+        )}
         {desc && (
           <div className="chat--header--description">
             <strong>Note: </strong>

@@ -375,12 +375,20 @@ class Replay extends Component {
       info = this.state.snapshotData.info;
     }
     if (!info) return null;
-    const {title, author, type} = info;
+    const {title, author, type, titleOverride, authorOverride} = info;
+    const displayTitle = titleOverride || title;
+    const displayAuthor = authorOverride || author;
+    const hasOverride = titleOverride || authorOverride;
     return (
       <div>
-        <div className="header--title">{title}</div>
-
-        <div className="header--subtitle">{type && `${type} | By ${author}`}</div>
+        <div className="header--title">{displayTitle}</div>
+        <div className="header--subtitle">{type && `${type} | By ${displayAuthor}`}</div>
+        {hasOverride && (
+          <div className="header--original">
+            Originally: {title}
+            {authorOverride ? ` by ${author}` : ''}
+          </div>
+        )}
       </div>
     );
   }
@@ -638,8 +646,9 @@ class Replay extends Component {
 
   getPuzzleTitle() {
     const game = this.game;
-    if (game && game.info) return game.info.title;
-    if (this.state.snapshotData?.info) return this.state.snapshotData.info.title;
+    if (game && game.info) return game.info.titleOverride || game.info.title;
+    if (this.state.snapshotData?.info)
+      return this.state.snapshotData.info.titleOverride || this.state.snapshotData.info.title;
     return '';
   }
 
