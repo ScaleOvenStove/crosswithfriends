@@ -45,10 +45,10 @@ export default class Upload extends Component {
     const originalTitle = this.state.puzzle.info?.title || '';
     const originalAuthor = this.state.puzzle.info?.author || '';
     const info = {...this.state.puzzle.info};
-    if (editTitle.trim() !== originalTitle.trim()) {
+    if (editTitle.trim() && editTitle.trim() !== originalTitle.trim()) {
       info.titleOverride = editTitle.trim();
     }
-    if (editAuthor.trim() !== originalAuthor.trim()) {
+    if (editAuthor.trim() && editAuthor.trim() !== originalAuthor.trim()) {
       info.authorOverride = editAuthor.trim();
     }
     const puzzle = {
