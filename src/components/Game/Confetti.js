@@ -11,18 +11,6 @@ export default class ConfettiWrapper extends Component {
       done: false,
       numberOfPieces: 200,
     };
-
-    // jingleAudio.addEventListener("canplay", (event) => {
-    //   console.log("can play through");
-    //   jingleAudio.play();
-    // });
-
-    // jingleAudio.canplay = (event) => {
-    //   console.log("oncanplay");
-    //   jingleAudio.play();
-    // };
-
-    // jingleAudio.play();
     this.handleConfettiComplete = this.handleConfettiComplete.bind(this);
   }
 
