@@ -1,5 +1,4 @@
 /* eslint-disable no-param-reassign */
-import * as Sentry from '@sentry/react';
 import EventEmitter from 'events';
 import _ from 'lodash';
 import * as uuid from 'uuid';
@@ -22,6 +21,34 @@ const castNullsToUndefined = (obj) => {
   return obj;
 };
 
+// ============ Offline Event Queue ========== //
+// Persists unsent events to localStorage so they survive disconnects and page refreshes.
+
+function offlineQueueKey(gid) {
+  return `offline_queue_${gid}`;
+}
+
+function loadOfflineQueue(gid) {
+  try {
+    const raw = localStorage.getItem(offlineQueueKey(gid));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOfflineQueue(gid, queue) {
+  try {
+    if (queue.length === 0) {
+      localStorage.removeItem(offlineQueueKey(gid));
+    } else {
+      localStorage.setItem(offlineQueueKey(gid), JSON.stringify(queue));
+    }
+  } catch {
+    // localStorage full or unavailable — events stay in memory only
+  }
+}
+
 // a wrapper class that models Game
 
 const CURRENT_VERSION = 1.0;
@@ -31,7 +58,8 @@ export default class Game extends EventEmitter {
     window.game = this;
     this.path = path;
     this.createEvent = null;
-    this.syncState = null; // null | 'retrying' | 'failed'
+    this.syncState = null; // null | 'retrying'
+    this._flushing = false;
   }
 
   get gid() {
@@ -55,11 +83,8 @@ export default class Game extends EventEmitter {
       console.log('reconnecting...');
       await emitAsync(socket, 'join_game', this.gid);
       console.log('reconnected...');
-      // Only clear sync state if not 'failed' — failed events exhausted retries
-      // and were never persisted, so reconnecting doesn't fix them
-      if (this.syncState !== 'failed') {
-        this.syncState = null;
-      }
+      this.syncState = null;
+      await this.flushOfflineQueue();
       this.emitReconnect();
     });
   }
@@ -85,9 +110,6 @@ export default class Game extends EventEmitter {
   }
 
   setSyncState(level, detail) {
-    // Once failed, only a reconnect (or refresh) can clear it — individual
-    // event successes and retries must not mask the lost-data state
-    if (this.syncState === 'failed' && level !== 'failed') return;
     this.syncState = level;
     this.emit('syncWarning', {level, ...detail});
   }
@@ -101,34 +123,55 @@ export default class Game extends EventEmitter {
     this.emitOptimisticEvent(event);
     await this.connectToWebsocket();
 
-    const MAX_RETRIES = 3;
-    const RETRY_DELAYS = [5000, 10000, 20000];
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // If queue is empty, try sending immediately
+    const queue = loadOfflineQueue(this.gid);
+    if (queue.length === 0) {
       try {
         await this.pushEventToWebsocket(event);
         this.setSyncState(null);
         return;
-      } catch (err) {
-        console.warn(`Event emit failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, err.message);
-        if (attempt < MAX_RETRIES) {
-          this.setSyncState('retrying', {retryIn: RETRY_DELAYS[attempt] / 1000});
-          // Wait for the backoff delay OR socket reconnect, whichever comes first
-          await new Promise((resolve) => {
-            const timeout = setTimeout(resolve, RETRY_DELAYS[attempt]);
-            if (this.socket && !this.socket.connected) {
-              this.socket.once('connect', () => {
-                clearTimeout(timeout);
-                resolve();
-              });
-            }
-          });
-        }
+      } catch {
+        // Fall through to queuing logic
       }
     }
-    // all retries exhausted — freeze input, let socket.io keep trying to reconnect
-    Sentry.captureException(new Error('Event delivery failed after all retries'));
-    console.error('Event delivery failed after all retries');
-    this.setSyncState('failed');
+
+    // Persist to localStorage so the event survives page refreshes / long tunnels
+    queue.push(event);
+    saveOfflineQueue(this.gid, queue);
+    console.log(`Queued event offline (${queue.length} pending)`);
+    this.setSyncState('retrying', {retryIn: null});
+    await this.flushOfflineQueue();
+  }
+
+  async flushOfflineQueue() {
+    if (this._flushing) return;
+    this._flushing = true;
+    try {
+      while (true) {
+        const queue = loadOfflineQueue(this.gid);
+        if (queue.length === 0) {
+          this.setSyncState(null);
+          break;
+        }
+
+        const event = queue[0];
+        try {
+          await this.pushEventToWebsocket(event);
+          // Re-load to avoid overwriting events added concurrently by addEvent
+          const currentQueue = loadOfflineQueue(this.gid);
+          if (currentQueue.length > 0 && currentQueue[0].id === event.id) {
+            currentQueue.shift();
+            saveOfflineQueue(this.gid, currentQueue);
+          }
+        } catch (err) {
+          console.warn('Failed to flush offline event:', err.message);
+          this.setSyncState('retrying', {retryIn: null});
+          break; // Stop on first failure to preserve event order
+        }
+      }
+    } finally {
+      this._flushing = false;
+    }
   }
 
   pushEventToWebsocket(event) {
@@ -168,7 +211,10 @@ export default class Game extends EventEmitter {
   }
 
   async attach() {
-    const websocketPromise = this.connectToWebsocket().then(() => this.subscribeToWebsocketEvents());
+    const websocketPromise = this.connectToWebsocket().then(async () => {
+      await this.flushOfflineQueue();
+      await this.subscribeToWebsocketEvents();
+    });
     await websocketPromise;
   }
 

@@ -109,13 +109,9 @@ class Game extends Component {
       this.handleUpdate();
     });
     this.gameModel.on('reconnect', () => {
-      // Don't clear optimistic events — the retry loop will re-send them
-      // and they'll be confirmed through the normal server broadcast flow
-      // Only clear the warning banner if the model isn't in 'failed' state —
-      // failed events exhausted retries and were never persisted
-      if (this.gameModel.syncState !== 'failed') {
-        this.setState({syncWarning: null});
-      }
+      // Offline events were flushed by the Game model on reconnect,
+      // so we can safely clear warnings and optimistic state
+      this.setState({syncWarning: null});
       if (this._connectionTimer) clearTimeout(this._connectionTimer);
       this.setState({connectionFailed: false});
       this.handleChange();
