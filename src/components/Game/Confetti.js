@@ -1,5 +1,8 @@
 import {Component} from 'react';
 import Confetti from 'react-confetti';
+import jingleSound from '..//..//assets/cwfJingle.mp3';
+
+const jingleAudio = new Audio(jingleSound);
 
 export default class ConfettiWrapper extends Component {
   constructor() {
@@ -17,6 +20,12 @@ export default class ConfettiWrapper extends Component {
         numberOfPieces: 0,
       });
     }, 7000);
+    if (jingleAudio.readyState > 0) {
+      jingleAudio.currentTime = 0;
+    }
+    jingleAudio.play().catch((e) => {
+      console.error('Audio play failed:', e);
+    });
   }
 
   handleConfettiComplete() {
