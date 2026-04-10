@@ -205,4 +205,11 @@ describe('backfillSolvesForDfacId', () => {
     expect(params[0]).toBe('user-1');
     expect(params[1]).toBe('dfac-xyz');
   });
+
+  it('uses ON CONFLICT DO NOTHING so repeated calls are safe', async () => {
+    pool.query.mockResolvedValueOnce({rowCount: 0});
+    await backfillSolvesForDfacId('user-1', 'dfac-abc');
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ON CONFLICT DO NOTHING');
+  });
 });

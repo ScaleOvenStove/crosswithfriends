@@ -61,11 +61,17 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         .then((stats) => {
           if (stale || !stats) return;
           const statuses: PuzzleStatuses = {};
-          (stats.history || []).forEach((item) => {
-            statuses[item.pid] = 'solved';
-          });
+          // Apply snapshot-based statuses first (fallback from game_snapshots)
+          if (stats.snapshotStatuses) {
+            Object.assign(statuses, stats.snapshotStatuses);
+          }
+          // Overlay in-progress (only if not already marked)
           (stats.inProgress || []).forEach((item) => {
             if (!statuses[item.pid]) statuses[item.pid] = 'started';
+          });
+          // Overlay solved from puzzle_solves (highest priority)
+          (stats.history || []).forEach((item) => {
+            statuses[item.pid] = 'solved';
           });
           updateStatuses(statuses);
         })

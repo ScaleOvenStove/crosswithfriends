@@ -77,6 +77,7 @@ export interface UserStatsResponse {
   history?: SolveHistoryItem[];
   uploads?: UploadedPuzzle[];
   inProgress?: InProgressGame[];
+  snapshotStatuses?: {[pid: string]: 'solved' | 'started'};
 }
 
 export async function getUserStats(

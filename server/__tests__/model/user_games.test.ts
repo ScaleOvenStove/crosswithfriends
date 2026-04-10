@@ -2,7 +2,11 @@ import {pool, resetPoolMocks} from '../../__mocks__/pool';
 
 jest.mock('../../model/pool', () => require('../../__mocks__/pool'));
 
-import {getUserGamesForPuzzle, clearUserGamesCache} from '../../model/user_games';
+import {
+  getUserGamesForPuzzle,
+  getAuthenticatedPuzzleStatuses,
+  clearUserGamesCache,
+} from '../../model/user_games';
 
 describe('getUserGamesForPuzzle', () => {
   beforeEach(() => {
@@ -132,5 +136,61 @@ describe('getUserGamesForPuzzle', () => {
     const result = await getUserGamesForPuzzle('123', {dfacId: 'guest-1'});
 
     expect(result[0].time).toBe(0);
+  });
+});
+
+describe('getAuthenticatedPuzzleStatuses', () => {
+  beforeEach(() => {
+    resetPoolMocks();
+    clearUserGamesCache();
+  });
+
+  it('returns empty map when user has no linked dfac_ids', async () => {
+    pool.query.mockResolvedValueOnce({rows: []}); // getDfacIdsForUser
+    const result = await getAuthenticatedPuzzleStatuses('user-123');
+    expect(result).toEqual({});
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks puzzle as solved when game_snapshots entry exists', async () => {
+    // getDfacIdsForUser
+    pool.query.mockResolvedValueOnce({rows: [{dfac_id: 'dfac-abc'}]});
+    // main status query
+    pool.query.mockResolvedValueOnce({
+      rows: [{pid: 'puzzle-1', status: 'solved'}],
+    });
+    const result = await getAuthenticatedPuzzleStatuses('user-123');
+    expect(result['puzzle-1']).toBe('solved');
+  });
+
+  it('marks puzzle as started when no game_snapshots entry exists', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{dfac_id: 'dfac-abc'}]});
+    pool.query.mockResolvedValueOnce({
+      rows: [{pid: 'puzzle-2', status: 'started'}],
+    });
+    const result = await getAuthenticatedPuzzleStatuses('user-123');
+    expect(result['puzzle-2']).toBe('started');
+  });
+
+  it('passes all dfac_ids via ANY($1)', async () => {
+    pool.query.mockResolvedValueOnce({
+      rows: [{dfac_id: 'dfac-1'}, {dfac_id: 'dfac-2'}],
+    });
+    pool.query.mockResolvedValueOnce({rows: []});
+    await getAuthenticatedPuzzleStatuses('user-123');
+    const params = pool.query.mock.calls[1][1] as any[];
+    expect(params[0]).toEqual(['dfac-1', 'dfac-2']);
+  });
+
+  it('uses cache on second call (no DB queries)', async () => {
+    // First call: dfac_id lookup + main query
+    pool.query.mockResolvedValueOnce({rows: [{dfac_id: 'dfac-abc'}]});
+    pool.query.mockResolvedValueOnce({rows: [{pid: 'p1', status: 'solved'}]});
+    await getAuthenticatedPuzzleStatuses('user-123');
+
+    // Second call: entire fetch is cached, no new DB queries
+    const result = await getAuthenticatedPuzzleStatuses('user-123');
+    expect(pool.query).toHaveBeenCalledTimes(2); // only the original 2 calls
+    expect(result['p1']).toBe('solved');
   });
 });

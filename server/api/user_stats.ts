@@ -3,6 +3,7 @@ import express from 'express';
 import {getUserSolveStats, getInProgressGames} from '../model/puzzle_solve';
 import {getUserById} from '../model/user';
 import {getUserUploadedPuzzles} from '../model/puzzle';
+import {getAuthenticatedPuzzleStatuses} from '../model/user_games';
 import {verifyAccessToken} from '../auth/jwt';
 
 const router = express.Router();
@@ -93,12 +94,19 @@ router.get('/:userId', async (req, res, next) => {
     }
 
     let inProgress: Awaited<ReturnType<typeof getInProgressGames>> = [];
+    let snapshotStatuses: Awaited<ReturnType<typeof getAuthenticatedPuzzleStatuses>> = {};
     if (isOwner) {
       try {
         inProgress = await getInProgressGames(userId);
       } catch (err) {
         Sentry.captureException(err);
         console.error('getInProgressGames error:', err);
+      }
+      try {
+        snapshotStatuses = await getAuthenticatedPuzzleStatuses(userId);
+      } catch (err) {
+        Sentry.captureException(err);
+        console.error('getAuthenticatedPuzzleStatuses error:', err);
       }
     }
 
@@ -122,6 +130,7 @@ router.get('/:userId', async (req, res, next) => {
       history,
       uploads,
       inProgress,
+      snapshotStatuses,
     });
   } catch (e) {
     next(e);

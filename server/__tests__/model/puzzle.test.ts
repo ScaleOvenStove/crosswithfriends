@@ -400,11 +400,14 @@ describe('recordSolve', () => {
     expect(pool.connect).not.toHaveBeenCalled();
   });
 
-  it('skips insert when anonymous and game already solved', async () => {
-    // isGidAlreadySolved returns count > 0
+  it('skips insert when anonymous and an anonymous solve already exists', async () => {
+    // isGidAlreadySolved checks only anonymous solves (user_id IS NULL)
     pool.query.mockResolvedValueOnce({rows: [{count: 1}]});
     await recordSolve('p1', 'g1', 300);
     expect(pool.connect).not.toHaveBeenCalled();
+    // Verify query checks only anonymous solves
+    const dedupSql = pool.query.mock.calls[0][0] as string;
+    expect(dedupSql).toContain('user_id IS NULL');
   });
 
   it('increments times_solved only for first solve of a game', async () => {
@@ -450,6 +453,30 @@ describe('recordSolve', () => {
     expect(mockClient.query).toHaveBeenCalledTimes(5);
     const allSql = mockClient.query.mock.calls.map((c: any[]) => c[0] as string);
     expect(allSql.some((s) => s.includes('times_solved'))).toBe(false);
+  });
+
+  it('allows anonymous solve even when an authenticated solve exists for the same game', async () => {
+    // isGidAlreadySolved: only checks anonymous solves, should return count=0
+    // even though an authenticated solve exists for this gid
+    pool.query.mockResolvedValueOnce({rows: [{count: 0}]});
+    // BEGIN
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // SELECT FOR UPDATE
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // COUNT for first-solve check: 1 (authenticated user already solved)
+    mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
+    // INSERT puzzle_solve (anonymous)
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // COMMIT
+    mockClient.query.mockResolvedValueOnce({rows: []});
+
+    await recordSolve('p1', 'g1', 300); // no userId = anonymous
+
+    // Should have proceeded to insert (pool.connect was called)
+    expect(pool.connect).toHaveBeenCalled();
+    // Verify the dedup query checked only anonymous solves
+    const dedupSql = pool.query.mock.calls[0][0] as string;
+    expect(dedupSql).toContain('user_id IS NULL');
   });
 
   it('calls ROLLBACK on error and releases client', async () => {

@@ -16,10 +16,12 @@ export type UserGameItem = {
 // ---- In-memory TTL caches ----
 // Cache key format for userGamesForPuzzleCache: "pid:dfacId1,dfacId2:userId"
 const guestPuzzleStatusCache = new TTLCache<PuzzleStatusMap>({ttlMs: 10 * 60_000, maxSize: 10_000});
+const authPuzzleStatusCache = new TTLCache<PuzzleStatusMap>({ttlMs: 10 * 60_000, maxSize: 2_000});
 const userGamesForPuzzleCache = new TTLCache<UserGameItem[]>({ttlMs: 3 * 60_000, maxSize: 5_000});
 
 export function clearUserGamesCache(): void {
   guestPuzzleStatusCache.clear();
+  authPuzzleStatusCache.clear();
   userGamesForPuzzleCache.clear();
 }
 
@@ -32,6 +34,11 @@ export function invalidateUserGamesCacheForUser(dfacId: string): void {
     const dfacSegment = key.split(':')[1];
     return dfacSegment !== undefined && dfacSegment.split(',').includes(dfacId);
   });
+}
+
+/** Invalidate authenticated puzzle status cache for a specific user. */
+export function invalidateAuthPuzzleStatusCache(userId: string): void {
+  authPuzzleStatusCache.delete(userId);
 }
 
 /**
@@ -74,6 +81,53 @@ export async function getGuestPuzzleStatuses(dfacId: string): Promise<PuzzleStat
        ) combined
        GROUP BY pid`,
       [dfacId]
+    );
+
+    const statuses: PuzzleStatusMap = {};
+    for (const row of result.rows as {pid: string; status: 'solved' | 'started'}[]) {
+      statuses[row.pid] = row.status;
+    }
+    return statuses;
+  });
+}
+
+/**
+ * Get puzzle statuses (solved/started) for an authenticated user.
+ * Falls back to game_snapshots (like the guest path) so puzzles completed
+ * without a puzzle_solves record still show as solved.
+ */
+export async function getAuthenticatedPuzzleStatuses(userId: string): Promise<PuzzleStatusMap> {
+  return authPuzzleStatusCache.getOrFetch(userId, async () => {
+    const dfacIds = await getDfacIdsForUser(userId);
+    if (dfacIds.length === 0) return {};
+
+    const result = await pool.query(
+      `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
+       FROM (
+         SELECT
+           COALESCE(ce.pid, gs.pid) AS pid,
+           gs.gid IS NOT NULL AS solved
+         FROM (
+           SELECT DISTINCT gid FROM game_events
+           WHERE uid = ANY($1) OR (event_payload->'params'->>'id') = ANY($1)
+         ) ug
+         LEFT JOIN LATERAL (
+           SELECT event_payload->'params'->>'pid' AS pid
+           FROM game_events
+           WHERE gid = ug.gid AND event_type = 'create'
+           LIMIT 1
+         ) ce ON true
+         LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
+         WHERE COALESCE(ce.pid, gs.pid) IS NOT NULL
+
+         UNION ALL
+
+         SELECT fh.pid::text AS pid, fh.solved
+         FROM firebase_history fh
+         WHERE fh.dfac_id = ANY($1)
+       ) combined
+       GROUP BY pid`,
+      [dfacIds]
     );
 
     const statuses: PuzzleStatusMap = {};

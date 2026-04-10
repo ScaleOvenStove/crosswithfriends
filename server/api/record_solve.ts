@@ -3,7 +3,7 @@ import {RecordSolveRequest, RecordSolveResponse} from '../../src/shared/types';
 import {recordSolve} from '../model/puzzle';
 import {saveGameSnapshot} from '../model/game_snapshot';
 import {invalidateInProgressCacheForUser} from '../model/puzzle_solve';
-import {invalidateUserGamesCacheForUser} from '../model/user_games';
+import {invalidateUserGamesCacheForUser, invalidateAuthPuzzleStatusCache} from '../model/user_games';
 import {getDfacIdsForUser} from '../model/user';
 import {verifyAccessToken} from '../auth/jwt';
 
@@ -63,6 +63,7 @@ router.post<{pid: string}, RecordSolveResponse, RecordSolveRequest>('/:pid', asy
     // Invalidate caches so solved game disappears from in-progress lists
     if (userId) {
       invalidateInProgressCacheForUser(userId);
+      invalidateAuthPuzzleStatusCache(userId);
       const dfacIds = await getDfacIdsForUser(userId);
       for (const dfacId of dfacIds) invalidateUserGamesCacheForUser(dfacId);
     }

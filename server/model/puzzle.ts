@@ -335,7 +335,7 @@ export async function getUserUploadedPuzzles(userId: string) {
 async function isGidAlreadySolved(gid: string) {
   const {
     rows: [{count}],
-  } = await pool.query(`SELECT COUNT(*) FROM puzzle_solves WHERE gid=$1`, [gid]);
+  } = await pool.query(`SELECT COUNT(*) FROM puzzle_solves WHERE gid=$1 AND user_id IS NULL`, [gid]);
   return count > 0;
 }
 
