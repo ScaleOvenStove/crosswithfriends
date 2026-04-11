@@ -40,6 +40,7 @@ export interface GridProps {
   onPing?(r: number, c: number): void;
   canFlipColor?(r: number, c: number): boolean;
   onFlipColor?(r: number, c: number): void;
+  fontScale?: number;
 }
 
 export default class Grid extends React.PureComponent<GridProps> {
@@ -135,7 +136,7 @@ export default class Grid extends React.PureComponent<GridProps> {
   }
 
   render() {
-    const {size, cellStyle} = this.props;
+    const {size, cellStyle, fontScale = 1} = this.props;
     const sizeClass = Grid.getSizeClass(size);
     const data = this.props.grid.map((row, r) =>
       row.map((cell, c) => ({
@@ -171,7 +172,7 @@ export default class Grid extends React.PureComponent<GridProps> {
               name={`grid row ${i}`}
               // eslint-disable-next-line react/no-array-index-key
               key={i}
-              hash={hashGridRow(row, {...this.props.cellStyle, size})}
+              hash={hashGridRow(row, {...this.props.cellStyle, size, fontScale})}
             >
               <tr>
                 {row.map((cellProps) => (
@@ -182,7 +183,7 @@ export default class Grid extends React.PureComponent<GridProps> {
                     style={{
                       width: size,
                       height: size,
-                      fontSize: `${size * 0.15}px`,
+                      fontSize: `${size * 0.15 * fontScale}px`,
                     }}
                   >
                     <Cell

@@ -390,6 +390,7 @@ export default class Player extends Component {
       gridStyle = {},
       colorAttributionMode,
       contest,
+      fontScale,
     } = this.props;
     const size = this.size;
     const {cellStyle = {}} = gridStyle;
@@ -449,6 +450,7 @@ export default class Player extends Component {
       myColor,
       onChangeDirection: this._changeDirection,
       frozen,
+      fontScale,
     };
 
     const clueProps = {

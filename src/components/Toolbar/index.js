@@ -189,12 +189,21 @@ export default class Toolbar extends Component {
   };
 
   renderExtrasMenu() {
-    const {vimMode, onToggleColorAttributionMode, skipFilledSquares, autoAdvanceCursor, showProgress} =
-      this.props;
+    const {
+      vimMode,
+      onToggleColorAttributionMode,
+      skipFilledSquares,
+      autoAdvanceCursor,
+      showProgress,
+      onFontScaleChange,
+      fontScale = 1,
+    } = this.props;
     const vimModeLabel = vimMode ? 'Vim mode off' : 'Vim mode';
     const skipFilledSquaresLabel = skipFilledSquares ? "Don't skip filled" : 'Skip filled';
     const autoAdvanceLabel = autoAdvanceCursor ? 'No auto-advance' : 'Auto-advance';
     const showProgressLabel = showProgress ? 'Hide progress' : 'Show progress';
+    const isScaled = Math.round(fontScale * 100) !== 100;
+    const resetLabel = `Text: Reset (${Math.round(fontScale * 100)}%)`;
     return (
       <ActionMenu
         label="Extras"
@@ -208,6 +217,9 @@ export default class Toolbar extends Component {
           'List View': this.props.onToggleListView,
           Pencil: this.props.onTogglePencil,
           Autocheck: this.props.onToggleAutocheck,
+          'Text: Larger': () => onFontScaleChange(0.1),
+          'Text: Smaller': () => onFontScaleChange(-0.1),
+          ...(isScaled && {[resetLabel]: () => onFontScaleChange(1.0 - fontScale)}),
           'New game link': () => window.open(`/beta/play/${this.props.pid}?new=1`, '_blank'),
         }}
       />

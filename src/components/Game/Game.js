@@ -37,6 +37,7 @@ export default class Game extends Component {
       milestoneInitialized: false,
       milestoneMessage: null,
       showProgress: true,
+      fontScale: 1.0,
     };
   }
 
@@ -86,6 +87,17 @@ export default class Game extends Component {
     this.setState({showProgress});
 
     this.componentDidUpdate({});
+
+    let fontScale = this.state.fontScale;
+    try {
+      const storedValue = localStorage.getItem('font-scale');
+      if (storedValue != null) {
+        fontScale = JSON.parse(storedValue);
+      }
+    } catch (_e) {
+      console.error('Failed to parse local storage: fontScale');
+    }
+    this.setState({fontScale});
   }
 
   componentWillUnmount() {
@@ -328,6 +340,12 @@ export default class Game extends Component {
     this.props.onUnfocus();
   };
 
+  handleFontScale = (delta) => {
+    const next = Math.max(0.6, Math.min(2.0, this.state.fontScale + delta));
+    localStorage.setItem('font-scale', JSON.stringify(next));
+    this.setState({fontScale: next});
+  };
+
   focus() {
     this.player && this.player.focus();
   }
@@ -443,6 +461,7 @@ export default class Game extends Component {
         onCheck={this.handleCheck}
         onReveal={this.handleReveal}
         contest={!!this.game.contest}
+        fontScale={this.state.fontScale}
         {...themeStyles}
       />
     );
@@ -524,6 +543,8 @@ export default class Game extends Component {
         showProgress={this.state.showProgress}
         onToggleShowProgress={this.handleToggleShowProgress}
         percentComplete={this.state.showProgress ? this.getPercentComplete() : 0}
+        fontScale={this.state.fontScale}
+        onFontScaleChange={this.handleFontScale}
       />
     );
   }
