@@ -10,16 +10,13 @@
   display: flex;
   flex-direction: column;
   user-select: none;
-
-  --cell-bg: white;
-
-  background-color: var(--cell-bg);
+  background-color: white;
   box-sizing: border-box;
 }
 
 @media print {
   .cell {
-    background-color: white;
+    background-color: white !important;
   }
 }
 
@@ -39,9 +36,7 @@
 
 .cell.hidden {
   pointer-events: none;
-
-  --cell-bg: var(--main-gray-2);
-
+  background-color: var(--main-gray-2);
   color: var(--main-gray-2);
 }
 
@@ -52,27 +47,27 @@
 }
 
 .frozen .cell.highlighted {
-  --cell-bg: var(--main-green-1);
+  background-color: var(--main-green-1);
 }
 
 div:focus .frozen .cell.highlighted {
-  --cell-bg: var(--main-green-2);
+  background-color: var(--main-green-2);
 }
 
 .cell.highlighted {
-  --cell-bg: var(--main-blue-3);
+  background-color: var(--main-blue-3);
 }
 
 div:focus .cell.highlighted {
-  --cell-bg: var(--main-blue-2);
+  background-color: var(--main-blue-2);
 }
 
 .cell.referenced {
-  --cell-bg: #b3ff00;
+  background-color: #b3ff00;
 }
 
 div:focus .cell.referenced {
-  --cell-bg: #b3ff00; /* TODO */
+  background-color: #b3ff00; /* TODO */
 }
 
 .cell.referenced.highlighted {
@@ -80,9 +75,9 @@ div:focus .cell.referenced {
 }
 
 .cell.selected {
-  --cell-bg: #4aeba1;
+  background-color: #4aeba1;
 
-  /* --cell-bg: #98ee99; */
+  /* background-color: #98ee99; */
 }
 
 .cell.pencil .cell--value {
