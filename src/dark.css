@@ -61,17 +61,20 @@
   --cell-bg: var(--dark-background);
 }
 
-.dark .cell.highlighted {
+.dark .cell.highlighted,
+.dark div:focus .cell.highlighted {
   --cell-bg: var(--dark-blue-2);
 }
 
-.dark .cell.referenced {
+.dark .cell.referenced,
+.dark div:focus .cell.referenced {
   --cell-bg: #80a030;
 
   color: white;
 }
 
-.dark .cell.frozen.highlighted {
+.dark .cell.frozen.highlighted,
+.dark div:focus .frozen .cell.highlighted {
   --cell-bg: #399629;
 
   color: white;
