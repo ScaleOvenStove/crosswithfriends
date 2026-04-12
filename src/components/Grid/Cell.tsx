@@ -189,16 +189,10 @@ export default class Cell extends React.Component<Props> {
   getStyle(): React.CSSProperties {
     const {attributionColor, cellStyle, selected, highlighted, frozen, image} = this.props;
     let style: React.CSSProperties;
-    const isDark = document.body.classList.contains('dark');
     if (selected) {
-      // In dark mode, let CSS handle selected/highlighted colors
-      style = isDark ? {} : cellStyle.selected;
+      style = cellStyle.selected;
     } else if (highlighted) {
-      if (isDark) {
-        style = {};
-      } else {
-        style = frozen ? cellStyle.frozen : cellStyle.highlighted;
-      }
+      style = frozen ? cellStyle.frozen : cellStyle.highlighted;
     } else {
       style = {'--cell-bg': attributionColor};
     }

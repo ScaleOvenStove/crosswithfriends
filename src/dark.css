@@ -52,7 +52,7 @@
 }
 
 .dark .cell {
-  --cell-bg: var(--dark-background-2);
+  --cell-bg: var(--dark-background-2) !important;
 
   color: var(--dark-primary-text);
 }
@@ -62,24 +62,24 @@
 }
 
 .dark .cell.selected {
-  --cell-bg: var(--dark-blue-1);
+  --cell-bg: var(--dark-blue-1) !important;
 }
 
 .dark .cell.highlighted,
 .dark div:focus .cell.highlighted {
-  --cell-bg: var(--dark-blue-2);
+  --cell-bg: var(--dark-blue-2) !important;
 }
 
 .dark .cell.referenced,
 .dark div:focus .cell.referenced {
-  --cell-bg: #80a030;
+  --cell-bg: #80a030 !important;
 
   color: white;
 }
 
 .dark .cell.frozen.highlighted,
 .dark div:focus .frozen .cell.highlighted {
-  --cell-bg: #399629;
+  --cell-bg: #399629 !important;
 
   color: white;
 }
