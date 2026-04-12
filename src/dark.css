@@ -52,25 +52,28 @@
 }
 
 .dark .cell {
-  background-color: var(--dark-background-2);
+  --cell-bg: var(--dark-background-2);
+
   color: var(--dark-primary-text);
 }
 
 .dark .cell.black {
-  background-color: var(--dark-background);
+  --cell-bg: var(--dark-background);
 }
 
 .dark .cell.highlighted {
-  background-color: var(--dark-blue-2) !important;
+  --cell-bg: var(--dark-blue-2);
 }
 
 .dark .cell.referenced {
-  background-color: #80a030 !important;
+  --cell-bg: #80a030;
+
   color: white;
 }
 
 .dark .cell.frozen.highlighted {
-  background-color: #399629 !important;
+  --cell-bg: #399629;
+
   color: white;
 }
 
