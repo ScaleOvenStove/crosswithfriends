@@ -58,7 +58,7 @@
 }
 
 .dark .cell.black {
-  --cell-bg: var(--dark-background);
+  background-color: var(--dark-background);
 }
 
 .dark .cell.highlighted,
