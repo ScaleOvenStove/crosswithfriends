@@ -13,6 +13,7 @@ const PREF_STORAGE_MAP = {
   showProgress: {key: 'show-progress', type: 'json', default: true},
   darkMode: {key: 'dark_mode_preference', type: 'string', default: '0'},
   colorAttribution: {key: null, type: 'json', default: false},
+  sound: {key: 'sound', type: 'json', default: true},
 };
 
 function readLocalStoragePrefs() {

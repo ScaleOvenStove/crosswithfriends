@@ -4,6 +4,16 @@ import jingleSound from '..//..//assets/cwfJingle.mp3';
 
 const jingleAudio = new Audio(jingleSound);
 
+function soundEnabled() {
+  try {
+    const stored = localStorage.getItem('sound');
+    if (stored == null) return true;
+    return JSON.parse(stored) !== false;
+  } catch {
+    return true;
+  }
+}
+
 export default class ConfettiWrapper extends Component {
   constructor() {
     super();
@@ -20,6 +30,7 @@ export default class ConfettiWrapper extends Component {
         numberOfPieces: 0,
       });
     }, 7000);
+    if (!soundEnabled()) return;
     if (jingleAudio.readyState > 0) {
       jingleAudio.currentTime = 0;
     }

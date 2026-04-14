@@ -99,6 +99,7 @@ function GamePreferencesSection({preferences, savePreference, darkModePreference
     {key: 'autoAdvanceCursor', label: 'Auto-advance cursor', value: preferences?.autoAdvanceCursor ?? true},
     {key: 'showProgress', label: 'Show progress', value: preferences?.showProgress ?? true},
     {key: 'colorAttribution', label: 'Color Attribution', value: preferences?.colorAttribution ?? false},
+    {key: 'sound', label: 'Sound on solve', value: preferences?.sound ?? true},
   ];
 
   return (
