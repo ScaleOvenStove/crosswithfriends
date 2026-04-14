@@ -16,6 +16,7 @@ const healthLimiter = rateLimit({
 type CachedResult = {status: 'ok' | 'degraded'; timestamp: number};
 const CACHE_TTL_MS = 60 * 1000;
 let emailCache: CachedResult | null = null;
+let inflightCheck: Promise<'ok' | 'degraded'> | null = null;
 
 async function checkSendGrid(): Promise<'ok' | 'degraded'> {
   const apiKey = process.env.SENDGRID_API_KEY;
@@ -56,7 +57,13 @@ router.get('/email', healthLimiter, async (_req, res) => {
     return;
   }
 
-  const status = await checkSendGrid();
+  // Coalesce concurrent cache misses: all callers share one in-flight SendGrid call
+  if (!inflightCheck) {
+    inflightCheck = checkSendGrid().finally(() => {
+      inflightCheck = null;
+    });
+  }
+  const status = await inflightCheck;
   emailCache = {status, timestamp: now};
   res.status(status === 'ok' ? 200 : 503).json({status, cached: false});
 });

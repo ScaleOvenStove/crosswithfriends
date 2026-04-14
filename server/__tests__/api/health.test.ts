@@ -79,6 +79,38 @@ describe('/api/health/email', () => {
     expect(bodyStr).not.toContain('sendgrid');
   });
 
+  it('coalesces concurrent cache misses into a single SendGrid call', async () => {
+    let resolveCheck: (value: {ok: boolean}) => void = () => {};
+    const pending = new Promise<{ok: boolean}>((resolve) => {
+      resolveCheck = resolve;
+    });
+    const fetchMock = jest.fn().mockReturnValue(pending);
+    global.fetch = fetchMock as any;
+    const app = buildApp();
+
+    // Fire 5 concurrent requests while SendGrid call is pending
+    const requests = Promise.all([
+      request(app).get('/health/email'),
+      request(app).get('/health/email'),
+      request(app).get('/health/email'),
+      request(app).get('/health/email'),
+      request(app).get('/health/email'),
+    ]);
+
+    // Let the event loop run so all requests hit the handler
+    await new Promise((r) => setImmediate(r));
+
+    resolveCheck({ok: true});
+    const responses = await requests;
+
+    responses.forEach((res) => {
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ok');
+    });
+    // Despite 5 concurrent requests, SendGrid was only called once
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('calls SendGrid /v3/scopes with Bearer auth', async () => {
     const fetchMock = jest.fn().mockResolvedValue({ok: true});
     global.fetch = fetchMock as any;
