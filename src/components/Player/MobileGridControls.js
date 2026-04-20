@@ -523,7 +523,6 @@ export default class MobileGridControls extends GridControls {
   renderMobileInputs() {
     // This resets the input to contain just "$" on every render.
     const inputValue = '$';
-    const inputType = 'email';
     const inputStyle = {
       opacity: 0,
       width: 0,
@@ -532,8 +531,18 @@ export default class MobileGridControls extends GridControls {
       touchEvents: 'none',
       position: 'absolute',
     };
-    const inputAutoComplete = 'none';
-    const inputAutoCapitalize = 'none';
+    // The attributes below suppress iOS / mobile keyboard chrome that eats
+    // vertical space:
+    // - autoComplete="off" disables browser autofill suggestions (the
+    //   prior value "none" is invalid and was treated like the default).
+    // - autoCorrect/spellCheck off prevent the predictive-text accessory bar.
+    // - inputMode="text" gives an explicit hint so iOS doesn't fall back to
+    //   email-style behavior (which surfaced the credit-card / contacts /
+    //   location AutoFill bar above the keyboard).
+    // - data-*-ignore + data-form-type opt out of 1Password / LastPass /
+    //   Bitwarden popups (mirrors the desktop GridControls fix).
+    // Previously these textareas had type="email", which is invalid on a
+    // <textarea> but iOS WebKit picked it up and rendered the autofill bar.
 
     const USE_TEXT_AREA = true;
     if (USE_TEXT_AREA) {
@@ -542,10 +551,16 @@ export default class MobileGridControls extends GridControls {
           <textarea
             name="1"
             value={inputValue}
-            type={inputType}
             style={inputStyle}
-            autoComplete={inputAutoComplete}
-            autoCapitalize={inputAutoCapitalize}
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="text"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bw-ignore="true"
+            data-form-type="other"
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
@@ -554,10 +569,16 @@ export default class MobileGridControls extends GridControls {
             name="2"
             ref={this.inputRef}
             value={inputValue}
-            type={inputType}
             style={inputStyle}
-            autoComplete={inputAutoComplete}
-            autoCapitalize={inputAutoCapitalize}
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="text"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bw-ignore="true"
+            data-form-type="other"
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
@@ -566,10 +587,16 @@ export default class MobileGridControls extends GridControls {
           <textarea
             name="3"
             value={inputValue}
-            type={inputType}
             style={inputStyle}
-            autoComplete={inputAutoComplete}
-            autoCapitalize={inputAutoCapitalize}
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="text"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bw-ignore="true"
+            data-form-type="other"
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
@@ -582,10 +609,17 @@ export default class MobileGridControls extends GridControls {
         <input
           name="1"
           value={inputValue}
-          type={inputType}
+          type="text"
           style={inputStyle}
-          autoComplete={inputAutoComplete}
-          autoCapitalize={inputAutoCapitalize}
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode="text"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bw-ignore="true"
+          data-form-type="other"
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
@@ -594,10 +628,17 @@ export default class MobileGridControls extends GridControls {
           name="2"
           ref={this.inputRef}
           value={inputValue}
-          type={inputType}
+          type="text"
           style={inputStyle}
-          autoComplete={inputAutoComplete}
-          autoCapitalize={inputAutoCapitalize}
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode="text"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bw-ignore="true"
+          data-form-type="other"
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
@@ -606,10 +647,17 @@ export default class MobileGridControls extends GridControls {
         <input
           name="3"
           value={inputValue}
-          type={inputType}
+          type="text"
           style={inputStyle}
-          autoComplete={inputAutoComplete}
-          autoCapitalize={inputAutoCapitalize}
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode="text"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bw-ignore="true"
+          data-form-type="other"
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
