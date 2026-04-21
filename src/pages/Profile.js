@@ -70,6 +70,71 @@ function CollabTag({playerCount, coSolvers, anonCount}) {
 
 const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+function usePagination(items, storageKey, defaultPageSize = 10) {
+  const [pageSize, setPageSizeState] = useState(
+    () => Number(localStorage.getItem(storageKey)) || defaultPageSize
+  );
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [items]);
+
+  const setPageSize = useCallback(
+    (n) => {
+      setPageSizeState(n);
+      setPage(1);
+      localStorage.setItem(storageKey, n);
+    },
+    [storageKey]
+  );
+
+  const handlePrev = useCallback(() => setPage((p) => p - 1), []);
+  const handleNext = useCallback(() => setPage((p) => p + 1), []);
+
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
+  return {page, pageItems, totalPages, pageSize, setPageSize, handlePrev, handleNext};
+}
+
+function PageSizeSelector({value, onChange}) {
+  const handleClick = useCallback((e) => onChange(Number(e.currentTarget.dataset.size)), [onChange]);
+  return (
+    <span className="profile--page-size-selector">
+      Show:{' '}
+      {PAGE_SIZE_OPTIONS.map((n) => (
+        <button
+          key={n}
+          data-size={n}
+          className={`profile--page-size-btn${value === n ? ' profile--page-size-btn--active' : ''}`}
+          onClick={handleClick}
+        >
+          {n}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+function Paginator({page, totalPages, onPrev, onNext}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="profile--paginator">
+      <button className="profile--paginator-btn" disabled={page === 1} onClick={onPrev}>
+        ‹ Prev
+      </button>
+      <span className="profile--paginator-info">
+        {page} / {totalPages}
+      </span>
+      <button className="profile--paginator-btn" disabled={page === totalPages} onClick={onNext}>
+        Next ›
+      </button>
+    </div>
+  );
+}
+
 const STATS_MODES = [
   {key: 'all', label: 'All'},
   {key: 'solo', label: 'Solo'},
@@ -141,11 +206,20 @@ function StatsCards({stats}) {
 }
 
 function HistoryTable({history}) {
+  const {page, pageItems, totalPages, pageSize, setPageSize, handlePrev, handleNext} = usePagination(
+    history,
+    'profile.pageSize.history',
+    10
+  );
+
   if (history.length === 0) return null;
 
   return (
     <div className="profile--history">
-      <h3>Solve History</h3>
+      <div className="profile--section-header">
+        <h3>Solve History</h3>
+        <PageSizeSelector value={pageSize} onChange={setPageSize} />
+      </div>
       <table className="profile--history-table">
         <thead>
           <tr>
@@ -158,7 +232,7 @@ function HistoryTable({history}) {
           </tr>
         </thead>
         <tbody>
-          {history.map((item) => (
+          {pageItems.map((item) => (
             <tr key={`${item.pid}-${item.gid}`}>
               <td>
                 {item.title}
@@ -192,16 +266,26 @@ function HistoryTable({history}) {
           ))}
         </tbody>
       </table>
+      <Paginator page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
     </div>
   );
 }
 
 function InProgressTable({inProgress, onRemove}) {
+  const {page, pageItems, totalPages, pageSize, setPageSize, handlePrev, handleNext} = usePagination(
+    inProgress || [],
+    'profile.pageSize.inProgress',
+    10
+  );
+
   if (!inProgress || inProgress.length === 0) return null;
 
   return (
     <div className="profile--history">
-      <h3>In Progress</h3>
+      <div className="profile--section-header">
+        <h3>In Progress</h3>
+        <PageSizeSelector value={pageSize} onChange={setPageSize} />
+      </div>
       <table className="profile--history-table">
         <thead>
           <tr>
@@ -214,7 +298,7 @@ function InProgressTable({inProgress, onRemove}) {
           </tr>
         </thead>
         <tbody>
-          {inProgress.map((item) => (
+          {pageItems.map((item) => (
             <tr key={item.gid}>
               <td>
                 <Link to={`/beta/play/${item.pid}`} style={{color: 'inherit'}}>
@@ -246,16 +330,26 @@ function InProgressTable({inProgress, onRemove}) {
           ))}
         </tbody>
       </table>
+      <Paginator page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
     </div>
   );
 }
 
 function UploadsTable({uploads}) {
+  const {page, pageItems, totalPages, pageSize, setPageSize, handlePrev, handleNext} = usePagination(
+    uploads || [],
+    'profile.pageSize.uploads',
+    10
+  );
+
   if (!uploads || uploads.length === 0) return null;
 
   return (
     <div className="profile--uploads">
-      <h3>Uploaded Puzzles</h3>
+      <div className="profile--section-header">
+        <h3>Uploaded Puzzles</h3>
+        <PageSizeSelector value={pageSize} onChange={setPageSize} />
+      </div>
       <table className="profile--history-table">
         <thead>
           <tr>
@@ -267,7 +361,7 @@ function UploadsTable({uploads}) {
           </tr>
         </thead>
         <tbody>
-          {uploads.map((item) => (
+          {pageItems.map((item) => (
             <tr key={item.pid}>
               <td>
                 <Link to={`/beta/play/${item.pid}`} style={{color: 'inherit'}}>
@@ -283,6 +377,7 @@ function UploadsTable({uploads}) {
           ))}
         </tbody>
       </table>
+      <Paginator page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
     </div>
   );
 }
