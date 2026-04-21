@@ -405,13 +405,15 @@ export default class Game extends Component {
     if (this.props.mobile) {
       width = Math.min((35 * 15 * cols) / rows, screenWidth - 20);
     } else {
-      // Size grid to fill available viewport height without overflowing the screen.
-      // Reserved space: nav (~41px) + toolbar (~30px) + clue bar (~44px) + padding (~24px) + margin (~46px)
-      const DESKTOP_CHROME_HEIGHT = 185;
+      // Keep the grid inside the viewport so high browser zooms don't overflow.
+      // Reserved chrome: nav (~41px) + toolbar (~30px) + clue bar (~44px) + padding (~24px) + margin (~46px).
+      // Focus mode hides the nav, so subtract its height.
+      const NAV_HEIGHT = 41;
+      const DESKTOP_CHROME_HEIGHT = 185 - (this.props.focusMode ? NAV_HEIGHT : 0);
       const availableHeight = window.innerHeight - DESKTOP_CHROME_HEIGHT;
       const viewportWidth = (availableHeight * cols) / rows;
-      // Cap at the old fixed sizing so zooming out shrinks the grid as expected
-      const fixedWidth = (35 * 15 * cols) / rows;
+      // Cap scales with fontScale so "Text: Larger" grows cells up to the viewport cap.
+      const fixedWidth = (35 * 15 * this.state.fontScale * cols) / rows;
       width = Math.min(viewportWidth, fixedWidth, screenWidth - 20);
     }
     const minSize = this.props.mobile ? 1 : 20;
@@ -545,6 +547,8 @@ export default class Game extends Component {
         percentComplete={this.state.showProgress ? this.getPercentComplete() : 0}
         fontScale={this.state.fontScale}
         onFontScaleChange={this.handleFontScale}
+        focusMode={this.props.focusMode}
+        onToggleFocusMode={this.props.onToggleFocusMode}
       />
     );
   }

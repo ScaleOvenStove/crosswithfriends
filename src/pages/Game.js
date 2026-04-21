@@ -37,6 +37,7 @@ class Game extends Component {
       mobile: isMobile(),
       mode: 'game',
       chatHidden: localStorage.getItem('chat_hidden') === 'true',
+      focusMode: localStorage.getItem('focus_mode') === 'true',
       lastReadChat: 0,
       replayRetained: null, // null = no snapshot yet, false = snapshot exists but not retained, true = retained
       savingReplay: false,
@@ -234,6 +235,14 @@ class Game extends Component {
     return color;
   }
 
+  handleToggleFocusMode = () => {
+    this.setState((prevState) => {
+      const focusMode = !prevState.focusMode;
+      localStorage.setItem('focus_mode', String(focusMode));
+      return {focusMode};
+    });
+  };
+
   handleToggleChat = () => {
     if (this.state.mobile) {
       this.setState((prevState) => ({mode: prevState.mode === 'game' ? 'chat' : 'game'}));
@@ -389,6 +398,8 @@ class Game extends Component {
         savingReplay={this.state.savingReplay}
         isAuthenticated={this.context?.isAuthenticated}
         onPreferenceChange={this.context?.savePreference}
+        focusMode={this.state.focusMode}
+        onToggleFocusMode={this.handleToggleFocusMode}
       />
     );
   }
@@ -445,10 +456,10 @@ class Game extends Component {
       </>
     );
 
-    const {chatHidden} = this.state;
+    const {chatHidden, focusMode} = this.state;
     const desktopContent = (
       <>
-        <Nav />
+        <Nav hidden={focusMode} />
         <div className="game">
           <div className={`flex--column flex--shrink-0${chatHidden ? ' flex--center-h' : ''}`}>
             {this.showingGame && this.renderGame()}

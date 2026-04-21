@@ -197,11 +197,15 @@ export default class Toolbar extends Component {
       showProgress,
       onFontScaleChange,
       fontScale = 1,
+      focusMode,
+      onToggleFocusMode,
+      mobile,
     } = this.props;
     const vimModeLabel = vimMode ? 'Vim mode off' : 'Vim mode';
     const skipFilledSquaresLabel = skipFilledSquares ? "Don't skip filled" : 'Skip filled';
     const autoAdvanceLabel = autoAdvanceCursor ? 'No auto-advance' : 'Auto-advance';
     const showProgressLabel = showProgress ? 'Hide progress' : 'Show progress';
+    const focusModeLabel = focusMode ? 'Focus mode off' : 'Focus mode';
     const isScaled = Math.round(fontScale * 100) !== 100;
     const resetLabel = `Text: Reset (${Math.round(fontScale * 100)}%)`;
     return (
@@ -213,6 +217,7 @@ export default class Toolbar extends Component {
           [skipFilledSquaresLabel]: this.handleSkipFilledSquaresClick,
           [autoAdvanceLabel]: this.props.onToggleAutoAdvanceCursor,
           [showProgressLabel]: this.props.onToggleShowProgress,
+          ...(!mobile && onToggleFocusMode && {[focusModeLabel]: onToggleFocusMode}),
           'Color Attribution': onToggleColorAttributionMode,
           'List View': this.props.onToggleListView,
           Pencil: this.props.onTogglePencil,
