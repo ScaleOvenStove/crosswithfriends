@@ -144,6 +144,7 @@
     "test:e2e:report": "npx playwright show-report e2e/playwright-report",
     "stylelint": "stylelint \"src/**/*.css\"",
     "stylelint:fix": "stylelint \"src/**/*.css\" --fix",
+    "seed:test-profile": "dotenv -e server/.env.local -- npx ts-node -P server/tsconfig.json server/scripts/seed-test-profile.ts",
     "loadtest:seed": "psql -d ${PGDATABASE:-dfac} -f loadtest/seed.sql",
     "loadtest": "pnpm loadtest:seed && k6 run loadtest/api-read.js",
     "loadtest:auth": "pnpm loadtest:seed && k6 run loadtest/api-auth.js",
