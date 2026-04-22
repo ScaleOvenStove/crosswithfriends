@@ -32,9 +32,22 @@ export default function Help() {
 
         <h3>Do I need an account to play?</h3>
         <p>
-          No. You can browse, play, and upload puzzles without an account. Creating an account lets you track
-          your solve history and view your profile and stats.
+          No. You can browse, play, and upload puzzles without an account. Creating an account unlocks extras:
         </p>
+        <ul>
+          <li>Solve history and stats broken down by puzzle size and averages.</li>
+          <li>
+            Save Replay — after solving, keep the full replay of your game permanently instead of letting it
+            expire.
+          </li>
+          <li>A persistent display name and cursor color that follow you across devices.</li>
+          <li>In-progress games tracked on your profile so you can pick up where you left off.</li>
+          <li>
+            Preferences (dark mode, vim mode, auto-advance, etc.) sync across every device you&apos;re logged
+            into.
+          </li>
+          <li>Optional public profile you can share with friends.</li>
+        </ul>
 
         <h2>Playing Puzzles</h2>
 
@@ -54,7 +67,89 @@ export default function Help() {
         <h3>How do I upload a puzzle?</h3>
         <p>
           Click &quot;Upload&quot; on the home page and select a .puz file. Uploaded puzzles can be public
-          (visible to everyone) or unlisted (only accessible via direct link).
+          (visible to everyone) or unlisted (only accessible via direct link). You can also override the title
+          and author at upload time if you want a custom name.
+        </p>
+
+        <h2>In-Game Features</h2>
+
+        <h3>How do I check, reveal, or reset my answers?</h3>
+        <p>
+          The toolbar above the grid has <strong>Check</strong>, <strong>Reveal</strong>, and{' '}
+          <strong>Reset</strong> menus. Each can be applied to the current <em>Square</em>, <em>Word</em>, or
+          the whole <em>Puzzle</em>. Reveal and Reset on the full puzzle ask for confirmation first.
+        </p>
+
+        <h3>What is pencil mode?</h3>
+        <p>
+          Pencil mode lets you enter tentative answers in a lighter color so you can distinguish guesses from
+          confirmed letters. Click the pencil icon in the toolbar (or press <code>.</code>) to toggle it. When
+          pencil mode is on, a small swatch appears next to the icon so you can pick the pencil color.
+        </p>
+
+        <h3>What&apos;s in the Extras menu?</h3>
+        <p>The Extras menu in the toolbar bundles most of the optional gameplay toggles:</p>
+        <ul>
+          <li>
+            <strong>Focus mode</strong> (desktop) — hides the top nav bar to give the grid more vertical
+            space. Handy on smaller laptop screens.
+          </li>
+          <li>
+            <strong>Text: Larger / Smaller</strong> — scales both the letters and the grid cells until they
+            fill the available viewport.
+          </li>
+          <li>
+            <strong>Sound on solve</strong> — toggles the jingle that plays when you complete a puzzle.
+          </li>
+          <li>
+            <strong>Skip filled</strong> — when typing, jump over cells that already have letters.
+          </li>
+          <li>
+            <strong>Auto-advance</strong> — when the current word is complete, move the cursor to the next
+            clue automatically.
+          </li>
+          <li>
+            <strong>Show progress</strong> — show a percent-complete indicator and celebratory messages at
+            25/50/75%.
+          </li>
+          <li>
+            <strong>Color Attribution</strong> — highlight each cell with the color of the player who filled
+            it (useful for co-op games).
+          </li>
+          <li>
+            <strong>List View</strong> — switch to a stacked list of clues next to the grid, which works
+            better for large / non-standard puzzles.
+          </li>
+          <li>
+            <strong>Autocheck</strong> — mark wrong letters as soon as you enter them.
+          </li>
+          <li>
+            <strong>Vim mode</strong> — keyboard shortcuts for vim users (jump to clue number, etc.).
+          </li>
+          <li>
+            <strong>New game link</strong> — open a fresh empty game of the same puzzle in a new tab.
+          </li>
+        </ul>
+
+        <h3>What keyboard shortcuts are available?</h3>
+        <p>
+          Click the <code>ⓘ</code> icon in the game toolbar for a full list of shortcuts inside the game,
+          including Tab / Shift+Tab to jump between clues, Space to flip direction, Shift+Enter or
+          <code>[</code> / <code>]</code> to move perpendicular to the current word, and
+          <code>Alt</code>+<code>S</code>/<code>W</code>/<code>P</code> to Check Square/Word/Puzzle.
+        </p>
+
+        <h3>How do I switch to dark mode?</h3>
+        <p>
+          Click the user icon in the top right and choose the Dark Mode option. It cycles between <em>Off</em>
+          , <em>On</em>, and <em>System</em> (follows your OS setting). If you&apos;re signed in, the
+          preference syncs across your devices.
+        </p>
+
+        <h3>Can I print a puzzle?</h3>
+        <p>
+          Yes. Use your browser&apos;s print dialog (Cmd/Ctrl+P) on the game page. The grid, clues, and
+          numbers are laid out for printing — chat, cursors, and other live-play UI are hidden.
         </p>
 
         <h2>Your Profile &amp; Stats</h2>
