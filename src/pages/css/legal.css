@@ -75,3 +75,8 @@
 .dark .legal--content a {
   color: #6aa9f4;
 }
+
+.dark .legal--content code {
+  background-color: rgb(255 255 255 / 15%);
+  color: var(--dark-primary-text);
+}

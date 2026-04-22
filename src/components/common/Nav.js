@@ -10,6 +10,7 @@ import GlobalContext from '../../lib/GlobalContext';
 import AuthContext from '../../lib/AuthContext';
 import LoginModal from '../Auth/LoginModal';
 import InfoDialog from './InfoDialog';
+import SupportOptions, {SupportHeartIcon} from './SupportOptions';
 
 function darkModeIcon(darkModePreference) {
   if (darkModePreference === '1') return <FaMoon />;
@@ -29,6 +30,7 @@ function UserMenu() {
   const [open, setOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -62,6 +64,11 @@ function UserMenu() {
   const handleShowAbout = useCallback(() => {
     setOpen(false);
     setShowAbout(true);
+  }, []);
+
+  const handleShowSupport = useCallback(() => {
+    setOpen(false);
+    setShowSupport(true);
   }, []);
 
   const handleLogoutClick = useCallback(() => {
@@ -132,15 +139,15 @@ function UserMenu() {
             <span className="nav--user-menu--dark-mode-icon">{darkModeIcon(darkModePreference)}</span>
             {darkModeLabel(darkModePreference)}
           </div>
-          <a
+          <div
             className="nav--user-menu--item"
-            href="https://ko-fi.com/crosswithfriends"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={handleCloseMenu}
+            role="button"
+            tabIndex={0}
+            onClick={handleShowSupport}
+            onKeyDown={handleButtonKeyDown(handleShowSupport)}
           >
             Support CWF
-          </a>
+          </div>
           <div
             className="nav--user-menu--item"
             role="button"
@@ -193,6 +200,14 @@ function UserMenu() {
           </a>
           .
         </p>
+      </InfoDialog>
+      <InfoDialog
+        open={showSupport}
+        onOpenChange={setShowSupport}
+        title="Support Cross with Friends"
+        icon={<SupportHeartIcon />}
+      >
+        <SupportOptions />
       </InfoDialog>
     </div>
   );

@@ -4,6 +4,7 @@ import {Helmet} from 'react-helmet-async';
 import {Link} from 'react-router';
 import Nav from '../components/common/Nav';
 import Footer from '../components/common/Footer';
+import SupportOptions from '../components/common/SupportOptions';
 
 export default function Help() {
   return (
@@ -32,9 +33,22 @@ export default function Help() {
 
         <h3>Do I need an account to play?</h3>
         <p>
-          No. You can browse, play, and upload puzzles without an account. Creating an account lets you track
-          your solve history and view your profile and stats.
+          No. You can browse, play, and upload puzzles without an account. Creating an account unlocks extras:
         </p>
+        <ul>
+          <li>Solve history and stats broken down by puzzle size and averages.</li>
+          <li>
+            Save Replay — after solving, keep the full replay of your game permanently instead of letting it
+            expire.
+          </li>
+          <li>A persistent display name and cursor color that follow you across devices.</li>
+          <li>In-progress games tracked on your profile so you can pick up where you left off.</li>
+          <li>
+            Preferences (dark mode, vim mode, auto-advance, etc.) sync across every device you&apos;re logged
+            into.
+          </li>
+          <li>Optional public profile you can share with friends.</li>
+        </ul>
 
         <h2>Playing Puzzles</h2>
 
@@ -54,7 +68,89 @@ export default function Help() {
         <h3>How do I upload a puzzle?</h3>
         <p>
           Click &quot;Upload&quot; on the home page and select a .puz file. Uploaded puzzles can be public
-          (visible to everyone) or unlisted (only accessible via direct link).
+          (visible to everyone) or unlisted (only accessible via direct link). You can also override the title
+          and author at upload time if you want a custom name.
+        </p>
+
+        <h2>In-Game Features</h2>
+
+        <h3>How do I check, reveal, or reset my answers?</h3>
+        <p>
+          The toolbar above the grid has <strong>Check</strong>, <strong>Reveal</strong>, and{' '}
+          <strong>Reset</strong> menus. Each can be applied to the current <em>Square</em>, <em>Word</em>, or
+          the whole <em>Puzzle</em>. Reveal and Reset on the full puzzle ask for confirmation first.
+        </p>
+
+        <h3>What is pencil mode?</h3>
+        <p>
+          Pencil mode lets you enter tentative answers in a lighter color so you can distinguish guesses from
+          confirmed letters. Click the pencil icon in the toolbar (or press <code>.</code>) to toggle it. When
+          pencil mode is on, a small swatch appears next to the icon so you can pick the pencil color.
+        </p>
+
+        <h3>What&apos;s in the Extras menu?</h3>
+        <p>The Extras menu in the toolbar bundles most of the optional gameplay toggles:</p>
+        <ul>
+          <li>
+            <strong>Focus mode</strong> (desktop) — hides the top nav bar to give the grid more vertical
+            space. Handy on smaller laptop screens.
+          </li>
+          <li>
+            <strong>Text: Larger / Smaller</strong> — scales both the letters and the grid cells until they
+            fill the available viewport.
+          </li>
+          <li>
+            <strong>Sound on solve</strong> — toggles the jingle that plays when you complete a puzzle.
+          </li>
+          <li>
+            <strong>Skip filled squares</strong> — when typing, jump over cells that already have letters.
+          </li>
+          <li>
+            <strong>Auto-advance cursor</strong> — when the current word is complete, move the cursor to the
+            next clue automatically.
+          </li>
+          <li>
+            <strong>Show progress</strong> — show a percent-complete indicator and celebratory messages at
+            25/50/75%.
+          </li>
+          <li>
+            <strong>Color Attribution</strong> — highlight each cell with the color of the player who filled
+            it (useful for co-op games).
+          </li>
+          <li>
+            <strong>List View</strong> — switch to a stacked list of clues next to the grid, which works
+            better for large / non-standard puzzles.
+          </li>
+          <li>
+            <strong>Autocheck</strong> — mark wrong letters as soon as you enter them.
+          </li>
+          <li>
+            <strong>Vim mode</strong> — keyboard shortcuts for vim users (jump to clue number, etc.).
+          </li>
+          <li>
+            <strong>New game link</strong> — open a fresh empty game of the same puzzle in a new tab.
+          </li>
+        </ul>
+
+        <h3>What keyboard shortcuts are available?</h3>
+        <p>
+          Click the <code>ⓘ</code> icon in the game toolbar for a full list of shortcuts inside the game,
+          including <code>Tab</code> / <code>Shift+Tab</code> to jump between clues, <code>Space</code> to
+          flip direction, <code>Shift+Enter</code> or <code>[</code> / <code>]</code> to move perpendicular to
+          the current word, and <code>Alt+S/W/P</code> to Check <em>Square</em>/<em>Word</em>/<em>Puzzle</em>.
+        </p>
+
+        <h3>How do I switch to dark mode?</h3>
+        <p>
+          Click the user icon in the top right corner and choose the Dark Mode option. It cycles between{' '}
+          <em>Off</em>, <em>On</em>, and <em>System</em> (follows your OS setting). If you&apos;re signed in,
+          the preference syncs across your devices.
+        </p>
+
+        <h3>Can I print a puzzle?</h3>
+        <p>
+          Yes. Use your browser&apos;s print dialog (Cmd/Ctrl+P) on the game page. The grid, clues, and
+          numbers are laid out for printing — chat, cursors, and other live-play UI are hidden.
         </p>
 
         <h2>Your Profile &amp; Stats</h2>
@@ -131,6 +227,13 @@ export default function Help() {
           If you&apos;ve already verified but still see the verification screen, try refreshing the page or
           logging out and back in.
         </p>
+
+        <h2>Support the Site</h2>
+        <p>
+          Cross with Friends is free and ad-free. If you&apos;ve enjoyed it and want to help cover hosting
+          costs, either option below goes to the same place — pick whichever works in your region.
+        </p>
+        <SupportOptions showIntro={false} />
 
         <h2>Contact &amp; Community</h2>
 

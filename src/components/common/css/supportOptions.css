@@ -1,0 +1,79 @@
+.support-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.support-options--intro {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.support-options--button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #fff;
+  transition: filter 0.15s ease;
+}
+
+.support-options--button:hover,
+.support-options--button:focus-visible {
+  filter: brightness(1.08);
+}
+
+.support-options--button-kofi {
+  background-color: #29abe0;
+}
+
+.support-options--button-bmc {
+  background-color: #fd0;
+  color: #000;
+}
+
+.support-options--button-kofi .support-options--label-primary,
+.support-options--button-kofi .support-options--icon svg {
+  color: #fff;
+}
+
+.support-options--button-bmc .support-options--label-primary,
+.support-options--button-bmc .support-options--icon svg {
+  color: #000;
+}
+
+.confirm-dialog--icon .support-options--heart {
+  display: inline-flex;
+}
+
+.confirm-dialog--icon .support-options--heart svg {
+  color: #e91e63;
+}
+
+.support-options--icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+}
+
+.support-options--icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.support-options--label-primary {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.dark .support-options--intro {
+  color: rgb(255 255 255 / 75%);
+}
