@@ -19,6 +19,16 @@ function getClueAbbreviation({clueNumber = '', direction = ''} = {}) {
   return `${clueNumber}${direction.substring(0, 1).toUpperCase()}`;
 }
 
+// Firefox Android routes hardware volume keys through the focused element
+// instead of the OS media bus, so while our hidden IME-capture textarea is
+// focused the device volume rocker stops working (#479). Blur on detection
+// so the next press reaches the OS.
+function handleVolumeKeyBlur(ev) {
+  if (ev.key === 'AudioVolumeUp' || ev.key === 'AudioVolumeDown' || ev.key === 'AudioVolumeMute') {
+    ev.target.blur();
+  }
+}
+
 export default class MobileGridControls extends GridControls {
   constructor() {
     super();
@@ -571,6 +581,7 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
+            onKeyDown={handleVolumeKeyBlur}
           />
           <textarea
             name="2"
@@ -589,6 +600,7 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
+            onKeyDown={handleVolumeKeyBlur}
             onKeyUp={this.handleKeyUp}
           />
           <textarea
@@ -607,6 +619,7 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
+            onKeyDown={handleVolumeKeyBlur}
           />
         </>
       );
