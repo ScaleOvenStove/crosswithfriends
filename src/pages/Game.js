@@ -147,6 +147,13 @@ class Game extends Component {
       this.setState({gameNotFound: true});
     });
 
+    // Defer updateDisplayName until after we confirm the game has a create
+    // event server-side. Emitting on mount produced orphan rows in
+    // game_events for legacy gids that never had a create (#478).
+    this.gameModel.on('gameReady', () => {
+      this.handleUpdateDisplayName(this.userId, this.initialUsername);
+    });
+
     this.gameModel.on('archived', () => {
       this.setState({
         archived: true,
@@ -167,7 +174,6 @@ class Game extends Component {
 
   componentDidMount() {
     this.initializeGame();
-    this.handleUpdateDisplayName(this.userId, this.initialUsername);
     this.maybeUndismiss();
   }
 

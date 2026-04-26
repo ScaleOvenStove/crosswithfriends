@@ -121,6 +121,21 @@ export interface InitialGameEvent extends GameEvent {
   };
 }
 
+/**
+ * Returns true if the gid is a real, bootstrapped game (has a create event
+ * or a snapshot). Used to gate non-create event persistence so legacy/orphan
+ * gids don't accumulate stray events (#478).
+ */
+export async function gameExists(gid: string): Promise<boolean> {
+  const {rowCount} = await pool.query(
+    "SELECT 1 FROM game_events WHERE gid=$1 AND event_type='create' LIMIT 1",
+    [gid]
+  );
+  if (rowCount && rowCount > 0) return true;
+  const snapshot = await getGameSnapshot(gid);
+  return snapshot !== null;
+}
+
 export async function addGameEvent(gid: string, event: GameEvent) {
   // event.user is historically always null; fall back to params.id (the player's dfac_id)
   const uid = event.user || event.params?.id || null;

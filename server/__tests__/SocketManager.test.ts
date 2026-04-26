@@ -183,6 +183,8 @@ describe('SocketManager', () => {
       const sm = new SocketManager(io);
       sm.listen();
 
+      // gameExists check — game has a create event
+      pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]});
       const ack = jest.fn();
       const event = {type: 'updateCell', timestamp: 1700000000000, params: {id: 'p1'}} as any;
       await socketHandlers['game_event']({gid: 'g1', event}, ack);
@@ -233,6 +235,8 @@ describe('SocketManager', () => {
       const sm = new SocketManager(io);
       sm.listen();
 
+      // gameExists check — game has a create event
+      pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]});
       const ack = jest.fn();
       const event = {
         type: 'updateCell',
@@ -255,6 +259,66 @@ describe('SocketManager', () => {
       await expect(
         socketHandlers['game_event']({gid: 'g1', event: {type: 'updateCursor', timestamp: 1000, params: {}}})
       ).resolves.not.toThrow();
+    });
+
+    it('rejects persisted events for gids without a create event or snapshot', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      // gameExists: no create event, then no snapshot
+      pool.query.mockResolvedValueOnce({rowCount: 0, rows: []}); // create event lookup
+      pool.query.mockResolvedValueOnce({rows: []}); // getGameSnapshot
+
+      const ack = jest.fn();
+      const event = {type: 'updateCell', timestamp: 1700000000000, params: {id: 'p1'}};
+      await socketHandlers['game_event']({gid: 'orphan-gid', event}, ack);
+
+      expect(ack).toHaveBeenCalledWith({error: 'unknown game'});
+      // Only the two gameExists lookups should have run — no INSERT
+      expect(pool.query).toHaveBeenCalledTimes(2);
+    });
+
+    it('caches gameExists result per socket', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      // First event: gameExists hits DB and finds create event
+      pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]});
+      const ack1 = jest.fn();
+      await socketHandlers['game_event'](
+        {gid: 'g1', event: {type: 'updateCell', timestamp: 1700000000000, params: {id: 'p1'}}},
+        ack1
+      );
+      expect(ack1).toHaveBeenCalledWith();
+
+      // Second event for the same gid should NOT call gameExists again — only INSERT
+      pool.query.mockClear();
+      const ack2 = jest.fn();
+      await socketHandlers['game_event'](
+        {gid: 'g1', event: {type: 'updateCell', timestamp: 1700000000001, params: {id: 'p1'}}},
+        ack2
+      );
+      expect(ack2).toHaveBeenCalledWith();
+      // Only one query should have run (the INSERT) — the gameExists check was cached
+      expect(pool.query).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows ephemeral events to bypass the gate', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      const ack = jest.fn();
+      await socketHandlers['game_event'](
+        {gid: 'orphan-gid', event: {type: 'updateCursor', timestamp: 1000, params: {}}},
+        ack
+      );
+
+      expect(ack).toHaveBeenCalledWith();
+      // No DB query should have run for an ephemeral event
+      expect(pool.query).not.toHaveBeenCalled();
     });
   });
 

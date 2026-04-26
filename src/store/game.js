@@ -205,7 +205,9 @@ export default class Game extends EventEmitter {
       event = castNullsToUndefined(event);
       this.emitWSEvent(event);
     });
-    if (!response.some((event) => event && event.type === 'create')) {
+    if (response.some((event) => event && event.type === 'create')) {
+      this.emit('gameReady');
+    } else {
       this.emit('gameNotFound');
     }
   }
