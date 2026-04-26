@@ -210,7 +210,9 @@ export async function getUserGamesForPuzzle(
        FROM user_games ug
        LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
        LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
-       LEFT JOIN firebase_history fh ON fh.gid = ug.gid AND fh.dfac_id = ANY($1)
+       LEFT JOIN LATERAL (
+         SELECT pid FROM firebase_history WHERE gid = ug.gid AND dfac_id = ANY($1) LIMIT 1
+       ) fh ON true
        WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid, fh.pid::text) = $2
        ORDER BY ug.last_activity DESC`,
       options.userId ? [dfacIds, pid, options.userId, pidInt] : [dfacIds, pid, pidInt]
