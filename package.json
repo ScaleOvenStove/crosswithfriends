@@ -43,7 +43,7 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "typescript": "~5.9.3",
-    "uuid": "^11.1.0"
+    "uuid": "^14.0.0"
   },
   "pnpm": {
     "overrides": {
@@ -58,7 +58,8 @@
       "flatted": ">=3.4.2",
       "socket.io-parser": ">=4.2.6",
       "axios": ">=1.15.0",
-      "follow-redirects": ">=1.16.0"
+      "follow-redirects": ">=1.16.0",
+      "postcss": ">=8.5.10"
     },
     "onlyBuiltDependencies": [
       "bcrypt",
