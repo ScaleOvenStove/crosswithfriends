@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import _ from 'lodash';
 import Joi from 'joi';
-import * as uuid from 'uuid';
 import {PuzzleJson, ListPuzzleRequestFilters, AddPuzzleResult} from '@shared/types';
 import {pool} from './pool';
 import {dayOfWeekExtract} from './sql_helpers';
@@ -277,7 +276,7 @@ export async function addPuzzle(
   pid?: string,
   uploadedBy?: string | null
 ): Promise<AddPuzzleResult> {
-  const puzzleId = pid || uuid.v4().substr(0, 8);
+  const puzzleId = pid || crypto.randomUUID().slice(0, 8);
   validatePuzzle(puzzle);
   const contentHash = computePuzzleHash(puzzle);
 
