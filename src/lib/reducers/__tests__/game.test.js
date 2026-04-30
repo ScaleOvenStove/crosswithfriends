@@ -115,6 +115,19 @@ describe('reduce — updateCell', () => {
     });
     expect(result.grid).toBe(game.grid);
   });
+
+  it('does not throw when grid is undefined', () => {
+    // Defends against a reducer call landing on a malformed game state — e.g.
+    // an updateCell arriving before the create event has hydrated.
+    const partialGame = {pid: 'x', solution: [['']]};
+    expect(() =>
+      reduce(partialGame, {
+        type: 'updateCell',
+        timestamp: 2000,
+        params: {cell: {r: 0, c: 0}, value: 'X', id: 'user1'},
+      })
+    ).not.toThrow();
+  });
 });
 
 describe('reduce — check', () => {
