@@ -92,6 +92,29 @@ describe('reduce — updateCell', () => {
     });
     expect(game.grid[0][0].value).toBe('A');
   });
+
+  // Regression: previously an out-of-bounds (r, c) threw inside the reducer,
+  // which `reduce` caught and returned the stale `result`. From the user's
+  // perspective the typed letter would silently disappear (#482).
+  it('returns game unchanged when r is out of range', () => {
+    const game = makeGame();
+    const result = reduce(game, {
+      type: 'updateCell',
+      timestamp: 2000,
+      params: {cell: {r: 99, c: 0}, value: 'X', id: 'user1'},
+    });
+    expect(result.grid).toBe(game.grid);
+  });
+
+  it('returns game unchanged when c is out of range', () => {
+    const game = makeGame();
+    const result = reduce(game, {
+      type: 'updateCell',
+      timestamp: 2000,
+      params: {cell: {r: 0, c: 99}, value: 'X', id: 'user1'},
+    });
+    expect(result.grid).toBe(game.grid);
+  });
 });
 
 describe('reduce — check', () => {
