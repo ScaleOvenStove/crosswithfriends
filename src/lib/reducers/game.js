@@ -175,6 +175,26 @@ const reducers = {
       value,
       pencil = false,
     } = params;
+    // Defensive: if the event references a cell outside our grid — stale
+    // optimistic event left over from a previous game, out-of-order delivery
+    // before the create event has hydrated, dimension mismatch — skip the
+    // update rather than throwing. The throw was caught upstream by `reduce`
+    // and silently dropped the user's typed letter, which surfaced as #482.
+    // captureMessage (vs logger.warn) so this aggregates into a single
+    // Sentry Issue we can watch for rate / affected users / grid context.
+    if (!grid || !grid[r] || !grid[r][c]) {
+      Sentry.captureMessage('updateCell out of bounds', {
+        level: 'warning',
+        extra: {
+          r,
+          c,
+          gridRows: grid?.length,
+          gridCols: grid?.[0]?.length,
+          pid: game.pid,
+        },
+      });
+      return game;
+    }
     if (!game.solved && !grid[r][c].good) {
       grid = Object.assign([], grid, {
         [r]: Object.assign([], grid[r], {
@@ -408,7 +428,15 @@ export const reduce = (game, action, options = {}) => {
       result = tick(result, timestamp, isPause);
     }
   } catch (_e) {
-    Sentry.captureException(_e);
+    Sentry.captureException(_e, {
+      extra: {
+        eventType: type,
+        params,
+        gridRows: result?.grid?.length,
+        gridCols: result?.grid?.[0]?.length,
+        pid: result?.pid,
+      },
+    });
     console.error('Error handling action', action);
   }
   return result;
