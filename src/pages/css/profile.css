@@ -107,10 +107,86 @@
   margin-top: 24px;
 }
 
-.profile--history h3 {
-  margin: 0 0 12px;
+.profile--section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.profile--section-header h3 {
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
+}
+
+.profile--page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.profile--page-size-btn {
+  padding: 2px 7px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: none;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.profile--page-size-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.profile--page-size-btn--active {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+}
+
+.profile--page-size-btn--active:hover {
+  background-color: #1565c0;
+}
+
+.profile--paginator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 8px;
+}
+
+.profile--paginator-btn {
+  padding: 4px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: none;
+  font-size: 13px;
+  color: #1976d2;
+  cursor: pointer;
+}
+
+.profile--paginator-btn:hover:not(:disabled) {
+  background-color: #f5f5f5;
+}
+
+.profile--paginator-btn:disabled {
+  color: #ccc;
+  cursor: default;
+}
+
+.profile--paginator-info {
+  font-size: 13px;
+  color: #666;
+  min-width: 40px;
+  text-align: center;
 }
 
 .profile--history-table {
@@ -221,8 +297,7 @@
   margin-top: 32px;
 }
 
-.profile--uploads h3 {
-  margin: 0 0 12px;
+.profile--uploads .profile--section-header h3 {
   font-size: 16px;
   font-weight: 600;
 }
@@ -297,10 +372,6 @@
   color: rgb(255 255 255 / 50%);
 }
 
-.dark .profile--history h3 {
-  color: var(--dark-primary-text);
-}
-
 .dark .profile--history-table th {
   color: rgb(255 255 255 / 50%);
   border-bottom-color: #444;
@@ -331,8 +402,48 @@
   color: #555;
 }
 
-.dark .profile--uploads h3 {
+.dark .profile--section-header h3 {
   color: var(--dark-primary-text);
+}
+
+.dark .profile--page-size-selector {
+  color: rgb(255 255 255 / 50%);
+}
+
+.dark .profile--page-size-btn {
+  border-color: #444;
+  color: rgb(255 255 255 / 50%);
+}
+
+.dark .profile--page-size-btn:hover {
+  background-color: rgb(255 255 255 / 10%);
+}
+
+.dark .profile--page-size-btn--active {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+}
+
+.dark .profile--page-size-btn--active:hover {
+  background-color: #1565c0;
+}
+
+.dark .profile--paginator-btn {
+  border-color: #444;
+  color: #6aa9f4;
+}
+
+.dark .profile--paginator-btn:hover:not(:disabled) {
+  background-color: rgb(255 255 255 / 5%);
+}
+
+.dark .profile--paginator-btn:disabled {
+  color: rgb(255 255 255 / 25%);
+}
+
+.dark .profile--paginator-info {
+  color: rgb(255 255 255 / 50%);
 }
 
 .dark .profile--empty,
