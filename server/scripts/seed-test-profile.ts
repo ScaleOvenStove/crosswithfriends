@@ -131,8 +131,10 @@ async function main() {
   for (let i = 0; i < NUM_HISTORY; i++) {
     const pid = pids[i];
     const gid = `seed-solved-${String(i + 1).padStart(3, '0')}`;
-    // time_taken_to_solve is in seconds; vary by size (bigger = slower)
-    const timeSec = randBetween(90, 1800);
+    // time_taken_to_solve is in milliseconds despite the SQL column comment
+    // saying seconds — verified against prod (real values are in the
+    // 100k–2M range and the frontend's formatTime treats this field as ms).
+    const timeMs = randBetween(90_000, 1_800_000); // 90s to 30min
     const solvedAt = daysAgo(i * 2 + 1); // spread over past ~50 days
     const playerCount = i % 5 === 0 ? 2 : 1; // every 5th is a co-op solve
 
@@ -140,7 +142,7 @@ async function main() {
       `INSERT INTO puzzle_solves (pid, gid, solved_time, time_taken_to_solve, user_id, player_count)
        VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT DO NOTHING`,
-      [pid, gid, solvedAt, timeSec, userId, playerCount]
+      [pid, gid, solvedAt, timeMs, userId, playerCount]
     );
     if ((r.rowCount ?? 0) > 0) solvesCreated += 1;
   }

@@ -73,14 +73,11 @@ const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 function usePagination(items, storageKey, defaultPageSize = 10) {
-  const [pageSize, setPageSizeState] = useState(
-    () => Number(localStorage.getItem(storageKey)) || defaultPageSize
-  );
+  const [pageSize, setPageSizeState] = useState(() => {
+    const stored = Number(localStorage.getItem(storageKey));
+    return PAGE_SIZE_OPTIONS.includes(stored) ? stored : defaultPageSize;
+  });
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    setPage(1);
-  }, [items]);
 
   const setPageSize = useCallback(
     (n) => {
@@ -94,9 +91,15 @@ function usePagination(items, storageKey, defaultPageSize = 10) {
   const handlePrev = useCallback(() => setPage((p) => p - 1), []);
   const handleNext = useCallback(() => setPage((p) => p + 1), []);
 
+  // Clamp during render rather than resetting via effect on every items
+  // change. The previous implementation forced page=1 whenever items
+  // changed reference (e.g. after dismissing an in-progress game), which
+  // bounced users back to page 1 mid-task. Clamping keeps them where they
+  // were and only nudges them when their current page no longer exists.
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
-  const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
-  return {page, pageItems, totalPages, pageSize, setPageSize, handlePrev, handleNext};
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const pageItems = items.slice((safePage - 1) * pageSize, safePage * pageSize);
+  return {page: safePage, pageItems, totalPages, pageSize, setPageSize, handlePrev, handleNext};
 }
 
 function PageSizeSelector({value, onChange}) {
