@@ -1,5 +1,6 @@
 import './css/ActionMenu.css';
-import React, {Component} from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import {Component} from 'react';
 
 /*
  * Summary of ActionMenu component
@@ -24,86 +25,66 @@ import React, {Component} from 'react';
  * */
 
 export default class ActionMenu extends Component {
-  containerRef = React.createRef();
+  shouldRefocusGrid = false;
 
-  constructor() {
-    super();
-    this.state = {
-      active: false,
-    };
-    this._onClick = this.onClick.bind(this);
-    this._onBlur = this.onBlur.bind(this);
-  }
-
-  handlePointerDown = (e) => {
-    const refNode = this.containerRef.current;
-    if (refNode?.contains(e.target)) {
-      return;
-    }
-    this.setState({active: false});
+  handleActionSelect = (event) => {
+    const actionKey = event.currentTarget.dataset.actionKey;
+    this.shouldRefocusGrid = true;
+    this.props.actions[actionKey]();
   };
 
-  static onButtonMouseDown(e) {
-    e.preventDefault();
-  }
+  handleCloseAutoFocus = (event) => {
+    if (!this.shouldRefocusGrid) {
+      return;
+    }
 
-  onClick() {
-    this.setState(
-      (prevState) => ({active: !prevState.active}),
-      () => {
-        if (this.state.active) {
-          window.addEventListener('pointerdown', this.handlePointerDown);
-        } else {
-          window.removeEventListener('pointerdown', this.handlePointerDown);
-        }
-      }
-    );
-  }
-
-  onBlur() {
-    this.setState({active: false});
+    event.preventDefault();
+    this.shouldRefocusGrid = false;
     this.props.onBlur();
-  }
+  };
 
-  handleAction = (ev) => {
-    ev.preventDefault();
-    const actionKey = ev.currentTarget.dataset.actionKey;
-    this.props.actions[actionKey]();
-    this.onBlur();
-    this.setState({active: false});
+  handleEscapeKeyDown = () => {
+    this.shouldRefocusGrid = true;
+  };
+
+  handleInteractOutside = () => {
+    this.shouldRefocusGrid = false;
   };
 
   render() {
     return (
-      <div
-        ref={this.containerRef}
-        className={`${this.state.active ? 'active ' : ''}action-menu`}
-        onBlur={this._onBlur}
-      >
-        <button
-          tabIndex={-1}
-          className="action-menu--button"
-          onMouseDown={ActionMenu.onButtonMouseDown}
-          onClick={this._onClick}
-        >
-          {this.props.label}
-        </button>
-        <div className="action-menu--list">
-          {Object.keys(this.props.actions).map((key) => (
-            <div
-              key={key}
-              role="button"
-              tabIndex={0}
-              className="action-menu--list--action"
-              data-action-key={key}
-              onMouseDown={this.handleAction}
-              onTouchStart={this.handleAction}
+      <DropdownMenu.Root>
+        <div className="action-menu">
+          <DropdownMenu.Trigger asChild>
+            <button type="button" tabIndex={-1} className="action-menu--button">
+              {this.props.label}
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              className="action-menu--list"
+              align="start"
+              side="bottom"
+              sideOffset={4}
+              collisionPadding={8}
+              onCloseAutoFocus={this.handleCloseAutoFocus}
+              onEscapeKeyDown={this.handleEscapeKeyDown}
+              onInteractOutside={this.handleInteractOutside}
             >
-              <span> {key} </span>
-            </div>
-          ))}
+              {Object.keys(this.props.actions).map((key) => (
+                <DropdownMenu.Item
+                  key={key}
+                  className="action-menu--list--action"
+                  data-action-key={key}
+                  onSelect={this.handleActionSelect}
+                >
+                  <span>{key}</span>
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
         </div>
-      </div>
+      </DropdownMenu.Root>
     );
   }
 }
