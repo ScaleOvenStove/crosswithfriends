@@ -101,8 +101,7 @@ export const test = base.extend<{gamePage: GameHelpers}>({
     };
 
     const clickAction = async (key: string): Promise<void> => {
-      // Scope to the currently active (open) action menu to avoid strict mode violations
-      await page.locator(`.active.action-menu .action-menu--list--action[data-action-key="${key}"]`).click();
+      await page.locator(`.action-menu--list .action-menu--list--action[data-action-key="${key}"]`).click();
     };
 
     // Detect contest mode — contest puzzles show "Mark as Solved" instead of Check/Reveal

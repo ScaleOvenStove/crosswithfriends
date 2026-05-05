@@ -374,7 +374,8 @@
   border-color: #555;
 }
 
-.dark .action-menu--list--action:hover {
+.dark .action-menu--list--action:hover,
+.dark .action-menu--list--action[data-highlighted] {
   color: var(--dark-primary-text);
   background-color: #383838;
 }
