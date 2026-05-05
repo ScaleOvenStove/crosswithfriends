@@ -58,7 +58,7 @@
       "undici": ">=7.24.0",
       "flatted": ">=3.4.2",
       "socket.io-parser": ">=4.2.6",
-      "axios": ">=1.15.0",
+      "axios": ">=1.15.2",
       "follow-redirects": ">=1.16.0",
       "postcss": ">=8.5.10"
     },
