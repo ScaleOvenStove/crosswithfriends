@@ -7,7 +7,7 @@ CREATE TABLE
     pid text NOT NULL REFERENCES puzzles ON DELETE CASCADE,
     gid text NOT NULL,
     solved_time timestamp without time zone, -- the time the solve was recorded
-    time_taken_to_solve integer CHECK (time_taken_to_solve > 0), -- the duration (seconds) of how long it took to solve
+    time_taken_to_solve integer CHECK (time_taken_to_solve > 0), -- the duration (milliseconds) of how long it took to solve
     user_id UUID REFERENCES users(id), -- authenticated user who solved (NULL for anonymous)
     player_count integer DEFAULT 1 -- number of players in the game at solve time
 );
