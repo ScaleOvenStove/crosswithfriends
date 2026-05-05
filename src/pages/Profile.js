@@ -88,9 +88,6 @@ function usePagination(items, storageKey, defaultPageSize = 10) {
     [storageKey]
   );
 
-  const handlePrev = useCallback(() => setPage((p) => p - 1), []);
-  const handleNext = useCallback(() => setPage((p) => p + 1), []);
-
   // Clamp during render rather than resetting via effect on every items
   // change. The previous implementation forced page=1 whenever items
   // changed reference (e.g. after dismissing an in-progress game), which
@@ -99,6 +96,14 @@ function usePagination(items, storageKey, defaultPageSize = 10) {
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const pageItems = items.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  // Derive handlers from safePage rather than the raw page state — when
+  // items shrink and page drifts above totalPages, a functional updater
+  // would decrement the stale value and produce a dead click before the
+  // UI moves.
+  const handlePrev = useCallback(() => setPage(safePage - 1), [safePage]);
+  const handleNext = useCallback(() => setPage(safePage + 1), [safePage]);
+
   return {page: safePage, pageItems, totalPages, pageSize, setPageSize, handlePrev, handleNext};
 }
 
