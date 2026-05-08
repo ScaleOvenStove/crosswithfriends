@@ -63,12 +63,12 @@ router.post<{pid: string}, RecordSolveResponse, RecordSolveRequest>('/:pid', asy
     } catch (solveErr) {
       // Don't abort the snapshot save: a snapshot without a puzzle_solves row
       // is still useful to the user (the game page can reload the solved grid).
-      // recordSolve already logs and reports to Sentry; we tag the gid here so
-      // the report surfaces "snapshot orphaned by solve failure" cases.
+      // Tag this report with the orphan context so it's distinguishable from
+      // unrelated DB errors when we triage Sentry.
       solveRecorded = false;
-      Sentry.captureMessage('recordSolve failed; snapshot will be saved without solve record', {
+      Sentry.captureException(solveErr, {
         level: 'warning',
-        extra: {pid: req.params.pid, gid, userId, time_to_solve, error: String(solveErr)},
+        extra: {pid: req.params.pid, gid, userId, time_to_solve, note: 'snapshot orphaned by solve failure'},
       });
     }
     if (snapshot) {
