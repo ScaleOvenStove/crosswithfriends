@@ -4,7 +4,7 @@ import {Link} from 'react-router';
 import {useCallback, useContext, useEffect, useRef, useState} from 'react';
 
 import clsx from 'clsx';
-import {FaSun, FaMoon, FaDesktop, FaUserCircle} from 'react-icons/fa';
+import {FaSun, FaMoon, FaDesktop, FaUserCircle, FaVolumeUp, FaVolumeMute} from 'react-icons/fa';
 import {MdInfoOutline} from 'react-icons/md';
 import GlobalContext from '../../lib/GlobalContext';
 import AuthContext from '../../lib/AuthContext';
@@ -25,8 +25,9 @@ function darkModeLabel(darkModePreference) {
 }
 
 function UserMenu() {
-  const {isAuthenticated, user, handleLogout} = useContext(AuthContext);
+  const {isAuthenticated, user, handleLogout, preferences, savePreference} = useContext(AuthContext);
   const {darkModePreference, toggleMolesterMoons} = useContext(GlobalContext);
+  const soundEnabled = preferences?.sound ?? true;
   const [open, setOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -85,6 +86,19 @@ function UserMenu() {
     [toggleMolesterMoons]
   );
 
+  const handleToggleSound = useCallback(() => {
+    savePreference('sound', !soundEnabled);
+  }, [savePreference, soundEnabled]);
+
+  const handleToggleSoundKey = useCallback(
+    (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        handleToggleSound();
+      }
+    },
+    [handleToggleSound]
+  );
+
   const handleButtonKeyDown = useCallback(
     (handler) => (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -130,14 +144,26 @@ function UserMenu() {
             </div>
           )}
           <div
-            className="nav--user-menu--item nav--user-menu--dark-mode"
+            className="nav--user-menu--item"
             role="button"
             tabIndex={0}
             onClick={toggleMolesterMoons}
             onKeyDown={handleToggleDarkMode}
           >
-            <span className="nav--user-menu--dark-mode-icon">{darkModeIcon(darkModePreference)}</span>
+            <span className="nav--user-menu--item-icon">{darkModeIcon(darkModePreference)}</span>
             {darkModeLabel(darkModePreference)}
+          </div>
+          <div
+            className="nav--user-menu--item"
+            role="button"
+            tabIndex={0}
+            onClick={handleToggleSound}
+            onKeyDown={handleToggleSoundKey}
+          >
+            <span className="nav--user-menu--item-icon">
+              {soundEnabled ? <FaVolumeUp /> : <FaVolumeMute />}
+            </span>
+            {soundEnabled ? 'Sound on solve: On' : 'Sound on solve: Off'}
           </div>
           <div
             className="nav--user-menu--item"
