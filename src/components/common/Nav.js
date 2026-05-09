@@ -144,23 +144,23 @@ function UserMenu() {
             </div>
           )}
           <div
-            className="nav--user-menu--item nav--user-menu--dark-mode"
+            className="nav--user-menu--item"
             role="button"
             tabIndex={0}
             onClick={toggleMolesterMoons}
             onKeyDown={handleToggleDarkMode}
           >
-            <span className="nav--user-menu--dark-mode-icon">{darkModeIcon(darkModePreference)}</span>
+            <span className="nav--user-menu--item-icon">{darkModeIcon(darkModePreference)}</span>
             {darkModeLabel(darkModePreference)}
           </div>
           <div
-            className="nav--user-menu--item nav--user-menu--dark-mode"
+            className="nav--user-menu--item"
             role="button"
             tabIndex={0}
             onClick={handleToggleSound}
             onKeyDown={handleToggleSoundKey}
           >
-            <span className="nav--user-menu--dark-mode-icon">
+            <span className="nav--user-menu--item-icon">
               {soundEnabled ? <FaVolumeUp /> : <FaVolumeMute />}
             </span>
             {soundEnabled ? 'Sound on solve: On' : 'Sound on solve: Off'}

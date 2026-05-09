@@ -65,7 +65,7 @@ export function AuthProvider({children}) {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [preferences, setPreferences] = useState(null);
+  const [preferences, setPreferences] = useState(readLocalStoragePrefs);
   const refreshTimerRef = useRef(null);
   const debounceTimerRef = useRef(null);
   const pendingPrefsRef = useRef({});
@@ -136,7 +136,7 @@ export function AuthProvider({children}) {
     await apiLogout();
     setAccessToken(null);
     setUser(null);
-    setPreferences(null);
+    setPreferences(readLocalStoragePrefs());
   }, []);
 
   const refreshUser = useCallback(async () => {
