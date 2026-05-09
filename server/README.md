@@ -149,7 +149,7 @@ For testing/production environments, create separate OAuth credentials with the 
 For local development, Resend is **optional** — emails are logged to the console when `RESEND_API_KEY` is not set. If you want to test actual email delivery:
 
 1. Create a free account at [resend.com](https://resend.com/)
-2. Go to **API Keys** and create a key with "Sending access" (full access also works)
+2. Go to **API Keys** and create a key with **"Full access"** permission. (A "Sending access" key sends fine but the `/api/health/email` endpoint will return 503 because it reads `/domains`, which requires Full access.)
 3. Go to **Domains** and verify the domain you want to send from (add the DKIM/SPF DNS records Resend provides)
 4. Add the key to `server/.env.local`:
 
