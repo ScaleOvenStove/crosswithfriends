@@ -177,7 +177,7 @@ Both compose files set default Postgres credentials and a placeholder `JWT_SECRE
 Optional variables for full functionality:
 
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` — Google OAuth login
-- `SENDGRID_API_KEY` — email verification (emails are logged to console without this)
+- `RESEND_API_KEY` — email verification (emails are logged to console without this)
 - `SENTRY_DSN` — error tracking
 
 ## Tips

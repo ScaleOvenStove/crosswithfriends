@@ -110,11 +110,11 @@ All auth-related env vars go in `server/.env.local` (for local dev) or the equiv
 
 Each environment (local, testing, production) needs its own Google OAuth credentials. See the setup guide below.
 
-**Required for email sending (SendGrid):**
+**Required for email sending (Resend):**
 
-| Variable           | Description                              | Example     |
-| ------------------ | ---------------------------------------- | ----------- |
-| `SENDGRID_API_KEY` | SendGrid API key for transactional email | `SG.xxx...` |
+| Variable         | Description                            | Example     |
+| ---------------- | -------------------------------------- | ----------- |
+| `RESEND_API_KEY` | Resend API key for transactional email | `re_xxx...` |
 
 **Optional (have sensible defaults):**
 
@@ -123,7 +123,7 @@ Each environment (local, testing, production) needs its own Google OAuth credent
 | `APP_URL`   | `http://localhost:3020`        | Base URL for links in emails |
 | `MAIL_FROM` | `noreply@crosswithfriends.com` | Sender address for emails    |
 
-If `SENDGRID_API_KEY` is not set, emails are logged to the console instead of sent (useful for local development). See the setup guide below for using SendGrid in dev.
+If `RESEND_API_KEY` is not set, emails are logged to the console instead of sent (useful for local development). See the setup guide below for using Resend in dev.
 
 ### Setting Up Google OAuth (Local Dev)
 
@@ -144,17 +144,17 @@ GOOGLE_REDIRECT_URI=http://localhost:3021/api/auth/google/callback
 
 For testing/production environments, create separate OAuth credentials with the appropriate redirect URIs (e.g., `https://crosswithfriends.com/api/auth/google/callback`).
 
-### Setting Up SendGrid (Local Dev)
+### Setting Up Resend (Local Dev)
 
-For local development, SendGrid is **optional** — emails are logged to the console when `SENDGRID_API_KEY` is not set. If you want to test actual email delivery:
+For local development, Resend is **optional** — emails are logged to the console when `RESEND_API_KEY` is not set. If you want to test actual email delivery:
 
-1. Create a free account at [sendgrid.com](https://sendgrid.com/)
-2. Go to **Settings > API Keys** and create an API key with "Mail Send" permission
-3. Go to **Settings > Sender Authentication** and verify a sender identity (either Single Sender or Domain Authentication)
+1. Create a free account at [resend.com](https://resend.com/)
+2. Go to **API Keys** and create a key with **"Full access"** permission. (A "Sending access" key sends fine but the `/api/health/email` endpoint will return 503 because it reads `/domains`, which requires Full access.)
+3. Go to **Domains** and verify the domain you want to send from (add the DKIM/SPF DNS records Resend provides)
 4. Add the key to `server/.env.local`:
 
 ```
-SENDGRID_API_KEY=SG.your-api-key-here
+RESEND_API_KEY=re_your-api-key-here
 ```
 
 **Important:** The env file must be `server/.env.local` (not the root `.env.local`), because `pnpm devbackend` loads env from that path. Restart the backend after adding/changing env vars.

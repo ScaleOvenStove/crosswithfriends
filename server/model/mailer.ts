@@ -1,21 +1,24 @@
-import sgMail from '@sendgrid/mail';
+import {Resend} from 'resend';
 
 const APP_URL = process.env.APP_URL || 'http://localhost:3020';
 const MAIL_FROM = process.env.MAIL_FROM || 'noreply@crosswithfriends.com';
 
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-} else {
-  console.warn('SENDGRID_API_KEY not set — emails will be logged to console instead of sent');
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+if (!resend) {
+  console.warn('RESEND_API_KEY not set — emails will be logged to console instead of sent');
 }
 
 async function sendEmail(to: string, subject: string, text: string, html: string): Promise<void> {
-  if (!process.env.SENDGRID_API_KEY) {
+  if (!resend) {
     console.log(`[MAIL] To: ${to} | Subject: ${subject}`);
     console.log(`[MAIL] ${text}`);
     return;
   }
-  await sgMail.send({to, from: MAIL_FROM, subject, text, html});
+  const {error} = await resend.emails.send({from: MAIL_FROM, to, subject, text, html});
+  if (error) {
+    throw new Error(`Resend send failed: ${error.name}: ${error.message}`);
+  }
 }
 
 export async function sendVerificationEmail(

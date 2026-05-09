@@ -3,16 +3,16 @@ import request from 'supertest';
 
 describe('/api/health/email', () => {
   const originalFetch = global.fetch;
-  const originalApiKey = process.env.SENDGRID_API_KEY;
+  const originalApiKey = process.env.RESEND_API_KEY;
 
   beforeEach(() => {
     jest.resetModules();
-    process.env.SENDGRID_API_KEY = 'SG.test-key';
+    process.env.RESEND_API_KEY = 're_test-key';
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
-    process.env.SENDGRID_API_KEY = originalApiKey;
+    process.env.RESEND_API_KEY = originalApiKey;
   });
 
   function buildApp() {
@@ -23,7 +23,7 @@ describe('/api/health/email', () => {
     return app;
   }
 
-  it('returns 200 when SendGrid returns success', async () => {
+  it('returns 200 when Resend returns success', async () => {
     global.fetch = jest.fn().mockResolvedValue({ok: true}) as any;
     const app = buildApp();
     const res = await request(app).get('/health/email');
@@ -31,7 +31,7 @@ describe('/api/health/email', () => {
     expect(res.body.status).toBe('ok');
   });
 
-  it('returns 503 when SendGrid returns an error status', async () => {
+  it('returns 503 when Resend returns an error status', async () => {
     global.fetch = jest.fn().mockResolvedValue({ok: false, status: 401}) as any;
     const app = buildApp();
     const res = await request(app).get('/health/email');
@@ -39,7 +39,7 @@ describe('/api/health/email', () => {
     expect(res.body.status).toBe('degraded');
   });
 
-  it('returns 503 when SendGrid fetch throws', async () => {
+  it('returns 503 when Resend fetch throws', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('network error')) as any;
     const app = buildApp();
     const res = await request(app).get('/health/email');
@@ -47,18 +47,18 @@ describe('/api/health/email', () => {
     expect(res.body.status).toBe('degraded');
   });
 
-  it('returns 503 when SENDGRID_API_KEY is unset', async () => {
-    delete process.env.SENDGRID_API_KEY;
+  it('returns 503 when RESEND_API_KEY is unset', async () => {
+    delete process.env.RESEND_API_KEY;
     global.fetch = jest.fn();
     const app = buildApp();
     const res = await request(app).get('/health/email');
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('degraded');
-    // Should not have called SendGrid at all
+    // Should not have called Resend at all
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('caches the result: second request does not hit SendGrid', async () => {
+  it('caches the result: second request does not hit Resend', async () => {
     const fetchMock = jest.fn().mockResolvedValue({ok: true});
     global.fetch = fetchMock as any;
     const app = buildApp();
@@ -74,12 +74,12 @@ describe('/api/health/email', () => {
     const app = buildApp();
     const res = await request(app).get('/health/email');
     const bodyStr = JSON.stringify(res.body);
-    expect(bodyStr).not.toContain('SG.');
+    expect(bodyStr).not.toContain('re_');
     expect(bodyStr).not.toContain('apiKey');
-    expect(bodyStr).not.toContain('sendgrid');
+    expect(bodyStr).not.toContain('resend');
   });
 
-  it('coalesces concurrent cache misses into a single SendGrid call', async () => {
+  it('coalesces concurrent cache misses into a single Resend call', async () => {
     let resolveCheck: (value: {ok: boolean}) => void = () => {};
     const pending = new Promise<{ok: boolean}>((resolve) => {
       resolveCheck = resolve;
@@ -88,7 +88,7 @@ describe('/api/health/email', () => {
     global.fetch = fetchMock as any;
     const app = buildApp();
 
-    // Fire 5 concurrent requests while SendGrid call is pending
+    // Fire 5 concurrent requests while Resend call is pending
     const requests = Promise.all([
       request(app).get('/health/email'),
       request(app).get('/health/email'),
@@ -107,17 +107,17 @@ describe('/api/health/email', () => {
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('ok');
     });
-    // Despite 5 concurrent requests, SendGrid was only called once
+    // Despite 5 concurrent requests, Resend was only called once
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('calls SendGrid /v3/scopes with Bearer auth', async () => {
+  it('calls Resend /domains with Bearer auth', async () => {
     const fetchMock = jest.fn().mockResolvedValue({ok: true});
     global.fetch = fetchMock as any;
     const app = buildApp();
     await request(app).get('/health/email');
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.sendgrid.com/v3/scopes',
+      'https://api.resend.com/domains',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: expect.stringMatching(/^Bearer /),

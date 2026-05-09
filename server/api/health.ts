@@ -18,15 +18,15 @@ const CACHE_TTL_MS = 60 * 1000;
 let emailCache: CachedResult | null = null;
 let inflightCheck: Promise<'ok' | 'degraded'> | null = null;
 
-async function checkSendGrid(): Promise<'ok' | 'degraded'> {
-  const apiKey = process.env.SENDGRID_API_KEY;
+async function checkResend(): Promise<'ok' | 'degraded'> {
+  const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return 'degraded';
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const resp = await fetch('https://api.sendgrid.com/v3/scopes', {
+    const resp = await fetch('https://api.resend.com/domains', {
       headers: {Authorization: `Bearer ${apiKey}`},
       signal: controller.signal,
     });
@@ -43,11 +43,11 @@ async function checkSendGrid(): Promise<'ok' | 'degraded'> {
  * /health/email:
  *   get:
  *     tags: [Health]
- *     summary: Email (SendGrid) health check
- *     description: Returns 200 if the SendGrid API key is accepted by SendGrid, 503 otherwise. Cached for 60s to cap upstream cost.
+ *     summary: Email (Resend) health check
+ *     description: Returns 200 if the Resend API key is accepted by Resend, 503 otherwise. Cached for 60s to cap upstream cost.
  *     responses:
- *       200: {description: SendGrid reachable and authenticated}
- *       503: {description: SendGrid unreachable or API key rejected}
+ *       200: {description: Resend reachable and authenticated}
+ *       503: {description: Resend unreachable or API key rejected}
  *       429: {description: Rate limited}
  */
 router.get('/email', healthLimiter, async (_req, res) => {
@@ -57,9 +57,9 @@ router.get('/email', healthLimiter, async (_req, res) => {
     return;
   }
 
-  // Coalesce concurrent cache misses: all callers share one in-flight SendGrid call
+  // Coalesce concurrent cache misses: all callers share one in-flight Resend call
   if (!inflightCheck) {
-    inflightCheck = checkSendGrid().finally(() => {
+    inflightCheck = checkResend().finally(() => {
       inflightCheck = null;
     });
   }
