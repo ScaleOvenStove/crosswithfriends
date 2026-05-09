@@ -419,8 +419,8 @@ describe('recordSolve', () => {
     mockClient.query.mockResolvedValueOnce({rows: []});
     // COUNT for first-solve check: 0 existing
     mockClient.query.mockResolvedValueOnce({rows: [{count: 0}]});
-    // INSERT puzzle_solve
-    mockClient.query.mockResolvedValueOnce({rows: []});
+    // INSERT puzzle_solve (rowCount=1: row was inserted)
+    mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 1});
     // UPDATE times_solved
     mockClient.query.mockResolvedValueOnce({rows: []});
     // COMMIT
@@ -442,8 +442,8 @@ describe('recordSolve', () => {
     mockClient.query.mockResolvedValueOnce({rows: []});
     // COUNT: already 1 solve exists
     mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
-    // INSERT puzzle_solve
-    mockClient.query.mockResolvedValueOnce({rows: []});
+    // INSERT puzzle_solve (different user_id, no conflict)
+    mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 1});
     // COMMIT (no UPDATE times_solved)
     mockClient.query.mockResolvedValueOnce({rows: []});
 
@@ -453,6 +453,29 @@ describe('recordSolve', () => {
     expect(mockClient.query).toHaveBeenCalledTimes(5);
     const allSql = mockClient.query.mock.calls.map((c: any[]) => c[0] as string);
     expect(allSql.some((s) => s.includes('times_solved'))).toBe(false);
+  });
+
+  it('does not increment times_solved when concurrent insert hit the unique index (ON CONFLICT)', async () => {
+    // Pre-flight check: not yet solved (race: the racing request committed after this check)
+    pool.query.mockResolvedValueOnce({rows: [{count: 0}]});
+    // BEGIN
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // SELECT FOR UPDATE — racing request has committed by the time we acquire the lock
+    mockClient.query.mockResolvedValueOnce({rows: []});
+    // COUNT inside the locked txn: 1 (the racing request's row)
+    mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
+    // INSERT with ON CONFLICT DO NOTHING — no row inserted (rowCount=0)
+    mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 0});
+    // COMMIT — no UPDATE times_solved
+    mockClient.query.mockResolvedValueOnce({rows: []});
+
+    await expect(recordSolve('p1', 'g1', 300)).resolves.not.toThrow();
+
+    expect(mockClient.query).toHaveBeenCalledTimes(5);
+    const allSql = mockClient.query.mock.calls.map((c: any[]) => c[0] as string);
+    expect(allSql.some((s) => s.includes('times_solved'))).toBe(false);
+    // Verify the INSERT uses ON CONFLICT DO NOTHING
+    expect(allSql[3]).toContain('ON CONFLICT DO NOTHING');
   });
 
   it('allows anonymous solve even when an authenticated solve exists for the same game', async () => {
@@ -466,7 +489,7 @@ describe('recordSolve', () => {
     // COUNT for first-solve check: 1 (authenticated user already solved)
     mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
     // INSERT puzzle_solve (anonymous)
-    mockClient.query.mockResolvedValueOnce({rows: []});
+    mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 1});
     // COMMIT
     mockClient.query.mockResolvedValueOnce({rows: []});
 

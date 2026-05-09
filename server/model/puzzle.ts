@@ -372,12 +372,13 @@ export async function recordSolve(
     } = await client.query(`SELECT COUNT(*) FROM puzzle_solves WHERE gid = $1`, [gid]);
     const isFirstSolveForGame = Number(count) === 0;
 
-    await client.query(
+    const insertResult = await client.query(
       `INSERT INTO puzzle_solves (pid, gid, solved_time, time_taken_to_solve, user_id, player_count)
-       VALUES ($1, $2, to_timestamp($3), $4, $5, $6)`,
+       VALUES ($1, $2, to_timestamp($3), $4, $5, $6)
+       ON CONFLICT DO NOTHING`,
       [pid, gid, solved_time / 1000.0, timeToSolve, userId || null, playerCount || 1]
     );
-    if (isFirstSolveForGame) {
+    if (insertResult.rowCount === 1 && isFirstSolveForGame) {
       await client.query(`UPDATE puzzles SET times_solved = times_solved + 1 WHERE pid = $1`, [pid]);
     }
     await client.query('COMMIT');
