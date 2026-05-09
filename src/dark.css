@@ -423,6 +423,10 @@
   fill: #8a9bb0;
 }
 
+.dark .entry--rating {
+  color: rgb(255 255 255 / 60%);
+}
+
 /* File Uploader */
 .dark .file-uploader--wrapper {
   background-color: rgb(255 255 255 / 5%);

@@ -98,6 +98,8 @@ export interface PuzzleJson {
 
 export interface PuzzleStatsJson {
   numSolves: number;
+  ratingAverage: number | null;
+  ratingCount: number;
 }
 
 export interface AddPuzzleRequest {

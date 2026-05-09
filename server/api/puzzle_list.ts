@@ -87,7 +87,11 @@ router.get<{}, ListPuzzleResponse>('/', optionalAuth, async (req, res, next) => 
     const puzzles = rawPuzzleList.map((puzzle) => ({
       pid: puzzle.pid,
       content: puzzle.content,
-      stats: {numSolves: puzzle.times_solved},
+      stats: {
+        numSolves: puzzle.times_solved,
+        ratingAverage: puzzle.rating_avg,
+        ratingCount: puzzle.rating_count,
+      },
       isPublic: puzzle.is_public,
     }));
     // Authenticated responses include the user's unlisted puzzles, so must not be publicly cached
