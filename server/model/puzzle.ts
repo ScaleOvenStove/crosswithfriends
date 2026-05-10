@@ -186,11 +186,11 @@ export async function listPuzzles(
         r.avg AS rating_avg,
         COALESCE(r.count, 0) AS rating_count
       FROM puzzles
-      LEFT JOIN (
-        SELECT pid, AVG(rating)::float AS avg, COUNT(*)::int AS count
+      LEFT JOIN LATERAL (
+        SELECT AVG(rating)::float AS avg, COUNT(*)::int AS count
         FROM puzzle_ratings
-        GROUP BY pid
-      ) r ON r.pid = puzzles.pid
+        WHERE pid = puzzles.pid
+      ) r ON true
       WHERE ${visibilityClause}
       ${sizeClause}
       ${typeClause}

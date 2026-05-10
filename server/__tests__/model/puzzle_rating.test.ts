@@ -3,9 +3,9 @@ import {pool, resetPoolMocks} from '../../__mocks__/pool';
 jest.mock('../../model/pool', () => require('../../__mocks__/pool'));
 
 // Mock dependencies that hasReachedRatingThreshold composes with
-const mockGetUserGamesForPuzzle = jest.fn();
-jest.mock('../../model/user_games', () => ({
-  getUserGamesForPuzzle: (...args: unknown[]) => mockGetUserGamesForPuzzle(...args),
+const mockGetDfacIdsForUser = jest.fn();
+jest.mock('../../model/user', () => ({
+  getDfacIdsForUser: (...args: unknown[]) => mockGetDfacIdsForUser(...args),
 }));
 
 const mockComputeGamesProgress = jest.fn();
@@ -23,7 +23,7 @@ import {
 
 beforeEach(() => {
   resetPoolMocks();
-  mockGetUserGamesForPuzzle.mockReset();
+  mockGetDfacIdsForUser.mockReset();
   mockComputeGamesProgress.mockReset();
 });
 
@@ -85,22 +85,26 @@ describe('hasReachedRatingThreshold', () => {
     const eligible = await hasReachedRatingThreshold('p1', 'user-1');
     expect(eligible).toBe(true);
     // Skips the games lookup entirely
-    expect(mockGetUserGamesForPuzzle).not.toHaveBeenCalled();
+    expect(mockGetDfacIdsForUser).not.toHaveBeenCalled();
+  });
+
+  it('returns false when the user has no dfac ids and no solve', async () => {
+    pool.query.mockResolvedValueOnce({rows: []});
+    mockGetDfacIdsForUser.mockResolvedValueOnce([]);
+    const eligible = await hasReachedRatingThreshold('p1', 'user-1');
+    expect(eligible).toBe(false);
   });
 
   it('returns false when the user has no games and no solve', async () => {
-    pool.query.mockResolvedValueOnce({rows: []});
-    mockGetUserGamesForPuzzle.mockResolvedValueOnce([]);
+    pool.query.mockResolvedValueOnce({rows: []}).mockResolvedValueOnce({rows: []});
+    mockGetDfacIdsForUser.mockResolvedValueOnce(['dfac-1']);
     const eligible = await hasReachedRatingThreshold('p1', 'user-1');
     expect(eligible).toBe(false);
   });
 
   it('returns true when any user game has reached the threshold', async () => {
-    pool.query.mockResolvedValueOnce({rows: []});
-    mockGetUserGamesForPuzzle.mockResolvedValueOnce([
-      {gid: 'g1', pid: 'p1', solved: false, time: 0, v2: true, percentComplete: 0},
-      {gid: 'g2', pid: 'p1', solved: false, time: 0, v2: true, percentComplete: 0},
-    ]);
+    pool.query.mockResolvedValueOnce({rows: []}).mockResolvedValueOnce({rows: [{gid: 'g1'}, {gid: 'g2'}]});
+    mockGetDfacIdsForUser.mockResolvedValueOnce(['dfac-1']);
     mockComputeGamesProgress.mockResolvedValueOnce(
       new Map([
         ['g1', 10],
@@ -112,12 +116,22 @@ describe('hasReachedRatingThreshold', () => {
   });
 
   it('returns false when all user games are below threshold', async () => {
-    pool.query.mockResolvedValueOnce({rows: []});
-    mockGetUserGamesForPuzzle.mockResolvedValueOnce([
-      {gid: 'g1', pid: 'p1', solved: false, time: 0, v2: true, percentComplete: 0},
-    ]);
+    pool.query.mockResolvedValueOnce({rows: []}).mockResolvedValueOnce({rows: [{gid: 'g1'}]});
+    mockGetDfacIdsForUser.mockResolvedValueOnce(['dfac-1']);
     mockComputeGamesProgress.mockResolvedValueOnce(new Map([['g1', RATING_THRESHOLD_PERCENT - 1]]));
     const eligible = await hasReachedRatingThreshold('p1', 'user-1');
     expect(eligible).toBe(false);
+  });
+
+  it('does not filter dismissed games when looking up gids for eligibility', async () => {
+    // Regression: getUserGamesForPuzzle excluded dismissed games, which meant a user
+    // who hit 25% then dismissed the game was wrongly blocked from rating. The
+    // eligibility helper must use a path that ignores game_dismissals.
+    pool.query.mockResolvedValueOnce({rows: []}).mockResolvedValueOnce({rows: [{gid: 'g1'}]});
+    mockGetDfacIdsForUser.mockResolvedValueOnce(['dfac-1']);
+    mockComputeGamesProgress.mockResolvedValueOnce(new Map([['g1', RATING_THRESHOLD_PERCENT]]));
+    await hasReachedRatingThreshold('p1', 'user-1');
+    const gidsLookupSql = pool.query.mock.calls[1][0] as string;
+    expect(gidsLookupSql).not.toContain('game_dismissals');
   });
 });

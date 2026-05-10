@@ -1,5 +1,5 @@
 import {pool} from './pool';
-import {getUserGamesForPuzzle} from './user_games';
+import {getDfacIdsForUser} from './user';
 import {computeGamesProgress} from './game_progress';
 
 export const RATING_THRESHOLD_PERCENT = 25;
@@ -45,6 +45,43 @@ export async function deleteRating(pid: string, userId: string): Promise<void> {
 }
 
 /**
+ * Find every gid where the user participated for a given pid, irrespective
+ * of dismissal status. getUserGamesForPuzzle filters out dismissed games
+ * (correct for in-progress UIs, wrong for eligibility — a user can dismiss
+ * a game they were eligible to rate from). Includes legacy firebase_history
+ * games so users with only legacy plays remain eligible.
+ */
+async function listAllUserGameIdsForPuzzle(pid: string, userId: string): Promise<string[]> {
+  const dfacIds = await getDfacIdsForUser(userId);
+  if (dfacIds.length === 0) return [];
+  const pidInt = Number.isFinite(Number(pid)) ? Number(pid) : null;
+  const result = await pool.query(
+    `SELECT DISTINCT gid FROM (
+       SELECT ug.gid
+       FROM (
+         SELECT DISTINCT gid FROM game_events
+         WHERE uid = ANY($1) OR (event_payload->'params'->>'id') = ANY($1)
+       ) ug
+       LEFT JOIN LATERAL (
+         SELECT event_payload->'params'->>'pid' AS pid
+         FROM game_events
+         WHERE gid = ug.gid AND event_type = 'create' LIMIT 1
+       ) ce ON true
+       LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
+       WHERE COALESCE(ce.pid, gs.pid) = $2
+
+       UNION
+
+       SELECT fh.gid
+       FROM firebase_history fh
+       WHERE fh.dfac_id = ANY($1) AND fh.pid = $3
+     ) all_gids`,
+    [dfacIds, pid, pidInt]
+  );
+  return result.rows.map((r: {gid: string}) => r.gid);
+}
+
+/**
  * A user is eligible to rate a puzzle once they have either solved it or
  * reached RATING_THRESHOLD_PERCENT progress on at least one of their games
  * for that puzzle. computeGamesProgress replays game_events, which is heavy,
@@ -58,10 +95,9 @@ export async function hasReachedRatingThreshold(pid: string, userId: string): Pr
   );
   if (solveRows.length > 0) return true;
 
-  const games = await getUserGamesForPuzzle(pid, {userId});
-  if (games.length === 0) return false;
+  const gids = await listAllUserGameIdsForPuzzle(pid, userId);
+  if (gids.length === 0) return false;
 
-  const gids = games.map((g) => g.gid);
   const progressMap = await computeGamesProgress(gids);
   for (const pct of progressMap.values()) {
     if (pct >= RATING_THRESHOLD_PERCENT) return true;

@@ -12,9 +12,9 @@ CREATE TABLE
     PRIMARY KEY (pid, user_id)
 );
 
--- Aggregate lookups for puzzle list (avg/count by pid)
-CREATE INDEX IF NOT EXISTS puzzle_ratings_pid_idx
-  ON puzzle_ratings (pid);
+-- Aggregate lookups by pid (avg/count for puzzle list, eligibility checks)
+-- are served by the (pid, user_id) PRIMARY KEY's B-tree index, since pid is
+-- the leading column. No separate index on (pid) is needed.
 
 ALTER TABLE public.puzzle_ratings
     OWNER to dfacadmin;
