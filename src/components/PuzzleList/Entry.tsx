@@ -1,6 +1,6 @@
 import {Component} from 'react';
 import _ from 'lodash';
-import {MdRadioButtonUnchecked, MdCheckCircle} from 'react-icons/md';
+import {MdRadioButtonUnchecked, MdCheckCircle, MdStar} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {Link} from 'react-router';
 
@@ -18,10 +18,17 @@ export interface EntryProps {
   stats: {
     numSolves?: number;
     solves?: Array<any>;
+    ratingAverage?: number | null;
+    ratingCount?: number;
   };
   fencing?: boolean;
   isPublic?: boolean;
   contest?: boolean;
+}
+
+function ratingTitle(average: number | null | undefined, count: number | undefined): string {
+  if (average == null || !count) return 'No ratings yet';
+  return `Average rating ${average.toFixed(1)} from ${count} ${count === 1 ? 'rating' : 'ratings'}`;
 }
 
 const handleClick = () => {
@@ -112,6 +119,12 @@ export default class Entry extends Component<EntryProps> {
               Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
             </p>
             <div className="flex">
+              <span className="entry--rating" title={ratingTitle(stats?.ratingAverage, stats?.ratingCount)}>
+                <MdStar className="entry--rating-icon" />
+                {stats?.ratingAverage != null
+                  ? `${stats.ratingAverage.toFixed(1)} (${stats.ratingCount ?? 0})`
+                  : 'Not yet rated'}
+              </span>
               {this.props.contest && <span className="entry--contest">Contest</span>}
               {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
             </div>

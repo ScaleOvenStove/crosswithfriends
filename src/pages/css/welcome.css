@@ -187,6 +187,22 @@
   left: 15px;
 }
 
+.entry--rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #888;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.entry--rating-icon {
+  color: #f5a623;
+  font-size: 12px;
+}
+
 ::-webkit-scrollbar {
   width: 2px; /* remove scrollbar space */
   background: transparent; /* optional: just make scrollbar invisible */

@@ -8,7 +8,14 @@ import {TTLCache} from './ttl_cache';
 
 // ================ Read and Write methods used to interface with postgres ========== //
 
-type PuzzleListRow = {pid: string; content: PuzzleJson; times_solved: number; is_public: boolean};
+type PuzzleListRow = {
+  pid: string;
+  content: PuzzleJson;
+  times_solved: number;
+  is_public: boolean;
+  rating_avg: number | null;
+  rating_count: number;
+};
 
 // ---- Puzzle list cache ----
 const puzzleListCache = new TTLCache<PuzzleListRow[]>({
@@ -132,14 +139,7 @@ export async function listPuzzles(
   limit: number,
   offset: number,
   userId?: string
-): Promise<
-  {
-    pid: string;
-    content: PuzzleJson;
-    times_solved: number;
-    is_public: boolean;
-  }[]
-> {
+): Promise<PuzzleListRow[]> {
   const cacheKey = buildCacheKey(filter, limit, offset, userId);
 
   return puzzleListCache.getOrFetch(cacheKey, async () => {
@@ -174,14 +174,23 @@ export async function listPuzzles(
     // Select only the JSONB fields the frontend needs (info, grid dimensions, contest flag)
     // instead of the entire content column which includes clues, solution, circles, shades, and images.
     // This dramatically reduces I/O and network transfer for the puzzle list page.
+    // puzzle_ratings shares only `pid` with puzzles, so the filter clauses
+    // (content/is_public/uploaded_by/pid_numeric) remain unambiguous after the LEFT JOIN.
     const {rows} = await pool.query(
       `
-      SELECT pid, uploaded_at, is_public, times_solved,
+      SELECT puzzles.pid, uploaded_at, is_public, times_solved,
         content->'info' AS info,
         jsonb_array_length(content->'grid') AS grid_rows,
         jsonb_array_length(content->'grid'->0) AS grid_cols,
-        (content->>'contest')::boolean AS contest
+        (content->>'contest')::boolean AS contest,
+        r.avg AS rating_avg,
+        COALESCE(r.count, 0) AS rating_count
       FROM puzzles
+      LEFT JOIN LATERAL (
+        SELECT AVG(rating)::float AS avg, COUNT(*)::int AS count
+        FROM puzzle_ratings
+        WHERE pid = puzzles.pid
+      ) r ON true
       WHERE ${visibilityClause}
       ${sizeClause}
       ${typeClause}
@@ -193,7 +202,7 @@ export async function listPuzzles(
     `,
       [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams, ...userIdParams]
     );
-    const puzzles = rows.map(
+    const puzzles: PuzzleListRow[] = rows.map(
       (row: {
         pid: string;
         uploaded_at: string;
@@ -203,12 +212,16 @@ export async function listPuzzles(
         grid_cols: number;
         contest: boolean | null;
         times_solved: string;
+        rating_avg: number | null;
+        rating_count: number;
         // NOTE: numeric returns as string in pg-promise
         // See https://stackoverflow.com/questions/39168501/pg-promise-returns-integers-as-strings
       }) => ({
         pid: row.pid,
         is_public: row.is_public,
         times_solved: Number(row.times_solved),
+        rating_avg: row.rating_avg !== null ? Number(row.rating_avg) : null,
+        rating_count: Number(row.rating_count) || 0,
         // Reconstruct a minimal content object with just the fields the frontend uses:
         // - info (title, author, type)
         // - grid (only dimensions matter — build a skeleton array)

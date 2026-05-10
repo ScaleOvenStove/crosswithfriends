@@ -79,3 +79,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- 12. firebase_history (no dependencies)
 -- ============================================================
 \ir create_firebase_history.sql
+
+-- ============================================================
+-- 13. puzzle_ratings (depends on puzzles + users)
+-- ============================================================
+\ir create_puzzle_ratings.sql

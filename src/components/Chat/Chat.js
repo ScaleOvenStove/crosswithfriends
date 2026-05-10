@@ -12,6 +12,7 @@ import ChatBar from './ChatBar';
 import EditableSpan from '../common/EditableSpan';
 import ColorPicker from './ColorPicker.tsx';
 import {formatMilliseconds} from '../Toolbar/Clock';
+import RatingWidget from '../Game/RatingWidget';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -190,8 +191,9 @@ export default class Chat extends Component {
 
   renderChatHeader() {
     if (this.props.header) return this.props.header;
-    const {info = {}, bid} = this.props;
+    const {info = {}, bid, game} = this.props;
     const {title, description, author, type, titleOverride, authorOverride} = info;
+    const pid = game?.pid;
     const displayTitle = titleOverride || title;
     const displayAuthor = authorOverride || author;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
@@ -220,6 +222,7 @@ export default class Chat extends Component {
             {bid}
           </div>
         )}
+        {pid && <RatingWidget pid={String(pid)} />}
         {this.renderFencingOptions()}
       </div>
     );
