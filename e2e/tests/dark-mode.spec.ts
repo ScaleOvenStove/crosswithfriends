@@ -17,11 +17,11 @@ test.describe('Dark mode', () => {
     await expect(page.locator('.nav--user-menu--dropdown')).toBeVisible();
 
     // Should show "Dark Mode: Off"
-    await expect(page.locator('.nav--user-menu--dark-mode')).toContainText('Dark Mode: Off');
+    await expect(page.getByRole('button', {name: /^Dark Mode:/})).toContainText('Dark Mode: Off');
 
     // Toggle to On
-    await page.locator('.nav--user-menu--dark-mode').click();
-    await expect(page.locator('.nav--user-menu--dark-mode')).toContainText('Dark Mode: On');
+    await page.getByRole('button', {name: /^Dark Mode:/}).click();
+    await expect(page.getByRole('button', {name: /^Dark Mode:/})).toContainText('Dark Mode: On');
     await expect(routerWrapper).toHaveClass(/\bdark\b/);
 
     // Body should also have dark class
@@ -29,12 +29,12 @@ test.describe('Dark mode', () => {
     expect(bodyHasDark).toBe(true);
 
     // Toggle to System
-    await page.locator('.nav--user-menu--dark-mode').click();
-    await expect(page.locator('.nav--user-menu--dark-mode')).toContainText('Dark Mode: System');
+    await page.getByRole('button', {name: /^Dark Mode:/}).click();
+    await expect(page.getByRole('button', {name: /^Dark Mode:/})).toContainText('Dark Mode: System');
 
     // Toggle back to Off
-    await page.locator('.nav--user-menu--dark-mode').click();
-    await expect(page.locator('.nav--user-menu--dark-mode')).toContainText('Dark Mode: Off');
+    await page.getByRole('button', {name: /^Dark Mode:/}).click();
+    await expect(page.getByRole('button', {name: /^Dark Mode:/})).toContainText('Dark Mode: Off');
     await expect(routerWrapper).not.toHaveClass(/\bdark\b/);
 
     assertNoFatalErrors(consoleErrors);
@@ -51,7 +51,7 @@ test.describe('Dark mode', () => {
 
     // Toggle to dark mode
     await page.locator('.nav--user-menu--trigger').click();
-    await page.locator('.nav--user-menu--dark-mode').click();
+    await page.getByRole('button', {name: /^Dark Mode:/}).click();
     await expect(page.locator('.router-wrapper')).toHaveClass(/\bdark\b/);
 
     // Get nav background color in dark mode

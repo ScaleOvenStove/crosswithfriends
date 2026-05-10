@@ -53,7 +53,7 @@ test.describe('Navigation', () => {
 
     // Unauthenticated items
     await expect(page.locator('.nav--user-menu--item', {hasText: 'Sign Up / Log In'})).toBeVisible();
-    await expect(page.locator('.nav--user-menu--dark-mode')).toBeVisible();
+    await expect(page.getByRole('button', {name: /^Dark Mode:/})).toBeVisible();
     await expect(page.locator('.nav--user-menu--item', {hasText: 'About'})).toBeVisible();
     await expect(page.locator('.nav--user-menu--item', {hasText: 'Help'})).toBeVisible();
 
