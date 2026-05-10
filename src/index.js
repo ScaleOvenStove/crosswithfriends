@@ -48,21 +48,25 @@ import {HelmetProvider} from 'react-helmet-async';
 import useMediaQuery from './lib/hooks/useMediaQuery';
 import {BrowserRouter as Router, Route, Routes, Navigate, useLocation} from 'react-router';
 import {isMobile} from './lib/jsUtils';
+import {lazyWithReload, clearChunkReloadMarker} from './lib/lazyWithReload';
 // Eager-loaded pages (critical path)
 import {Game, Room, WrappedWelcome} from './pages';
 
-// Lazy-loaded pages (loaded on demand when route is visited)
-const Account = React.lazy(() => import('./pages/Account'));
-const Fencing = React.lazy(() => import('./pages/Fencing'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const Help = React.lazy(() => import('./pages/Help'));
-const Play = React.lazy(() => import('./pages/Play'));
-const Privacy = React.lazy(() => import('./pages/Privacy'));
-const Profile = React.lazy(() => import('./pages/Profile'));
-const Replay = React.lazy(() => import('./pages/Replay'));
-const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
-const Terms = React.lazy(() => import('./pages/Terms'));
-const VerifyEmail = React.lazy(() => import('./pages/VerifyEmail'));
+// Lazy-loaded pages (loaded on demand when route is visited).
+// lazyWithReload force-reloads once per session if the chunk fetch fails — handles
+// the common case where a deploy lands while a tab is open and the hashed asset
+// URLs in the loaded HTML no longer exist.
+const Account = lazyWithReload(() => import('./pages/Account'));
+const Fencing = lazyWithReload(() => import('./pages/Fencing'));
+const ForgotPassword = lazyWithReload(() => import('./pages/ForgotPassword'));
+const Help = lazyWithReload(() => import('./pages/Help'));
+const Play = lazyWithReload(() => import('./pages/Play'));
+const Privacy = lazyWithReload(() => import('./pages/Privacy'));
+const Profile = lazyWithReload(() => import('./pages/Profile'));
+const Replay = lazyWithReload(() => import('./pages/Replay'));
+const ResetPassword = lazyWithReload(() => import('./pages/ResetPassword'));
+const Terms = lazyWithReload(() => import('./pages/Terms'));
+const VerifyEmail = lazyWithReload(() => import('./pages/VerifyEmail'));
 import GlobalContext from './lib/GlobalContext';
 import AuthContext, {AuthProvider} from './lib/AuthContext';
 import GoogleCallback from './components/Auth/GoogleCallback';
@@ -214,3 +218,6 @@ ReactDOM.render(
 );
 */
 createRoot(document.getElementById('root')).render(<Root />);
+// Successful boot — clear any pending reload marker so a future deploy can trigger
+// a fresh reload-on-chunk-failure.
+clearChunkReloadMarker();
