@@ -1,10 +1,21 @@
-import {ListPuzzleResponse, ListPuzzleRequestFilters} from '@shared/types';
+import {ListPuzzleResponse, ListPuzzleRequestFilters, PuzzleSortBy} from '@shared/types';
 import express from 'express';
 import _ from 'lodash';
 import {listPuzzles} from '../model/puzzle';
 import {optionalAuth} from '../auth/middleware';
 
 const router = express.Router();
+
+function parseMinRating(raw: unknown): number {
+  const n = Number.parseInt(String(raw ?? ''), 10);
+  if (!Number.isFinite(n) || n < 1 || n > 5) return 0;
+  return n;
+}
+
+function parseSortBy(raw: unknown): PuzzleSortBy {
+  if (raw === 'rating_desc' || raw === 'rating_asc') return raw;
+  return 'default';
+}
 
 /**
  * @openapi
@@ -79,6 +90,8 @@ router.get<{}, ListPuzzleResponse>('/', optionalAuth, async (req, res, next) => 
         Sun: rawFilters?.dayOfWeekFilter?.Sun !== 'false',
         Unknown: rawFilters?.dayOfWeekFilter?.Unknown !== 'false',
       },
+      minRating: parseMinRating(rawFilters?.minRating),
+      sortBy: parseSortBy(rawFilters?.sortBy),
     };
     if (!(Number.isFinite(page) && Number.isFinite(pageSize))) {
       return next(_.assign(new Error('page and pageSize should be integers'), {statusCode: 400}));

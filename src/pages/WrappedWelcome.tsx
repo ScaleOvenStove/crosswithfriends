@@ -1,5 +1,6 @@
 import {useEffect} from 'react';
 import useStateParams from '../lib/hooks/useStateParams';
+import {PuzzleSortBy} from '../shared/types';
 import Welcome from './Welcome';
 
 interface UseFencing {
@@ -103,6 +104,23 @@ const WrappedWelcome = (props: UseFencing) => {
     (s) => s
   );
 
+  // Rating filter (0 = any) and sort
+  const [minRating, setMinRating] = useStateParams<number>(
+    0,
+    'min_rating',
+    (n) => String(n),
+    (s) => {
+      const parsed = Number.parseInt(s, 10);
+      return Number.isFinite(parsed) && parsed >= 1 && parsed <= 5 ? parsed : 0;
+    }
+  );
+  const [sortBy, setSortBy] = useStateParams<PuzzleSortBy>(
+    'default',
+    'sort',
+    (s) => s,
+    (s) => (s === 'rating_desc' || s === 'rating_asc' ? (s as PuzzleSortBy) : 'default')
+  );
+
   function setStatusFilter(statusFilter: StatusFilter) {
     setIncludeComplete(statusFilter.Complete);
     setIncludeInProgress(statusFilter['In progress']);
@@ -161,6 +179,10 @@ const WrappedWelcome = (props: UseFencing) => {
     setDayOfWeekFilter,
     search,
     setSearch,
+    minRating,
+    setMinRating,
+    sortBy,
+    setSortBy,
     fencing: props.fencing,
   };
 

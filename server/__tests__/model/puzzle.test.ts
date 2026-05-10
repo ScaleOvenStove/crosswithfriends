@@ -159,6 +159,61 @@ describe('listPuzzles', () => {
     // userId should be the last parameter
     expect(params[params.length - 1]).toBe(userId);
   });
+
+  it('orders by pid_numeric DESC by default', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles(defaultFilter, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ORDER BY pid_numeric DESC');
+    expect(sql).not.toContain('r.weighted');
+  });
+
+  it('orders by weighted rating DESC when sortBy is rating_desc', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, sortBy: 'rating_desc'}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ORDER BY r.weighted DESC NULLS LAST, pid_numeric DESC');
+  });
+
+  it('orders by weighted rating ASC when sortBy is rating_asc', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, sortBy: 'rating_asc'}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ORDER BY r.weighted ASC NULLS LAST, pid_numeric DESC');
+  });
+
+  it('skips the rating filter clause when minRating is not set', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles(defaultFilter, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).not.toContain('r.avg >=');
+  });
+
+  it('applies the rating filter when minRating is between 1 and 5', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, minRating: 3}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('r.avg IS NOT NULL AND r.avg >= 3');
+  });
+
+  it('ignores out-of-range minRating values', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, minRating: 99}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).not.toContain('r.avg >=');
+  });
+
+  it('exposes a Bayesian-shrinkage weighted column for sort', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, sortBy: 'rating_desc'}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    // The exact constants are an implementation detail (5 phantom votes,
+    // prior mean 3.5) — we just check that the LATERAL emits a `weighted`
+    // expression that combines SUM(rating) and COUNT(*).
+    expect(sql).toContain('AS weighted');
+    expect(sql).toContain('SUM(rating)');
+    expect(sql).toContain('COUNT(*)');
+  });
 });
 
 describe('getUserUploadedPuzzles', () => {

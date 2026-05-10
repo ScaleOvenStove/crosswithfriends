@@ -427,6 +427,16 @@
   color: rgb(255 255 255 / 60%);
 }
 
+.dark .welcome--sort-select {
+  background: #2a2a2a;
+  color: rgb(255 255 255 / 87%);
+  border-color: #444;
+}
+
+.dark .welcome--min-rating-label {
+  color: rgb(255 255 255 / 60%);
+}
+
 /* File Uploader */
 .dark .file-uploader--wrapper {
   background-color: rgb(255 255 255 / 5%);

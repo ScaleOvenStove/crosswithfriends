@@ -1,0 +1,39 @@
+.rating-completion--body {
+  text-align: center;
+}
+
+.rating-completion--stars {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin: 12px 0;
+}
+
+.rating-completion--star-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rating-completion--star {
+  font-size: 32px;
+  color: #f5a623;
+}
+
+.rating-completion--star-btn:hover .rating-completion--star,
+.rating-completion--star-btn:focus-visible .rating-completion--star {
+  color: #ffb84d;
+}
+
+.rating-completion--hint {
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+}
+
+.dark .rating-completion--hint {
+  color: rgb(255 255 255 / 60%);
+}

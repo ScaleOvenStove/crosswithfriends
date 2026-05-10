@@ -171,6 +171,28 @@ export async function listPuzzles(
       : 'is_public = true';
     const userIdParams = userId ? [userId] : [];
 
+    // Bayesian shrinkage so a single 5★ rating doesn't outrank an
+    // established 4.5★ with many ratings. Constants chosen to be gentle:
+    // ~5 phantom votes at the 3.5★ middle keep low-N puzzles from
+    // dominating but don't drown out real signal once a puzzle has 10+
+    // ratings. Tune later if rating_desc results feel off.
+    const ratingPriorWeight = 5;
+    const ratingPriorMean = 3.5;
+
+    const rawMinRating = filter.minRating;
+    const minRating =
+      typeof rawMinRating === 'number' && rawMinRating >= 1 && rawMinRating <= 5 ? rawMinRating : 0;
+    const ratingFilterClause = minRating > 0 ? `AND r.avg IS NOT NULL AND r.avg >= ${minRating}` : '';
+
+    let orderByClause: string;
+    if (filter.sortBy === 'rating_desc') {
+      orderByClause = `ORDER BY r.weighted DESC NULLS LAST, pid_numeric DESC`;
+    } else if (filter.sortBy === 'rating_asc') {
+      orderByClause = `ORDER BY r.weighted ASC NULLS LAST, pid_numeric DESC`;
+    } else {
+      orderByClause = `ORDER BY pid_numeric DESC`;
+    }
+
     // Select only the JSONB fields the frontend needs (info, grid dimensions, contest flag)
     // instead of the entire content column which includes clues, solution, circles, shades, and images.
     // This dramatically reduces I/O and network transfer for the puzzle list page.
@@ -187,7 +209,13 @@ export async function listPuzzles(
         COALESCE(r.count, 0) AS rating_count
       FROM puzzles
       LEFT JOIN LATERAL (
-        SELECT AVG(rating)::float AS avg, COUNT(*)::int AS count
+        SELECT
+          AVG(rating)::float AS avg,
+          COUNT(*)::int AS count,
+          CASE WHEN COUNT(*) > 0
+               THEN ((${ratingPriorWeight} * ${ratingPriorMean}) + SUM(rating))::float / (${ratingPriorWeight} + COUNT(*))
+               ELSE NULL
+          END AS weighted
         FROM puzzle_ratings
         WHERE pid = puzzles.pid
       ) r ON true
@@ -196,7 +224,8 @@ export async function listPuzzles(
       ${typeClause}
       ${parameterizedTitleAuthorFilter}
       ${dayClause}
-      ORDER BY pid_numeric DESC
+      ${ratingFilterClause}
+      ${orderByClause}
       LIMIT $1
       OFFSET $2
     `,

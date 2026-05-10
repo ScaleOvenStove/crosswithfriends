@@ -10,6 +10,8 @@ import {
   MdExpandLess,
   MdFilterList,
   MdClose,
+  MdStar,
+  MdStarBorder,
 } from 'react-icons/md';
 import _ from 'lodash';
 
@@ -104,6 +106,8 @@ export default class Welcome extends Component {
         statusFilter={this.props.statusFilter}
         typeFilter={this.props.typeFilter}
         dayOfWeekFilter={this.props.dayOfWeekFilter}
+        minRating={this.props.minRating}
+        sortBy={this.props.sortBy}
         search={this.props.search}
         onScroll={this.handleScroll}
       />
@@ -206,6 +210,27 @@ export default class Welcome extends Component {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this.closeMobileSidebar();
+    }
+  };
+
+  handleSortChange = (e) => {
+    this.props.setSortBy(e.target.value);
+  };
+
+  handleMinRatingClick = (e) => {
+    const value = Number(e.currentTarget.dataset.value);
+    // Click the active star to clear; otherwise set to that level.
+    if (this.props.minRating === value) {
+      this.props.setMinRating(0);
+    } else {
+      this.props.setMinRating(value);
+    }
+  };
+
+  handleMinRatingKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.handleMinRatingClick(e);
     }
   };
 
@@ -343,8 +368,57 @@ export default class Welcome extends Component {
       );
     };
 
+    const minRating = this.props.minRating || 0;
+    const sortBy = this.props.sortBy || 'default';
+
+    const sortGroup = (
+      <div className="flex--column checkbox-group" style={groupStyle}>
+        <span style={{...headerStyle, cursor: 'default'}}>Sort</span>
+        <select
+          className="welcome--sort-select"
+          value={sortBy}
+          onChange={this.handleSortChange}
+          aria-label="Sort puzzles"
+        >
+          <option value="default">Newest</option>
+          <option value="rating_desc">Highest rated</option>
+          <option value="rating_asc">Lowest rated</option>
+        </select>
+      </div>
+    );
+
+    const ratingGroup = (
+      <div className="flex--column checkbox-group" style={groupStyle}>
+        <span style={{...headerStyle, cursor: 'default'}}>Min rating</span>
+        <div className="welcome--min-rating">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const filled = n <= minRating;
+            const Icon = filled ? MdStar : MdStarBorder;
+            return (
+              <span
+                key={n}
+                role="button"
+                tabIndex={0}
+                aria-label={`At least ${n} ${n === 1 ? 'star' : 'stars'}`}
+                aria-pressed={filled}
+                data-value={n}
+                onClick={this.handleMinRatingClick}
+                onKeyDown={this.handleMinRatingKeyDown}
+                className="welcome--min-rating-star"
+              >
+                <Icon />
+              </span>
+            );
+          })}
+          <span className="welcome--min-rating-label">{minRating === 0 ? 'Any' : `${minRating}+`}</span>
+        </div>
+      </div>
+    );
+
     return (
       <div className="flex--column flex--shrink-0 filters">
+        {sortGroup}
+        {ratingGroup}
         {checkboxGroup('Size', sizeFilter)}
         {checkboxGroup('Type', typeFilter)}
         {checkboxGroup('Day', dayOfWeekFilter, true)}

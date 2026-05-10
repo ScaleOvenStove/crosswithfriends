@@ -124,6 +124,8 @@ export interface ListPuzzleRequest {
   pageSize: number;
 }
 
+export type PuzzleSortBy = 'default' | 'rating_desc' | 'rating_asc';
+
 export interface ListPuzzleRequestFilters {
   sizeFilter: {
     Mini: boolean;
@@ -147,6 +149,11 @@ export interface ListPuzzleRequestFilters {
     Sun: boolean;
     Unknown: boolean;
   };
+  // 0 = no filter; 1-5 = puzzles with average rating >= that value
+  minRating?: number;
+  // Default ranking is pid_numeric DESC; rating sorts use a weighted mean
+  // so a single 5★ rating doesn't outrank a well-established 4★.
+  sortBy?: PuzzleSortBy;
 }
 
 export interface ListPuzzleResponse {

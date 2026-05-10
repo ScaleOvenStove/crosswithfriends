@@ -136,6 +136,8 @@ export default class PuzzleList extends PureComponent {
       sizeFilter: this.props.sizeFilter,
       typeFilter: this.props.typeFilter,
       dayOfWeekFilter: this.props.dayOfWeekFilter,
+      minRating: this.props.minRating,
+      sortBy: this.props.sortBy,
     };
     return (
       <NewPuzzleList

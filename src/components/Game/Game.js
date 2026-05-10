@@ -8,6 +8,7 @@ import Confetti from './Confetti.js';
 import Player from '../Player';
 import Toolbar from '../Toolbar';
 import MilestoneToast from './MilestoneToast';
+import RatingCompletionModal from './RatingCompletionModal';
 import {toArr} from '../../lib/jsUtils';
 import {toHex, darken, GREENISH} from '../../lib/colors';
 import GridWrapper from '../../lib/wrappers/GridWrapper';
@@ -567,6 +568,7 @@ export default class Game extends Component {
           {this.renderPlayer()}
         </div>
         {this.game.solved && <Confetti />}
+        {this.game.pid && <RatingCompletionModal pid={String(this.game.pid)} solved={!!this.game.solved} />}
         {this.state.milestoneMessage && <MilestoneToast message={this.state.milestoneMessage} />}
       </div>
     );
