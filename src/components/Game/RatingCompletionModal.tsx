@@ -1,4 +1,4 @@
-import {useCallback, useContext, useEffect, useState} from 'react';
+import {useCallback, useContext, useEffect, useRef, useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import {MdStar, MdStarBorder} from 'react-icons/md';
 import * as Sentry from '@sentry/react';
@@ -20,11 +20,13 @@ interface StarButtonProps {
   filled: boolean;
   onHover: (n: number) => void;
   onClick: (n: number) => void;
+  disabled?: boolean;
 }
 
-function StarButton({n, filled, onHover, onClick}: StarButtonProps) {
+function StarButton({n, filled, onHover, onClick, disabled}: StarButtonProps) {
   const Icon = filled ? MdStar : MdStarBorder;
   const handleEnter = useCallback(() => onHover(n), [onHover, n]);
+  const handleFocus = useCallback(() => onHover(n), [onHover, n]);
   const handleClick = useCallback(() => onClick(n), [onClick, n]);
   return (
     <button
@@ -32,7 +34,9 @@ function StarButton({n, filled, onHover, onClick}: StarButtonProps) {
       className="rating-completion--star-btn"
       aria-label={`${n} ${n === 1 ? 'star' : 'stars'}`}
       onMouseEnter={handleEnter}
+      onFocus={handleFocus}
       onClick={handleClick}
+      disabled={disabled}
     >
       <Icon className="rating-completion--star" />
     </button>
@@ -69,11 +73,16 @@ export default function RatingCompletionModal({pid, solved}: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [eligibilityError, setEligibilityError] = useState<number | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  // Track previous solved state so we only open on a false→true transition.
+  // Otherwise the modal would also pop on any mount where the puzzle is
+  // already solved (e.g. revisiting a snapshot-loaded game).
+  const wasSolvedRef = useRef(solved);
 
-  // Open once when the puzzle transitions to solved, unless this pid has
-  // already been prompted (and dismissed or rated) on this device.
   useEffect(() => {
-    if (!solved || !pid) return;
+    const wasSolved = wasSolvedRef.current;
+    wasSolvedRef.current = solved;
+    if (!pid) return;
+    if (!solved || wasSolved) return;
     if (readDismissed(pid)) return;
     setOpen(true);
   }, [solved, pid]);
@@ -140,6 +149,7 @@ export default function RatingCompletionModal({pid, solved}: Props) {
                         filled={n <= display}
                         onHover={setHover}
                         onClick={handleSubmit}
+                        disabled={submitting}
                       />
                     ))}
                   </div>
