@@ -630,7 +630,9 @@ describe('getPuzzleStats', () => {
     pool.query.mockResolvedValueOnce({rows: [{sample_count: 0, median_ms: null}]});
     await getPuzzleStats('p4b');
     const [sql] = pool.query.mock.calls[0];
-    expect(sql).toContain('MIN(ps.time_taken_to_solve)');
+    // MAX over the per-user clocks approximates total game duration. MIN would
+    // bias downward toward whichever co-op user joined last.
+    expect(sql).toContain('MAX(ps.time_taken_to_solve)');
     expect(sql).toContain('GROUP BY ps.gid');
   });
 

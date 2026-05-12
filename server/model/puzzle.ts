@@ -474,13 +474,14 @@ export async function getPuzzleStats(pid: string): Promise<PuzzleStats> {
   return puzzleStatsCache.getOrFetch(pid, async () => {
     // Aggregate to one row per gid first: a co-op game has one puzzle_solves row per
     // authenticated user, and counting each as a separate sample would weight the
-    // median toward larger teams. MIN(time) per gid approximates game duration
-    // (the user who was present longest has the lowest elapsed clock).
+    // median toward larger teams. MAX(time) per gid picks the longest-present user's
+    // clock — closest to total game duration, since each user's clock starts when
+    // they join. MIN would bias downward toward the latest joiner.
     // "Clean" solve: no reveal events ever fired for the game, non-zero time, under
     // the cap. game_events_gid_event_type_idx makes the NOT EXISTS cheap.
     const {rows} = await pool.query(
       `WITH game_times AS (
-         SELECT ps.gid, MIN(ps.time_taken_to_solve) AS time_ms
+         SELECT ps.gid, MAX(ps.time_taken_to_solve) AS time_ms
          FROM puzzle_solves ps
          WHERE ps.pid = $1
            AND ps.time_taken_to_solve > 0
