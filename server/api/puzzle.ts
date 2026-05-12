@@ -98,9 +98,10 @@ router.get<{pid: string}>('/:pid/info', async (req, res, next) => {
  *     tags: [Puzzles]
  *     summary: Get aggregate solve stats for a puzzle
  *     description: |
- *       Returns the median completion time across "clean" solves (no reveals used, non-zero
- *       time, under a 2-hour cap). The median is only populated once a minimum sample size
- *       has been reached; below that the response contains only `sampleCount`.
+ *       Returns the median completion time across solves (non-zero time, under a 2-hour
+ *       cap). Co-op games are reduced to one sample per game. The median is only
+ *       populated once a minimum sample size has been reached; below that the response
+ *       contains only `sampleCount`.
  *     parameters:
  *       - in: path
  *         name: pid

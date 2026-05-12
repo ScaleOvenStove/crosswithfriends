@@ -477,8 +477,11 @@ export async function getPuzzleStats(pid: string): Promise<PuzzleStats> {
     // median toward larger teams. MAX(time) per gid picks the longest-present user's
     // clock — closest to total game duration, since each user's clock starts when
     // they join. MIN would bias downward toward the latest joiner.
-    // "Clean" solve: no reveal events ever fired for the game, non-zero time, under
-    // the cap. game_events_gid_event_type_idx makes the NOT EXISTS cheap.
+    // We do not exclude reveal-assisted solves: that would require joining game_events,
+    // whose history is deleted by the archival job once a game is solved. Filtering
+    // there would drift over time as old games get cleaned up. The median is robust
+    // enough to typical reveal usage at this sample threshold; a future revision can
+    // persist a durable per-solve "had_reveals" flag.
     const {rows} = await pool.query(
       `WITH game_times AS (
          SELECT ps.gid, MAX(ps.time_taken_to_solve) AS time_ms
@@ -486,10 +489,6 @@ export async function getPuzzleStats(pid: string): Promise<PuzzleStats> {
          WHERE ps.pid = $1
            AND ps.time_taken_to_solve > 0
            AND ps.time_taken_to_solve < $2
-           AND NOT EXISTS (
-             SELECT 1 FROM game_events ge
-             WHERE ge.gid = ps.gid AND ge.event_type = 'reveal'
-           )
          GROUP BY ps.gid
        )
        SELECT

@@ -613,16 +613,17 @@ describe('getPuzzleStats', () => {
     expect(result).toEqual({sampleCount: 0, medianMs: null});
   });
 
-  it('filters by pid, excludes zero-time and over-cap solves, and excludes reveal games', async () => {
+  it('filters by pid and excludes zero-time and over-cap solves', async () => {
     pool.query.mockResolvedValueOnce({rows: [{sample_count: 0, median_ms: null}]});
     await getPuzzleStats('p4');
     const [sql, params] = pool.query.mock.calls[0];
     expect(sql).toContain('FROM puzzle_solves');
     expect(sql).toContain('ps.time_taken_to_solve > 0');
     expect(sql).toContain('ps.time_taken_to_solve < $2');
-    expect(sql).toContain("event_type = 'reveal'");
-    expect(sql).toContain('NOT EXISTS');
     expect(sql).toContain('PERCENTILE_CONT(0.5)');
+    // No reveal-filter: that would require joining game_events, which is archived
+    // away on solved games. See comment in getPuzzleStats.
+    expect(sql).not.toContain('game_events');
     expect(params).toEqual(['p4', PUZZLE_STATS_TIME_CAP_MS, PUZZLE_STATS_MIN_SAMPLES]);
   });
 
