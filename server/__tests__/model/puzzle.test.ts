@@ -626,6 +626,14 @@ describe('getPuzzleStats', () => {
     expect(params).toEqual(['p4', PUZZLE_STATS_TIME_CAP_MS, PUZZLE_STATS_MIN_SAMPLES]);
   });
 
+  it('aggregates per gid so co-op games are counted once, not once per user', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{sample_count: 0, median_ms: null}]});
+    await getPuzzleStats('p4b');
+    const [sql] = pool.query.mock.calls[0];
+    expect(sql).toContain('MIN(ps.time_taken_to_solve)');
+    expect(sql).toContain('GROUP BY ps.gid');
+  });
+
   it('caches repeat lookups for the same pid', async () => {
     pool.query.mockResolvedValueOnce({rows: [{sample_count: 30, median_ms: 100000}]});
     await getPuzzleStats('p5');

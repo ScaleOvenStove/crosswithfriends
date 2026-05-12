@@ -472,23 +472,32 @@ export type PuzzleStats = {
 
 export async function getPuzzleStats(pid: string): Promise<PuzzleStats> {
   return puzzleStatsCache.getOrFetch(pid, async () => {
-    // "Clean" solve: no reveal events ever fired for the game, non-zero time, under the cap.
-    // game_events_gid_event_type_idx makes the NOT EXISTS cheap.
+    // Aggregate to one row per gid first: a co-op game has one puzzle_solves row per
+    // authenticated user, and counting each as a separate sample would weight the
+    // median toward larger teams. MIN(time) per gid approximates game duration
+    // (the user who was present longest has the lowest elapsed clock).
+    // "Clean" solve: no reveal events ever fired for the game, non-zero time, under
+    // the cap. game_events_gid_event_type_idx makes the NOT EXISTS cheap.
     const {rows} = await pool.query(
-      `SELECT
+      `WITH game_times AS (
+         SELECT ps.gid, MIN(ps.time_taken_to_solve) AS time_ms
+         FROM puzzle_solves ps
+         WHERE ps.pid = $1
+           AND ps.time_taken_to_solve > 0
+           AND ps.time_taken_to_solve < $2
+           AND NOT EXISTS (
+             SELECT 1 FROM game_events ge
+             WHERE ge.gid = ps.gid AND ge.event_type = 'reveal'
+           )
+         GROUP BY ps.gid
+       )
+       SELECT
          COUNT(*)::int AS sample_count,
          CASE WHEN COUNT(*) >= $3
-           THEN PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ps.time_taken_to_solve)::int
+           THEN PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_ms)::int
            ELSE NULL
          END AS median_ms
-       FROM puzzle_solves ps
-       WHERE ps.pid = $1
-         AND ps.time_taken_to_solve > 0
-         AND ps.time_taken_to_solve < $2
-         AND NOT EXISTS (
-           SELECT 1 FROM game_events ge
-           WHERE ge.gid = ps.gid AND ge.event_type = 'reveal'
-         )`,
+       FROM game_times`,
       [pid, PUZZLE_STATS_TIME_CAP_MS, PUZZLE_STATS_MIN_SAMPLES]
     );
     const row = rows[0] || {sample_count: 0, median_ms: null};
