@@ -51,7 +51,19 @@ class Play extends Component {
 
   componentDidMount() {
     this._lastAccessToken = this.context?.accessToken ?? null;
-    this.loadGames();
+    this._lastAuthLoading = this.context?.loading ?? true;
+
+    // AuthContext is async on page load (it refreshes the access token before
+    // exposing the session). If we read context here and it's still loading,
+    // accessToken is null and a logged-in user looks like a guest. Fetching
+    // games with no token returns only games matching the local dfac_id —
+    // which can be empty if the user solved on another device — and the
+    // autocreate path below would then spawn a fresh empty game per visit
+    // (see "blank in-progress games" reports). Defer the initial fetch until
+    // auth has resolved.
+    if (!this._lastAuthLoading) {
+      this.loadGames();
+    }
 
     fetchPuzzleInfo(this.pid).then((info) => {
       if (info) this.setState({puzzleInfo: info});
@@ -87,11 +99,30 @@ class Play extends Component {
   }
 
   componentDidUpdate() {
-    // Re-fetch when auth context hydrates after mount
     const currentToken = this.context?.accessToken ?? null;
+    const currentLoading = this.context?.loading ?? true;
+
+    // While auth is still resolving, don't fetch games or decide on
+    // autocreate/autojoin — see the comment in componentDidMount.
+    if (currentLoading) {
+      this._lastAuthLoading = true;
+      return;
+    }
+
+    // First update after auth resolves: kick off the initial fetch with the
+    // correct token, then wait for it to land before any autocreate decision.
+    if (this._lastAuthLoading) {
+      this._lastAuthLoading = false;
+      this._lastAccessToken = currentToken;
+      this.loadGames();
+      return;
+    }
+
+    // Re-fetch when the token changes after the initial load (login/logout).
     if (currentToken !== this._lastAccessToken) {
       this._lastAccessToken = currentToken;
       this.loadGames();
+      return;
     }
 
     const {games} = this.state;
