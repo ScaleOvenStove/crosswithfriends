@@ -531,13 +531,16 @@ async function refreshPuzzleSolveStats(client: DbClient, pid: string): Promise<v
 // Recompute rating_avg/count/weighted for a pid and write them to the puzzles
 // row. Caller is responsible for transaction + FOR UPDATE lock.
 export async function refreshPuzzleRatingStats(client: DbClient, pid: string): Promise<void> {
+  // Casts on the parameters: Postgres can't resolve `$2 * $3` when both
+  // sides arrive as untyped parameters ("operator is not unique: unknown *
+  // unknown"). Forcing float8 picks the unambiguous numeric multiply.
   await client.query(
     `WITH rating_agg AS (
        SELECT
          AVG(rating)::float AS avg,
          COUNT(*)::int AS count,
          CASE WHEN COUNT(*) > 0
-           THEN (($2 * $3) + SUM(rating))::float / ($2 + COUNT(*))
+           THEN (($2::float * $3::float) + SUM(rating))::float / ($2::float + COUNT(*))
            ELSE NULL
          END AS weighted
        FROM puzzle_ratings
