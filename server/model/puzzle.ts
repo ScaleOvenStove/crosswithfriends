@@ -15,6 +15,8 @@ type PuzzleListRow = {
   is_public: boolean;
   rating_avg: number | null;
   rating_count: number;
+  median_solve_ms: number | null;
+  solve_sample_count: number;
 };
 
 // ---- Puzzle list cache ----
@@ -206,41 +208,70 @@ export async function listPuzzles(
       orderByClause = `ORDER BY pid_numeric DESC`;
     }
 
-    // Select only the JSONB fields the frontend needs (info, grid dimensions, contest flag)
-    // instead of the entire content column which includes clues, solution, circles, shades, and images.
-    // This dramatically reduces I/O and network transfer for the puzzle list page.
+    // Two-stage query so the expensive median LATERAL only runs over the
+    // returned page, not every matched puzzle. The rating aggregate has to
+    // be in the inner stage because filters/sort can reference its outputs;
+    // it's cheap enough (AVG/COUNT over a small puzzle_ratings) that paying
+    // the cost across all matched puzzles is fine. PERCENTILE_CONT is the
+    // one we don't want fanning out — see EXPLAIN notes in the PR.
+    //
     // puzzle_ratings shares only `pid` with puzzles, so the filter clauses
-    // (content/is_public/uploaded_by/pid_numeric) remain unambiguous after the LEFT JOIN.
+    // (content/is_public/uploaded_by/pid_numeric) remain unambiguous after
+    // the LATERAL join in the inner stage.
     const {rows} = await pool.query(
       `
-      SELECT puzzles.pid, uploaded_at, is_public, times_solved,
-        content->'info' AS info,
-        jsonb_array_length(content->'grid') AS grid_rows,
-        jsonb_array_length(content->'grid'->0) AS grid_cols,
-        (content->>'contest')::boolean AS contest,
-        r.avg AS rating_avg,
-        COALESCE(r.count, 0) AS rating_count
-      FROM puzzles
+      WITH page AS (
+        SELECT puzzles.pid, uploaded_at, is_public, times_solved,
+          content->'info' AS info,
+          jsonb_array_length(content->'grid') AS grid_rows,
+          jsonb_array_length(content->'grid'->0) AS grid_cols,
+          (content->>'contest')::boolean AS contest,
+          r.avg AS rating_avg,
+          COALESCE(r.count, 0) AS rating_count
+        FROM puzzles
+        LEFT JOIN LATERAL (
+          SELECT
+            AVG(rating)::float AS avg,
+            COUNT(*)::int AS count,
+            CASE WHEN COUNT(*) > 0
+                 THEN ((${ratingPriorWeight} * ${ratingPriorMean}) + SUM(rating))::float / (${ratingPriorWeight} + COUNT(*))
+                 ELSE NULL
+            END AS weighted
+          FROM puzzle_ratings
+          WHERE pid = puzzles.pid
+        ) r ON true
+        WHERE ${visibilityClause}
+        ${sizeClause}
+        ${typeClause}
+        ${parameterizedTitleAuthorFilter}
+        ${dayClause}
+        ${ratingFilterClause}
+        ${orderByClause}
+        LIMIT $1
+        OFFSET $2
+      )
+      SELECT page.*,
+        s.median_ms AS median_solve_ms,
+        COALESCE(s.sample_count, 0) AS solve_sample_count
+      FROM page
       LEFT JOIN LATERAL (
+        -- Mirrors getPuzzleStats: collapse co-op solves to one per gid via
+        -- MAX(time), then median over those when we have a stable sample.
         SELECT
-          AVG(rating)::float AS avg,
-          COUNT(*)::int AS count,
-          CASE WHEN COUNT(*) > 0
-               THEN ((${ratingPriorWeight} * ${ratingPriorMean}) + SUM(rating))::float / (${ratingPriorWeight} + COUNT(*))
-               ELSE NULL
-          END AS weighted
-        FROM puzzle_ratings
-        WHERE pid = puzzles.pid
-      ) r ON true
-      WHERE ${visibilityClause}
-      ${sizeClause}
-      ${typeClause}
-      ${parameterizedTitleAuthorFilter}
-      ${dayClause}
-      ${ratingFilterClause}
-      ${orderByClause}
-      LIMIT $1
-      OFFSET $2
+          COUNT(*)::int AS sample_count,
+          CASE WHEN COUNT(*) >= ${PUZZLE_STATS_MIN_SAMPLES}
+            THEN PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_ms)::int
+            ELSE NULL
+          END AS median_ms
+        FROM (
+          SELECT MAX(ps.time_taken_to_solve) AS time_ms
+          FROM puzzle_solves ps
+          WHERE ps.pid = page.pid
+            AND ps.time_taken_to_solve > 0
+            AND ps.time_taken_to_solve < ${PUZZLE_STATS_TIME_CAP_MS}
+          GROUP BY ps.gid
+        ) game_times
+      ) s ON true
     `,
       [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams, ...userIdParams]
     );
@@ -256,6 +287,8 @@ export async function listPuzzles(
         times_solved: string;
         rating_avg: number | null;
         rating_count: number;
+        median_solve_ms: number | string | null;
+        solve_sample_count: number | string;
         // NOTE: numeric returns as string in pg-promise
         // See https://stackoverflow.com/questions/39168501/pg-promise-returns-integers-as-strings
       }) => ({
@@ -264,6 +297,8 @@ export async function listPuzzles(
         times_solved: Number(row.times_solved),
         rating_avg: row.rating_avg !== null ? Number(row.rating_avg) : null,
         rating_count: Number(row.rating_count) || 0,
+        median_solve_ms: row.median_solve_ms !== null ? Number(row.median_solve_ms) : null,
+        solve_sample_count: Number(row.solve_sample_count) || 0,
         // Reconstruct a minimal content object with just the fields the frontend uses:
         // - info (title, author, type)
         // - grid (only dimensions matter — build a skeleton array)

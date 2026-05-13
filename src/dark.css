@@ -427,6 +427,11 @@
   color: rgb(255 255 255 / 60%);
 }
 
+.dark .entry--solve-time,
+.dark .entry--solve-time-icon {
+  color: rgb(255 255 255 / 60%);
+}
+
 .dark .welcome--sort-select {
   background: #2a2a2a;
   color: rgb(255 255 255 / 87%);
