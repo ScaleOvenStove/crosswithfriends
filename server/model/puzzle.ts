@@ -423,10 +423,10 @@ export async function recordSolve(
        ON CONFLICT DO NOTHING`,
       [pid, gid, solved_time / 1000.0, timeToSolve, userId || null, playerCount || 1]
     );
-    if (insertResult.rowCount === 1 && isFirstSolveForGame) {
-      await client.query(`UPDATE puzzles SET times_solved = times_solved + 1 WHERE pid = $1`, [pid]);
-    }
     if (insertResult.rowCount === 1) {
+      if (isFirstSolveForGame) {
+        await client.query(`UPDATE puzzles SET times_solved = times_solved + 1 WHERE pid = $1`, [pid]);
+      }
       // Refresh denormalized solve stats inside the same transaction so the
       // homepage list query can read median_solve_ms/solve_sample_count as
       // plain columns instead of running PERCENTILE_CONT per page render.
