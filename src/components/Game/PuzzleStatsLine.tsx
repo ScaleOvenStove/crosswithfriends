@@ -14,6 +14,11 @@ export default function PuzzleStatsLine({pid}: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    // Clear stale stats so an in-app navigation between puzzles doesn't
+    // flash the previous puzzle's median while the new fetch is pending.
+    // Chat (which renders us) is mounted without a key in pages/Game.js,
+    // so the same component instance is reused across pid changes.
+    setStats(null);
     fetchPuzzleStats(pid)
       .then((data) => {
         if (!cancelled) setStats(data);
