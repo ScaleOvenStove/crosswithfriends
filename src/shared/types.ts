@@ -100,6 +100,8 @@ export interface PuzzleStatsJson {
   numSolves: number;
   ratingAverage: number | null;
   ratingCount: number;
+  medianSolveMs: number | null;
+  solveSampleCount: number;
 }
 
 export interface AddPuzzleRequest {
