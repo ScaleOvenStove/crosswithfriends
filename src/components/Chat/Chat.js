@@ -13,6 +13,7 @@ import EditableSpan from '../common/EditableSpan';
 import ColorPicker from './ColorPicker.tsx';
 import {formatMilliseconds} from '../Toolbar/Clock';
 import RatingWidget from '../Game/RatingWidget';
+import PuzzleStatsLine from '../Game/PuzzleStatsLine';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -222,6 +223,7 @@ export default class Chat extends Component {
             {bid}
           </div>
         )}
+        {pid && <PuzzleStatsLine pid={String(pid)} />}
         {pid && <RatingWidget pid={String(pid)} />}
         {this.renderFencingOptions()}
       </div>

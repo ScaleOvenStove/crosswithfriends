@@ -1,8 +1,9 @@
 import {Component} from 'react';
 import _ from 'lodash';
-import {MdRadioButtonUnchecked, MdCheckCircle, MdStar} from 'react-icons/md';
+import {MdRadioButtonUnchecked, MdCheckCircle, MdStar, MdAccessTime} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {Link} from 'react-router';
+import {formatMilliseconds} from '../Toolbar/Clock';
 
 export interface EntryProps {
   info: {
@@ -20,6 +21,8 @@ export interface EntryProps {
     solves?: Array<any>;
     ratingAverage?: number | null;
     ratingCount?: number;
+    medianSolveMs?: number | null;
+    solveSampleCount?: number;
   };
   fencing?: boolean;
   isPublic?: boolean;
@@ -29,6 +32,11 @@ export interface EntryProps {
 function ratingTitle(average: number | null | undefined, count: number | undefined): string {
   if (average == null || !count) return 'No ratings yet';
   return `Average rating ${average.toFixed(1)} from ${count} ${count === 1 ? 'rating' : 'ratings'}`;
+}
+
+function typicalSolveTitle(medianMs: number | null | undefined, sampleCount: number | undefined): string {
+  if (medianMs == null || !sampleCount) return '';
+  return `Typical solve time: ${formatMilliseconds(medianMs)} across ${sampleCount} solves`;
 }
 
 const handleClick = () => {
@@ -119,6 +127,15 @@ export default class Entry extends Component<EntryProps> {
               Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
             </p>
             <div className="flex">
+              {stats?.medianSolveMs != null && (
+                <span
+                  className="entry--solve-time"
+                  title={typicalSolveTitle(stats.medianSolveMs, stats.solveSampleCount)}
+                >
+                  <MdAccessTime className="entry--solve-time-icon" />
+                  {formatMilliseconds(stats.medianSolveMs)}
+                </span>
+              )}
               <span className="entry--rating" title={ratingTitle(stats?.ratingAverage, stats?.ratingCount)}>
                 <MdStar className="entry--rating-icon" />
                 {stats?.ratingAverage != null

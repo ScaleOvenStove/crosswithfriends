@@ -159,9 +159,13 @@ describe('listPuzzles', () => {
 
     await listPuzzles(filter, 50, 0, userId);
 
+    const sql = pool.query.mock.calls[0][0] as string;
     const params = pool.query.mock.calls[0][1] as any[];
-    // userId should be the last parameter
-    expect(params[params.length - 1]).toBe(userId);
+    // userId should be at whatever position the SQL's "uploaded_by = $N" refers to.
+    const match = sql.match(/uploaded_by = \$(\d+)/);
+    expect(match).not.toBeNull();
+    const userIdParamPos = Number.parseInt(match![1], 10);
+    expect(params[userIdParamPos - 1]).toBe(userId);
   });
 
   it('orders by pid_numeric DESC by default', async () => {
@@ -217,6 +221,74 @@ describe('listPuzzles', () => {
     expect(sql).toContain('AS weighted');
     expect(sql).toContain('SUM(rating)');
     expect(sql).toContain('COUNT(*)');
+  });
+
+  it('joins a LATERAL median-solve-time aggregate over puzzle_solves', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles(defaultFilter, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    // Same shape as getPuzzleStats: group by gid first (co-op dedup), then
+    // PERCENTILE_CONT over the per-gid MAX times.
+    expect(sql).toContain('PERCENTILE_CONT(0.5)');
+    expect(sql).toContain('MAX(ps.time_taken_to_solve)');
+    expect(sql).toContain('FROM puzzle_solves ps');
+    expect(sql).toContain('GROUP BY ps.gid');
+    expect(sql).toContain('median_solve_ms');
+    expect(sql).toContain('solve_sample_count');
+  });
+
+  it('maps median_solve_ms and solve_sample_count from row to camelCase fields', async () => {
+    pool.query.mockResolvedValue({
+      rows: [
+        {
+          pid: 'abc',
+          uploaded_at: '2026-05-01',
+          is_public: true,
+          info: {title: 'Test', author: 'A'},
+          grid_rows: 15,
+          grid_cols: 15,
+          contest: false,
+          times_solved: '300',
+          rating_avg: null,
+          rating_count: 0,
+          median_solve_ms: '780000',
+          solve_sample_count: '87',
+        },
+      ],
+    });
+
+    const result = await listPuzzles(defaultFilter, 50, 0);
+
+    expect(result[0].median_solve_ms).toBe(780000);
+    expect(result[0].solve_sample_count).toBe(87);
+    expect(typeof result[0].median_solve_ms).toBe('number');
+    expect(typeof result[0].solve_sample_count).toBe('number');
+  });
+
+  it('returns null median when there are not enough samples', async () => {
+    pool.query.mockResolvedValue({
+      rows: [
+        {
+          pid: 'abc',
+          uploaded_at: '2026-05-01',
+          is_public: true,
+          info: {title: 'Test', author: 'A'},
+          grid_rows: 15,
+          grid_cols: 15,
+          contest: false,
+          times_solved: '5',
+          rating_avg: null,
+          rating_count: 0,
+          median_solve_ms: null,
+          solve_sample_count: '5',
+        },
+      ],
+    });
+
+    const result = await listPuzzles(defaultFilter, 50, 0);
+
+    expect(result[0].median_solve_ms).toBeNull();
+    expect(result[0].solve_sample_count).toBe(5);
   });
 });
 

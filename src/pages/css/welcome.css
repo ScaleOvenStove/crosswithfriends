@@ -203,6 +203,22 @@
   font-size: 12px;
 }
 
+.entry--solve-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #888;
+  white-space: nowrap;
+  margin-right: 6px;
+}
+
+.entry--solve-time-icon {
+  color: #888;
+  font-size: 12px;
+}
+
 .welcome--sort-select {
   margin-top: 6px;
   padding: 4px 6px;

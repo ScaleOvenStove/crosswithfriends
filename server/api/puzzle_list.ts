@@ -104,6 +104,8 @@ router.get<{}, ListPuzzleResponse>('/', optionalAuth, async (req, res, next) => 
         numSolves: puzzle.times_solved,
         ratingAverage: puzzle.rating_avg,
         ratingCount: puzzle.rating_count,
+        medianSolveMs: puzzle.median_solve_ms,
+        solveSampleCount: puzzle.solve_sample_count,
       },
       isPublic: puzzle.is_public,
     }));
