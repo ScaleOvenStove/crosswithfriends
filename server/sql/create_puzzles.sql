@@ -22,7 +22,19 @@ IF NOT EXISTS puzzles
   uploaded_by UUID REFERENCES users(id),
 
   -- SHA-256 hash for duplicate detection
-  content_hash text
+  content_hash text,
+
+  -- denormalized solve-time stats, maintained transactionally in recordSolve.
+  -- median_solve_ms is NULL until solve_sample_count reaches the min-samples
+  -- threshold (see PUZZLE_STATS_MIN_SAMPLES in model/puzzle.ts).
+  median_solve_ms integer,
+  solve_sample_count integer NOT NULL DEFAULT 0 CHECK (solve_sample_count >= 0),
+
+  -- denormalized rating stats, maintained transactionally in upsert/deleteRating.
+  -- rating_weighted is the Bayesian-shrunk score used for rating_desc sort.
+  rating_avg double precision,
+  rating_count integer NOT NULL DEFAULT 0 CHECK (rating_count >= 0),
+  rating_weighted double precision
 );
 
 ALTER TABLE public.puzzles

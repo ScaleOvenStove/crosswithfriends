@@ -11,8 +11,6 @@ import {
   recordSolve,
   getPuzzleInfo,
   getPuzzleStats,
-  PUZZLE_STATS_MIN_SAMPLES,
-  PUZZLE_STATS_TIME_CAP_MS,
   clearPuzzleListCache,
   clearPuzzleStatsCache,
 } from '../../model/puzzle';
@@ -173,68 +171,57 @@ describe('listPuzzles', () => {
     await listPuzzles(defaultFilter, 50, 0);
     const sql = pool.query.mock.calls[0][0] as string;
     expect(sql).toContain('ORDER BY pid_numeric DESC');
-    expect(sql).not.toContain('r.weighted');
+    expect(sql).not.toContain('rating_weighted');
   });
 
   it('orders by weighted rating DESC when sortBy is rating_desc', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles({...defaultFilter, sortBy: 'rating_desc'}, 50, 0);
     const sql = pool.query.mock.calls[0][0] as string;
-    expect(sql).toContain('ORDER BY r.weighted DESC NULLS LAST, pid_numeric DESC');
+    expect(sql).toContain('ORDER BY rating_weighted DESC NULLS LAST, pid_numeric DESC');
   });
 
   it('orders by weighted rating ASC when sortBy is rating_asc', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles({...defaultFilter, sortBy: 'rating_asc'}, 50, 0);
     const sql = pool.query.mock.calls[0][0] as string;
-    expect(sql).toContain('ORDER BY r.weighted ASC NULLS LAST, pid_numeric DESC');
+    expect(sql).toContain('ORDER BY rating_weighted ASC NULLS LAST, pid_numeric DESC');
   });
 
   it('skips the rating filter clause when minRating is not set', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles(defaultFilter, 50, 0);
     const sql = pool.query.mock.calls[0][0] as string;
-    expect(sql).not.toContain('r.avg >=');
+    expect(sql).not.toContain('rating_avg >=');
   });
 
   it('applies the rating filter when minRating is between 1 and 5', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles({...defaultFilter, minRating: 3}, 50, 0);
     const sql = pool.query.mock.calls[0][0] as string;
-    expect(sql).toContain('r.avg IS NOT NULL AND r.avg >= 3');
+    expect(sql).toContain('rating_avg IS NOT NULL AND rating_avg >= 3');
   });
 
   it('ignores out-of-range minRating values', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles({...defaultFilter, minRating: 99}, 50, 0);
     const sql = pool.query.mock.calls[0][0] as string;
-    expect(sql).not.toContain('r.avg >=');
+    expect(sql).not.toContain('rating_avg >=');
   });
 
-  it('exposes a Bayesian-shrinkage weighted column for sort', async () => {
-    pool.query.mockResolvedValue({rows: []});
-    await listPuzzles({...defaultFilter, sortBy: 'rating_desc'}, 50, 0);
-    const sql = pool.query.mock.calls[0][0] as string;
-    // The exact constants are an implementation detail (5 phantom votes,
-    // prior mean 3.5) — we just check that the LATERAL emits a `weighted`
-    // expression that combines SUM(rating) and COUNT(*).
-    expect(sql).toContain('AS weighted');
-    expect(sql).toContain('SUM(rating)');
-    expect(sql).toContain('COUNT(*)');
-  });
-
-  it('joins a LATERAL median-solve-time aggregate over puzzle_solves', async () => {
+  it('selects denormalized rating + solve-time columns directly (no LATERAL aggregates)', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles(defaultFilter, 50, 0);
     const sql = pool.query.mock.calls[0][0] as string;
-    // Same shape as getPuzzleStats: group by gid first (co-op dedup), then
-    // PERCENTILE_CONT over the per-gid MAX times.
-    expect(sql).toContain('PERCENTILE_CONT(0.5)');
-    expect(sql).toContain('MAX(ps.time_taken_to_solve)');
-    expect(sql).toContain('FROM puzzle_solves ps');
-    expect(sql).toContain('GROUP BY ps.gid');
+    expect(sql).toContain('rating_avg');
+    expect(sql).toContain('rating_count');
     expect(sql).toContain('median_solve_ms');
     expect(sql).toContain('solve_sample_count');
+    // The previous implementation paid a per-row LATERAL cost; the whole
+    // point of the denormalization is that the list query does no joins.
+    expect(sql).not.toContain('PERCENTILE_CONT');
+    expect(sql).not.toContain('FROM puzzle_ratings');
+    expect(sql).not.toContain('FROM puzzle_solves');
   });
 
   it('maps median_solve_ms and solve_sample_count from row to camelCase fields', async () => {
@@ -554,14 +541,18 @@ describe('recordSolve', () => {
     mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 1});
     // UPDATE times_solved
     mockClient.query.mockResolvedValueOnce({rows: []});
+    // refreshPuzzleSolveStats: recompute median + sample count into puzzles
+    mockClient.query.mockResolvedValueOnce({rows: []});
     // COMMIT
     mockClient.query.mockResolvedValueOnce({rows: []});
 
     await recordSolve('p1', 'g1', 300, 'user-1');
 
-    // Verify times_solved increment happened (5th client.query call)
-    const updateSql = mockClient.query.mock.calls[4][0] as string;
-    expect(updateSql).toContain('times_solved = times_solved + 1');
+    const allSql = mockClient.query.mock.calls.map((c: any[]) => c[0] as string);
+    expect(allSql.some((s) => s.includes('times_solved = times_solved + 1'))).toBe(true);
+    // The denorm refresh runs after the insert so the list query can read
+    // median_solve_ms / solve_sample_count as plain columns.
+    expect(allSql.some((s) => s.includes('PERCENTILE_CONT') && s.includes('UPDATE puzzles'))).toBe(true);
   });
 
   it('does not increment times_solved when game was already solved by someone else', async () => {
@@ -575,15 +566,17 @@ describe('recordSolve', () => {
     mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
     // INSERT puzzle_solve (different user_id, no conflict)
     mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 1});
+    // refreshPuzzleSolveStats — still runs whenever a new row was inserted
+    mockClient.query.mockResolvedValueOnce({rows: []});
     // COMMIT (no UPDATE times_solved)
     mockClient.query.mockResolvedValueOnce({rows: []});
 
     await recordSolve('p1', 'g1', 300, 'user-2');
 
-    // 5 client.query calls total (no times_solved increment)
-    expect(mockClient.query).toHaveBeenCalledTimes(5);
     const allSql = mockClient.query.mock.calls.map((c: any[]) => c[0] as string);
-    expect(allSql.some((s) => s.includes('times_solved'))).toBe(false);
+    expect(allSql.some((s) => s.includes('times_solved = times_solved + 1'))).toBe(false);
+    // Stats refresh fires on every successful insert regardless of first-solve status.
+    expect(allSql.some((s) => s.includes('PERCENTILE_CONT'))).toBe(true);
   });
 
   it('does not increment times_solved when concurrent insert hit the unique index (ON CONFLICT)', async () => {
@@ -597,14 +590,15 @@ describe('recordSolve', () => {
     mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
     // INSERT with ON CONFLICT DO NOTHING — no row inserted (rowCount=0)
     mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 0});
-    // COMMIT — no UPDATE times_solved
+    // COMMIT — no UPDATE times_solved, no refresh (insert was a no-op)
     mockClient.query.mockResolvedValueOnce({rows: []});
 
     await expect(recordSolve('p1', 'g1', 300)).resolves.not.toThrow();
 
-    expect(mockClient.query).toHaveBeenCalledTimes(5);
     const allSql = mockClient.query.mock.calls.map((c: any[]) => c[0] as string);
     expect(allSql.some((s) => s.includes('times_solved'))).toBe(false);
+    // No insert means no stats change; skip the refresh.
+    expect(allSql.some((s) => s.includes('PERCENTILE_CONT'))).toBe(false);
     // Verify the INSERT uses ON CONFLICT DO NOTHING
     expect(allSql[3]).toContain('ON CONFLICT DO NOTHING');
   });
@@ -621,6 +615,8 @@ describe('recordSolve', () => {
     mockClient.query.mockResolvedValueOnce({rows: [{count: 1}]});
     // INSERT puzzle_solve (anonymous)
     mockClient.query.mockResolvedValueOnce({rows: [], rowCount: 1});
+    // refreshPuzzleSolveStats
+    mockClient.query.mockResolvedValueOnce({rows: []});
     // COMMIT
     mockClient.query.mockResolvedValueOnce({rows: []});
 
@@ -668,13 +664,13 @@ describe('getPuzzleStats', () => {
   });
 
   it('returns the median and sample count when the threshold is met', async () => {
-    pool.query.mockResolvedValueOnce({rows: [{sample_count: 42, median_ms: 1122334}]});
+    pool.query.mockResolvedValueOnce({rows: [{solve_sample_count: 42, median_solve_ms: 1122334}]});
     const result = await getPuzzleStats('p1');
     expect(result).toEqual({sampleCount: 42, medianMs: 1122334});
   });
 
   it('returns null median when below the sample threshold', async () => {
-    pool.query.mockResolvedValueOnce({rows: [{sample_count: 7, median_ms: null}]});
+    pool.query.mockResolvedValueOnce({rows: [{solve_sample_count: 7, median_solve_ms: null}]});
     const result = await getPuzzleStats('p2');
     expect(result).toEqual({sampleCount: 7, medianMs: null});
   });
@@ -685,32 +681,22 @@ describe('getPuzzleStats', () => {
     expect(result).toEqual({sampleCount: 0, medianMs: null});
   });
 
-  it('filters by pid and excludes zero-time and over-cap solves', async () => {
-    pool.query.mockResolvedValueOnce({rows: [{sample_count: 0, median_ms: null}]});
+  it('reads denormalized columns from puzzles instead of aggregating puzzle_solves', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{solve_sample_count: 0, median_solve_ms: null}]});
     await getPuzzleStats('p4');
     const [sql, params] = pool.query.mock.calls[0];
-    expect(sql).toContain('FROM puzzle_solves');
-    expect(sql).toContain('ps.time_taken_to_solve > 0');
-    expect(sql).toContain('ps.time_taken_to_solve < $2');
-    expect(sql).toContain('PERCENTILE_CONT(0.5)');
-    // No reveal-filter: that would require joining game_events, which is archived
-    // away on solved games. See comment in getPuzzleStats.
-    expect(sql).not.toContain('game_events');
-    expect(params).toEqual(['p4', PUZZLE_STATS_TIME_CAP_MS, PUZZLE_STATS_MIN_SAMPLES]);
-  });
-
-  it('aggregates per gid so co-op games are counted once, not once per user', async () => {
-    pool.query.mockResolvedValueOnce({rows: [{sample_count: 0, median_ms: null}]});
-    await getPuzzleStats('p4b');
-    const [sql] = pool.query.mock.calls[0];
-    // MAX over the per-user clocks approximates total game duration. MIN would
-    // bias downward toward whichever co-op user joined last.
-    expect(sql).toContain('MAX(ps.time_taken_to_solve)');
-    expect(sql).toContain('GROUP BY ps.gid');
+    expect(sql).toContain('FROM puzzles');
+    expect(sql).toContain('median_solve_ms');
+    expect(sql).toContain('solve_sample_count');
+    // The aggregation happens in refreshPuzzleSolveStats on the write path;
+    // the read path must not pay that cost per request.
+    expect(sql).not.toContain('PERCENTILE_CONT');
+    expect(sql).not.toContain('FROM puzzle_solves');
+    expect(params).toEqual(['p4']);
   });
 
   it('caches repeat lookups for the same pid', async () => {
-    pool.query.mockResolvedValueOnce({rows: [{sample_count: 30, median_ms: 100000}]});
+    pool.query.mockResolvedValueOnce({rows: [{solve_sample_count: 30, median_solve_ms: 100000}]});
     await getPuzzleStats('p5');
     await getPuzzleStats('p5');
     expect(pool.query).toHaveBeenCalledTimes(1);
@@ -718,7 +704,7 @@ describe('getPuzzleStats', () => {
 
   it('invalidates the cache for a pid when a new solve is recorded', async () => {
     // Prime: cache pid="p6" stats
-    pool.query.mockResolvedValueOnce({rows: [{sample_count: 30, median_ms: 100000}]});
+    pool.query.mockResolvedValueOnce({rows: [{solve_sample_count: 30, median_solve_ms: 100000}]});
     await getPuzzleStats('p6');
     expect(pool.query).toHaveBeenCalledTimes(1);
 
@@ -730,11 +716,12 @@ describe('getPuzzleStats', () => {
       .mockResolvedValueOnce({rows: [{count: 0}]}) // first-solve COUNT
       .mockResolvedValueOnce({rows: [], rowCount: 1}) // INSERT
       .mockResolvedValueOnce({rows: []}) // UPDATE times_solved
+      .mockResolvedValueOnce({rows: []}) // refreshPuzzleSolveStats
       .mockResolvedValueOnce({rows: []}); // COMMIT
     await recordSolve('p6', 'g6', 300, 'user-6');
 
     // Cache should have been invalidated; the next stats call hits the DB again.
-    pool.query.mockResolvedValueOnce({rows: [{sample_count: 31, median_ms: 99000}]});
+    pool.query.mockResolvedValueOnce({rows: [{solve_sample_count: 31, median_solve_ms: 99000}]});
     const fresh = await getPuzzleStats('p6');
     expect(fresh).toEqual({sampleCount: 31, medianMs: 99000});
   });

@@ -186,115 +186,49 @@ export async function listPuzzles(
       : 'is_public = true';
     const userIdParams = userId ? [userId] : [];
 
-    // Bayesian shrinkage so a single 5★ rating doesn't outrank an
-    // established 4.5★ with many ratings. Constants chosen to be gentle:
-    // ~5 phantom votes at the 3.5★ middle keep low-N puzzles from
-    // dominating but don't drown out real signal once a puzzle has 10+
-    // ratings. Tune later if rating_desc results feel off.
-    const ratingPriorWeight = 5;
-    const ratingPriorMean = 3.5;
-
     const rawMinRating = filter.minRating;
     const minRating =
       typeof rawMinRating === 'number' && rawMinRating >= 1 && rawMinRating <= 5 ? rawMinRating : 0;
-    const ratingFilterClause = minRating > 0 ? `AND r.avg IS NOT NULL AND r.avg >= ${minRating}` : '';
+    const ratingFilterClause =
+      minRating > 0 ? `AND rating_avg IS NOT NULL AND rating_avg >= ${minRating}` : '';
 
-    let orderBySpec: string;
+    let orderByClause: string;
     if (filter.sortBy === 'rating_desc') {
-      orderBySpec = `r.weighted DESC NULLS LAST, pid_numeric DESC`;
+      orderByClause = `ORDER BY rating_weighted DESC NULLS LAST, pid_numeric DESC`;
     } else if (filter.sortBy === 'rating_asc') {
-      orderBySpec = `r.weighted ASC NULLS LAST, pid_numeric DESC`;
+      orderByClause = `ORDER BY rating_weighted ASC NULLS LAST, pid_numeric DESC`;
     } else {
-      orderBySpec = `pid_numeric DESC`;
+      orderByClause = `ORDER BY pid_numeric DESC`;
     }
-    const orderByClause = `ORDER BY ${orderBySpec}`;
-    const windowOrderBy = `OVER (ORDER BY ${orderBySpec})`;
 
-    // Stats constants are parameterized for consistency with getPuzzleStats
-    // (and the rest of the codebase). Append them after the existing params
-    // so we don't have to renumber title/day/userId placeholders.
-    const statsTimeCapIndex = userIdParamIndex + (userId ? 1 : 0);
-    const statsMinSamplesIndex = statsTimeCapIndex + 1;
-
-    // Two-stage query so the expensive median LATERAL only runs over the
-    // returned page, not every matched puzzle. The rating aggregate has to
-    // be in the inner stage because filters/sort can reference its outputs;
-    // it's cheap enough (AVG/COUNT over a small puzzle_ratings) that paying
-    // the cost across all matched puzzles is fine. PERCENTILE_CONT is the
-    // one we don't want fanning out — see EXPLAIN notes in the PR.
-    //
-    // puzzle_ratings shares only `pid` with puzzles, so the filter clauses
-    // (content/is_public/uploaded_by/pid_numeric) remain unambiguous after
-    // the LATERAL join in the inner stage.
+    // Rating and solve-time aggregates are denormalized onto puzzles
+    // (maintained transactionally by recordSolve / upsertRating /
+    // deleteRating). Reading them as plain columns is what makes this
+    // query cheap enough to run on every filter change — see
+    // alter_puzzles_add_denorm_stats.sql.
     const {rows} = await pool.query(
       `
-      WITH page AS (
-        SELECT puzzles.pid, uploaded_at, is_public, times_solved,
-          content->'info' AS info,
-          jsonb_array_length(content->'grid') AS grid_rows,
-          jsonb_array_length(content->'grid'->0) AS grid_cols,
-          (content->>'contest')::boolean AS contest,
-          r.avg AS rating_avg,
-          COALESCE(r.count, 0) AS rating_count,
-          -- Tag each row with its sort position so the outer query can
-          -- preserve order after the median LATERAL join. SQL doesn't
-          -- guarantee row order survives subsequent joins.
-          ROW_NUMBER() ${windowOrderBy} AS sort_idx
-        FROM puzzles
-        LEFT JOIN LATERAL (
-          SELECT
-            AVG(rating)::float AS avg,
-            COUNT(*)::int AS count,
-            CASE WHEN COUNT(*) > 0
-                 THEN ((${ratingPriorWeight} * ${ratingPriorMean}) + SUM(rating))::float / (${ratingPriorWeight} + COUNT(*))
-                 ELSE NULL
-            END AS weighted
-          FROM puzzle_ratings
-          WHERE pid = puzzles.pid
-        ) r ON true
-        WHERE ${visibilityClause}
-        ${sizeClause}
-        ${typeClause}
-        ${parameterizedTitleAuthorFilter}
-        ${dayClause}
-        ${ratingFilterClause}
-        ${orderByClause}
-        LIMIT $1
-        OFFSET $2
-      )
-      SELECT page.*,
-        s.median_ms AS median_solve_ms,
-        COALESCE(s.sample_count, 0) AS solve_sample_count
-      FROM page
-      LEFT JOIN LATERAL (
-        -- Mirrors getPuzzleStats: collapse co-op solves to one per gid via
-        -- MAX(time), then median over those when we have a stable sample.
-        SELECT
-          COUNT(*)::int AS sample_count,
-          CASE WHEN COUNT(*) >= $${statsMinSamplesIndex}
-            THEN PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_ms)::int
-            ELSE NULL
-          END AS median_ms
-        FROM (
-          SELECT MAX(ps.time_taken_to_solve) AS time_ms
-          FROM puzzle_solves ps
-          WHERE ps.pid = page.pid
-            AND ps.time_taken_to_solve > 0
-            AND ps.time_taken_to_solve < $${statsTimeCapIndex}
-          GROUP BY ps.gid
-        ) game_times
-      ) s ON true
-      ORDER BY page.sort_idx
+      SELECT puzzles.pid, uploaded_at, is_public, times_solved,
+        content->'info' AS info,
+        jsonb_array_length(content->'grid') AS grid_rows,
+        jsonb_array_length(content->'grid'->0) AS grid_cols,
+        (content->>'contest')::boolean AS contest,
+        rating_avg,
+        rating_count,
+        median_solve_ms,
+        solve_sample_count
+      FROM puzzles
+      WHERE ${visibilityClause}
+      ${sizeClause}
+      ${typeClause}
+      ${parameterizedTitleAuthorFilter}
+      ${dayClause}
+      ${ratingFilterClause}
+      ${orderByClause}
+      LIMIT $1
+      OFFSET $2
     `,
-      [
-        limit,
-        offset,
-        ...parametersForTitleAuthorFilter,
-        ...dayParams,
-        ...userIdParams,
-        PUZZLE_STATS_TIME_CAP_MS,
-        PUZZLE_STATS_MIN_SAMPLES,
-      ]
+      [limit, offset, ...parametersForTitleAuthorFilter, ...dayParams, ...userIdParams]
     );
     const puzzles: PuzzleListRow[] = rows.map(
       (row: {
@@ -489,12 +423,20 @@ export async function recordSolve(
        ON CONFLICT DO NOTHING`,
       [pid, gid, solved_time / 1000.0, timeToSolve, userId || null, playerCount || 1]
     );
-    if (insertResult.rowCount === 1 && isFirstSolveForGame) {
-      await client.query(`UPDATE puzzles SET times_solved = times_solved + 1 WHERE pid = $1`, [pid]);
+    if (insertResult.rowCount === 1) {
+      if (isFirstSolveForGame) {
+        await client.query(`UPDATE puzzles SET times_solved = times_solved + 1 WHERE pid = $1`, [pid]);
+      }
+      // Refresh denormalized solve stats inside the same transaction so the
+      // homepage list query can read median_solve_ms/solve_sample_count as
+      // plain columns instead of running PERCENTILE_CONT per page render.
+      await refreshPuzzleSolveStats(client, pid);
     }
     await client.query('COMMIT');
     if (insertResult.rowCount === 1) {
       puzzleStatsCache.delete(pid);
+      // Stat columns drive the list; invalidate so the next list render reflects the change.
+      clearPuzzleListCache();
     }
   } catch (e) {
     await client.query('ROLLBACK');
@@ -521,6 +463,12 @@ export const PUZZLE_STATS_TIME_CAP_MS = 2 * 60 * 60 * 1000;
 // difficulty signal.
 export const PUZZLE_STATS_MIN_SAMPLES = 25;
 
+// Bayesian shrinkage prior for the rating sort. ~5 phantom votes at the 3.5★
+// middle keep low-N puzzles from dominating but don't drown out real signal
+// once a puzzle has 10+ ratings.
+export const RATING_PRIOR_WEIGHT = 5;
+export const RATING_PRIOR_MEAN = 3.5;
+
 export type PuzzleStats = {
   sampleCount: number;
   medianMs: number | null;
@@ -528,38 +476,79 @@ export type PuzzleStats = {
 
 export async function getPuzzleStats(pid: string): Promise<PuzzleStats> {
   return puzzleStatsCache.getOrFetch(pid, async () => {
-    // Aggregate to one row per gid first: a co-op game has one puzzle_solves row per
-    // authenticated user, and counting each as a separate sample would weight the
-    // median toward larger teams. MAX(time) per gid picks the longest-present user's
-    // clock — closest to total game duration, since each user's clock starts when
-    // they join. MIN would bias downward toward the latest joiner.
-    // We do not exclude reveal-assisted solves: that would require joining game_events,
-    // whose history is deleted by the archival job once a game is solved. Filtering
-    // there would drift over time as old games get cleaned up. The median is robust
-    // enough to typical reveal usage at this sample threshold; a future revision can
-    // persist a durable per-solve "had_reveals" flag.
+    // Read from denormalized columns on puzzles — maintained by recordSolve.
+    // See alter_puzzles_add_denorm_stats.sql for the aggregation logic and
+    // why we don't filter reveal-assisted solves.
     const {rows} = await pool.query(
-      `WITH game_times AS (
-         SELECT ps.gid, MAX(ps.time_taken_to_solve) AS time_ms
-         FROM puzzle_solves ps
-         WHERE ps.pid = $1
-           AND ps.time_taken_to_solve > 0
-           AND ps.time_taken_to_solve < $2
-         GROUP BY ps.gid
-       )
+      `SELECT median_solve_ms, solve_sample_count FROM puzzles WHERE pid = $1`,
+      [pid]
+    );
+    const row = rows[0] || {median_solve_ms: null, solve_sample_count: 0};
+    return {
+      sampleCount: Number(row.solve_sample_count) || 0,
+      medianMs: row.median_solve_ms != null ? Number(row.median_solve_ms) : null,
+    };
+  });
+}
+
+// Recompute solve_sample_count and median_solve_ms for a pid and write them to
+// the puzzles row. Caller is responsible for transaction + FOR UPDATE lock on
+// the puzzles row. Co-op solves are collapsed to one sample per gid via
+// MAX(time), then PERCENTILE_CONT over those once we have a stable sample.
+// Reveal-assisted solves are intentionally included — see getPuzzleStats.
+type DbClient = {
+  query: (text: string, params?: unknown[]) => Promise<{rows: any[]; rowCount?: number | null}>;
+};
+
+async function refreshPuzzleSolveStats(client: DbClient, pid: string): Promise<void> {
+  await client.query(
+    `WITH game_times AS (
+       SELECT MAX(ps.time_taken_to_solve) AS time_ms
+       FROM puzzle_solves ps
+       WHERE ps.pid = $1
+         AND ps.time_taken_to_solve > 0
+         AND ps.time_taken_to_solve < $2
+       GROUP BY ps.gid
+     ),
+     stats AS (
        SELECT
          COUNT(*)::int AS sample_count,
          CASE WHEN COUNT(*) >= $3
            THEN PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_ms)::int
            ELSE NULL
          END AS median_ms
-       FROM game_times`,
-      [pid, PUZZLE_STATS_TIME_CAP_MS, PUZZLE_STATS_MIN_SAMPLES]
-    );
-    const row = rows[0] || {sample_count: 0, median_ms: null};
-    return {
-      sampleCount: Number(row.sample_count) || 0,
-      medianMs: row.median_ms != null ? Number(row.median_ms) : null,
-    };
-  });
+       FROM game_times
+     )
+     UPDATE puzzles
+     SET solve_sample_count = stats.sample_count,
+         median_solve_ms = stats.median_ms
+     FROM stats
+     WHERE puzzles.pid = $1`,
+    [pid, PUZZLE_STATS_TIME_CAP_MS, PUZZLE_STATS_MIN_SAMPLES]
+  );
+}
+
+// Recompute rating_avg/count/weighted for a pid and write them to the puzzles
+// row. Caller is responsible for transaction + FOR UPDATE lock.
+export async function refreshPuzzleRatingStats(client: DbClient, pid: string): Promise<void> {
+  await client.query(
+    `WITH rating_agg AS (
+       SELECT
+         AVG(rating)::float AS avg,
+         COUNT(*)::int AS count,
+         CASE WHEN COUNT(*) > 0
+           THEN (($2 * $3) + SUM(rating))::float / ($2 + COUNT(*))
+           ELSE NULL
+         END AS weighted
+       FROM puzzle_ratings
+       WHERE pid = $1
+     )
+     UPDATE puzzles
+     SET rating_avg = rating_agg.avg,
+         rating_count = rating_agg.count,
+         rating_weighted = rating_agg.weighted
+     FROM rating_agg
+     WHERE puzzles.pid = $1`,
+    [pid, RATING_PRIOR_WEIGHT, RATING_PRIOR_MEAN]
+  );
 }
