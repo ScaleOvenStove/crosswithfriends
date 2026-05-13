@@ -89,6 +89,14 @@ export default function RatingWidget({pid}: RatingWidgetProps) {
 
   useEffect(() => {
     let cancelled = false;
+    // Clear stale state so an in-app navigation between puzzles doesn't
+    // flash the previous puzzle's aggregate (or a no-longer-applicable
+    // eligibility hint) while the new fetch is pending. Chat is mounted
+    // without a key in pages/Game.js so the same instance is reused.
+    setAggregate(null);
+    setEligibilityError(null);
+    setHover(0);
+    setSubmitting(false);
     fetchPuzzleRating(pid, accessToken)
       .then((data) => {
         if (!cancelled) setAggregate(data);
