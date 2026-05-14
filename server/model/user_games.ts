@@ -132,9 +132,18 @@ export async function getAuthenticatedPuzzleStatuses(userId: string): Promise<Pu
 
          UNION ALL
 
+         -- Legacy firebase_history branch needs the same dismissal filter
+         -- as the v2 branch above. getUserGamesForPuzzle already filters
+         -- both, so dismissing a legacy in-progress game on Profile would
+         -- otherwise leave the homepage overlay still showing it as
+         -- started.
          SELECT fh.pid::text AS pid, fh.solved
          FROM firebase_history fh
          WHERE fh.dfac_id = ANY($1)
+           AND (
+             fh.solved
+             OR NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = fh.gid AND gd.user_id = $2)
+           )
        ) combined
        GROUP BY pid`,
       [dfacIds, userId]
