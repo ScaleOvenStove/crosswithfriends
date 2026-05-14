@@ -196,7 +196,7 @@ export async function getUserGamesForPuzzle(
            SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY($1)
            ${
              options.userId
-               ? 'UNION ALL SELECT gid, solved_time AS ts FROM puzzle_solves WHERE user_id = $3'
+               ? 'UNION ALL SELECT gid, solved_time AS ts FROM puzzle_solves WHERE user_id = $3 AND pid = $2'
                : ''
            }
          ) all_events

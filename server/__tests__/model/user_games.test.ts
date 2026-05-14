@@ -138,7 +138,9 @@ describe('getUserGamesForPuzzle', () => {
     // game_events archival job runs (the create event has no uid/params.id
     // tying it to the user).
     const mainQuery = pool.query.mock.calls[1][0] as string;
-    expect(mainQuery).toContain('FROM puzzle_solves WHERE user_id = $3');
+    // Filter on pid in the inner branch so power users with many solves
+    // (Mala has 2k+) don't materialize every solve before the outer filter.
+    expect(mainQuery).toContain('FROM puzzle_solves WHERE user_id = $3 AND pid = $2');
   });
 
   it('does not consult puzzle_solves for guest queries', async () => {
