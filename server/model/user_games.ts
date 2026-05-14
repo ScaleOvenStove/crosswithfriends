@@ -180,12 +180,25 @@ export async function getUserGamesForPuzzle(
     const pidIntParam = options.userId ? '$4' : '$3';
     const result = await pool.query(
       `WITH user_games AS (
-         -- v2 games from game_events
+         -- v2 games from game_events. The inner UNION ALL also pulls in
+         -- gids from puzzle_solves for authenticated users so we still find
+         -- solved games after the archival job has deleted their
+         -- updateCell/check/reveal events. The create event's uid and
+         -- params.id don't carry a player identity, so without the
+         -- puzzle_solves branch the user's own solved game becomes
+         -- "unfindable" post-archival and Play.js autocreates a fresh
+         -- empty game on revisit (Maladroit's "puzzle revisits with empty
+         -- grid" report).
          SELECT gid, MAX(ts) AS last_activity, true AS v2, false AS fh_solved
          FROM (
            SELECT gid, ts FROM game_events WHERE uid = ANY($1)
            UNION ALL
            SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY($1)
+           ${
+             options.userId
+               ? 'UNION ALL SELECT gid, solved_time AS ts FROM puzzle_solves WHERE user_id = $3 AND pid = $2'
+               : ''
+           }
          ) all_events
          ${options.userId ? 'WHERE NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = all_events.gid AND gd.user_id = $3)' : ''}
          GROUP BY gid

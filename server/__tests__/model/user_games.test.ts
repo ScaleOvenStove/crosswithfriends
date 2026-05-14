@@ -127,6 +127,34 @@ describe('getUserGamesForPuzzle', () => {
     expect(queryArgs[0]).toEqual(['same-dfac']);
   });
 
+  it('unions puzzle_solves into the participation lookup for authed users', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{dfac_id: 'dfac-abc'}]});
+    pool.query.mockResolvedValueOnce({rows: []});
+
+    await getUserGamesForPuzzle('123', {userId: 'user-1'});
+
+    // Authed lookup must look for puzzle_solves rows owned by the user,
+    // otherwise the user's own solved games become invisible after the
+    // game_events archival job runs (the create event has no uid/params.id
+    // tying it to the user).
+    const mainQuery = pool.query.mock.calls[1][0] as string;
+    // Filter on pid in the inner branch so power users with many solves
+    // (Mala has 2k+) don't materialize every solve before the outer filter.
+    expect(mainQuery).toContain('FROM puzzle_solves WHERE user_id = $3 AND pid = $2');
+  });
+
+  it('does not consult puzzle_solves for guest queries', async () => {
+    pool.query.mockResolvedValueOnce({rows: []});
+
+    await getUserGamesForPuzzle('456', {dfacId: 'guest-dfac-123'});
+
+    // Guests have no user_id, so the puzzle_solves UNION branch is omitted.
+    // (A guest equivalent would need a different identity bridge — see
+    // server/model/user_games.ts comment.)
+    const mainQuery = pool.query.mock.calls[0][0] as string;
+    expect(mainQuery).not.toContain('FROM puzzle_solves');
+  });
+
   it('handles null last_activity', async () => {
     pool.query.mockResolvedValueOnce({
       rows: [{gid: 'game-1', pid: '123', solved: false, last_activity: null, v2: true}],
