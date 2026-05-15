@@ -341,17 +341,26 @@ export default class Chat extends Component {
     const kickedSet = new Set(this.props.kickedDfacIds || []);
     const ownerDfacId = this.props.game?.creator?.dfacId || null;
 
-    // Split into players (have placed letters or sent chat) and spectators
-    // (joined and picked a name but haven't done anything yet). Kicked
-    // users with activity render in the players section (greyed); kicked
-    // users without activity are hidden entirely.
+    // Three sections: the owner gets their own slot at the top so they're
+    // always identifiable at a glance. Everyone else splits between
+    // players (have placed letters or sent chat) and spectators (joined
+    // and picked a name but haven't done anything yet). Kicked users with
+    // activity render in players (greyed for attribution); kicked users
+    // without activity are hidden entirely.
+    const owner = [];
     const players = [];
     const spectators = [];
     for (const id of Object.keys(users)) {
       const kicked = kickedSet.has(id);
       const active = this.hasUserActivity(id);
       if (kicked && !active) continue;
-      (active ? players : spectators).push({id, kicked});
+      if (ownerDfacId && id === ownerDfacId) {
+        owner.push({id, kicked});
+      } else if (active) {
+        players.push({id, kicked});
+      } else {
+        spectators.push({id, kicked});
+      }
     }
 
     const renderEntry = ({id, kicked}) =>
@@ -366,6 +375,12 @@ export default class Chat extends Component {
 
     return (
       <div className="chat--users--present">
+        {owner.length > 0 && (
+          <div className="chat--users--section">
+            <div className="chat--users--section-label">Game owner</div>
+            <div className="chat--users--section-list">{owner.map(renderEntry)}</div>
+          </div>
+        )}
         {players.length > 0 && (
           <div className="chat--users--section">
             <div className="chat--users--section-label">Players</div>
