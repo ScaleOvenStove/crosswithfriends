@@ -46,6 +46,15 @@ export default class Chat extends Component {
     return false;
   }
 
+  // Moderation endpoints require auth (the server rejects dfac-only
+  // ownership because the creator.dfacId field is visible to anyone in
+  // the room — it would otherwise be trivially forgeable by another
+  // player). A guest owner needs to sign in to moderate. Gate the UI on
+  // this so the buttons aren't there to click in the first place.
+  get canModerate() {
+    return this.isOwner && !!this.context?.accessToken;
+  }
+
   handleKickClick = async (event) => {
     const targetDfacId = event.currentTarget.dataset.dfacId;
     if (!targetDfacId) return;
@@ -254,7 +263,7 @@ export default class Chat extends Component {
         )}
         {pid && <PuzzleStatsLine pid={String(pid)} />}
         {pid && <RatingWidget pid={String(pid)} />}
-        {this.isOwner && this.props.gid && <OwnerControls gid={this.props.gid} />}
+        {this.canModerate && this.props.gid && <OwnerControls gid={this.props.gid} />}
         {this.renderFencingOptions()}
       </div>
     );
@@ -303,7 +312,7 @@ export default class Chat extends Component {
 
   renderUsersPresent(users) {
     if (this.props.hideChatBar) return null;
-    const showKick = this.isOwner;
+    const showKick = this.canModerate;
     return (
       <div className="chat--users--present">
         {Object.keys(users).map((id) =>

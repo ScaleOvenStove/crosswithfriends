@@ -301,13 +301,16 @@ router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', asyn
     }
 
     // Persist both identities if the caller supplied both — covers the
-    // sign-out-and-rejoin-as-guest case.
+    // sign-out-and-rejoin-as-guest case. Run them in parallel since the
+    // two rows are independent.
+    const banWrites: Promise<void>[] = [];
     if (target.user_id) {
-      await addGameBan(gid, {identity: target.user_id, identityType: 'user'}, payload.userId);
+      banWrites.push(addGameBan(gid, {identity: target.user_id, identityType: 'user'}, payload.userId));
     }
     if (target.dfac_id) {
-      await addGameBan(gid, {identity: target.dfac_id, identityType: 'dfac'}, payload.userId);
+      banWrites.push(addGameBan(gid, {identity: target.dfac_id, identityType: 'dfac'}, payload.userId));
     }
+    await Promise.all(banWrites);
 
     // Broadcast so the kicked client disconnects immediately rather than
     // waiting for their next event to be rejected.

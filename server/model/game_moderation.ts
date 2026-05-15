@@ -3,12 +3,17 @@ import {TTLCache} from './ttl_cache';
 
 export type Identity = {userId?: string | null; dfacId?: string | null};
 
+export type GameCreator = {userId?: string; dfacId?: string};
+
 // Per-gid cache so the socket fast-path doesn't hit Postgres on every event.
-// Bans and locks change rarely; 5 minutes is generous but bounded. Invalidated
-// explicitly on ban/lock/unlock writes.
+// Bans, locks, and ownership change rarely; 5 minutes is generous but
+// bounded. Invalidated explicitly on ban/lock/unlock writes. Ownership
+// itself is immutable but we still recompute it on cache miss for code
+// simplicity — the create event lookup is a single PK probe.
 type ModerationState = {
   banned: {userIds: Set<string>; dfacIds: Set<string>};
   locked: boolean;
+  owner: GameCreator | null;
 };
 const moderationCache = new TTLCache<ModerationState>({ttlMs: 5 * 60_000, maxSize: 10_000});
 
@@ -21,12 +26,16 @@ export function clearModerationCache(): void {
 }
 
 async function loadModerationState(gid: string): Promise<ModerationState> {
-  const [bans, locks] = await Promise.all([
+  const [bans, locks, creator] = await Promise.all([
     pool.query<{identity: string; identity_type: 'user' | 'dfac'}>(
       `SELECT identity, identity_type FROM game_bans WHERE gid = $1`,
       [gid]
     ),
     pool.query<{gid: string}>(`SELECT gid FROM game_locks WHERE gid = $1`, [gid]),
+    pool.query<{event_payload: any}>(
+      `SELECT event_payload FROM game_events WHERE gid = $1 AND event_type = 'create' ORDER BY ts ASC LIMIT 1`,
+      [gid]
+    ),
   ]);
   const userIds = new Set<string>();
   const dfacIds = new Set<string>();
@@ -34,7 +43,15 @@ async function loadModerationState(gid: string): Promise<ModerationState> {
     if (row.identity_type === 'user') userIds.add(row.identity);
     else dfacIds.add(row.identity);
   }
-  return {banned: {userIds, dfacIds}, locked: locks.rows.length > 0};
+  let owner: GameCreator | null = null;
+  const creatorPayload = creator.rows[0]?.event_payload?.params?.creator;
+  if (creatorPayload) {
+    owner = {};
+    if (creatorPayload.userId) owner.userId = creatorPayload.userId;
+    if (creatorPayload.dfacId) owner.dfacId = creatorPayload.dfacId;
+    if (Object.keys(owner).length === 0) owner = null;
+  }
+  return {banned: {userIds, dfacIds}, locked: locks.rows.length > 0, owner};
 }
 
 async function getModerationState(gid: string): Promise<ModerationState> {
@@ -60,23 +77,12 @@ export async function isGameLocked(gid: string): Promise<boolean> {
   return state.locked;
 }
 
-export type GameCreator = {userId?: string; dfacId?: string};
-
 // Owner identity is stamped onto the create event's params.creator at game
 // creation time. Games created before this feature have no creator → no
 // one can moderate them (returns null).
 export async function getGameOwner(gid: string): Promise<GameCreator | null> {
-  const {rows} = await pool.query<{event_payload: any}>(
-    `SELECT event_payload FROM game_events WHERE gid = $1 AND event_type = 'create' ORDER BY ts ASC LIMIT 1`,
-    [gid]
-  );
-  if (rows.length === 0) return null;
-  const creator = rows[0].event_payload?.params?.creator;
-  if (!creator) return null;
-  const owner: GameCreator = {};
-  if (creator.userId) owner.userId = creator.userId;
-  if (creator.dfacId) owner.dfacId = creator.dfacId;
-  return Object.keys(owner).length > 0 ? owner : null;
+  const state = await getModerationState(gid);
+  return state.owner;
 }
 
 export function isOwner(

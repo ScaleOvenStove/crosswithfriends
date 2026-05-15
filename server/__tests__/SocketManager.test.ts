@@ -183,7 +183,9 @@ describe('SocketManager', () => {
       const sm = new SocketManager(io);
       sm.listen();
 
-      // isIdentityBanned reads game_bans + game_locks first (authed identity)
+      // isIdentityBanned reads moderation state (bans + locks + create event
+      // for owner caching) on first contact with this gid.
+      pool.query.mockResolvedValueOnce({rows: []});
       pool.query.mockResolvedValueOnce({rows: []});
       pool.query.mockResolvedValueOnce({rows: []});
       // gameExists check — game has a create event

@@ -156,6 +156,10 @@ class Game extends Component {
       const myUserId = this.context?.user?.id;
       const isTarget = (msg.dfac_id && msg.dfac_id === myDfacId) || (msg.user_id && msg.user_id === myUserId);
       if (isTarget) {
+        // Cut the live socket so we stop receiving updates/chat from the
+        // room. The server-side ban already blocks our outgoing events,
+        // but the room broadcasts still hit us until we disconnect.
+        if (this.gameModel.forceDisconnect) this.gameModel.forceDisconnect();
         this.setState({moderationError: 'kicked'});
       }
     });

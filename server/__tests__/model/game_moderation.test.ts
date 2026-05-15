@@ -18,64 +18,75 @@ beforeEach(() => {
   clearModerationCache();
 });
 
+// Moderation state is loaded with 3 parallel queries: bans, locks, and the
+// create event (for owner caching). Tests need to mock all three.
+function mockState({
+  bans = [],
+  locked = false,
+  creator = null,
+}: {
+  bans?: Array<{identity: string; identity_type: 'user' | 'dfac'}>;
+  locked?: boolean;
+  creator?: {userId?: string; dfacId?: string} | null;
+}): void {
+  pool.query.mockResolvedValueOnce({rows: bans});
+  pool.query.mockResolvedValueOnce({rows: locked ? [{gid: 'g1'}] : []});
+  pool.query.mockResolvedValueOnce({rows: creator ? [{event_payload: {params: {creator}}}] : []});
+}
+
 describe('isIdentityBanned', () => {
   it('returns true when the user_id matches a ban row', async () => {
-    // game_bans + game_locks lookup happens in parallel
-    pool.query.mockResolvedValueOnce({rows: [{identity: 'user-1', identity_type: 'user'}]});
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({bans: [{identity: 'user-1', identity_type: 'user'}]});
     expect(await isIdentityBanned('g1', {userId: 'user-1'})).toBe(true);
   });
 
   it('returns true when the dfac_id matches', async () => {
-    pool.query.mockResolvedValueOnce({rows: [{identity: 'dfac-x', identity_type: 'dfac'}]});
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({bans: [{identity: 'dfac-x', identity_type: 'dfac'}]});
     expect(await isIdentityBanned('g1', {dfacId: 'dfac-x'})).toBe(true);
   });
 
   it('returns false when neither identity matches', async () => {
-    pool.query.mockResolvedValueOnce({rows: [{identity: 'other', identity_type: 'user'}]});
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({bans: [{identity: 'other', identity_type: 'user'}]});
     expect(await isIdentityBanned('g1', {userId: 'user-1', dfacId: 'dfac-x'})).toBe(false);
   });
 
   it('caches per-gid so back-to-back socket events skip the DB', async () => {
-    pool.query.mockResolvedValueOnce({rows: []});
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({});
     await isIdentityBanned('g1', {userId: 'user-1'});
     await isIdentityBanned('g1', {userId: 'user-2'});
-    // First call hit the DB (2 queries), second call should be cached (0).
-    expect(pool.query).toHaveBeenCalledTimes(2);
+    // First call hit the DB (3 queries — bans, locks, create event), second
+    // call should be cached (0 additional).
+    expect(pool.query).toHaveBeenCalledTimes(3);
   });
 });
 
 describe('isGameLocked', () => {
   it('returns true when a game_locks row exists', async () => {
-    pool.query.mockResolvedValueOnce({rows: []});
-    pool.query.mockResolvedValueOnce({rows: [{gid: 'g1'}]});
+    mockState({locked: true});
     expect(await isGameLocked('g1')).toBe(true);
   });
 
   it('returns false when no row exists', async () => {
-    pool.query.mockResolvedValueOnce({rows: []});
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({locked: false});
     expect(await isGameLocked('g1')).toBe(false);
   });
 });
 
 describe('getGameOwner', () => {
   it('reads creator from the create event payload', async () => {
-    pool.query.mockResolvedValueOnce({
-      rows: [{event_payload: {params: {creator: {userId: 'user-1', dfacId: 'dfac-x'}}}}],
-    });
+    mockState({creator: {userId: 'user-1', dfacId: 'dfac-x'}});
     expect(await getGameOwner('g1')).toEqual({userId: 'user-1', dfacId: 'dfac-x'});
   });
 
   it('returns null when no create event exists', async () => {
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({});
     expect(await getGameOwner('g1')).toBeNull();
   });
 
   it('returns null when create event has no creator field (legacy game)', async () => {
+    // create event row present, no creator key
+    pool.query.mockResolvedValueOnce({rows: []});
+    pool.query.mockResolvedValueOnce({rows: []});
     pool.query.mockResolvedValueOnce({rows: [{event_payload: {params: {pid: 'p1'}}}]});
     expect(await getGameOwner('g1')).toBeNull();
   });
@@ -102,8 +113,7 @@ describe('isOwner', () => {
 describe('addGameBan / lockGame / unlockGame', () => {
   it('addGameBan upserts and invalidates cache', async () => {
     // Prime cache
-    pool.query.mockResolvedValueOnce({rows: []});
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({});
     await isIdentityBanned('g1', {userId: 'u1'});
 
     // Add ban
@@ -114,8 +124,7 @@ describe('addGameBan / lockGame / unlockGame', () => {
     expect(insertSql).toContain('ON CONFLICT (gid, identity, identity_type) DO NOTHING');
 
     // Next isIdentityBanned hits DB again (cache busted) and now sees the row
-    pool.query.mockResolvedValueOnce({rows: [{identity: 'u1', identity_type: 'user'}]});
-    pool.query.mockResolvedValueOnce({rows: []});
+    mockState({bans: [{identity: 'u1', identity_type: 'user'}]});
     expect(await isIdentityBanned('g1', {userId: 'u1'})).toBe(true);
   });
 

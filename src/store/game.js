@@ -74,9 +74,13 @@ export default class Game extends EventEmitter {
     this.socket = socket;
     const joinAck = await emitAsync(socket, 'join_game', this.gid);
     if (joinAck && joinAck.error) {
-      // Server refused — surface to the page so it can redirect / show
-      // an explanation instead of silently sitting on an empty grid.
+      // Server refused (banned/locked). Mark this connection terminal and
+      // bail before subscribing — otherwise attach() would still call
+      // sync_all_game_events and the client could load full game history
+      // for a game they're not allowed in.
+      this.joinRejected = joinAck.error;
       this.emit('joinRejected', joinAck.error);
+      return;
     }
 
     socket.on('disconnect', () => {
@@ -97,6 +101,7 @@ export default class Game extends EventEmitter {
       console.log('reconnecting...');
       const ack = await emitAsync(socket, 'join_game', this.gid);
       if (ack && ack.error) {
+        this.joinRejected = ack.error;
         this.emit('joinRejected', ack.error);
         return;
       }
@@ -105,6 +110,16 @@ export default class Game extends EventEmitter {
       await this.flushOfflineQueue();
       this.emitReconnect();
     });
+  }
+
+  // Called when the local user is the kick target — drop the live socket
+  // so they stop receiving live updates/chat even though the server-side
+  // ban also blocks outgoing events. Matches the UX of being booted.
+  forceDisconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
   }
 
   emitEvent(event) {
@@ -232,6 +247,9 @@ export default class Game extends EventEmitter {
 
   async attach() {
     const websocketPromise = this.connectToWebsocket().then(async () => {
+      // join_game was rejected (banned/locked). Don't flush queued events
+      // (server would reject them anyway) and don't sync history.
+      if (this.joinRejected) return;
       await this.flushOfflineQueue();
       await this.subscribeToWebsocketEvents();
     });
