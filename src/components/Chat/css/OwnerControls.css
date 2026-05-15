@@ -1,8 +1,14 @@
+.owner-controls--lock-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0;
+}
+
 .owner-controls--lock-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin: 4px 0;
   padding: 4px 10px;
   font-size: 12px;
   background: #f5f5f5;
@@ -10,6 +16,24 @@
   border-radius: 4px;
   cursor: pointer;
   color: #333;
+}
+
+.owner-controls--info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  font-size: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #888;
+}
+
+.owner-controls--info-btn:hover {
+  color: #333;
+  background: rgb(0 0 0 / 6%);
 }
 
 .owner-controls--lock-btn:hover:not(:disabled) {
@@ -48,6 +72,15 @@
 
 .dark .owner-controls--lock-btn:hover:not(:disabled) {
   background: #333;
+}
+
+.dark .owner-controls--info-btn {
+  color: rgb(255 255 255 / 60%);
+}
+
+.dark .owner-controls--info-btn:hover {
+  color: rgb(255 255 255 / 87%);
+  background: rgb(255 255 255 / 8%);
 }
 
 .dark .chat--user--kick-btn {

@@ -4,7 +4,7 @@ import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
 import {MdClose} from 'react-icons/md';
-import {FaClone} from 'react-icons/fa6';
+import {FaClone, FaCrown} from 'react-icons/fa6';
 import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '../../lib/emoji';
@@ -292,13 +292,14 @@ export default class Chat extends Component {
     );
   }
 
-  static renderUserPresent(id, displayName, color, kickHandler, kicked) {
+  static renderUserPresent(id, displayName, color, kickHandler, kicked, isOwner) {
     // Kicked users keep their entry for attribution but render greyed out
     // with no live dot and no kick button (already gone).
     const style = kicked ? {opacity: 0.45, textDecoration: 'line-through'} : color && {color};
     return (
       <span key={id} style={style} title={kicked ? `${displayName} (kicked)` : undefined}>
         {!kicked && <span className="dot">{'\u25CF'}</span>}
+        {isOwner && <FaCrown className="chat--user--owner-icon" title="Game owner" aria-label="Game owner" />}
         {displayName}
         {kickHandler && !kicked && (
           <button
@@ -338,20 +339,45 @@ export default class Chat extends Component {
     if (this.props.hideChatBar) return null;
     const showKick = this.canModerate;
     const kickedSet = new Set(this.props.kickedDfacIds || []);
+    const ownerDfacId = this.props.game?.creator?.dfacId || null;
+
+    // Split into players (have placed letters or sent chat) and spectators
+    // (joined and picked a name but haven't done anything yet). Kicked
+    // users with activity render in the players section (greyed); kicked
+    // users without activity are hidden entirely.
+    const players = [];
+    const spectators = [];
+    for (const id of Object.keys(users)) {
+      const kicked = kickedSet.has(id);
+      const active = this.hasUserActivity(id);
+      if (kicked && !active) continue;
+      (active ? players : spectators).push({id, kicked});
+    }
+
+    const renderEntry = ({id, kicked}) =>
+      Chat.renderUserPresent(
+        id,
+        users[id].displayName,
+        users[id].color,
+        showKick && !kicked && id !== this.props.id ? this.handleKickClick : null,
+        kicked,
+        !!ownerDfacId && id === ownerDfacId
+      );
+
     return (
       <div className="chat--users--present">
-        {Object.keys(users)
-          .filter((id) => !kickedSet.has(id) || this.hasUserActivity(id))
-          .map((id) => {
-            const kicked = kickedSet.has(id);
-            return Chat.renderUserPresent(
-              id,
-              users[id].displayName,
-              users[id].color,
-              showKick && !kicked && id !== this.props.id ? this.handleKickClick : null,
-              kicked
-            );
-          })}
+        {players.length > 0 && (
+          <div className="chat--users--section">
+            <div className="chat--users--section-label">Players</div>
+            <div className="chat--users--section-list">{players.map(renderEntry)}</div>
+          </div>
+        )}
+        {spectators.length > 0 && (
+          <div className="chat--users--section">
+            <div className="chat--users--section-label">Spectators</div>
+            <div className="chat--users--section-list">{spectators.map(renderEntry)}</div>
+          </div>
+        )}
       </div>
     );
   }
