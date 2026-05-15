@@ -183,7 +183,10 @@ class Game extends Component {
     });
 
     // Show error if socket doesn't connect within 10 seconds
-    this.setState({connectionFailed: false, gameNotFound: false});
+    // Also clear any moderation blocker carried over from a previous gid —
+    // navigating to a fresh game in the same SPA session shouldn't show
+    // "you were removed" once we successfully connect to the new one.
+    this.setState({connectionFailed: false, gameNotFound: false, moderationError: undefined});
     if (this._connectionTimer) clearTimeout(this._connectionTimer);
     this._connectionTimer = setTimeout(() => {
       if (!this.historyWrapper || !this.historyWrapper.ready) {

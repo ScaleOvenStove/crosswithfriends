@@ -147,6 +147,16 @@ class SocketManager {
             if (typeof ack === 'function') ack({error: 'banned'});
             return;
           }
+          // For everything other than the bootstrapping create event,
+          // require that the socket actually joined the room. Join is
+          // gated by isGameLocked + isIdentityBanned in join_game above,
+          // so this is what makes lock cover writes too: a new client
+          // that never joined can't smuggle in updateCell/chat directly.
+          // Existing players who joined before the lock keep their seat.
+          if (event.type !== 'create' && !socket.rooms.has(`game-${message.gid}`)) {
+            if (typeof ack === 'function') ack({error: 'not in game'});
+            return;
+          }
           // Reject persisted, non-create events for gids that don't have a
           // create event or snapshot — prevents orphan rows from accumulating
           // for legacy gids whose game was never bootstrapped server-side

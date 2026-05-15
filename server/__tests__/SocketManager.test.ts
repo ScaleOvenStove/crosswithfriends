@@ -20,11 +20,17 @@ function createMockIo() {
   const toFn = jest.fn(() => ({emit: emitFn}));
 
   const socketHandlers: Record<string, AnyFn> = {};
+  // Pre-populate `rooms` with the default test gid so handler tests that
+  // invoke game_event directly (without going through join_game) don't
+  // trip the production room-membership check. Tests that want to verify
+  // the rejection path can clear the set or use a different gid.
+  const rooms = new Set<string>(['game-g1']);
   const mockSocket = {
     handshake: {auth: {}},
     data: {} as any,
-    join: jest.fn(),
-    leave: jest.fn(),
+    rooms,
+    join: jest.fn((room: string) => rooms.add(room)),
+    leave: jest.fn((room: string) => rooms.delete(room)),
     on: jest.fn((event: string, handler: AnyFn) => {
       socketHandlers[event] = handler;
     }),
@@ -267,9 +273,12 @@ describe('SocketManager', () => {
     });
 
     it('rejects persisted events for gids without a create event or snapshot', async () => {
-      const {io, socketHandlers} = createMockIo();
+      const {io, socketHandlers, mockSocket} = createMockIo();
       const sm = new SocketManager(io);
       sm.listen();
+      // Pretend the socket joined this gid already so we exercise the
+      // gameExists gate rather than the upstream room-membership check.
+      mockSocket.rooms.add('game-orphan-gid');
 
       // gameExists: no create event, then no snapshot
       pool.query.mockResolvedValueOnce({rowCount: 0, rows: []}); // create event lookup
@@ -336,9 +345,13 @@ describe('SocketManager', () => {
     });
 
     it('allows ephemeral events to bypass the gate', async () => {
-      const {io, socketHandlers} = createMockIo();
+      const {io, socketHandlers, mockSocket} = createMockIo();
       const sm = new SocketManager(io);
       sm.listen();
+      // Ephemeral cursor/ping still require the socket to be in the room.
+      // The "gate" this test is about is the gameExists check, not the
+      // room-membership one — pretend we joined already.
+      mockSocket.rooms.add('game-orphan-gid');
 
       const ack = jest.fn();
       await socketHandlers['game_event'](
@@ -348,6 +361,23 @@ describe('SocketManager', () => {
 
       expect(ack).toHaveBeenCalledWith();
       // No DB query should have run for an ephemeral event
+      expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-create events from sockets that never joined the room', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+      // No mockSocket.rooms.add — the new gid was never joined. Without
+      // this gate, a client could skip join_game (which is what enforces
+      // bans + locks) and still emit updateCell/chat directly.
+
+      const ack = jest.fn();
+      await socketHandlers['game_event'](
+        {gid: 'unjoined-gid', event: {type: 'updateCell', timestamp: 1000, params: {id: 'p1'}}},
+        ack
+      );
+      expect(ack).toHaveBeenCalledWith({error: 'not in game'});
       expect(pool.query).not.toHaveBeenCalled();
     });
   });
