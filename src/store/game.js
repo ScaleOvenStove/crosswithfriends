@@ -72,16 +72,34 @@ export default class Game extends EventEmitter {
     if (this.socket) return;
     const socket = await getSocket();
     this.socket = socket;
-    await emitAsync(socket, 'join_game', this.gid);
+    const joinAck = await emitAsync(socket, 'join_game', this.gid);
+    if (joinAck && joinAck.error) {
+      // Server refused — surface to the page so it can redirect / show
+      // an explanation instead of silently sitting on an empty grid.
+      this.emit('joinRejected', joinAck.error);
+    }
 
     socket.on('disconnect', () => {
       console.log('received disconnect from server');
     });
 
+    // Server broadcasts 'kicked' to the room when the owner kicks a player.
+    // Forward to listeners; the page checks identity and redirects if it
+    // matches the current user.
+    socket.on('kicked', (msg) => {
+      if (msg && msg.gid === this.gid) {
+        this.emit('kicked', msg);
+      }
+    });
+
     // handle future reconnects
     socket.on('connect', async () => {
       console.log('reconnecting...');
-      await emitAsync(socket, 'join_game', this.gid);
+      const ack = await emitAsync(socket, 'join_game', this.gid);
+      if (ack && ack.error) {
+        this.emit('joinRejected', ack.error);
+        return;
+      }
       console.log('reconnected...');
       this.syncState = null;
       await this.flushOfflineQueue();

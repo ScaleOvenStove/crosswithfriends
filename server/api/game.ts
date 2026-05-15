@@ -9,6 +9,15 @@ import {verifyAccessToken} from '../auth/jwt';
 import {dismissGameForUser, undismissGameForUser} from '../model/game_dismissal';
 import {invalidateUserGamesCacheForUser, invalidateAuthPuzzleStatusCache} from '../model/user_games';
 import {getDfacIdsForUser} from '../model/user';
+import {
+  addGameBan,
+  getGameOwner,
+  isGameLocked,
+  isOwner,
+  lockGame,
+  unlockGame,
+} from '../model/game_moderation';
+import {getSocketIo} from '../socket_instance';
 
 const router = express.Router();
 
@@ -42,7 +51,21 @@ const router = express.Router();
  */
 router.post<{}, CreateGameResponse | {error: string}, CreateGameRequest>('/', async (req, res, next) => {
   try {
-    const gid = await addInitialGameEvent(req.body.gid, req.body.pid);
+    // Optional auth — if the caller is signed in, stamp their user_id onto
+    // the create event's creator field. The dfac_id from the body is the
+    // fallback identity for guests. Either is enough to anchor ownership;
+    // both is best (covers sign-out -> rejoin as guest).
+    let userId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const payload = verifyAccessToken(authHeader.slice(7));
+      if (payload) userId = payload.userId;
+    }
+
+    const gid = await addInitialGameEvent(req.body.gid, req.body.pid, {
+      userId,
+      dfacId: req.body.dfac_id,
+    });
     // Invalidate user games cache so the "Your Games" page reflects the new game immediately
     if (req.body.dfac_id) {
       invalidateUserGamesCacheForUser(req.body.dfac_id);
@@ -195,6 +218,188 @@ router.post<{gid: string}>('/:gid/undismiss', async (req, res, next) => {
     invalidateAuthPuzzleStatusCache(payload.userId);
     const dfacIds = await getDfacIdsForUser(payload.userId);
     for (const dfacId of dfacIds) invalidateUserGamesCacheForUser(dfacId);
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+  return undefined;
+});
+
+/**
+ * @openapi
+ * /game/{gid}/moderation:
+ *   get:
+ *     tags: [Games]
+ *     summary: Get moderation state for a game
+ *     description: Returns current lock state and owner identity (if any). No auth required; the data is non-sensitive — clients use it to decide whether to render owner controls.
+ *     parameters:
+ *       - in: path
+ *         name: gid
+ *         required: true
+ *         schema: {type: string}
+ *     responses:
+ *       200:
+ *         description: Moderation state
+ */
+router.get<{gid: string}>('/:gid/moderation', async (req, res, next) => {
+  try {
+    const {gid} = req.params;
+    const [locked, owner] = await Promise.all([isGameLocked(gid), getGameOwner(gid)]);
+    res.json({locked, owner});
+  } catch (e) {
+    next(e);
+  }
+});
+
+type KickRequest = {dfac_id?: string; user_id?: string};
+
+/**
+ * @openapi
+ * /game/{gid}/kick:
+ *   post:
+ *     tags: [Games]
+ *     summary: Kick (ban) a player from a game
+ *     description: Owner-only. Bans the target identity from joining or sending events to this gid. Broadcasts a 'kicked' event so the target's client disconnects immediately.
+ *     security: [{bearerAuth: []}]
+ *     parameters:
+ *       - in: path
+ *         name: gid
+ *         required: true
+ *         schema: {type: string}
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               dfac_id: {type: string}
+ *               user_id: {type: string}
+ *     responses:
+ *       204: {description: Player kicked}
+ *       400: {description: Missing target identity}
+ *       401: {description: Not authenticated}
+ *       403: {description: Caller is not the owner}
+ */
+router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', async (req, res, next) => {
+  try {
+    const {gid} = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
+    const payload = verifyAccessToken(authHeader.slice(7));
+    if (!payload) return res.sendStatus(401);
+
+    const target = req.body || {};
+    if (!target.dfac_id && !target.user_id) {
+      return res.status(400).json({error: 'target dfac_id or user_id required'});
+    }
+
+    const owner = await getGameOwner(gid);
+    const dfacIds = await getDfacIdsForUser(payload.userId);
+    if (!isOwner(owner, {userId: payload.userId, dfacIds})) {
+      return res.status(403).json({error: 'only the game owner can kick'});
+    }
+
+    // Persist both identities if the caller supplied both — covers the
+    // sign-out-and-rejoin-as-guest case.
+    if (target.user_id) {
+      await addGameBan(gid, {identity: target.user_id, identityType: 'user'}, payload.userId);
+    }
+    if (target.dfac_id) {
+      await addGameBan(gid, {identity: target.dfac_id, identityType: 'dfac'}, payload.userId);
+    }
+
+    // Broadcast so the kicked client disconnects immediately rather than
+    // waiting for their next event to be rejected.
+    const io = getSocketIo();
+    if (io) {
+      io.to(`game-${gid}`).emit('kicked', {
+        gid,
+        dfac_id: target.dfac_id,
+        user_id: target.user_id,
+      });
+    }
+
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+  return undefined;
+});
+
+/**
+ * @openapi
+ * /game/{gid}/lock:
+ *   post:
+ *     tags: [Games]
+ *     summary: Lock a game so no new players can join
+ *     description: Owner-only. Existing players continue to play.
+ *     security: [{bearerAuth: []}]
+ *     parameters:
+ *       - in: path
+ *         name: gid
+ *         required: true
+ *         schema: {type: string}
+ *     responses:
+ *       204: {description: Game locked}
+ *       401: {description: Not authenticated}
+ *       403: {description: Caller is not the owner}
+ */
+router.post<{gid: string}>('/:gid/lock', async (req, res, next) => {
+  try {
+    const {gid} = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
+    const payload = verifyAccessToken(authHeader.slice(7));
+    if (!payload) return res.sendStatus(401);
+
+    const owner = await getGameOwner(gid);
+    const dfacIds = await getDfacIdsForUser(payload.userId);
+    if (!isOwner(owner, {userId: payload.userId, dfacIds})) {
+      return res.sendStatus(403);
+    }
+
+    await lockGame(gid, {userId: payload.userId, dfacId: dfacIds[0] || null});
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+  return undefined;
+});
+
+/**
+ * @openapi
+ * /game/{gid}/unlock:
+ *   post:
+ *     tags: [Games]
+ *     summary: Unlock a game
+ *     description: Owner-only.
+ *     security: [{bearerAuth: []}]
+ *     parameters:
+ *       - in: path
+ *         name: gid
+ *         required: true
+ *         schema: {type: string}
+ *     responses:
+ *       204: {description: Game unlocked}
+ *       401: {description: Not authenticated}
+ *       403: {description: Caller is not the owner}
+ */
+router.post<{gid: string}>('/:gid/unlock', async (req, res, next) => {
+  try {
+    const {gid} = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
+    const payload = verifyAccessToken(authHeader.slice(7));
+    if (!payload) return res.sendStatus(401);
+
+    const owner = await getGameOwner(gid);
+    const dfacIds = await getDfacIdsForUser(payload.userId);
+    if (!isOwner(owner, {userId: payload.userId, dfacIds})) {
+      return res.sendStatus(403);
+    }
+
+    await unlockGame(gid);
     res.sendStatus(204);
   } catch (e) {
     next(e);

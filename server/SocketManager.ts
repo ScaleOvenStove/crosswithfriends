@@ -6,6 +6,8 @@ import {Server} from 'socket.io';
 import {addGameEvent, gameExists, GameEvent, getGameEvents} from './model/game';
 import {addRoomEvent, getRoomEvents} from './model/room';
 import {verifyAccessToken} from './auth/jwt';
+import {getGameOwner, isGameLocked, isIdentityBanned, isOwner} from './model/game_moderation';
+import {getDfacIdsForUser} from './model/user';
 
 // Event types that are broadcast to connected clients but NOT persisted to the database.
 // updateCursor and addPing are high-frequency and only meaningful in real-time.
@@ -34,7 +36,9 @@ class SocketManager {
   }
 
   listen() {
-    // Auth middleware: verify JWT on connection if provided (guests still allowed)
+    // Auth middleware: verify JWT on connection if provided (guests still
+    // allowed). Also captures the client's dfac_id from the handshake so we
+    // can ban/lock-check both identities later.
     this.io.use((socket, next) => {
       const token = socket.handshake.auth?.token;
       if (token) {
@@ -42,6 +46,10 @@ class SocketManager {
         if (payload) {
           socket.data.authUser = payload;
         }
+      }
+      const dfacId = socket.handshake.auth?.dfacId;
+      if (typeof dfacId === 'string' && dfacId) {
+        socket.data.dfacId = dfacId;
       }
       next();
     });
@@ -53,6 +61,27 @@ class SocketManager {
           if (typeof gid !== 'string' || !gid) {
             if (typeof ack === 'function') ack({error: 'invalid gid'});
             return;
+          }
+          // Moderation gates: identity-based ban first, then lock (with an
+          // owner bypass so the owner can always rejoin even on a locked
+          // game). Both reads are cached per-gid; misses are still fast PK
+          // lookups.
+          const identity = {
+            userId: socket.data.authUser?.userId,
+            dfacId: socket.data.dfacId,
+          };
+          if (await isIdentityBanned(gid, identity)) {
+            if (typeof ack === 'function') ack({error: 'banned'});
+            return;
+          }
+          if (await isGameLocked(gid)) {
+            const owner = await getGameOwner(gid);
+            const dfacIds = identity.userId ? await getDfacIdsForUser(identity.userId) : [];
+            if (identity.dfacId && !dfacIds.includes(identity.dfacId)) dfacIds.push(identity.dfacId);
+            if (!isOwner(owner, {userId: identity.userId, dfacIds})) {
+              if (typeof ack === 'function') ack({error: 'locked'});
+              return;
+            }
           }
           socket.join(`game-${gid}`);
           if (typeof ack === 'function') ack();
@@ -104,6 +133,18 @@ class SocketManager {
           if (typeof message.gid !== 'string' || !message.gid) {
             console.error('Invalid game_event: missing or invalid gid');
             if (typeof ack === 'function') ack({error: 'invalid gid'});
+            return;
+          }
+          // Banned identities can't send events of any kind. Includes
+          // ephemeral cursor/ping — a kicked user shouldn't keep showing up
+          // in the live presence view.
+          if (
+            await isIdentityBanned(message.gid, {
+              userId: socket.data.authUser?.userId,
+              dfacId: socket.data.dfacId,
+            })
+          ) {
+            if (typeof ack === 'function') ack({error: 'banned'});
             return;
           }
           // Reject persisted, non-create events for gids that don't have a

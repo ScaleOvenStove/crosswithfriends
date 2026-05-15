@@ -147,6 +147,24 @@ class Game extends Component {
       this.setState({gameNotFound: true});
     });
 
+    // Owner-driven moderation events from the socket layer. The kick
+    // broadcast goes to everyone in the room; only the target acts on it.
+    // joinRejected fires when the server refused our join because we're
+    // banned or the game is locked.
+    this.gameModel.on('kicked', (msg) => {
+      const myDfacId = this.userId;
+      const myUserId = this.context?.user?.id;
+      const isTarget = (msg.dfac_id && msg.dfac_id === myDfacId) || (msg.user_id && msg.user_id === myUserId);
+      if (isTarget) {
+        this.setState({moderationError: 'kicked'});
+      }
+    });
+    this.gameModel.on('joinRejected', (reason) => {
+      // 'banned' or 'locked' — both render the same blocker screen, just
+      // with different copy.
+      this.setState({moderationError: reason});
+    });
+
     // Defer updateDisplayName until after we confirm the game has a create
     // event server-side. Emitting on mount produced orphan rows in
     // game_events for legacy gids that never had a create (#478).
@@ -490,6 +508,29 @@ class Game extends Component {
         <Helmet>
           <title>{this.getPuzzleTitle()}</title>
         </Helmet>
+        {this.state.moderationError && (
+          <div className="game-moderation-blocker">
+            <div className="game-moderation-blocker--card">
+              <h2>
+                {this.state.moderationError === 'kicked'
+                  ? 'You were removed from this game'
+                  : this.state.moderationError === 'locked'
+                    ? 'This game is locked'
+                    : "You can't join this game"}
+              </h2>
+              <p>
+                {this.state.moderationError === 'kicked'
+                  ? 'The game owner removed you.'
+                  : this.state.moderationError === 'locked'
+                    ? 'The game owner closed this game to new players.'
+                    : 'The game owner has banned this account from the game.'}
+              </p>
+              <a href="/" className="btn btn--contained btn--primary">
+                Back to home
+              </a>
+            </div>
+          </div>
+        )}
         {this.state.syncWarning === 'retrying' && (
           <div
             style={{

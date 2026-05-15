@@ -12,6 +12,7 @@ import _ from 'lodash';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import SocketManager from './SocketManager';
+import {setSocketIo} from './socket_instance';
 import apiRouter from './api/router';
 import {swaggerSpec} from './swagger';
 import passport from './auth/passport';
@@ -110,6 +111,7 @@ function logAllEvents(log: typeof console.log) {
 // ================== Main Entrypoint ================
 
 async function runServer() {
+  setSocketIo(io);
   const socketManager = new SocketManager(io);
   socketManager.listen();
   logAllEvents(console.log);

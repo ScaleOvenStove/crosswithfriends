@@ -147,7 +147,9 @@ export async function addGameEvent(gid: string, event: GameEvent) {
   );
 }
 
-export async function addInitialGameEvent(gid: string, pid: string) {
+export type GameCreator = {userId?: string | null; dfacId?: string | null};
+
+export async function addInitialGameEvent(gid: string, pid: string, creator?: GameCreator) {
   const puzzle = await getPuzzle(pid);
   if (!puzzle) throw new Error(`Puzzle not found: ${pid}`);
   const {
@@ -163,6 +165,12 @@ export async function addInitialGameEvent(gid: string, pid: string) {
   const clues = gridObject.alignClues(puzzle.clues);
   const grid = gridObject.toArray();
 
+  // Persist creator identity so we can check ownership later for kick/lock.
+  // Only set keys that are actually present so the payload stays compact.
+  const creatorPayload: {userId?: string; dfacId?: string} = {};
+  if (creator?.userId) creatorPayload.userId = creator.userId;
+  if (creator?.dfacId) creatorPayload.dfacId = creator.dfacId;
+
   const initialEvent = {
     user: '',
     timestamp: Date.now(),
@@ -170,6 +178,7 @@ export async function addInitialGameEvent(gid: string, pid: string) {
     params: {
       pid,
       version: 1.0,
+      ...(Object.keys(creatorPayload).length > 0 ? {creator: creatorPayload} : {}),
       game: {
         info,
         grid,

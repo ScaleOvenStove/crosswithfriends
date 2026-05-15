@@ -84,3 +84,13 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- 13. puzzle_ratings (depends on puzzles + users)
 -- ============================================================
 \ir create_puzzle_ratings.sql
+
+-- ============================================================
+-- 14. game_bans (depends on users)
+-- ============================================================
+\ir create_game_bans.sql
+
+-- ============================================================
+-- 15. game_locks (depends on users)
+-- ============================================================
+\ir create_game_locks.sql

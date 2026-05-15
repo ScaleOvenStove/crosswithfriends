@@ -5,6 +5,7 @@ import Linkify from 'linkify-react';
 import {Link} from 'react-router';
 import {MdClose} from 'react-icons/md';
 import {FaClone} from 'react-icons/fa6';
+import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '../../lib/emoji';
 import nameGenerator, {isFromNameGenerator} from '../../lib/nameGenerator';
@@ -14,6 +15,9 @@ import ColorPicker from './ColorPicker.tsx';
 import {formatMilliseconds} from '../Toolbar/Clock';
 import RatingWidget from '../Game/RatingWidget';
 import PuzzleStatsLine from '../Game/PuzzleStatsLine';
+import OwnerControls from './OwnerControls';
+import AuthContext from '../../lib/AuthContext';
+import {kickPlayer} from '../../api/create_game';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -21,6 +25,8 @@ const isEmojis = (str) => {
 };
 
 export default class Chat extends Component {
+  static contextType = AuthContext;
+
   constructor() {
     super();
     // We'll set the username state when we mount the component.
@@ -30,6 +36,29 @@ export default class Chat extends Component {
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
   }
+
+  get isOwner() {
+    const creator = this.props.game?.creator;
+    if (!creator) return false;
+    const userId = this.context?.user?.id;
+    if (creator.userId && userId && creator.userId === userId) return true;
+    if (creator.dfacId && this.props.id && creator.dfacId === this.props.id) return true;
+    return false;
+  }
+
+  handleKickClick = async (event) => {
+    const targetDfacId = event.currentTarget.dataset.dfacId;
+    if (!targetDfacId) return;
+    const accessToken = this.context?.accessToken;
+    if (!accessToken) return;
+    if (targetDfacId === this.props.id) return;
+    if (!window.confirm('Kick this player? They will be removed from the game and cannot rejoin.')) return;
+    try {
+      await kickPlayer(this.props.gid, {dfac_id: targetDfacId}, accessToken);
+    } catch (err) {
+      Sentry.captureException(err);
+    }
+  };
 
   componentDidMount() {
     const username = this.props.initialUsername;
@@ -225,6 +254,7 @@ export default class Chat extends Component {
         )}
         {pid && <PuzzleStatsLine pid={String(pid)} />}
         {pid && <RatingWidget pid={String(pid)} />}
+        {this.isOwner && this.props.gid && <OwnerControls gid={this.props.gid} />}
         {this.renderFencingOptions()}
       </div>
     );
@@ -248,22 +278,42 @@ export default class Chat extends Component {
     );
   }
 
-  static renderUserPresent(id, displayName, color) {
+  static renderUserPresent(id, displayName, color, kickHandler) {
     const style = color && {
       color,
     };
     return (
       <span key={id} style={style}>
         <span className="dot">{'\u25CF'}</span>
-        {displayName}{' '}
+        {displayName}
+        {kickHandler && (
+          <button
+            type="button"
+            className="chat--user--kick-btn"
+            data-dfac-id={id}
+            onClick={kickHandler}
+            title={`Kick ${displayName}`}
+          >
+            \u00D7
+          </button>
+        )}{' '}
       </span>
     );
   }
 
   renderUsersPresent(users) {
-    return this.props.hideChatBar ? null : (
+    if (this.props.hideChatBar) return null;
+    const showKick = this.isOwner;
+    return (
       <div className="chat--users--present">
-        {Object.keys(users).map((id) => Chat.renderUserPresent(id, users[id].displayName, users[id].color))}
+        {Object.keys(users).map((id) =>
+          Chat.renderUserPresent(
+            id,
+            users[id].displayName,
+            users[id].color,
+            showKick && id !== this.props.id ? this.handleKickClick : null
+          )
+        )}
       </div>
     );
   }
