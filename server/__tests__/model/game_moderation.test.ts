@@ -6,11 +6,13 @@ import {
   addGameBan,
   clearModerationCache,
   getGameOwner,
+  getLockedAt,
   isGameLocked,
   isIdentityBanned,
   isOwner,
   lockGame,
   unlockGame,
+  wasParticipantBeforeLock,
 } from '../../model/game_moderation';
 
 beforeEach(() => {
@@ -23,14 +25,16 @@ beforeEach(() => {
 function mockState({
   bans = [],
   locked = false,
+  lockedAt = null,
   creator = null,
 }: {
   bans?: Array<{identity: string; identity_type: 'user' | 'dfac'}>;
   locked?: boolean;
+  lockedAt?: Date | null;
   creator?: {userId?: string; dfacId?: string} | null;
 }): void {
   pool.query.mockResolvedValueOnce({rows: bans});
-  pool.query.mockResolvedValueOnce({rows: locked ? [{gid: 'g1'}] : []});
+  pool.query.mockResolvedValueOnce({rows: locked ? [{locked_at: lockedAt ?? new Date()}] : []});
   pool.query.mockResolvedValueOnce({rows: creator ? [{event_payload: {params: {creator}}}] : []});
 }
 
@@ -107,6 +111,50 @@ describe('isOwner', () => {
 
   it('returns false when owner is null (legacy game)', () => {
     expect(isOwner(null, {userId: 'u1', dfacIds: ['d1']})).toBe(false);
+  });
+});
+
+describe('getLockedAt', () => {
+  it('returns the lock timestamp when locked', async () => {
+    const lockedAt = new Date('2026-01-01T00:00:00Z');
+    mockState({locked: true, lockedAt});
+    expect(await getLockedAt('g1')).toEqual(lockedAt);
+  });
+
+  it('returns null when unlocked', async () => {
+    mockState({locked: false});
+    expect(await getLockedAt('g1')).toBeNull();
+  });
+});
+
+describe('wasParticipantBeforeLock', () => {
+  const lockedAt = new Date('2026-01-01T12:00:00Z');
+
+  it('returns true when a game_events row exists for the dfac_id before the lock', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{exists: 1}]});
+    expect(await wasParticipantBeforeLock('g1', {dfacId: 'dfac-x'}, lockedAt)).toBe(true);
+    const [sql, params] = pool.query.mock.calls[0];
+    expect(sql).toContain('FROM game_events');
+    expect(sql).toContain('uid = $2');
+    expect(params).toEqual(['g1', 'dfac-x', lockedAt]);
+  });
+
+  it('returns true when a verifiedUserId matches before the lock (cross-device reconnect)', async () => {
+    pool.query.mockResolvedValueOnce({rows: []}); // no dfac match
+    pool.query.mockResolvedValueOnce({rows: [{exists: 1}]}); // userId match
+    expect(await wasParticipantBeforeLock('g1', {userId: 'u1', dfacId: 'new-dfac'}, lockedAt)).toBe(true);
+    expect(pool.query.mock.calls[1][0]).toContain("event_payload->>'verifiedUserId'");
+  });
+
+  it('returns false when neither identity has prior events', async () => {
+    pool.query.mockResolvedValueOnce({rows: []});
+    pool.query.mockResolvedValueOnce({rows: []});
+    expect(await wasParticipantBeforeLock('g1', {userId: 'u1', dfacId: 'd1'}, lockedAt)).toBe(false);
+  });
+
+  it('returns false and skips the DB when identity is empty', async () => {
+    expect(await wasParticipantBeforeLock('g1', {}, lockedAt)).toBe(false);
+    expect(pool.query).not.toHaveBeenCalled();
   });
 });
 

@@ -2,11 +2,22 @@ import {io, Socket} from 'socket.io-client';
 import {SOCKET_HOST} from '../api/constants';
 import getLocalId from '../localAuth';
 
-let websocketPromise: Promise<Socket>;
+let websocketPromise: Promise<Socket> | undefined;
 let currentAuthToken: string | null = null;
 
 export function setSocketAuthToken(token: string | null) {
   currentAuthToken = token;
+}
+
+// Drop the cached socket promise. Used after we deliberately disconnect
+// the underlying socket (e.g. forceDisconnect on kick) so the next caller
+// gets a fresh connection instead of a dead one. Without this, subsequent
+// game sessions in the same SPA tab would reuse the disconnected socket
+// and never rejoin/sync until a full page reload.
+export function resetSocket() {
+  websocketPromise = undefined;
+  (window as any).socket = undefined;
+  (window as any).connectionStatus = undefined;
 }
 
 export const getSocket = () => {

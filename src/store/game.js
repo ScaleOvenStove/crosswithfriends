@@ -4,7 +4,7 @@ import _ from 'lodash';
 import * as uuid from 'uuid';
 import * as colors from '../lib/colors';
 import {emitAsync, emitAsyncWithTimeout} from '../sockets/emitAsync';
-import {getSocket} from '../sockets/getSocket';
+import {getSocket, resetSocket} from '../sockets/getSocket';
 // ============ Serialize / Deserialize Helpers ========== //
 
 // Recursively walks obj and converts `null` to `undefined`
@@ -115,11 +115,15 @@ export default class Game extends EventEmitter {
   // Called when the local user is the kick target — drop the live socket
   // so they stop receiving live updates/chat even though the server-side
   // ban also blocks outgoing events. Matches the UX of being booted.
+  // Also reset the module-level socket promise: getSocket() caches the
+  // socket globally, so without this, navigating to another game in the
+  // same SPA tab would reuse the now-disconnected socket and never sync.
   forceDisconnect() {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
+    resetSocket();
   }
 
   emitEvent(event) {

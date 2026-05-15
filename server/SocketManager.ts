@@ -6,7 +6,14 @@ import {Server} from 'socket.io';
 import {addGameEvent, gameExists, GameEvent, getGameEvents} from './model/game';
 import {addRoomEvent, getRoomEvents} from './model/room';
 import {verifyAccessToken} from './auth/jwt';
-import {getGameOwner, isGameLocked, isIdentityBanned, isOwner} from './model/game_moderation';
+import {
+  getGameOwner,
+  getLockedAt,
+  isGameLocked,
+  isIdentityBanned,
+  isOwner,
+  wasParticipantBeforeLock,
+} from './model/game_moderation';
 import {getDfacIdsForUser} from './model/user';
 
 // Event types that are broadcast to connected clients but NOT persisted to the database.
@@ -84,9 +91,21 @@ class SocketManager {
             // dfac ids from the token are sufficient.
             const owner = await getGameOwner(gid);
             const dfacIds = identity.userId ? await getDfacIdsForUser(identity.userId) : [];
-            if (!isOwner(owner, {userId: identity.userId, dfacIds})) {
-              if (typeof ack === 'function') ack({error: 'locked'});
-              return;
+            const isCallerOwner = isOwner(owner, {userId: identity.userId, dfacIds});
+            if (!isCallerOwner) {
+              // Pre-lock participants get through too — the lock contract is
+              // "block new joins, existing players keep playing". Without
+              // this, a transient socket reconnect would re-issue join_game
+              // and the client treats the {error: 'locked'} as terminal,
+              // effectively ejecting everyone on flaky networks.
+              const lockedAt = await getLockedAt(gid);
+              const wasParticipant = lockedAt
+                ? await wasParticipantBeforeLock(gid, identity, lockedAt)
+                : false;
+              if (!wasParticipant) {
+                if (typeof ack === 'function') ack({error: 'locked'});
+                return;
+              }
             }
           }
           socket.join(`game-${gid}`);
