@@ -3,7 +3,7 @@ import React, {Component} from 'react';
 import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
-import {MdClose, MdErrorOutline} from 'react-icons/md';
+import {MdClose, MdErrorOutline, MdHelpOutline} from 'react-icons/md';
 import {FaClone, FaCrown} from 'react-icons/fa6';
 import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
@@ -34,6 +34,7 @@ export default class Chat extends Component {
     this.state = {
       username: '',
       kickTarget: null,
+      unkickTarget: null,
     };
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
@@ -89,14 +90,28 @@ export default class Chat extends Component {
     }
   };
 
-  handleUnkickClick = async (event) => {
+  handleUnkickClick = (event) => {
     const targetDfacId = event.currentTarget.dataset.dfacId;
     if (!targetDfacId) return;
+    if (!this.context?.accessToken) return;
+    const user = this.props.users?.[targetDfacId];
+    const displayName = user?.displayName || 'this player';
+    const color = user?.color || null;
+    this.setState({unkickTarget: {dfacId: targetDfacId, displayName, color}});
+  };
+
+  handleUnkickDialogChange = (open) => {
+    if (!open) this.setState({unkickTarget: null});
+  };
+
+  handleUnkickConfirm = async () => {
+    const target = this.state.unkickTarget;
+    if (!target) return;
     const accessToken = this.context?.accessToken;
     if (!accessToken) return;
     try {
-      const ok = await unkickPlayer(this.props.gid, {dfac_id: targetDfacId}, accessToken);
-      if (ok && this.props.onUnkick) this.props.onUnkick(targetDfacId);
+      const ok = await unkickPlayer(this.props.gid, {dfac_id: target.dfacId}, accessToken);
+      if (ok && this.props.onUnkick) this.props.onUnkick(target.dfacId);
     } catch (err) {
       Sentry.captureException(err);
     }
@@ -597,7 +612,7 @@ export default class Chat extends Component {
 
   render() {
     const messages = Chat.mergeMessages(this.props.data, this.props.opponentData);
-    const {kickTarget} = this.state;
+    const {kickTarget, unkickTarget} = this.state;
     return (
       <div className="flex--column flex--grow">
         {this.renderToolbar()}
@@ -623,6 +638,28 @@ export default class Chat extends Component {
           danger
         >
           <p>They will be removed from the game and cannot rejoin.</p>
+        </ConfirmDialog>
+        <ConfirmDialog
+          open={!!unkickTarget}
+          onOpenChange={this.handleUnkickDialogChange}
+          title={
+            unkickTarget ? (
+              <>
+                Unkick{' '}
+                <span style={unkickTarget.color ? {color: unkickTarget.color} : undefined}>
+                  {unkickTarget.displayName}
+                </span>
+                ?
+              </>
+            ) : (
+              ''
+            )
+          }
+          icon={<MdHelpOutline />}
+          onConfirm={this.handleUnkickConfirm}
+          confirmLabel="Unkick"
+        >
+          <p>They will be allowed back into the game.</p>
         </ConfirmDialog>
         <div className="chat">
           {this.renderChatHeader()}
