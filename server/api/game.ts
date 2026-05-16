@@ -8,7 +8,7 @@ import {getPuzzleInfo} from '../model/puzzle';
 import {verifyAccessToken} from '../auth/jwt';
 import {dismissGameForUser, undismissGameForUser} from '../model/game_dismissal';
 import {invalidateUserGamesCacheForUser, invalidateAuthPuzzleStatusCache} from '../model/user_games';
-import {getDfacIdsForUser} from '../model/user';
+import {getDfacIdsForUser, getUserIdByDfacId} from '../model/user';
 import {
   addGameBan,
   getGameOwner,
@@ -322,12 +322,19 @@ router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', asyn
       return res.status(403).json({error: 'only the game owner can kick'});
     }
 
-    // Persist both identities if the caller supplied both — covers the
-    // sign-out-and-rejoin-as-guest case. Run them in parallel since the
-    // two rows are independent.
+    // The client only knows the target's dfac_id (presence list keys),
+    // but banning just that lets an authed target rejoin from another
+    // browser with a fresh dfac. Resolve the linked user_id server-side
+    // and ban both identities so the kick covers every device of the
+    // same account. No-op for guests with no linked account.
+    let resolvedUserId = target.user_id;
+    if (!resolvedUserId && target.dfac_id) {
+      resolvedUserId = (await getUserIdByDfacId(target.dfac_id)) || undefined;
+    }
+
     const banWrites: Promise<void>[] = [];
-    if (target.user_id) {
-      banWrites.push(addGameBan(gid, {identity: target.user_id, identityType: 'user'}, payload.userId));
+    if (resolvedUserId) {
+      banWrites.push(addGameBan(gid, {identity: resolvedUserId, identityType: 'user'}, payload.userId));
     }
     if (target.dfac_id) {
       banWrites.push(addGameBan(gid, {identity: target.dfac_id, identityType: 'dfac'}, payload.userId));
@@ -341,7 +348,7 @@ router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', asyn
       io.to(`game-${gid}`).emit('kicked', {
         gid,
         dfac_id: target.dfac_id,
-        user_id: target.user_id,
+        user_id: resolvedUserId,
       });
     }
 
