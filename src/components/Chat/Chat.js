@@ -67,8 +67,10 @@ export default class Chat extends Component {
     if (!targetDfacId) return;
     if (!this.context?.accessToken) return;
     if (targetDfacId === this.props.id) return;
-    const displayName = this.props.users?.[targetDfacId]?.displayName || 'this player';
-    this.setState({kickTarget: {dfacId: targetDfacId, displayName}});
+    const user = this.props.users?.[targetDfacId];
+    const displayName = user?.displayName || 'this player';
+    const color = user?.color || null;
+    this.setState({kickTarget: {dfacId: targetDfacId, displayName, color}});
   };
 
   handleKickDialogChange = (open) => {
@@ -576,7 +578,19 @@ export default class Chat extends Component {
         <ConfirmDialog
           open={!!kickTarget}
           onOpenChange={this.handleKickDialogChange}
-          title={kickTarget ? `Kick ${kickTarget.displayName}?` : ''}
+          title={
+            kickTarget ? (
+              <>
+                Kick{' '}
+                <span style={kickTarget.color ? {color: kickTarget.color} : undefined}>
+                  {kickTarget.displayName}
+                </span>
+                ?
+              </>
+            ) : (
+              ''
+            )
+          }
           icon={<MdErrorOutline />}
           onConfirm={this.handleKickConfirm}
           confirmLabel="Kick"
