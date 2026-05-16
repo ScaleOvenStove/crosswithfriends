@@ -122,7 +122,7 @@ export default class Game extends EventEmitter {
       if (ack && ack.error) {
         if (isTerminalJoinError(ack.error)) {
           this.joinRejected = ack.error;
-          this.emit('joinRejected', ack.error);
+          this.emit('joinRejected', {reason: ack.error, gid: this.gid});
           return;
         }
         console.warn('join_game on reconnect returned non-terminal error:', ack.error);
@@ -146,7 +146,7 @@ export default class Game extends EventEmitter {
           // Server refused (banned/locked). Mark this connection terminal so
           // attach()'s caller skips flushOfflineQueue + the initial sync.
           this.joinRejected = joinAck.error;
-          this.emit('joinRejected', joinAck.error);
+          this.emit('joinRejected', {reason: joinAck.error, gid: this.gid});
           return;
         }
         console.warn('join_game returned non-terminal error:', joinAck.error);

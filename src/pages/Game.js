@@ -179,10 +179,14 @@ class Game extends Component {
         });
       }
     });
-    this.gameModel.on('joinRejected', (reason) => {
+    this.gameModel.on('joinRejected', (msg) => {
       // 'banned' or 'locked' — both render the same blocker screen, just
-      // with different copy.
-      this.setState({moderationError: reason});
+      // with different copy. Gate on gid for the same reason the kicked
+      // listener does: stale gameModel instances from prior gids can still
+      // emit joinRejected on reconnect, and without this check they'd
+      // incorrectly drop a blocker on the currently active game.
+      if (msg.gid !== this.state.gid) return;
+      this.setState({moderationError: msg.reason});
     });
     this.gameModel.on('unkicked', (msg) => {
       if (msg.gid !== this.state.gid) return;
