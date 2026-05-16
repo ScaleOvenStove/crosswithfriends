@@ -3,7 +3,7 @@ import React, {Component} from 'react';
 import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
-import {MdClose} from 'react-icons/md';
+import {MdClose, MdErrorOutline} from 'react-icons/md';
 import {FaClone, FaCrown} from 'react-icons/fa6';
 import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
@@ -16,6 +16,7 @@ import {formatMilliseconds} from '../Toolbar/Clock';
 import RatingWidget from '../Game/RatingWidget';
 import PuzzleStatsLine from '../Game/PuzzleStatsLine';
 import OwnerControls from './OwnerControls';
+import ConfirmDialog from '../common/ConfirmDialog';
 import AuthContext from '../../lib/AuthContext';
 import {kickPlayer} from '../../api/create_game';
 
@@ -32,6 +33,7 @@ export default class Chat extends Component {
     // We'll set the username state when we mount the component.
     this.state = {
       username: '',
+      kickTarget: null,
     };
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
@@ -60,15 +62,26 @@ export default class Chat extends Component {
     return this.isOwner && !!this.context?.accessToken;
   }
 
-  handleKickClick = async (event) => {
+  handleKickClick = (event) => {
     const targetDfacId = event.currentTarget.dataset.dfacId;
     if (!targetDfacId) return;
+    if (!this.context?.accessToken) return;
+    if (targetDfacId === this.props.id) return;
+    const displayName = this.props.users?.[targetDfacId]?.displayName || 'this player';
+    this.setState({kickTarget: {dfacId: targetDfacId, displayName}});
+  };
+
+  handleKickDialogChange = (open) => {
+    if (!open) this.setState({kickTarget: null});
+  };
+
+  handleKickConfirm = async () => {
+    const target = this.state.kickTarget;
+    if (!target) return;
     const accessToken = this.context?.accessToken;
     if (!accessToken) return;
-    if (targetDfacId === this.props.id) return;
-    if (!window.confirm('Kick this player? They will be removed from the game and cannot rejoin.')) return;
     try {
-      await kickPlayer(this.props.gid, {dfac_id: targetDfacId}, accessToken);
+      await kickPlayer(this.props.gid, {dfac_id: target.dfacId}, accessToken);
     } catch (err) {
       Sentry.captureException(err);
     }
@@ -556,9 +569,21 @@ export default class Chat extends Component {
 
   render() {
     const messages = Chat.mergeMessages(this.props.data, this.props.opponentData);
+    const {kickTarget} = this.state;
     return (
       <div className="flex--column flex--grow">
         {this.renderToolbar()}
+        <ConfirmDialog
+          open={!!kickTarget}
+          onOpenChange={this.handleKickDialogChange}
+          title={kickTarget ? `Kick ${kickTarget.displayName}?` : ''}
+          icon={<MdErrorOutline />}
+          onConfirm={this.handleKickConfirm}
+          confirmLabel="Kick"
+          danger
+        >
+          <p>They will be removed from the game and cannot rejoin.</p>
+        </ConfirmDialog>
         <div className="chat">
           {this.renderChatHeader()}
           {this.renderChatSubheader()}
