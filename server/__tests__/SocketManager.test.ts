@@ -456,6 +456,22 @@ describe('SocketManager', () => {
       expect(ack).toHaveBeenCalledWith({error: 'invalid gid'});
     });
 
+    it('rejects join_game when the socket has neither dfacId nor authUser', async () => {
+      // Without this gate, a kicked guest could simply omit dfacId from the
+      // handshake and isIdentityBanned would return false vacuously, letting
+      // them re-enter the room.
+      const {io, socketHandlers, mockSocket} = createMockIo();
+      mockSocket.data = {};
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      const ack = jest.fn();
+      await socketHandlers['join_game']('g1', ack);
+
+      expect(ack).toHaveBeenCalledWith({error: 'no identity'});
+      expect(pool.query).not.toHaveBeenCalled();
+    });
+
     it('rejects invalid gid for leave_game', async () => {
       const {io, socketHandlers} = createMockIo();
       const sm = new SocketManager(io);

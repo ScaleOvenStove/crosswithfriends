@@ -5,15 +5,40 @@ import getLocalId from '../localAuth';
 let websocketPromise: Promise<Socket> | undefined;
 let currentAuthToken: string | null = null;
 
+function buildAuth(): Record<string, string> {
+  const auth: Record<string, string> = {};
+  if (currentAuthToken) auth.token = currentAuthToken;
+  const dfacId = getLocalId();
+  if (dfacId) auth.dfacId = dfacId;
+  return auth;
+}
+
 export function setSocketAuthToken(token: string | null) {
+  if (currentAuthToken === token) return;
   currentAuthToken = token;
+  // The active socket's handshake.auth was sealed at io() creation time, so
+  // a guest socket keeps presenting null/old tokens even after sign-in.
+  // Mutate socket.auth in place and bounce the connection so the server-side
+  // checks that depend on socket.data.authUser (owner bypass in join_game,
+  // verifiedUserId stamping on game_event) see the new identity. We reuse
+  // the same Socket instance so GameModel's reference + 'kicked'/'connect'
+  // listeners stay attached, and the reconnect handler re-issues join_game.
+  if (websocketPromise) {
+    websocketPromise
+      .then((socket) => {
+        socket.auth = buildAuth();
+        if (socket.connected) socket.disconnect();
+        socket.connect();
+      })
+      .catch(() => {});
+  }
 }
 
 // Drop the cached socket promise. Used after we deliberately disconnect
-// the underlying socket (e.g. forceDisconnect on kick) so the next caller
-// gets a fresh connection instead of a dead one. Without this, subsequent
-// game sessions in the same SPA tab would reuse the disconnected socket
-// and never rejoin/sync until a full page reload.
+// the underlying socket (forceDisconnect on kick) so the next caller gets
+// a fresh connection instead of a dead one. Without this, subsequent game
+// sessions in the same SPA tab would reuse the disconnected socket and
+// never rejoin/sync until a full page reload.
 export function resetSocket() {
   websocketPromise = undefined;
   (window as any).socket = undefined;
@@ -26,12 +51,9 @@ export const getSocket = () => {
       // Note: In attempt to increase websocket limit, use upgrade false
       // https://stackoverflow.com/questions/15872788/maximum-concurrent-socket-io-connections
       const socketOptions: Record<string, any> = {upgrade: false, transports: ['websocket']};
-      const auth: Record<string, string> = {};
-      if (currentAuthToken) auth.token = currentAuthToken;
       // dfacId always travels — it's the guest identity. The server uses
       // both this and the JWT-derived userId for ban/lock checks.
-      const dfacId = getLocalId();
-      if (dfacId) auth.dfacId = dfacId;
+      const auth = buildAuth();
       if (Object.keys(auth).length > 0) socketOptions.auth = auth;
       const socket = io(SOCKET_HOST, socketOptions);
 
