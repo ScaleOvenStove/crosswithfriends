@@ -177,6 +177,16 @@ class SocketManager {
             if (typeof ack === 'function') ack({error: 'invalid gid'});
             return;
           }
+          // create events are HTTP-only. Allowing them over the socket lets
+          // any authed player emit a backdated create with their own
+          // params.creator, which getGameOwner (ORDER BY ts ASC LIMIT 1)
+          // would then return — turning every moderation endpoint into a
+          // privilege-escalation path. Real bootstrapping happens in
+          // /api/game POST → addInitialGameEvent with server-stamped ts.
+          if (event.type === 'create') {
+            if (typeof ack === 'function') ack({error: 'create not allowed over socket'});
+            return;
+          }
           // Banned identities can't send events of any kind. Includes
           // ephemeral cursor/ping — a kicked user shouldn't keep showing up
           // in the live presence view.
@@ -189,23 +199,22 @@ class SocketManager {
             if (typeof ack === 'function') ack({error: 'banned'});
             return;
           }
-          // For everything other than the bootstrapping create event,
-          // require that the socket actually joined the room. Join is
-          // gated by isGameLocked + isIdentityBanned in join_game above,
-          // so this is what makes lock cover writes too: a new client
-          // that never joined can't smuggle in updateCell/chat directly.
-          // Existing players who joined before the lock keep their seat.
-          if (event.type !== 'create' && !socket.rooms.has(`game-${message.gid}`)) {
+          // Require that the socket actually joined the room. Join is gated
+          // by isGameLocked + isIdentityBanned in join_game above, so this
+          // is what makes lock cover writes too: a new client that never
+          // joined can't smuggle in updateCell/chat directly. Existing
+          // players who joined before the lock keep their seat.
+          if (!socket.rooms.has(`game-${message.gid}`)) {
             if (typeof ack === 'function') ack({error: 'not in game'});
             return;
           }
-          // Reject persisted, non-create events for gids that don't have a
-          // create event or snapshot — prevents orphan rows from accumulating
-          // for legacy gids whose game was never bootstrapped server-side
-          // (#478). Ephemeral events (cursor, ping) bypass since they aren't
+          // Reject persisted events for gids that don't have a create event
+          // or snapshot — prevents orphan rows from accumulating for legacy
+          // gids whose game was never bootstrapped server-side (#478).
+          // Ephemeral events (cursor, ping) bypass since they aren't
           // persisted. Cache positive results per socket to avoid repeated
           // DB lookups.
-          if (event.type !== 'create' && !EPHEMERAL_EVENT_TYPES.has(event.type)) {
+          if (!EPHEMERAL_EVENT_TYPES.has(event.type)) {
             const verified: Set<string> = (socket.data.verifiedGids ||= new Set());
             if (!verified.has(message.gid)) {
               if (await gameExists(message.gid)) {
@@ -228,12 +237,6 @@ class SocketManager {
             delete event.verifiedUserId;
           }
           await this.addGameEvent(message.gid, event);
-          // A successful create persists the bootstrap row, so future events
-          // from this socket can skip the gameExists lookup.
-          if (event.type === 'create') {
-            const verified: Set<string> = (socket.data.verifiedGids ||= new Set());
-            verified.add(message.gid);
-          }
           if (typeof ack === 'function') ack();
         } catch (err) {
           console.error(`[Socket] game_event error:`, err);

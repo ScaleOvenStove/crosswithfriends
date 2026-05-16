@@ -319,29 +319,30 @@ describe('SocketManager', () => {
       expect(pool.query).toHaveBeenCalledTimes(1);
     });
 
-    it('primes the gameExists cache after a successful create event', async () => {
+    it('rejects create events over the socket (HTTP-only bootstrap)', async () => {
+      // Allowing socket-side creates lets any authed player emit a backdated
+      // create with their own params.creator. getGameOwner reads earliest by
+      // ts → the impostor's row → privilege escalation through /kick, /lock,
+      // /unlock. Real bootstrap happens via /api/game POST.
       const {io, socketHandlers} = createMockIo();
       const sm = new SocketManager(io);
       sm.listen();
 
-      // Create event passes through without a gameExists lookup
-      const ack1 = jest.fn();
+      const ack = jest.fn();
       await socketHandlers['game_event'](
-        {gid: 'g1', event: {type: 'create', timestamp: 1700000000000, params: {pid: 'p1'}}},
-        ack1
+        {
+          gid: 'g1',
+          event: {
+            type: 'create',
+            timestamp: 1, // backdated to win the ORDER BY ts ASC race
+            params: {pid: 'p1', creator: {dfacId: 'attacker'}},
+          },
+        },
+        ack
       );
-      expect(ack1).toHaveBeenCalledWith();
 
-      // Subsequent updateCell on the same socket+gid should NOT call gameExists —
-      // the create should have primed verifiedGids. Only the INSERT runs.
-      pool.query.mockClear();
-      const ack2 = jest.fn();
-      await socketHandlers['game_event'](
-        {gid: 'g1', event: {type: 'updateCell', timestamp: 1700000000001, params: {id: 'p1'}}},
-        ack2
-      );
-      expect(ack2).toHaveBeenCalledWith();
-      expect(pool.query).toHaveBeenCalledTimes(1);
+      expect(ack).toHaveBeenCalledWith({error: 'create not allowed over socket'});
+      expect(pool.query).not.toHaveBeenCalled();
     });
 
     it('allows ephemeral events to bypass the gate', async () => {
