@@ -18,7 +18,7 @@ import PuzzleStatsLine from '../Game/PuzzleStatsLine';
 import OwnerControls from './OwnerControls';
 import ConfirmDialog from '../common/ConfirmDialog';
 import AuthContext from '../../lib/AuthContext';
-import {kickPlayer} from '../../api/create_game';
+import {kickPlayer, unkickPlayer} from '../../api/create_game';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -84,6 +84,19 @@ export default class Chat extends Component {
     if (!accessToken) return;
     try {
       await kickPlayer(this.props.gid, {dfac_id: target.dfacId}, accessToken);
+    } catch (err) {
+      Sentry.captureException(err);
+    }
+  };
+
+  handleUnkickClick = async (event) => {
+    const targetDfacId = event.currentTarget.dataset.dfacId;
+    if (!targetDfacId) return;
+    const accessToken = this.context?.accessToken;
+    if (!accessToken) return;
+    try {
+      const ok = await unkickPlayer(this.props.gid, {dfac_id: targetDfacId}, accessToken);
+      if (ok && this.props.onUnkick) this.props.onUnkick(targetDfacId);
     } catch (err) {
       Sentry.captureException(err);
     }
@@ -307,7 +320,7 @@ export default class Chat extends Component {
     );
   }
 
-  static renderUserPresent(id, displayName, color, kickHandler, kicked, isOwner) {
+  static renderUserPresent(id, displayName, color, kickHandler, kicked, isOwner, unkickHandler) {
     // Kicked users keep their entry for attribution but render greyed out
     // with no live dot and no kick button (already gone).
     const style = kicked ? {opacity: 0.45, textDecoration: 'line-through'} : color && {color};
@@ -325,6 +338,18 @@ export default class Chat extends Component {
             title={`Kick ${displayName}`}
           >
             {'\u00D7'}
+          </button>
+        )}
+        {unkickHandler && kicked && (
+          <button
+            type="button"
+            className="chat--user--unkick-btn"
+            data-dfac-id={id}
+            onClick={unkickHandler}
+            title={`Unkick ${displayName}`}
+            aria-label={`Unkick ${displayName}`}
+          >
+            {'\u21A9'}
           </button>
         )}{' '}
       </span>
@@ -385,7 +410,8 @@ export default class Chat extends Component {
         users[id].color,
         showKick && !kicked && id !== this.props.id ? this.handleKickClick : null,
         kicked,
-        !!ownerDfacId && id === ownerDfacId
+        !!ownerDfacId && id === ownerDfacId,
+        showKick && kicked ? this.handleUnkickClick : null
       );
 
     return (

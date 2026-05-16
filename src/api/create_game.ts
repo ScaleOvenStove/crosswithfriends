@@ -60,6 +60,22 @@ export async function kickPlayer(
   return resp.ok;
 }
 
+export async function unkickPlayer(
+  gid: string,
+  target: {dfac_id?: string; user_id?: string},
+  accessToken: string
+): Promise<boolean> {
+  const resp = await fetch(`${SERVER_URL}/api/game/${gid}/unkick`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(target),
+  });
+  return resp.ok;
+}
+
 export async function lockGame(gid: string, accessToken: string): Promise<boolean> {
   const resp = await fetch(`${SERVER_URL}/api/game/${gid}/lock`, {
     method: 'POST',

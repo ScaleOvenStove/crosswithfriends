@@ -157,6 +157,34 @@ export async function addGameBan(
   invalidateModerationCacheForGid(gid);
 }
 
+// Lift a ban — owner reversed a kick. Removes both the dfac and user
+// rows so the target's other devices (linked via user_identity_map) also
+// regain access. Caller is expected to supply both identities when known.
+export async function removeGameBan(
+  gid: string,
+  target: {dfacId?: string | null; userId?: string | null}
+): Promise<void> {
+  const removals: Promise<unknown>[] = [];
+  if (target.dfacId) {
+    removals.push(
+      pool.query(`DELETE FROM game_bans WHERE gid = $1 AND identity = $2 AND identity_type = 'dfac'`, [
+        gid,
+        target.dfacId,
+      ])
+    );
+  }
+  if (target.userId) {
+    removals.push(
+      pool.query(`DELETE FROM game_bans WHERE gid = $1 AND identity = $2 AND identity_type = 'user'`, [
+        gid,
+        target.userId,
+      ])
+    );
+  }
+  await Promise.all(removals);
+  invalidateModerationCacheForGid(gid);
+}
+
 export async function lockGame(gid: string, by: Identity): Promise<void> {
   await pool.query(
     `INSERT INTO game_locks (gid, locked_by_user_id, locked_by_dfac_id)

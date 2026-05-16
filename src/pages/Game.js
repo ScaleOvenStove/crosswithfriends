@@ -330,6 +330,12 @@ class Game extends Component {
     }
   };
 
+  handleUnkick = (dfacId) => {
+    this.setState((prev) => ({
+      kickedDfacIds: prev.kickedDfacIds.filter((id) => id !== dfacId),
+    }));
+  };
+
   handleChat = (username, id, message) => {
     this.gameModel.chat(username, id, message);
   };
@@ -500,6 +506,7 @@ class Game extends Component {
         users={this.game.users}
         kickedDfacIds={this.state.kickedDfacIds}
         isOwnerFromServer={this.state.isOwnerFromServer}
+        onUnkick={this.handleUnkick}
         id={id}
         myColor={color}
         onChat={this.handleChat}

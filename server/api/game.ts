@@ -16,6 +16,7 @@ import {
   isGameLocked,
   isOwner,
   lockGame,
+  removeGameBan,
   unlockGame,
 } from '../model/game_moderation';
 import {getSocketIo} from '../socket_instance';
@@ -351,6 +352,70 @@ router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', asyn
         user_id: resolvedUserId,
       });
     }
+
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+  return undefined;
+});
+
+/**
+ * @openapi
+ * /game/{gid}/unkick:
+ *   post:
+ *     tags: [Games]
+ *     summary: Lift a kick (unban) a player
+ *     description: Owner-only. Removes the ban for the given target identity. Resolves the linked user_id so all device-local bans tied to the same account are lifted.
+ *     security: [{bearerAuth: []}]
+ *     parameters:
+ *       - in: path
+ *         name: gid
+ *         required: true
+ *         schema: {type: string}
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               dfac_id: {type: string}
+ *               user_id: {type: string}
+ *     responses:
+ *       204: {description: Player unkicked}
+ *       400: {description: Missing target identity}
+ *       401: {description: Not authenticated}
+ *       403: {description: Caller is not the owner}
+ */
+router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/unkick', async (req, res, next) => {
+  try {
+    const {gid} = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
+    const payload = verifyAccessToken(authHeader.slice(7));
+    if (!payload) return res.sendStatus(401);
+
+    const target = req.body || {};
+    if (!target.dfac_id && !target.user_id) {
+      return res.status(400).json({error: 'target dfac_id or user_id required'});
+    }
+
+    const owner = await getGameOwner(gid);
+    const dfacIds = await getDfacIdsForUser(payload.userId);
+    if (!isOwner(owner, {userId: payload.userId, dfacIds})) {
+      return res.status(403).json({error: 'only the game owner can unkick'});
+    }
+
+    // Mirror /kick: resolve the linked user_id so we remove the user-scoped
+    // ban too, not just the dfac-scoped one. Otherwise an authed player who
+    // was kicked from another device would still be banned on this device.
+    let resolvedUserId = target.user_id;
+    if (!resolvedUserId && target.dfac_id) {
+      resolvedUserId = (await getUserIdByDfacId(target.dfac_id)) || undefined;
+    }
+
+    await removeGameBan(gid, {dfacId: target.dfac_id, userId: resolvedUserId});
 
     res.sendStatus(204);
   } catch (e) {

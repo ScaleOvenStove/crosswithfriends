@@ -64,6 +64,25 @@
   background: rgb(204 51 51 / 12%);
 }
 
+.chat--user--unkick-btn {
+  margin-left: 2px;
+  padding: 0 4px;
+  font-size: 11px;
+  background: transparent;
+  border: none;
+  color: #2a7a2a;
+  cursor: pointer;
+  border-radius: 3px;
+
+  /* Keep the button readable on the greyed-out kicked entry */
+  opacity: 1;
+  text-decoration: none;
+}
+
+.chat--user--unkick-btn:hover:not(:disabled) {
+  background: rgb(42 122 42 / 12%);
+}
+
 .dark .owner-controls--lock-btn {
   background: #2a2a2a;
   border-color: rgb(255 255 255 / 12%);
@@ -89,4 +108,12 @@
 
 .dark .chat--user--kick-btn:hover:not(:disabled) {
   background: rgb(229 115 115 / 18%);
+}
+
+.dark .chat--user--unkick-btn {
+  color: #81c784;
+}
+
+.dark .chat--user--unkick-btn:hover:not(:disabled) {
+  background: rgb(129 199 132 / 18%);
 }
