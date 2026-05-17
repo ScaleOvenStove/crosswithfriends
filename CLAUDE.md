@@ -71,11 +71,15 @@ All of these must pass before merging to master:
 
 **Backend** (Express + TypeScript): `server/` — routes in `server/api/`, database models in `server/model/`, auth via Passport + JWT in `server/auth/`. Entry point is `server/server.ts`.
 
-**Real-time**: Socket.IO handles multiplayer gameplay. `server/SocketManager.ts` manages game rooms, event persistence to `game_events` table, and broadcasting. Ephemeral events (cursor, ping) are broadcast-only; others are persisted.
+**Real-time**: Socket.IO handles multiplayer gameplay. `server/SocketManager.ts` manages game rooms, event persistence to `game_events` table, and broadcasting. Ephemeral events (cursor, ping) are broadcast-only; others are persisted. The client mirrors unsent events to `localStorage` (offline queue in `src/store/game.js`) so moves survive disconnects and refreshes, flushing on reconnect.
 
 **Shared code**: `src/shared/types.ts` has interfaces used by both frontend and backend. Path aliases `@shared/*` and `@lib/*` resolve to `src/shared/` and `src/lib/`.
 
-**Database**: PostgreSQL — key tables are `game_events` (move history), `game_snapshots` (solved grid state), `puzzles`, `users`, `puzzle_solves` (solve records with times), `firebase_history` (legacy game data migrated from Firebase), `user_identity_map` (links user accounts to legacy dfac_ids), `game_dismissals` (user-dismissed in-progress games). Schema scripts in `server/sql/`, with `create_fresh_db.sql` as the entry point for new environments.
+**Database**: PostgreSQL — key tables are `game_events` (move history), `game_snapshots` (solved grid state), `puzzles` (also carries denormalized rating + solve-time aggregates refreshed via `refreshPuzzleRatingStats` / `refreshPuzzleSolveStats`), `puzzle_ratings` (per-user 1–5 ratings), `users`, `puzzle_solves` (solve records with times), `firebase_history` (legacy game data migrated from Firebase), `user_identity_map` (links user accounts to legacy dfac_ids), `game_dismissals` (user-dismissed in-progress games), `game_locks` (presence row = game closed to new joins), `game_bans` (per-game kicks). Schema scripts in `server/sql/`, with `create_fresh_db.sql` as the entry point for new environments.
+
+**Game moderation**: The user who creates a game is its owner — identity (`userId` and/or `dfacId`) is stamped onto the create event's `params.creator` at game creation time. `server/model/game_moderation.ts` exposes `getGameOwner(gid)`, `isOwner(owner, caller)`, plus lock/ban operations, and caches moderation state per-gid with explicit invalidation on mutation. Owner-only actions (lock/unlock, kick/unkick) are gated server-side via `isOwner` in `server/api/game.ts` and `server/SocketManager.ts`. Games created before this feature have no creator → no one can moderate them.
+
+**Email**: Transactional email goes through Resend (`server/model/mailer.ts`). The `RESEND_API_KEY` must be a Full Access key (Sending Access is not enough). `/api/health/email` exposes a probe endpoint for monitoring.
 
 **Rate limiting**: Auth endpoints use `express-rate-limit` with tiered limits — strict (10 req/15min) for login/signup, moderate (5 req/15min) for email-sending endpoints, and general (30 req/15min) for authenticated actions. Custom key generator falls back from user ID to normalized IP via `ipKeyGenerator`.
 
