@@ -8,7 +8,6 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import http from 'http';
 import {Server} from 'socket.io';
-import _ from 'lodash';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import SocketManager from './SocketManager';
@@ -99,12 +98,17 @@ app.use((err: any, req: express.Request, res: express.Response, _next: express.N
 // ================== Logging ================
 
 function logAllEvents(log: typeof console.log) {
-  io.on('*', (event: any, ...args: any) => {
-    try {
-      log(`[${event}]`, _.truncate(JSON.stringify(args), {length: 100}));
-    } catch (_e) {
-      log(`[${event}]`, args);
-    }
+  // Log the event name only. The previous version called
+  // JSON.stringify(args) before truncating to 100 chars — but the
+  // intermediate full string was 50+ KB for events like `create`
+  // (whole grid + clues + solution embedded), and under load those
+  // intermediate strings piled up in the heap and forced V8 to flatten
+  // cons-strings on stdout writes. Net result was steady heap growth and
+  // periodic OOM crashes once the heap hit max-old-space-size. We don't
+  // actually need the payload here — just knowing which events fire is
+  // enough for the diagnostic this logging exists for.
+  io.on('*', (event: any) => {
+    log(`[${event}]`);
   });
 }
 
