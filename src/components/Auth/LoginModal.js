@@ -66,6 +66,17 @@ export default function LoginModal({open, onClose}) {
   );
 
   const handleGoogleLogin = useCallback(() => {
+    // Stash the current path so GoogleCallback can return the user here
+    // after the OAuth roundtrip. Without this, every Google sign-in ends
+    // up at the homepage — bad UX when signing in mid-game.
+    try {
+      // Include hash too so routers that use it (or in-page anchor state)
+      // survive the round-trip — pathname + search alone would strip it.
+      const here = window.location.pathname + window.location.search + window.location.hash;
+      sessionStorage.setItem('post_login_return_to', here);
+    } catch {
+      // sessionStorage unavailable — fall back to default homepage redirect
+    }
     window.location.href = getGoogleAuthUrl();
   }, []);
 
