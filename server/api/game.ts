@@ -333,6 +333,14 @@ router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', asyn
       resolvedUserId = (await getUserIdByDfacId(target.dfac_id)) || undefined;
     }
 
+    // Refuse self-kicks. The client UI suppresses the kick button for the
+    // owner's local dfac, but not for *other* devices of the same account,
+    // so clicking kick on a second-device entry would resolve to the
+    // owner's own user_id and ban every session. Fail loudly instead.
+    if (resolvedUserId === payload.userId || (target.dfac_id && dfacIds.includes(target.dfac_id))) {
+      return res.status(400).json({error: 'cannot kick yourself'});
+    }
+
     const banWrites: Promise<void>[] = [];
     if (resolvedUserId) {
       banWrites.push(addGameBan(gid, {identity: resolvedUserId, identityType: 'user'}, payload.userId));
