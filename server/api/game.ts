@@ -350,8 +350,13 @@ router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', asyn
     }
     await Promise.all(banWrites);
 
-    // Broadcast so the kicked client disconnects immediately rather than
-    // waiting for their next event to be rejected.
+    // Broadcast first so well-behaved kicked clients can call
+    // forceDisconnect and show the blocker, then evict the matching
+    // sockets from the room server-side. The eviction matters because a
+    // malicious client could ignore the broadcast and keep receiving
+    // room messages / replaying history — leaving the room cuts off
+    // both even without client cooperation. sync_all_game_events also
+    // re-checks isIdentityBanned for the same reason.
     const io = getSocketIo();
     if (io) {
       io.to(`game-${gid}`).emit('kicked', {
@@ -359,6 +364,14 @@ router.post<{gid: string}, {} | {error: string}, KickRequest>('/:gid/kick', asyn
         dfac_id: target.dfac_id,
         user_id: resolvedUserId,
       });
+      const sockets = await io.in(`game-${gid}`).fetchSockets();
+      for (const s of sockets) {
+        const matchesDfac = target.dfac_id && s.data.dfacId === target.dfac_id;
+        const matchesUser = resolvedUserId && s.data.authUser?.userId === resolvedUserId;
+        if (matchesDfac || matchesUser) {
+          s.leave(`game-${gid}`);
+        }
+      }
     }
 
     res.sendStatus(204);
