@@ -52,7 +52,9 @@ describe('offline event queue', () => {
     const game = makeGame();
     await game.addEvent({type: 'updateCell', timestamp: 1});
 
-    expect(emitAsyncWithTimeout).toHaveBeenCalledTimes(1);
+    // 2 calls: join_game (from the implicit connectToWebsocket) + game_event
+    expect(emitAsyncWithTimeout).toHaveBeenCalledTimes(2);
+    expect(emitAsyncWithTimeout.mock.calls.some((c) => c[2] === 'game_event')).toBe(true);
     expect(localStorage.getItem('offline_queue_test-123')).toBeNull();
   });
 
@@ -157,6 +159,7 @@ describe('flushOfflineQueue', () => {
   it('sends all queued events and clears localStorage', async () => {
     const game = makeGame();
     await game.connectToWebsocket();
+    emitAsyncWithTimeout.mockClear(); // discard the implicit join_game emit
 
     // Seed the queue as if we were offline earlier
     localStorage.setItem(
@@ -212,6 +215,7 @@ describe('flushOfflineQueue', () => {
   it('does nothing when queue is empty', async () => {
     const game = makeGame();
     await game.connectToWebsocket();
+    emitAsyncWithTimeout.mockClear(); // discard the implicit join_game emit
 
     await game.flushOfflineQueue();
 
@@ -221,6 +225,7 @@ describe('flushOfflineQueue', () => {
   it('prevents concurrent flushes', async () => {
     const game = makeGame();
     await game.connectToWebsocket();
+    emitAsyncWithTimeout.mockClear(); // discard the implicit join_game emit
 
     localStorage.setItem(
       'offline_queue_test-123',
@@ -240,6 +245,7 @@ describe('flushOfflineQueue', () => {
   it('does not lose events appended during flush', async () => {
     const game = makeGame();
     await game.connectToWebsocket();
+    emitAsyncWithTimeout.mockClear(); // discard the implicit join_game emit
 
     localStorage.setItem(
       'offline_queue_test-123',

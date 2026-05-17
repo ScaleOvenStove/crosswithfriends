@@ -3,8 +3,9 @@ import React, {Component} from 'react';
 import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
-import {MdClose} from 'react-icons/md';
-import {FaClone} from 'react-icons/fa6';
+import {MdClose, MdErrorOutline, MdHelpOutline} from 'react-icons/md';
+import {FaClone, FaCrown} from 'react-icons/fa6';
+import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '../../lib/emoji';
 import nameGenerator, {isFromNameGenerator} from '../../lib/nameGenerator';
@@ -14,6 +15,10 @@ import ColorPicker from './ColorPicker.tsx';
 import {formatMilliseconds} from '../Toolbar/Clock';
 import RatingWidget from '../Game/RatingWidget';
 import PuzzleStatsLine from '../Game/PuzzleStatsLine';
+import OwnerControls from './OwnerControls';
+import ConfirmDialog from '../common/ConfirmDialog';
+import AuthContext from '../../lib/AuthContext';
+import {kickPlayer, unkickPlayer} from '../../api/create_game';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -21,15 +26,96 @@ const isEmojis = (str) => {
 };
 
 export default class Chat extends Component {
+  static contextType = AuthContext;
+
   constructor() {
     super();
     // We'll set the username state when we mount the component.
     this.state = {
       username: '',
+      kickTarget: null,
+      unkickTarget: null,
     };
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
   }
+
+  get isOwner() {
+    // Server-resolved when the user is signed in (covers the cross-device
+    // case where the local dfac_id differs from creator.dfacId but the
+    // creator dfac is linked to the authed account). Falls back to local
+    // identity comparison for the same-device guest case.
+    if (this.props.isOwnerFromServer) return true;
+    const creator = this.props.game?.creator;
+    if (!creator) return false;
+    const userId = this.context?.user?.id;
+    if (creator.userId && userId && creator.userId === userId) return true;
+    if (creator.dfacId && this.props.id && creator.dfacId === this.props.id) return true;
+    return false;
+  }
+
+  // Moderation endpoints require auth (the server rejects dfac-only
+  // ownership because the creator.dfacId field is visible to anyone in
+  // the room — it would otherwise be trivially forgeable by another
+  // player). A guest owner needs to sign in to moderate. Gate the UI on
+  // this so the buttons aren't there to click in the first place.
+  get canModerate() {
+    return this.isOwner && !!this.context?.accessToken;
+  }
+
+  handleKickClick = (event) => {
+    const targetDfacId = event.currentTarget.dataset.dfacId;
+    if (!targetDfacId) return;
+    if (!this.context?.accessToken) return;
+    if (targetDfacId === this.props.id) return;
+    const user = this.props.users?.[targetDfacId];
+    const displayName = user?.displayName || 'this player';
+    const color = user?.color || null;
+    this.setState({kickTarget: {dfacId: targetDfacId, displayName, color}});
+  };
+
+  handleKickDialogChange = (open) => {
+    if (!open) this.setState({kickTarget: null});
+  };
+
+  handleKickConfirm = async () => {
+    const target = this.state.kickTarget;
+    if (!target) return;
+    const accessToken = this.context?.accessToken;
+    if (!accessToken) return;
+    try {
+      await kickPlayer(this.props.gid, {dfac_id: target.dfacId}, accessToken);
+    } catch (err) {
+      Sentry.captureException(err);
+    }
+  };
+
+  handleUnkickClick = (event) => {
+    const targetDfacId = event.currentTarget.dataset.dfacId;
+    if (!targetDfacId) return;
+    if (!this.context?.accessToken) return;
+    const user = this.props.users?.[targetDfacId];
+    const displayName = user?.displayName || 'this player';
+    const color = user?.color || null;
+    this.setState({unkickTarget: {dfacId: targetDfacId, displayName, color}});
+  };
+
+  handleUnkickDialogChange = (open) => {
+    if (!open) this.setState({unkickTarget: null});
+  };
+
+  handleUnkickConfirm = async () => {
+    const target = this.state.unkickTarget;
+    if (!target) return;
+    const accessToken = this.context?.accessToken;
+    if (!accessToken) return;
+    try {
+      const ok = await unkickPlayer(this.props.gid, {dfac_id: target.dfacId}, accessToken);
+      if (ok && this.props.onUnkick) this.props.onUnkick(target.dfacId);
+    } catch (err) {
+      Sentry.captureException(err);
+    }
+  };
 
   componentDidMount() {
     const username = this.props.initialUsername;
@@ -225,6 +311,7 @@ export default class Chat extends Component {
         )}
         {pid && <PuzzleStatsLine pid={String(pid)} />}
         {pid && <RatingWidget pid={String(pid)} />}
+        {this.canModerate && this.props.gid && <OwnerControls gid={this.props.gid} />}
         {this.renderFencingOptions()}
       </div>
     );
@@ -248,22 +335,120 @@ export default class Chat extends Component {
     );
   }
 
-  static renderUserPresent(id, displayName, color) {
-    const style = color && {
-      color,
-    };
+  static renderUserPresent(id, displayName, color, kickHandler, kicked, isOwner, unkickHandler) {
+    // Kicked users keep their entry for attribution but render greyed out
+    // with no live dot and no kick button (already gone).
+    const style = kicked ? {opacity: 0.45, textDecoration: 'line-through'} : color && {color};
     return (
-      <span key={id} style={style}>
-        <span className="dot">{'\u25CF'}</span>
-        {displayName}{' '}
+      <span key={id} style={style} title={kicked ? `${displayName} (kicked)` : undefined}>
+        {!kicked && <span className="dot">{'\u25CF'}</span>}
+        {isOwner && <FaCrown className="chat--user--owner-icon" title="Game owner" aria-label="Game owner" />}
+        {displayName}
+        {kickHandler && !kicked && (
+          <button
+            type="button"
+            className="chat--user--kick-btn"
+            data-dfac-id={id}
+            onClick={kickHandler}
+            title={`Kick ${displayName}`}
+          >
+            {'\u00D7'}
+          </button>
+        )}
+        {unkickHandler && kicked && (
+          <button
+            type="button"
+            className="chat--user--unkick-btn"
+            data-dfac-id={id}
+            onClick={unkickHandler}
+            title={`Unkick ${displayName}`}
+            aria-label={`Unkick ${displayName}`}
+          >
+            {'\u21A9'}
+          </button>
+        )}{' '}
       </span>
     );
   }
 
+  // Kicked players are hidden from the presence list unless they left grid
+  // or chat activity behind \u2014 in which case we keep them visible (greyed
+  // out) so other players can still see who placed each letter / sent each
+  // chat message.
+  hasUserActivity(id) {
+    const messages = this.props.data?.messages || [];
+    if (messages.some((m) => m.senderId === id)) return true;
+    const grid = this.props.game?.grid;
+    if (Array.isArray(grid)) {
+      for (const row of grid) {
+        if (!Array.isArray(row)) continue;
+        for (const cell of row) {
+          if (cell && cell.user_id === id) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   renderUsersPresent(users) {
-    return this.props.hideChatBar ? null : (
+    if (this.props.hideChatBar) return null;
+    const showKick = this.canModerate;
+    const kickedSet = new Set(this.props.kickedDfacIds || []);
+    const ownerDfacId = this.props.game?.creator?.dfacId || null;
+
+    // Three sections: the owner gets their own slot at the top so they're
+    // always identifiable at a glance. Everyone else splits between
+    // players (have placed letters or sent chat) and spectators (joined
+    // and picked a name but haven't done anything yet). Kicked users with
+    // activity render in players (greyed for attribution); kicked users
+    // without activity are hidden entirely.
+    const owner = [];
+    const players = [];
+    const spectators = [];
+    for (const id of Object.keys(users)) {
+      const kicked = kickedSet.has(id);
+      const active = this.hasUserActivity(id);
+      if (kicked && !active) continue;
+      if (ownerDfacId && id === ownerDfacId) {
+        owner.push({id, kicked});
+      } else if (active) {
+        players.push({id, kicked});
+      } else {
+        spectators.push({id, kicked});
+      }
+    }
+
+    const renderEntry = ({id, kicked}) =>
+      Chat.renderUserPresent(
+        id,
+        users[id].displayName,
+        users[id].color,
+        showKick && !kicked && id !== this.props.id ? this.handleKickClick : null,
+        kicked,
+        !!ownerDfacId && id === ownerDfacId,
+        showKick && kicked ? this.handleUnkickClick : null
+      );
+
+    return (
       <div className="chat--users--present">
-        {Object.keys(users).map((id) => Chat.renderUserPresent(id, users[id].displayName, users[id].color))}
+        {owner.length > 0 && (
+          <div className="chat--users--section">
+            <div className="chat--users--section-label">Game owner</div>
+            <div className="chat--users--section-list">{owner.map(renderEntry)}</div>
+          </div>
+        )}
+        {players.length > 0 && (
+          <div className="chat--users--section">
+            <div className="chat--users--section-label">Players</div>
+            <div className="chat--users--section-list">{players.map(renderEntry)}</div>
+          </div>
+        )}
+        {spectators.length > 0 && (
+          <div className="chat--users--section">
+            <div className="chat--users--section-label">Spectators</div>
+            <div className="chat--users--section-list">{spectators.map(renderEntry)}</div>
+          </div>
+        )}
       </div>
     );
   }
@@ -427,9 +612,55 @@ export default class Chat extends Component {
 
   render() {
     const messages = Chat.mergeMessages(this.props.data, this.props.opponentData);
+    const {kickTarget, unkickTarget} = this.state;
     return (
       <div className="flex--column flex--grow">
         {this.renderToolbar()}
+        <ConfirmDialog
+          open={!!kickTarget}
+          onOpenChange={this.handleKickDialogChange}
+          title={
+            kickTarget ? (
+              <>
+                Kick{' '}
+                <span style={kickTarget.color ? {color: kickTarget.color} : undefined}>
+                  {kickTarget.displayName}
+                </span>
+                ?
+              </>
+            ) : (
+              ''
+            )
+          }
+          icon={<MdErrorOutline />}
+          onConfirm={this.handleKickConfirm}
+          confirmLabel="Kick"
+          danger
+        >
+          <p>They will be removed from the game and cannot rejoin.</p>
+        </ConfirmDialog>
+        <ConfirmDialog
+          open={!!unkickTarget}
+          onOpenChange={this.handleUnkickDialogChange}
+          title={
+            unkickTarget ? (
+              <>
+                Unkick{' '}
+                <span style={unkickTarget.color ? {color: unkickTarget.color} : undefined}>
+                  {unkickTarget.displayName}
+                </span>
+                ?
+              </>
+            ) : (
+              ''
+            )
+          }
+          icon={<MdHelpOutline />}
+          onConfirm={this.handleUnkickConfirm}
+          confirmLabel="Unkick"
+        >
+          <p>They will be allowed back into the game.</p>
+        </ConfirmDialog>
         <div className="chat">
           {this.renderChatHeader()}
           {this.renderChatSubheader()}

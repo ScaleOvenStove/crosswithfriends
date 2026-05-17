@@ -8,3 +8,41 @@
     overflow: auto;
   }
 }
+
+.game-moderation-blocker {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.game-moderation-blocker--card {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 8px;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 30%);
+}
+
+.game-moderation-blocker--card h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.game-moderation-blocker--card p {
+  margin: 0 0 20px;
+  color: #555;
+}
+
+.dark .game-moderation-blocker--card {
+  background: #1e1e1e;
+  color: rgb(255 255 255 / 87%);
+}
+
+.dark .game-moderation-blocker--card p {
+  color: rgb(255 255 255 / 60%);
+}

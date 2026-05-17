@@ -4,7 +4,7 @@ import _ from 'lodash';
 import * as uuid from 'uuid';
 import * as colors from '../lib/colors';
 import {emitAsync, emitAsyncWithTimeout} from '../sockets/emitAsync';
-import {getSocket} from '../sockets/getSocket';
+import {getSocket, resetSocket} from '../sockets/getSocket';
 // ============ Serialize / Deserialize Helpers ========== //
 
 // Recursively walks obj and converts `null` to `undefined`
@@ -52,6 +52,16 @@ function saveOfflineQueue(gid, queue) {
 // a wrapper class that models Game
 
 const CURRENT_VERSION = 1.0;
+
+// Errors from join_game that should permanently fail the connection (the
+// page shows a blocker screen and doesn't retry). Anything else — most
+// notably the server's catch-all 'internal error' — is transient and should
+// fall through so the socket reconnect machinery can retry.
+const TERMINAL_JOIN_ERRORS = new Set(['banned', 'locked']);
+function isTerminalJoinError(error) {
+  return TERMINAL_JOIN_ERRORS.has(error);
+}
+
 export default class Game extends EventEmitter {
   constructor(path) {
     super();
@@ -72,21 +82,115 @@ export default class Game extends EventEmitter {
     if (this.socket) return;
     const socket = await getSocket();
     this.socket = socket;
-    await emitAsync(socket, 'join_game', this.gid);
 
+    // Attach all long-lived listeners up-front, BEFORE the initial join.
+    // socket.io preserves listeners across disconnect/connect on the same
+    // Socket instance, so this also covers the bounce-during-initial-join
+    // case: if setSocketAuthToken rebuilds the handshake while our first
+    // join_game ack is in flight, the reconnect handler below still fires
+    // on the same socket and recovers (re-joins + re-syncs). Previously
+    // these listeners were registered AFTER the join await, so a bounce
+    // during the await would leave the new transport with no listeners
+    // and the page would sit blank waiting for the create event.
     socket.on('disconnect', () => {
       console.log('received disconnect from server');
+      // Force the reconnect handler to re-issue join_game before we
+      // consider ourselves in the room again. Without resetting this, a
+      // mid-session disconnect would leave _joined true and the next
+      // pushEventToWebsocket would happily send game_event onto a socket
+      // that doesn't have a room membership yet — server rejects with
+      // 'not in game' and flushOfflineQueue silently drops the event.
+      this._joined = false;
     });
-
-    // handle future reconnects
+    socket.on('game_event', (event) => {
+      event = castNullsToUndefined(event);
+      this.emitWSEvent(event);
+    });
+    // Server broadcasts 'kicked' to the room when the owner kicks a player.
+    socket.on('kicked', (msg) => {
+      if (msg && msg.gid === this.gid) {
+        this.emit('kicked', msg);
+      }
+    });
+    // And 'unkicked' when a kick is reversed, so other tabs can drop the
+    // dfac_id from their local kicked list without a full reload.
+    socket.on('unkicked', (msg) => {
+      if (msg && msg.gid === this.gid) {
+        this.emit('unkicked', msg);
+      }
+    });
+    // Reconnect handler — fires on every future 'connect' event on this
+    // socket instance (the initial connect already fired before getSocket
+    // resolved). Re-issues join_game, re-runs initial sync if it never
+    // completed, and flushes queued events.
     socket.on('connect', async () => {
       console.log('reconnecting...');
-      await emitAsync(socket, 'join_game', this.gid);
+      const ack = await emitAsync(socket, 'join_game', this.gid);
+      if (ack && ack.error) {
+        if (isTerminalJoinError(ack.error)) {
+          this.joinRejected = ack.error;
+          this.emit('joinRejected', {reason: ack.error, gid: this.gid});
+          return;
+        }
+        // Non-terminal (e.g. 'internal error'). The socket isn't in the
+        // room — running flushOfflineQueue here would send game_event emits
+        // that the server rejects with 'not in game', and the flush treats
+        // a non-throwing ack as success and removes events from localStorage.
+        // Skip sync/flush entirely; the next reconnect will retry join_game.
+        console.warn('join_game on reconnect returned non-terminal error, skipping sync/flush:', ack.error);
+        return;
+      }
       console.log('reconnected...');
+      this._joined = true;
       this.syncState = null;
+      if (!this._initialSyncCompleted) {
+        await this.syncAllGameEvents();
+      }
       await this.flushOfflineQueue();
       this.emitReconnect();
     });
+
+    // Initial join. Use a timeout so a mid-flight socket bounce (its ack
+    // never arrives) doesn't hang attach() forever — the reconnect handler
+    // above will re-issue join_game on its own.
+    try {
+      const joinAck = await emitAsyncWithTimeout(socket, 10000, 'join_game', this.gid);
+      if (joinAck && joinAck.error) {
+        if (isTerminalJoinError(joinAck.error)) {
+          // Server refused (banned/locked). Mark this connection terminal so
+          // attach()'s caller skips flushOfflineQueue + the initial sync.
+          this.joinRejected = joinAck.error;
+          this.emit('joinRejected', {reason: joinAck.error, gid: this.gid});
+          return;
+        }
+        // Non-terminal (e.g. 'internal error'). Leave _joined false so
+        // attach() skips flush/sync — flushing on a socket that isn't in
+        // the room would get every event acked with 'not in game' and
+        // flushOfflineQueue would silently drop them from localStorage.
+        // The reconnect handler will retry join_game.
+        console.warn('join_game returned non-terminal error:', joinAck.error);
+        return;
+      }
+      this._joined = true;
+    } catch (e) {
+      // Ack lost mid-flight (bounce, transient network) — leave _joined
+      // false. The reconnect handler will retry and set it then.
+      console.warn('Initial join_game ack timed out; reconnect handler will retry:', e?.message);
+    }
+  }
+
+  // Called when the local user is the kick target — drop the live socket
+  // so they stop receiving live updates/chat even though the server-side
+  // ban also blocks outgoing events. Matches the UX of being booted.
+  // Also reset the module-level socket promise: getSocket() caches the
+  // socket globally, so without this, navigating to another game in the
+  // same SPA tab would reuse the now-disconnected socket and never sync.
+  forceDisconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    resetSocket();
   }
 
   emitEvent(event) {
@@ -127,7 +231,12 @@ export default class Game extends EventEmitter {
     const queue = loadOfflineQueue(this.gid);
     if (queue.length === 0) {
       try {
-        await this.pushEventToWebsocket(event);
+        const ack = await this.pushEventToWebsocket(event);
+        // Server rejection (e.g. 'not in game') resolves the Promise — don't
+        // mistake it for success and lose the event. Fall through to queue.
+        if (ack && ack.error) {
+          throw new Error(`server rejected event: ${ack.error}`);
+        }
         this.setSyncState(null);
         return;
       } catch {
@@ -156,7 +265,15 @@ export default class Game extends EventEmitter {
 
         const event = queue[0];
         try {
-          await this.pushEventToWebsocket(event);
+          const ack = await this.pushEventToWebsocket(event);
+          // The server sends {error: ...} on rejection (e.g. 'not in game'
+          // from the room-membership gate, 'banned', 'unknown game'). Treat
+          // those as failures and keep the event in the queue — without
+          // this check the resolved Promise would be mistaken for success
+          // and the event would silently drop from localStorage.
+          if (ack && ack.error) {
+            throw new Error(`server rejected event: ${ack.error}`);
+          }
           // Re-load to avoid overwriting events added concurrently by addEvent
           const currentQueue = loadOfflineQueue(this.gid);
           if (currentQueue.length > 0 && currentQueue[0].id === event.id) {
@@ -186,14 +303,16 @@ export default class Game extends EventEmitter {
   }
 
   async subscribeToWebsocketEvents() {
-    if (!this.socket || !this.socket.connected) {
-      throw new Error('Not connected to websocket');
-    }
+    // game_event listener is now attached up-front in connectToWebsocket,
+    // so this is just the initial history sync. We let the call no-op
+    // silently if we're disconnected — the reconnect handler in
+    // connectToWebsocket will redrive sync once the socket comes back.
+    if (!this.socket || !this.socket.connected) return;
+    await this.syncAllGameEvents();
+  }
 
-    this.socket.on('game_event', (event) => {
-      event = castNullsToUndefined(event);
-      this.emitWSEvent(event);
-    });
+  async syncAllGameEvents() {
+    if (!this.socket || !this.socket.connected) return;
     const response = await emitAsync(this.socket, 'sync_all_game_events', this.gid);
     // Server returns an array of events on success, or {error: ...} on failure.
     // Only process and check for gameNotFound on a valid array response.
@@ -206,6 +325,7 @@ export default class Game extends EventEmitter {
       this.emitWSEvent(event);
     });
     if (response.some((event) => event && event.type === 'create')) {
+      this._initialSyncCompleted = true;
       this.emit('gameReady');
     } else {
       this.emit('gameNotFound');
@@ -214,6 +334,14 @@ export default class Game extends EventEmitter {
 
   async attach() {
     const websocketPromise = this.connectToWebsocket().then(async () => {
+      // join_game was rejected (banned/locked). Don't flush queued events
+      // (server would reject them anyway) and don't sync history.
+      if (this.joinRejected) return;
+      // Non-terminal join failure (transient/timeout). Skip flush+sync —
+      // the server rejects game_event from sockets not in the room and
+      // flushOfflineQueue would treat each rejection as success, silently
+      // dropping queued events. The reconnect handler will retry.
+      if (!this._joined) return;
       await this.flushOfflineQueue();
       await this.subscribeToWebsocketEvents();
     });

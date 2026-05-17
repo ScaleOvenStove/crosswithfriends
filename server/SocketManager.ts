@@ -6,6 +6,14 @@ import {Server} from 'socket.io';
 import {addGameEvent, gameExists, GameEvent, getGameEvents} from './model/game';
 import {addRoomEvent, getRoomEvents} from './model/room';
 import {verifyAccessToken} from './auth/jwt';
+import {
+  getGameOwner,
+  isGameLocked,
+  isIdentityBanned,
+  isOwner,
+  wasParticipantOfGame,
+} from './model/game_moderation';
+import {getDfacIdsForUser} from './model/user';
 
 // Event types that are broadcast to connected clients but NOT persisted to the database.
 // updateCursor and addPing are high-frequency and only meaningful in real-time.
@@ -34,7 +42,9 @@ class SocketManager {
   }
 
   listen() {
-    // Auth middleware: verify JWT on connection if provided (guests still allowed)
+    // Auth middleware: verify JWT on connection if provided (guests still
+    // allowed). Also captures the client's dfac_id from the handshake so we
+    // can ban/lock-check both identities later.
     this.io.use((socket, next) => {
       const token = socket.handshake.auth?.token;
       if (token) {
@@ -42,6 +52,10 @@ class SocketManager {
         if (payload) {
           socket.data.authUser = payload;
         }
+      }
+      const dfacId = socket.handshake.auth?.dfacId;
+      if (typeof dfacId === 'string' && dfacId) {
+        socket.data.dfacId = dfacId;
       }
       next();
     });
@@ -53,6 +67,50 @@ class SocketManager {
           if (typeof gid !== 'string' || !gid) {
             if (typeof ack === 'function') ack({error: 'invalid gid'});
             return;
+          }
+          // Moderation gates: identity-based ban first, then lock (with an
+          // owner bypass so the owner can always rejoin even on a locked
+          // game). Both reads are cached per-gid; misses are still fast PK
+          // lookups.
+          // We intentionally don't require an identity on the handshake:
+          // dfacId-in-handshake shipped in this PR, so stale tabs from
+          // before would be locked out of every game otherwise. Bans for
+          // unauthed guests are best-effort regardless — a guest can clear
+          // localStorage and reappear under a fresh dfacId either way.
+          // For authed targets we additionally ban the linked user_id in
+          // /kick, which is the layer that's actually robust.
+          const identity = {
+            userId: socket.data.authUser?.userId,
+            dfacId: socket.data.dfacId,
+          };
+          if (await isIdentityBanned(gid, identity)) {
+            if (typeof ack === 'function') ack({error: 'banned'});
+            return;
+          }
+          if (await isGameLocked(gid)) {
+            // Owner bypass only trusts the authenticated identity: the dfac
+            // id from the socket handshake is client-supplied and the owner's
+            // dfac id is visible to every player via the create event and
+            // /moderation.owner. Trusting it here would let any client spoof
+            // ownership and walk past the lock. lock/unlock require auth, so
+            // every lockable game has an authenticated owner — the linked
+            // dfac ids from the token are sufficient.
+            const owner = await getGameOwner(gid);
+            const dfacIds = identity.userId ? await getDfacIdsForUser(identity.userId) : [];
+            const isCallerOwner = isOwner(owner, {userId: identity.userId, dfacIds});
+            if (!isCallerOwner) {
+              // Prior participants get through too — the lock contract is
+              // "block new joins, existing players keep playing". Without
+              // this, a transient socket reconnect would re-issue join_game
+              // and the client treats the {error: 'locked'} as terminal,
+              // effectively ejecting everyone on flaky networks (and any
+              // page refresh).
+              const wasParticipant = await wasParticipantOfGame(gid, identity);
+              if (!wasParticipant) {
+                if (typeof ack === 'function') ack({error: 'locked'});
+                return;
+              }
+            }
           }
           socket.join(`game-${gid}`);
           if (typeof ack === 'function') ack();
@@ -84,6 +142,28 @@ class SocketManager {
             if (typeof ack === 'function') ack({error: 'invalid gid'});
             return;
           }
+          // Require room membership so banned/locked clients can't read
+          // game history by calling this directly after a rejected
+          // join_game.
+          if (!socket.rooms.has(`game-${gid}`)) {
+            if (typeof ack === 'function') ack({error: 'not in game'});
+            return;
+          }
+          // Re-check ban on every read: room membership alone isn't enough
+          // because kicks happen after join_game (the socket is already in
+          // the room) and a malicious/modified client can ignore the
+          // 'kicked' broadcast and keep calling this to read history.
+          // The /kick handler also evicts the socket from the room
+          // server-side, but this gate is the durable one.
+          if (
+            await isIdentityBanned(gid, {
+              userId: socket.data.authUser?.userId,
+              dfacId: socket.data.dfacId,
+            })
+          ) {
+            if (typeof ack === 'function') ack({error: 'banned'});
+            return;
+          }
           const events = await getGameEvents(gid);
           if (typeof ack === 'function') ack(events);
         } catch (err) {
@@ -106,13 +186,44 @@ class SocketManager {
             if (typeof ack === 'function') ack({error: 'invalid gid'});
             return;
           }
-          // Reject persisted, non-create events for gids that don't have a
-          // create event or snapshot — prevents orphan rows from accumulating
-          // for legacy gids whose game was never bootstrapped server-side
-          // (#478). Ephemeral events (cursor, ping) bypass since they aren't
+          // create events are HTTP-only. Allowing them over the socket lets
+          // any authed player emit a backdated create with their own
+          // params.creator, which getGameOwner (ORDER BY ts ASC LIMIT 1)
+          // would then return — turning every moderation endpoint into a
+          // privilege-escalation path. Real bootstrapping happens in
+          // /api/game POST → addInitialGameEvent with server-stamped ts.
+          if (event.type === 'create') {
+            if (typeof ack === 'function') ack({error: 'create not allowed over socket'});
+            return;
+          }
+          // Banned identities can't send events of any kind. Includes
+          // ephemeral cursor/ping — a kicked user shouldn't keep showing up
+          // in the live presence view.
+          if (
+            await isIdentityBanned(message.gid, {
+              userId: socket.data.authUser?.userId,
+              dfacId: socket.data.dfacId,
+            })
+          ) {
+            if (typeof ack === 'function') ack({error: 'banned'});
+            return;
+          }
+          // Require that the socket actually joined the room. Join is gated
+          // by isGameLocked + isIdentityBanned in join_game above, so this
+          // is what makes lock cover writes too: a new client that never
+          // joined can't smuggle in updateCell/chat directly. Existing
+          // players who joined before the lock keep their seat.
+          if (!socket.rooms.has(`game-${message.gid}`)) {
+            if (typeof ack === 'function') ack({error: 'not in game'});
+            return;
+          }
+          // Reject persisted events for gids that don't have a create event
+          // or snapshot — prevents orphan rows from accumulating for legacy
+          // gids whose game was never bootstrapped server-side (#478).
+          // Ephemeral events (cursor, ping) bypass since they aren't
           // persisted. Cache positive results per socket to avoid repeated
           // DB lookups.
-          if (event.type !== 'create' && !EPHEMERAL_EVENT_TYPES.has(event.type)) {
+          if (!EPHEMERAL_EVENT_TYPES.has(event.type)) {
             const verified: Set<string> = (socket.data.verifiedGids ||= new Set());
             if (!verified.has(message.gid)) {
               if (await gameExists(message.gid)) {
@@ -135,12 +246,6 @@ class SocketManager {
             delete event.verifiedUserId;
           }
           await this.addGameEvent(message.gid, event);
-          // A successful create persists the bootstrap row, so future events
-          // from this socket can skip the gameExists lookup.
-          if (event.type === 'create') {
-            const verified: Set<string> = (socket.data.verifiedGids ||= new Set());
-            verified.add(message.gid);
-          }
           if (typeof ack === 'function') ack();
         } catch (err) {
           console.error(`[Socket] game_event error:`, err);

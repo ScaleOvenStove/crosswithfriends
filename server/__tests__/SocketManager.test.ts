@@ -20,11 +20,17 @@ function createMockIo() {
   const toFn = jest.fn(() => ({emit: emitFn}));
 
   const socketHandlers: Record<string, AnyFn> = {};
+  // Pre-populate `rooms` with the default test gid so handler tests that
+  // invoke game_event directly (without going through join_game) don't
+  // trip the production room-membership check. Tests that want to verify
+  // the rejection path can clear the set or use a different gid.
+  const rooms = new Set<string>(['game-g1']);
   const mockSocket = {
     handshake: {auth: {}},
     data: {} as any,
-    join: jest.fn(),
-    leave: jest.fn(),
+    rooms,
+    join: jest.fn((room: string) => rooms.add(room)),
+    leave: jest.fn((room: string) => rooms.delete(room)),
     on: jest.fn((event: string, handler: AnyFn) => {
       socketHandlers[event] = handler;
     }),
@@ -183,6 +189,11 @@ describe('SocketManager', () => {
       const sm = new SocketManager(io);
       sm.listen();
 
+      // isIdentityBanned reads moderation state (bans + locks + create event
+      // for owner caching) on first contact with this gid.
+      pool.query.mockResolvedValueOnce({rows: []});
+      pool.query.mockResolvedValueOnce({rows: []});
+      pool.query.mockResolvedValueOnce({rows: []});
       // gameExists check — game has a create event
       pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]});
       const ack = jest.fn();
@@ -262,9 +273,12 @@ describe('SocketManager', () => {
     });
 
     it('rejects persisted events for gids without a create event or snapshot', async () => {
-      const {io, socketHandlers} = createMockIo();
+      const {io, socketHandlers, mockSocket} = createMockIo();
       const sm = new SocketManager(io);
       sm.listen();
+      // Pretend the socket joined this gid already so we exercise the
+      // gameExists gate rather than the upstream room-membership check.
+      mockSocket.rooms.add('game-orphan-gid');
 
       // gameExists: no create event, then no snapshot
       pool.query.mockResolvedValueOnce({rowCount: 0, rows: []}); // create event lookup
@@ -305,35 +319,40 @@ describe('SocketManager', () => {
       expect(pool.query).toHaveBeenCalledTimes(1);
     });
 
-    it('primes the gameExists cache after a successful create event', async () => {
+    it('rejects create events over the socket (HTTP-only bootstrap)', async () => {
+      // Allowing socket-side creates lets any authed player emit a backdated
+      // create with their own params.creator. getGameOwner reads earliest by
+      // ts → the impostor's row → privilege escalation through /kick, /lock,
+      // /unlock. Real bootstrap happens via /api/game POST.
       const {io, socketHandlers} = createMockIo();
       const sm = new SocketManager(io);
       sm.listen();
 
-      // Create event passes through without a gameExists lookup
-      const ack1 = jest.fn();
+      const ack = jest.fn();
       await socketHandlers['game_event'](
-        {gid: 'g1', event: {type: 'create', timestamp: 1700000000000, params: {pid: 'p1'}}},
-        ack1
+        {
+          gid: 'g1',
+          event: {
+            type: 'create',
+            timestamp: 1, // backdated to win the ORDER BY ts ASC race
+            params: {pid: 'p1', creator: {dfacId: 'attacker'}},
+          },
+        },
+        ack
       );
-      expect(ack1).toHaveBeenCalledWith();
 
-      // Subsequent updateCell on the same socket+gid should NOT call gameExists —
-      // the create should have primed verifiedGids. Only the INSERT runs.
-      pool.query.mockClear();
-      const ack2 = jest.fn();
-      await socketHandlers['game_event'](
-        {gid: 'g1', event: {type: 'updateCell', timestamp: 1700000000001, params: {id: 'p1'}}},
-        ack2
-      );
-      expect(ack2).toHaveBeenCalledWith();
-      expect(pool.query).toHaveBeenCalledTimes(1);
+      expect(ack).toHaveBeenCalledWith({error: 'create not allowed over socket'});
+      expect(pool.query).not.toHaveBeenCalled();
     });
 
     it('allows ephemeral events to bypass the gate', async () => {
-      const {io, socketHandlers} = createMockIo();
+      const {io, socketHandlers, mockSocket} = createMockIo();
       const sm = new SocketManager(io);
       sm.listen();
+      // Ephemeral cursor/ping still require the socket to be in the room.
+      // The "gate" this test is about is the gameExists check, not the
+      // room-membership one — pretend we joined already.
+      mockSocket.rooms.add('game-orphan-gid');
 
       const ack = jest.fn();
       await socketHandlers['game_event'](
@@ -343,6 +362,23 @@ describe('SocketManager', () => {
 
       expect(ack).toHaveBeenCalledWith();
       // No DB query should have run for an ephemeral event
+      expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-create events from sockets that never joined the room', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+      // No mockSocket.rooms.add — the new gid was never joined. Without
+      // this gate, a client could skip join_game (which is what enforces
+      // bans + locks) and still emit updateCell/chat directly.
+
+      const ack = jest.fn();
+      await socketHandlers['game_event'](
+        {gid: 'unjoined-gid', event: {type: 'updateCell', timestamp: 1000, params: {id: 'p1'}}},
+        ack
+      );
+      expect(ack).toHaveBeenCalledWith({error: 'not in game'});
       expect(pool.query).not.toHaveBeenCalled();
     });
   });
@@ -373,6 +409,21 @@ describe('SocketManager', () => {
       await socketHandlers['sync_all_game_events']('', ack);
 
       expect(ack).toHaveBeenCalledWith({error: 'invalid gid'});
+      expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it('rejects history sync from sockets that never joined the room', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+      // Without the room-membership gate, a client rejected by join_game
+      // (banned/locked) could still call this directly and read game/chat
+      // history. Use a gid that isn't in the pre-populated room set.
+
+      const ack = jest.fn();
+      await socketHandlers['sync_all_game_events']('unjoined-gid', ack);
+
+      expect(ack).toHaveBeenCalledWith({error: 'not in game'});
       expect(pool.query).not.toHaveBeenCalled();
     });
 

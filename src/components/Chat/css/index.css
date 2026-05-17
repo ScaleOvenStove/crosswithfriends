@@ -85,13 +85,43 @@
   margin-bottom: 5px;
 }
 
-.chat--users--present > span {
+.chat--users--section {
+  margin-bottom: 4px;
+}
+
+.chat--users--section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888;
+  margin-left: 5px;
+  margin-bottom: 2px;
+}
+
+.chat--users--section-list > span {
   margin-left: 5px;
   margin-right: 8px;
 }
 
-.chat--users--present .dot {
+.chat--users--section-list .dot {
   padding-right: 5px;
+}
+
+.chat--user--owner-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+  color: #d4a017;
+  font-size: 12px;
+}
+
+.dark .chat--users--section-label {
+  color: rgb(255 255 255 / 50%);
+}
+
+.dark .chat--user--owner-icon {
+  color: #e6b800;
 }
 
 .chat--messages {

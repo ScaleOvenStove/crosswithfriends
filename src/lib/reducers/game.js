@@ -40,7 +40,7 @@ function isSolved(game) {
 
 const reducers = {
   create: (game, params) => {
-    const {pid} = params;
+    const {pid, creator} = params;
     const {
       info = {},
       grid = [[{}]],
@@ -70,6 +70,7 @@ const reducers = {
 
     return {
       pid,
+      creator,
       info,
       grid,
       solution,

@@ -20,7 +20,7 @@ import getLocalId from '../localAuth';
 import {recordSolve} from '../api/puzzle.ts';
 import AuthContext from '../lib/AuthContext';
 import {SERVER_URL} from '../api/constants';
-import {undismissGame} from '../api/create_game.ts';
+import {undismissGame, fetchGameModeration} from '../api/create_game.ts';
 
 import nameGenerator from '../lib/nameGenerator';
 
@@ -42,6 +42,8 @@ class Game extends Component {
       replayRetained: null, // null = no snapshot yet, false = snapshot exists but not retained, true = retained
       savingReplay: false,
       connectionFailed: false,
+      kickedDfacIds: [],
+      isOwnerFromServer: false,
     };
     this.initializeUser();
     window.addEventListener('resize', () => {
@@ -147,6 +149,53 @@ class Game extends Component {
       this.setState({gameNotFound: true});
     });
 
+    // Owner-driven moderation events from the socket layer. The kick
+    // broadcast goes to everyone in the room; only the target acts on it.
+    // joinRejected fires when the server refused our join because we're
+    // banned or the game is locked.
+    this.gameModel.on('kicked', (msg) => {
+      // initializeGame() runs on every gid change without explicitly
+      // tearing down the prior gameModel's listeners, so a 'kicked' event
+      // from the old game can fire after we've already navigated to a
+      // new one. Without this gid check, we'd forceDisconnect the new
+      // session and show the blocker for a kick that wasn't ours.
+      if (msg.gid !== this.state.gid) return;
+      const myDfacId = this.userId;
+      const myUserId = this.context?.user?.id;
+      const isTarget = (msg.dfac_id && msg.dfac_id === myDfacId) || (msg.user_id && msg.user_id === myUserId);
+      if (isTarget) {
+        // Cut the live socket so we stop receiving updates/chat from the
+        // room. The server-side ban already blocks our outgoing events,
+        // but the room broadcasts still hit us until we disconnect.
+        if (this.gameModel.forceDisconnect) this.gameModel.forceDisconnect();
+        this.setState({moderationError: 'kicked'});
+      } else if (msg.dfac_id) {
+        // Track for the presence-list filter — kicked players are hidden
+        // unless they left activity behind, in which case they render as
+        // greyed out for attribution. See Chat.renderUsersPresent.
+        this.setState((prev) => {
+          if (prev.kickedDfacIds.includes(msg.dfac_id)) return null;
+          return {kickedDfacIds: [...prev.kickedDfacIds, msg.dfac_id]};
+        });
+      }
+    });
+    this.gameModel.on('joinRejected', (msg) => {
+      // 'banned' or 'locked' — both render the same blocker screen, just
+      // with different copy. Gate on gid for the same reason the kicked
+      // listener does: stale gameModel instances from prior gids can still
+      // emit joinRejected on reconnect, and without this check they'd
+      // incorrectly drop a blocker on the currently active game.
+      if (msg.gid !== this.state.gid) return;
+      this.setState({moderationError: msg.reason});
+    });
+    this.gameModel.on('unkicked', (msg) => {
+      if (msg.gid !== this.state.gid) return;
+      if (!msg.dfac_id) return;
+      this.setState((prev) => ({
+        kickedDfacIds: prev.kickedDfacIds.filter((id) => id !== msg.dfac_id),
+      }));
+    });
+
     // Defer updateDisplayName until after we confirm the game has a create
     // event server-side. Emitting on mount produced orphan rows in
     // game_events for legacy gids that never had a create (#478).
@@ -161,7 +210,23 @@ class Game extends Component {
     });
 
     // Show error if socket doesn't connect within 10 seconds
-    this.setState({connectionFailed: false, gameNotFound: false});
+    // Also clear any moderation blocker carried over from a previous gid —
+    // navigating to a fresh game in the same SPA session shouldn't show
+    // "you were removed" once we successfully connect to the new one.
+    this.setState({
+      connectionFailed: false,
+      gameNotFound: false,
+      moderationError: undefined,
+      kickedDfacIds: [],
+      isOwnerFromServer: false,
+    });
+    // Seed kicked-id list + owner status from the server. The socket
+    // 'kicked' broadcast covers kicks that happen while we're connected;
+    // the fetch covers kicks that happened before we joined (or before a
+    // refresh). isOwner is server-resolved to handle the case where the
+    // owner's creator.dfacId is linked to the authed user but doesn't
+    // match the local dfac id (different device, same account).
+    this.fetchModerationState(this.state.gid);
     if (this._connectionTimer) clearTimeout(this._connectionTimer);
     this._connectionTimer = setTimeout(() => {
       if (!this.historyWrapper || !this.historyWrapper.ready) {
@@ -176,6 +241,20 @@ class Game extends Component {
     this.initializeGame();
     this.maybeUndismiss();
   }
+
+  fetchModerationState = async (gid) => {
+    try {
+      const accessToken = this.context?.accessToken;
+      const state = await fetchGameModeration(gid, accessToken);
+      if (!state || this.state.gid !== gid) return;
+      this.setState({
+        kickedDfacIds: state.kickedDfacIds || [],
+        isOwnerFromServer: !!state.isOwner,
+      });
+    } catch (e) {
+      Sentry.captureException(e);
+    }
+  };
 
   maybeUndismiss() {
     const accessToken = this.context?.accessToken;
@@ -199,6 +278,13 @@ class Game extends Component {
     }
     if (!this._undismissed) {
       this.maybeUndismiss();
+    }
+    // Re-fetch moderation when the user signs in/out mid-game so the
+    // server-resolved isOwner reflects the new token.
+    const token = this.context?.accessToken || null;
+    if (this._lastModerationToken !== token && this.state.gid) {
+      this._lastModerationToken = token;
+      this.fetchModerationState(this.state.gid);
     }
   }
 
@@ -259,6 +345,12 @@ class Game extends Component {
         return {chatHidden};
       });
     }
+  };
+
+  handleUnkick = (dfacId) => {
+    this.setState((prev) => ({
+      kickedDfacIds: prev.kickedDfacIds.filter((id) => id !== dfacId),
+    }));
   };
 
   handleChat = (username, id, message) => {
@@ -429,6 +521,9 @@ class Game extends Component {
         game={this.game}
         gid={this.state.gid}
         users={this.game.users}
+        kickedDfacIds={this.state.kickedDfacIds}
+        isOwnerFromServer={this.state.isOwnerFromServer}
+        onUnkick={this.handleUnkick}
         id={id}
         myColor={color}
         onChat={this.handleChat}
@@ -490,6 +585,29 @@ class Game extends Component {
         <Helmet>
           <title>{this.getPuzzleTitle()}</title>
         </Helmet>
+        {this.state.moderationError && (
+          <div className="game-moderation-blocker">
+            <div className="game-moderation-blocker--card">
+              <h2>
+                {this.state.moderationError === 'kicked'
+                  ? 'You were removed from this game'
+                  : this.state.moderationError === 'locked'
+                    ? 'This game is locked'
+                    : "You can't join this game"}
+              </h2>
+              <p>
+                {this.state.moderationError === 'kicked'
+                  ? 'The game owner removed you.'
+                  : this.state.moderationError === 'locked'
+                    ? 'The game owner closed this game to new players.'
+                    : 'The game owner has banned this account from the game.'}
+              </p>
+              <a href="/" className="btn btn--contained btn--primary">
+                Back to home
+              </a>
+            </div>
+          </div>
+        )}
         {this.state.syncWarning === 'retrying' && (
           <div
             style={{
