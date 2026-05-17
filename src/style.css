@@ -3,6 +3,10 @@ html {
   width: 100%;
 }
 
+/* Append platform emoji fonts to the fallback chain so emoji codepoints in
+   clue text (e.g. ⬛⬛⬛ for the "Come Full Circle" Sunday NYT, #526) route
+   to the right system font. Without these, Firefox in particular fails to
+   reach the OS emoji font on its own and renders tofu / .notdef glyphs. */
 html,
 body,
 input,
@@ -13,14 +17,18 @@ input,
   flex: 1;
   min-height: 0;
   margin: 0;
-  font-family: 'avenir next', avenir, Nunito, 'helvetica neue', Helvetica, arial, sans-serif;
+  font-family:
+    'avenir next', avenir, Nunito, 'helvetica neue', Helvetica, arial, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
 button {
   margin: 0;
-  font-family: 'avenir next', avenir, Nunito, 'helvetica neue', Helvetica, arial, sans-serif;
+  font-family:
+    'avenir next', avenir, Nunito, 'helvetica neue', Helvetica, arial, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
 }
 
 @media only screen and (width <= 768px) {
