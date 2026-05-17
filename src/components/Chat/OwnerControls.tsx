@@ -49,14 +49,18 @@ export default function OwnerControls({gid}: Props) {
     }
   }, [accessToken, busy, gid, locked]);
 
-  if (locked === null) return null;
-  const Icon = locked ? MdLock : MdLockOpen;
   // Guest-owner state: keep the button in place so the layout doesn't
   // shift after sign-in, but route the click to LoginModal and explain
   // why it's disabled. The lock/kick endpoints reject dfac-only ownership
   // anyway (creator.dfacId is forgeable from the create event), so this
   // is just surfacing the actual requirement.
   const signedOut = !accessToken;
+  // Signed-in: wait for the moderation fetch so the icon/label reflects
+  // real lock state. Signed-out: render the CTA immediately — the lock
+  // state isn't actionable until they sign in anyway, so blocking on the
+  // fetch just delays the affordance.
+  if (locked === null && !signedOut) return null;
+  const Icon = locked === true ? MdLock : MdLockOpen;
   let buttonTitle: string;
   let buttonLabel: string;
   if (signedOut) {
