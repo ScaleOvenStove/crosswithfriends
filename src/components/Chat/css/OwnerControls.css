@@ -45,6 +45,17 @@
   cursor: not-allowed;
 }
 
+/* Guest-owner state: rendered as a real button (click opens LoginModal)
+   but visually muted so it reads as a CTA rather than an active control. */
+.owner-controls--lock-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  font-style: italic;
+}
+
+.owner-controls--lock-btn[aria-disabled='true']:hover {
+  opacity: 0.85;
+}
+
 .owner-controls--lock-icon {
   font-size: 14px;
 }
