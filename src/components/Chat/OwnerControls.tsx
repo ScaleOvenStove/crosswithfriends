@@ -77,10 +77,9 @@ export default function OwnerControls({gid}: Props) {
     <div className="owner-controls--lock-row">
       <button
         type="button"
-        className="owner-controls--lock-btn"
+        className={`owner-controls--lock-btn${signedOut ? ' owner-controls--lock-btn-signin' : ''}`}
         onClick={signedOut ? handleShowLogin : handleToggle}
         disabled={busy}
-        aria-disabled={signedOut || undefined}
         title={buttonTitle}
       >
         <Icon className="owner-controls--lock-icon" />

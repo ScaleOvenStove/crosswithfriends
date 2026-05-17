@@ -47,26 +47,28 @@
 
 /* Guest-owner state: click opens LoginModal. Restyled as an outlined CTA
    to match the sibling "Sign in to rate" button (.rating-widget--cta) —
-   the muted+italic look made it read as disabled instead of clickable. */
-.owner-controls--lock-btn[aria-disabled='true'] {
+   the muted+italic look made it read as disabled instead of clickable.
+   Plain class (not aria-disabled) since the button is fully interactive
+   and assistive tech should announce it as such. */
+.owner-controls--lock-btn-signin {
   background: none;
   border-color: #888;
   color: #555;
 }
 
-.owner-controls--lock-btn[aria-disabled='true']:hover {
+.owner-controls--lock-btn-signin:hover {
   background: #f0f0f0;
   border-color: #555;
   color: #222;
 }
 
-.dark .owner-controls--lock-btn[aria-disabled='true'] {
+.dark .owner-controls--lock-btn-signin {
   background: none;
   border-color: rgb(255 255 255 / 40%);
   color: rgb(255 255 255 / 80%);
 }
 
-.dark .owner-controls--lock-btn[aria-disabled='true']:hover {
+.dark .owner-controls--lock-btn-signin:hover {
   background: rgb(255 255 255 / 5%);
   border-color: rgb(255 255 255 / 70%);
   color: rgb(255 255 255 / 95%);
