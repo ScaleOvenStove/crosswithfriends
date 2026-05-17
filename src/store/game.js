@@ -62,6 +62,17 @@ function isTerminalJoinError(error) {
   return TERMINAL_JOIN_ERRORS.has(error);
 }
 
+// game_event ack errors that the server will never accept on retry. These
+// must be dropped from the offline queue so they don't loop forever and
+// stall later events behind them. 'restricted' = owner gated this action
+// type; 'banned' = caller was kicked (also triggers forceDisconnect via
+// the 'kicked' broadcast, but defensive); 'create not allowed over socket'
+// is a protocol error that retries can't fix.
+const TERMINAL_EVENT_REJECTIONS = new Set(['restricted', 'banned', 'create not allowed over socket']);
+function isTerminalEventRejection(error) {
+  return TERMINAL_EVENT_REJECTIONS.has(error);
+}
+
 export default class Game extends EventEmitter {
   constructor(path) {
     super();
@@ -110,6 +121,24 @@ export default class Game extends EventEmitter {
     socket.on('kicked', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('kicked', msg);
+      }
+    });
+    // Owner toggled one of the per-action restrictions (check/reveal/reset).
+    // Forward to listeners so the Toolbar can flip the gating live without
+    // having to refetch /moderation.
+    socket.on('restrictions_changed', (msg) => {
+      if (msg && msg.gid === this.gid) {
+        this.emit('restrictionsChanged', msg);
+      }
+    });
+    // Owner locked or unlocked the game. The lock gate fires only on
+    // join_game (existing players keep playing) so this is purely for
+    // chat-side UX — showing players the room is now closed to new
+    // joiners — and for keeping the owner-controls panel in sync across
+    // tabs of the same account.
+    socket.on('lock_changed', (msg) => {
+      if (msg && msg.gid === this.gid) {
+        this.emit('lockChanged', msg);
       }
     });
     // And 'unkicked' when a kick is reversed, so other tabs can drop the
@@ -233,8 +262,13 @@ export default class Game extends EventEmitter {
       try {
         const ack = await this.pushEventToWebsocket(event);
         // Server rejection (e.g. 'not in game') resolves the Promise — don't
-        // mistake it for success and lose the event. Fall through to queue.
+        // mistake it for success and lose the event. Fall through to queue
+        // for transient rejections; bail without queuing for terminal ones.
         if (ack && ack.error) {
+          if (isTerminalEventRejection(ack.error)) {
+            this.emit('eventRejected', {event, reason: ack.error});
+            return;
+          }
           throw new Error(`server rejected event: ${ack.error}`);
         }
         this.setSyncState(null);
@@ -266,12 +300,24 @@ export default class Game extends EventEmitter {
         const event = queue[0];
         try {
           const ack = await this.pushEventToWebsocket(event);
-          // The server sends {error: ...} on rejection (e.g. 'not in game'
-          // from the room-membership gate, 'banned', 'unknown game'). Treat
-          // those as failures and keep the event in the queue — without
-          // this check the resolved Promise would be mistaken for success
-          // and the event would silently drop from localStorage.
+          // The server sends {error: ...} on rejection. Two kinds:
+          // - Terminal (e.g. 'restricted'): the server will never accept
+          //   this event. Drop it from the queue so we don't loop on it
+          //   forever and stall every later event behind it.
+          // - Transient (e.g. 'not in game' during a reconnect, or
+          //   'internal error'): keep the event and retry once the
+          //   underlying issue resolves.
           if (ack && ack.error) {
+            if (isTerminalEventRejection(ack.error)) {
+              console.warn(`Server rejected event terminally (${ack.error}); dropping from queue`);
+              const currentQueue = loadOfflineQueue(this.gid);
+              if (currentQueue.length > 0 && currentQueue[0].id === event.id) {
+                currentQueue.shift();
+                saveOfflineQueue(this.gid, currentQueue);
+              }
+              this.emit('eventRejected', {event, reason: ack.error});
+              continue; // Try the next queued event
+            }
             throw new Error(`server rejected event: ${ack.error}`);
           }
           // Re-load to avoid overwriting events added concurrently by addEvent

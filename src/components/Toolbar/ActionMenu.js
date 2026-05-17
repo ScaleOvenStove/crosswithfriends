@@ -1,30 +1,18 @@
 import './css/ActionMenu.css';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {Component} from 'react';
+import {MdLock} from 'react-icons/md';
+import InfoDialog from '../common/InfoDialog';
 
-/*
- * Summary of ActionMenu component
- *
- * Props: { grid, clues }
- *
- * State: { selected, direction }
- *
- * Children: [ GridControls, Grid, Clues ]
- * - GridControls.props:
- *   - attributes: { selected, direction, grid, clues }
- *   - callbacks: { setSelected, setDirection }
- * - Grid.props:
- *   - attributes: { grid, selected, direction }
- *   - callbacks: { setSelected, changeDirection }
- * - Clues.props:
- *   - attributes: { getClueList() }
- *   - callbacks: { selectClue }
- *
- * Potential parents (so far):
- * - Toolbar
- * */
+// Prevent the grid from losing focus when clicking the restricted button —
+// matches the behavior of the normal action menus.
+function preventMouseDownDefault(e) {
+  e.preventDefault();
+}
 
 export default class ActionMenu extends Component {
+  state = {showRestrictedInfo: false};
+
   shouldRefocusGrid = false;
 
   handleActionSelect = (event) => {
@@ -51,7 +39,46 @@ export default class ActionMenu extends Component {
     this.shouldRefocusGrid = false;
   };
 
+  handleOpenRestrictedInfo = () => {
+    this.setState({showRestrictedInfo: true});
+  };
+
+  handleRestrictedInfoChange = (open) => {
+    this.setState({showRestrictedInfo: open});
+  };
+
   render() {
+    // Disabled state: render a button that looks disabled (greyed + lock
+    // glyph) but is actually clickable — click opens an explainer dialog
+    // so non-owner players know why the menu doesn't work. The whole
+    // action is gated together (matches the server-side restriction
+    // shape — one toggle covers Square/Word/Puzzle).
+    if (this.props.disabled) {
+      const {disabledTitle, disabledExplainer, label} = this.props;
+      return (
+        <div className="action-menu">
+          <button
+            type="button"
+            tabIndex={-1}
+            className="action-menu--button action-menu--button-restricted"
+            title={disabledTitle}
+            onClick={this.handleOpenRestrictedInfo}
+            onMouseDown={preventMouseDownDefault}
+          >
+            <MdLock className="action-menu--lock-icon" aria-hidden="true" />
+            {label}
+          </button>
+          <InfoDialog
+            open={this.state.showRestrictedInfo}
+            onOpenChange={this.handleRestrictedInfoChange}
+            title={`${label} is restricted`}
+            icon={<MdLock />}
+          >
+            {disabledExplainer || <p>{disabledTitle}</p>}
+          </InfoDialog>
+        </div>
+      );
+    }
     return (
       <DropdownMenu.Root>
         <div className="action-menu">

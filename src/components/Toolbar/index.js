@@ -133,12 +133,20 @@ export default class Toolbar extends Component {
     );
   }
 
+  isRestrictedForCaller(action) {
+    const {restrictions, isOwnerFromServer} = this.props;
+    return !!restrictions && !!restrictions[action] && !isOwnerFromServer;
+  }
+
   renderCheckMenu() {
+    const restricted = this.isRestrictedForCaller('check');
     return (
       <div className="toolbar--menu check">
         <ActionMenu
           label="Check"
           onBlur={this.handleBlur}
+          disabled={restricted}
+          disabledTitle="The game host has restricted Check to themselves."
           actions={{
             Square: this.check.bind(this, 'square'),
             Word: this.check.bind(this, 'word'),
@@ -150,11 +158,14 @@ export default class Toolbar extends Component {
   }
 
   renderRevealMenu() {
+    const restricted = this.isRestrictedForCaller('reveal');
     return (
       <div className="toolbar--menu reveal">
         <ActionMenu
           label="Reveal"
           onBlur={this.handleBlur}
+          disabled={restricted}
+          disabledTitle="The game host has restricted Reveal to themselves."
           actions={{
             Square: this.reveal.bind(this, 'square'),
             Word: this.reveal.bind(this, 'word'),
@@ -166,10 +177,13 @@ export default class Toolbar extends Component {
   }
 
   renderResetMenu() {
+    const restricted = this.isRestrictedForCaller('reset');
     return (
       <ActionMenu
         label="Reset"
         onBlur={this.handleBlur}
+        disabled={restricted}
+        disabledTitle="The game host has restricted Reset to themselves."
         actions={{
           Square: this.reset.bind(this, 'square'),
           Word: this.reset.bind(this, 'word'),

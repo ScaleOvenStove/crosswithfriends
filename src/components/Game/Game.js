@@ -550,6 +550,8 @@ export default class Game extends Component {
         onFontScaleChange={this.handleFontScale}
         focusMode={this.props.focusMode}
         onToggleFocusMode={this.props.onToggleFocusMode}
+        restrictions={this.props.restrictions}
+        isOwnerFromServer={this.props.isOwnerFromServer}
       />
     );
   }

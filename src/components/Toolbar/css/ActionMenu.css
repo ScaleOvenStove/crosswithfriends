@@ -8,6 +8,22 @@
   color: #111;
 }
 
+.action-menu--button-restricted {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.action-menu--button-restricted:hover {
+  opacity: 0.75;
+}
+
+.action-menu--lock-icon {
+  font-size: 14px;
+}
+
 .action-menu--list {
   background-color: var(--main-gray-3);
   z-index: 13;

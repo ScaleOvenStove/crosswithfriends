@@ -1,109 +1,196 @@
-import {useCallback, useContext, useEffect, useState} from 'react';
+import {useCallback, useContext, useState} from 'react';
 import {MdInfoOutline, MdLock, MdLockOpen} from 'react-icons/md';
 import * as Sentry from '@sentry/react';
 import AuthContext from '../../lib/AuthContext';
-import {fetchGameModeration, lockGame, unlockGame} from '../../api/create_game';
+import {
+  clearGameRestriction,
+  GameRestrictions,
+  lockGame,
+  RestrictableAction,
+  setGameRestriction,
+  unlockGame,
+} from '../../api/create_game';
 import InfoDialog from '../common/InfoDialog';
 import LoginModal from '../Auth/LoginModal';
 import './css/OwnerControls.css';
 
 interface Props {
   gid: string;
+  // Source-of-truth lives in pages/Game.js so the lock chip in Chat and
+  // the lock_changed socket broadcast stay in sync with this panel.
+  locked: boolean;
+  restrictions: GameRestrictions;
 }
 
 interface AuthCtx {
   accessToken: string | null;
 }
 
-export default function OwnerControls({gid}: Props) {
+// Order matters — drives row order in the panel.
+const RESTRICTION_ROWS: ReadonlyArray<{action: RestrictableAction; label: string}> = [
+  {action: 'check', label: 'Check'},
+  {action: 'reveal', label: 'Reveal'},
+  {action: 'reset', label: 'Reset'},
+];
+
+interface RestrictionRowProps {
+  action: RestrictableAction;
+  label: string;
+  isRestricted: boolean;
+  busy: boolean;
+  onToggle: (action: RestrictableAction) => void;
+}
+
+function RestrictionRow({action, label, isRestricted, busy, onToggle}: RestrictionRowProps) {
+  const handleClick = useCallback(() => onToggle(action), [action, onToggle]);
+  const Icon = isRestricted ? MdLock : MdLockOpen;
+  const title = isRestricted
+    ? `Allow other players to ${label.toLowerCase()}`
+    : `Restrict ${label.toLowerCase()} to only you`;
+  const buttonLabel = isRestricted ? `${label} restricted` : `Restrict ${label}`;
+  return (
+    <div className="owner-controls--lock-row">
+      <button
+        type="button"
+        className="owner-controls--lock-btn"
+        onClick={handleClick}
+        disabled={busy}
+        title={title}
+      >
+        <Icon className="owner-controls--lock-icon" />
+        {buttonLabel}
+      </button>
+    </div>
+  );
+}
+
+export default function OwnerControls({gid, locked, restrictions}: Props) {
   const {accessToken} = useContext(AuthContext) as AuthCtx;
-  const [locked, setLocked] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(false);
+  // Per-row busy state so toggling one restriction doesn't disable the
+  // others. Keyed by action; 'lock' is the lock toggle's slot. Local UI
+  // state only — the actual lock/restriction state comes from props and
+  // updates via the lock_changed / restrictions_changed broadcasts.
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [showInfo, setShowInfo] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const handleShowInfo = useCallback(() => setShowInfo(true), []);
   const handleShowLogin = useCallback(() => setShowLogin(true), []);
   const handleCloseLogin = useCallback(() => setShowLogin(false), []);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchGameModeration(gid).then((state) => {
-      if (cancelled || !state) return;
-      setLocked(state.locked);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [gid]);
+  const setBusyFor = useCallback((slot: string, value: boolean) => {
+    setBusy((prev) => ({...prev, [slot]: value}));
+  }, []);
 
-  const handleToggle = useCallback(async () => {
-    if (!accessToken || busy || locked === null) return;
-    setBusy(true);
+  const handleToggleLock = useCallback(async () => {
+    if (!accessToken || busy.lock) return;
+    setBusyFor('lock', true);
     try {
-      const ok = locked ? await unlockGame(gid, accessToken) : await lockGame(gid, accessToken);
-      if (ok) setLocked(!locked);
+      if (locked) {
+        await unlockGame(gid, accessToken);
+      } else {
+        await lockGame(gid, accessToken);
+      }
+      // No local setState — the lock_changed broadcast lands in the
+      // pages/Game.js handler and re-renders us with updated props.
     } catch (err) {
       Sentry.captureException(err);
     } finally {
-      setBusy(false);
+      setBusyFor('lock', false);
     }
-  }, [accessToken, busy, gid, locked]);
+  }, [accessToken, busy.lock, gid, locked, setBusyFor]);
 
-  // Guest-owner state: keep the button in place so the layout doesn't
+  const handleToggleRestriction = useCallback(
+    async (action: RestrictableAction) => {
+      if (!accessToken || busy[action]) return;
+      const wasRestricted = restrictions[action];
+      setBusyFor(action, true);
+      try {
+        if (wasRestricted) {
+          await clearGameRestriction(gid, action, accessToken);
+        } else {
+          await setGameRestriction(gid, action, accessToken);
+        }
+        // Same as lock — restrictions_changed broadcast updates the
+        // source-of-truth state upstream; we re-render via props.
+      } catch (err) {
+        Sentry.captureException(err);
+      } finally {
+        setBusyFor(action, false);
+      }
+    },
+    [accessToken, busy, gid, restrictions, setBusyFor]
+  );
+
+  // Guest-owner state: keep the buttons in place so the layout doesn't
   // shift after sign-in, but route the click to LoginModal and explain
-  // why it's disabled. The lock/kick endpoints reject dfac-only ownership
-  // anyway (creator.dfacId is forgeable from the create event), so this
-  // is just surfacing the actual requirement.
+  // why they're disabled. The moderation endpoints all reject dfac-only
+  // ownership (creator.dfacId is visible to every player from the create
+  // event), so the only path to moderating is signing in.
   const signedOut = !accessToken;
-  // Signed-in: wait for the moderation fetch so the icon/label reflects
-  // real lock state. Signed-out: render the CTA immediately — the lock
-  // state isn't actionable until they sign in anyway, so blocking on the
-  // fetch just delays the affordance.
-  if (locked === null && !signedOut) return null;
-  const Icon = locked === true ? MdLock : MdLockOpen;
-  let buttonTitle: string;
-  let buttonLabel: string;
+  const LockIcon = locked ? MdLock : MdLockOpen;
+  let lockButtonTitle: string;
+  let lockButtonLabel: string;
   if (signedOut) {
-    buttonTitle = 'Sign in to manage your game';
-    buttonLabel = 'Sign in to manage your game';
+    lockButtonTitle = 'Sign in to manage your game';
+    lockButtonLabel = 'Sign in to manage your game';
   } else if (locked) {
-    buttonTitle = 'Unlock game (allow new players to join)';
-    buttonLabel = 'Locked';
+    lockButtonTitle = 'Unlock game (allow new players to join)';
+    lockButtonLabel = 'Locked';
   } else {
-    buttonTitle = 'Lock game (block new players)';
-    buttonLabel = 'Lock game';
+    lockButtonTitle = 'Lock game (block new players)';
+    lockButtonLabel = 'Lock game';
   }
+
   return (
-    <div className="owner-controls--lock-row">
-      <button
-        type="button"
-        className={`owner-controls--lock-btn${signedOut ? ' owner-controls--lock-btn-signin' : ''}`}
-        onClick={signedOut ? handleShowLogin : handleToggle}
-        disabled={busy}
-        title={buttonTitle}
+    <div className="owner-controls">
+      <div className="owner-controls--lock-row">
+        <button
+          type="button"
+          className={`owner-controls--lock-btn${signedOut ? ' owner-controls--lock-btn-signin' : ''}`}
+          onClick={signedOut ? handleShowLogin : handleToggleLock}
+          disabled={!!busy.lock}
+          title={lockButtonTitle}
+        >
+          <LockIcon className="owner-controls--lock-icon" />
+          {lockButtonLabel}
+        </button>
+        <button
+          type="button"
+          className="owner-controls--info-btn"
+          onClick={handleShowInfo}
+          aria-label="What do these controls do?"
+          title="What do these controls do?"
+        >
+          <MdInfoOutline />
+        </button>
+      </div>
+      {!signedOut &&
+        RESTRICTION_ROWS.map(({action, label}) => (
+          <RestrictionRow
+            key={action}
+            action={action}
+            label={label}
+            isRestricted={restrictions[action]}
+            busy={!!busy[action]}
+            onToggle={handleToggleRestriction}
+          />
+        ))}
+      <InfoDialog
+        open={showInfo}
+        onOpenChange={setShowInfo}
+        title="Game host controls"
+        icon={<MdInfoOutline />}
       >
-        <Icon className="owner-controls--lock-icon" />
-        {buttonLabel}
-      </button>
-      <button
-        type="button"
-        className="owner-controls--info-btn"
-        onClick={handleShowInfo}
-        aria-label="What does locking do?"
-        title="What does locking do?"
-      >
-        <MdInfoOutline />
-      </button>
-      <InfoDialog open={showInfo} onOpenChange={setShowInfo} title="Locking a game" icon={<MdInfoOutline />}>
         <p>
-          Locking prevents <strong>new</strong> players from joining. Players who are already in the game keep
-          playing.
+          <strong>Lock game</strong> prevents <em>new</em> players from joining. Players who are already in
+          the game keep playing.
         </p>
         <p>
-          Locked games still appear in lists, but anyone who tries to open one for the first time sees a
-          &ldquo;game is locked&rdquo; message instead of the puzzle.
+          <strong>Restrict Check / Reveal / Reset</strong> makes that action available only to you. Other
+          players see a locked icon on the menu instead. Useful when you want to keep a competitive solve
+          honest, or stop someone from resetting the whole grid.
         </p>
-        <p>You can unlock the game at any time.</p>
+        <p>You can flip any of these on or off at any time.</p>
       </InfoDialog>
       {signedOut && <LoginModal open={showLogin} onClose={handleCloseLogin} />}
     </div>

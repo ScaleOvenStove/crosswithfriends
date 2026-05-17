@@ -44,6 +44,8 @@ class Game extends Component {
       connectionFailed: false,
       kickedDfacIds: [],
       isOwnerFromServer: false,
+      restrictions: {check: false, reveal: false, reset: false},
+      locked: false,
     };
     this.initializeUser();
     window.addEventListener('resize', () => {
@@ -195,6 +197,17 @@ class Game extends Component {
         kickedDfacIds: prev.kickedDfacIds.filter((id) => id !== msg.dfac_id),
       }));
     });
+    this.gameModel.on('restrictionsChanged', (msg) => {
+      if (msg.gid !== this.state.gid) return;
+      if (!msg.action) return;
+      this.setState((prev) => ({
+        restrictions: {...prev.restrictions, [msg.action]: !!msg.restricted},
+      }));
+    });
+    this.gameModel.on('lockChanged', (msg) => {
+      if (msg.gid !== this.state.gid) return;
+      this.setState({locked: !!msg.locked});
+    });
 
     // Defer updateDisplayName until after we confirm the game has a create
     // event server-side. Emitting on mount produced orphan rows in
@@ -219,6 +232,8 @@ class Game extends Component {
       moderationError: undefined,
       kickedDfacIds: [],
       isOwnerFromServer: false,
+      restrictions: {check: false, reveal: false, reset: false},
+      locked: false,
     });
     // Seed kicked-id list + owner status from the server. The socket
     // 'kicked' broadcast covers kicks that happen while we're connected;
@@ -250,6 +265,8 @@ class Game extends Component {
       this.setState({
         kickedDfacIds: state.kickedDfacIds || [],
         isOwnerFromServer: !!state.isOwner,
+        restrictions: state.restrictions,
+        locked: !!state.locked,
       });
     } catch (e) {
       Sentry.captureException(e);
@@ -498,6 +515,8 @@ class Game extends Component {
         onPreferenceChange={this.context?.savePreference}
         focusMode={this.state.focusMode}
         onToggleFocusMode={this.handleToggleFocusMode}
+        restrictions={this.state.restrictions}
+        isOwnerFromServer={this.state.isOwnerFromServer}
       />
     );
   }
@@ -523,6 +542,8 @@ class Game extends Component {
         users={this.game.users}
         kickedDfacIds={this.state.kickedDfacIds}
         isOwnerFromServer={this.state.isOwnerFromServer}
+        locked={this.state.locked}
+        restrictions={this.state.restrictions}
         onUnkick={this.handleUnkick}
         id={id}
         myColor={color}

@@ -92,15 +92,47 @@ export async function unlockGame(gid: string, accessToken: string): Promise<bool
   return resp.ok;
 }
 
+export type RestrictableAction = 'check' | 'reveal' | 'reset';
+export const RESTRICTABLE_ACTIONS: readonly RestrictableAction[] = ['check', 'reveal', 'reset'];
+
+export type GameRestrictions = Record<RestrictableAction, boolean>;
+
+export const EMPTY_RESTRICTIONS: GameRestrictions = {check: false, reveal: false, reset: false};
+
 export interface GameModerationState {
   locked: boolean;
   owner: {userId?: string; dfacId?: string} | null;
   kickedDfacIds: string[];
+  restrictions: GameRestrictions;
   // Server-resolved against the caller's bearer token (false for guests).
   // The client can't compute this itself for the cross-device case where
   // a user created the game as a guest on another device and the dfac id
   // in the create event is one of their linked-but-not-local ids.
   isOwner: boolean;
+}
+
+export async function setGameRestriction(
+  gid: string,
+  action: RestrictableAction,
+  accessToken: string
+): Promise<boolean> {
+  const resp = await fetch(`${SERVER_URL}/api/game/${gid}/restrictions/${action}`, {
+    method: 'POST',
+    headers: {Authorization: `Bearer ${accessToken}`},
+  });
+  return resp.ok;
+}
+
+export async function clearGameRestriction(
+  gid: string,
+  action: RestrictableAction,
+  accessToken: string
+): Promise<boolean> {
+  const resp = await fetch(`${SERVER_URL}/api/game/${gid}/restrictions/${action}`, {
+    method: 'DELETE',
+    headers: {Authorization: `Bearer ${accessToken}`},
+  });
+  return resp.ok;
 }
 
 export async function fetchGameModeration(
@@ -111,5 +143,9 @@ export async function fetchGameModeration(
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const resp = await fetch(`${SERVER_URL}/api/game/${gid}/moderation`, {headers});
   if (!resp.ok) return null;
-  return resp.json();
+  const body = await resp.json();
+  // Normalize: a server without the restrictions feature deployed yet
+  // omits the field. Default to no restrictions so the UI can treat the
+  // shape as required.
+  return {...body, restrictions: {...EMPTY_RESTRICTIONS, ...(body.restrictions || {})}};
 }

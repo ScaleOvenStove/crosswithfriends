@@ -3,7 +3,7 @@ import React, {Component} from 'react';
 import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
-import {MdClose, MdErrorOutline, MdHelpOutline} from 'react-icons/md';
+import {MdClose, MdErrorOutline, MdHelpOutline, MdLock} from 'react-icons/md';
 import {FaClone, FaCrown} from 'react-icons/fa6';
 import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
@@ -17,6 +17,7 @@ import RatingWidget from '../Game/RatingWidget';
 import PuzzleStatsLine from '../Game/PuzzleStatsLine';
 import OwnerControls from './OwnerControls';
 import ConfirmDialog from '../common/ConfirmDialog';
+import InfoDialog from '../common/InfoDialog';
 import AuthContext from '../../lib/AuthContext';
 import {kickPlayer, unkickPlayer} from '../../api/create_game';
 
@@ -35,6 +36,7 @@ export default class Chat extends Component {
       username: '',
       kickTarget: null,
       unkickTarget: null,
+      showLockInfo: false,
     };
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
@@ -62,6 +64,14 @@ export default class Chat extends Component {
   get canModerate() {
     return this.isOwner && !!this.context?.accessToken;
   }
+
+  handleOpenLockInfo = () => {
+    this.setState({showLockInfo: true});
+  };
+
+  handleLockInfoChange = (open) => {
+    this.setState({showLockInfo: open});
+  };
 
   handleKickClick = (event) => {
     const targetDfacId = event.currentTarget.dataset.dfacId;
@@ -311,7 +321,41 @@ export default class Chat extends Component {
         )}
         {pid && <PuzzleStatsLine pid={String(pid)} />}
         {pid && <RatingWidget pid={String(pid)} />}
-        {this.isOwner && this.props.gid && <OwnerControls gid={this.props.gid} />}
+        {!this.isOwner && this.props.locked && (
+          <>
+            <button
+              type="button"
+              className="chat--lock-chip"
+              title="No new players can join. Click for details."
+              onClick={this.handleOpenLockInfo}
+            >
+              <MdLock className="chat--lock-chip-icon" aria-hidden="true" />
+              Game locked
+            </button>
+            <InfoDialog
+              open={this.state.showLockInfo}
+              onOpenChange={this.handleLockInfoChange}
+              title="This game is locked"
+              icon={<MdLock />}
+            >
+              <p>
+                The game host locked this game, so <strong>no new players can join</strong>. Anyone who tries
+                to open the game for the first time sees a &ldquo;game is locked&rdquo; message instead.
+              </p>
+              <p>
+                You and everyone else already in the game keep playing as normal. The host can unlock the game
+                at any time.
+              </p>
+            </InfoDialog>
+          </>
+        )}
+        {this.isOwner && this.props.gid && (
+          <OwnerControls
+            gid={this.props.gid}
+            locked={this.props.locked}
+            restrictions={this.props.restrictions}
+          />
+        )}
         {this.renderFencingOptions()}
       </div>
     );

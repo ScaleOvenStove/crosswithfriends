@@ -58,6 +58,31 @@
   font-style: italic;
 }
 
+.chat--lock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b4a00;
+  background: #fff4d6;
+  border: 1px solid #e6c870;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.chat--lock-chip-icon {
+  font-size: 13px;
+}
+
+.dark .chat--lock-chip {
+  color: #f0d488;
+  background: rgb(240 212 136 / 12%);
+  border-color: rgb(240 212 136 / 35%);
+}
+
 .chat--username {
   padding: 5px;
   padding-top: 10px;

@@ -500,6 +500,7 @@ router.post<{gid: string}>('/:gid/lock', async (req, res, next) => {
     }
 
     await lockGame(gid, {userId: payload.userId, dfacId: dfacIds[0] || null});
+    broadcastLockChange(gid, true);
     res.sendStatus(204);
   } catch (e) {
     next(e);
@@ -540,12 +541,25 @@ router.post<{gid: string}>('/:gid/unlock', async (req, res, next) => {
     }
 
     await unlockGame(gid);
+    broadcastLockChange(gid, false);
     res.sendStatus(204);
   } catch (e) {
     next(e);
   }
   return undefined;
 });
+
+function broadcastLockChange(gid: string, locked: boolean): void {
+  // Sibling of broadcastRestrictionChange — emit to everyone in the room
+  // so players see the lock chip flip live. Server enforcement (in
+  // join_game) is the source of truth; this is purely UX. Existing
+  // players keep playing on lock since the lock gate only fires for new
+  // joins, but we want them to see the room is closed to new joiners.
+  const io = getSocketIo();
+  if (io) {
+    io.to(`game-${gid}`).emit('lock_changed', {gid, locked});
+  }
+}
 
 /**
  * @openapi
@@ -591,6 +605,19 @@ router.post<{gid: string}>('/:gid/unlock', async (req, res, next) => {
  *       401: {description: Not authenticated}
  *       403: {description: Caller is not the owner}
  */
+function broadcastRestrictionChange(gid: string, action: RestrictableAction, restricted: boolean): void {
+  // Mirrors the kicked/unkicked broadcast: emit to everyone in the room
+  // so non-owner clients can flip their toolbar gating live instead of
+  // waiting for a refresh to re-fetch /moderation. Server-side
+  // enforcement (in SocketManager.game_event) is the source of truth;
+  // this broadcast is just for UX so the menu updates the moment the
+  // owner toggles.
+  const io = getSocketIo();
+  if (io) {
+    io.to(`game-${gid}`).emit('restrictions_changed', {gid, action, restricted});
+  }
+}
+
 router.post<{gid: string; action: string}, {} | {error: string}>(
   '/:gid/restrictions/:action',
   async (req, res, next) => {
@@ -611,6 +638,7 @@ router.post<{gid: string; action: string}, {} | {error: string}>(
       }
 
       await setGameRestriction(gid, action, {userId: payload.userId, dfacId: dfacIds[0] || null});
+      broadcastRestrictionChange(gid, action, true);
       res.sendStatus(204);
     } catch (e) {
       next(e);
@@ -639,6 +667,7 @@ router.delete<{gid: string; action: string}, {} | {error: string}>(
       }
 
       await clearGameRestriction(gid, action);
+      broadcastRestrictionChange(gid, action, false);
       res.sendStatus(204);
     } catch (e) {
       next(e);
