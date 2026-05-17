@@ -45,6 +45,33 @@
   cursor: not-allowed;
 }
 
+/* Guest-owner state: click opens LoginModal. Restyled as an outlined CTA
+   to match the sibling "Sign in to rate" button (.rating-widget--cta) —
+   the muted+italic look made it read as disabled instead of clickable. */
+.owner-controls--lock-btn[aria-disabled='true'] {
+  background: none;
+  border-color: #888;
+  color: #555;
+}
+
+.owner-controls--lock-btn[aria-disabled='true']:hover {
+  background: #f0f0f0;
+  border-color: #555;
+  color: #222;
+}
+
+.dark .owner-controls--lock-btn[aria-disabled='true'] {
+  background: none;
+  border-color: rgb(255 255 255 / 40%);
+  color: rgb(255 255 255 / 80%);
+}
+
+.dark .owner-controls--lock-btn[aria-disabled='true']:hover {
+  background: rgb(255 255 255 / 5%);
+  border-color: rgb(255 255 255 / 70%);
+  color: rgb(255 255 255 / 95%);
+}
+
 .owner-controls--lock-icon {
   font-size: 14px;
 }

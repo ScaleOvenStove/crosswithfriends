@@ -311,7 +311,7 @@ export default class Chat extends Component {
         )}
         {pid && <PuzzleStatsLine pid={String(pid)} />}
         {pid && <RatingWidget pid={String(pid)} />}
-        {this.canModerate && this.props.gid && <OwnerControls gid={this.props.gid} />}
+        {this.isOwner && this.props.gid && <OwnerControls gid={this.props.gid} />}
         {this.renderFencingOptions()}
       </div>
     );

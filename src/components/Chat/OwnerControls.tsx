@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react';
 import AuthContext from '../../lib/AuthContext';
 import {fetchGameModeration, lockGame, unlockGame} from '../../api/create_game';
 import InfoDialog from '../common/InfoDialog';
+import LoginModal from '../Auth/LoginModal';
 import './css/OwnerControls.css';
 
 interface Props {
@@ -19,7 +20,10 @@ export default function OwnerControls({gid}: Props) {
   const [locked, setLocked] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const handleShowInfo = useCallback(() => setShowInfo(true), []);
+  const handleShowLogin = useCallback(() => setShowLogin(true), []);
+  const handleCloseLogin = useCallback(() => setShowLogin(false), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,19 +49,42 @@ export default function OwnerControls({gid}: Props) {
     }
   }, [accessToken, busy, gid, locked]);
 
-  if (locked === null) return null;
-  const Icon = locked ? MdLock : MdLockOpen;
+  // Guest-owner state: keep the button in place so the layout doesn't
+  // shift after sign-in, but route the click to LoginModal and explain
+  // why it's disabled. The lock/kick endpoints reject dfac-only ownership
+  // anyway (creator.dfacId is forgeable from the create event), so this
+  // is just surfacing the actual requirement.
+  const signedOut = !accessToken;
+  // Signed-in: wait for the moderation fetch so the icon/label reflects
+  // real lock state. Signed-out: render the CTA immediately — the lock
+  // state isn't actionable until they sign in anyway, so blocking on the
+  // fetch just delays the affordance.
+  if (locked === null && !signedOut) return null;
+  const Icon = locked === true ? MdLock : MdLockOpen;
+  let buttonTitle: string;
+  let buttonLabel: string;
+  if (signedOut) {
+    buttonTitle = 'Sign in to manage your game';
+    buttonLabel = 'Sign in to manage your game';
+  } else if (locked) {
+    buttonTitle = 'Unlock game (allow new players to join)';
+    buttonLabel = 'Locked';
+  } else {
+    buttonTitle = 'Lock game (block new players)';
+    buttonLabel = 'Lock game';
+  }
   return (
     <div className="owner-controls--lock-row">
       <button
         type="button"
         className="owner-controls--lock-btn"
-        onClick={handleToggle}
+        onClick={signedOut ? handleShowLogin : handleToggle}
         disabled={busy}
-        title={locked ? 'Unlock game (allow new players to join)' : 'Lock game (block new players)'}
+        aria-disabled={signedOut || undefined}
+        title={buttonTitle}
       >
         <Icon className="owner-controls--lock-icon" />
-        {locked ? 'Locked' : 'Lock game'}
+        {buttonLabel}
       </button>
       <button
         type="button"
@@ -79,6 +106,7 @@ export default function OwnerControls({gid}: Props) {
         </p>
         <p>You can unlock the game at any time.</p>
       </InfoDialog>
+      {signedOut && <LoginModal open={showLogin} onClose={handleCloseLogin} />}
     </div>
   );
 }
