@@ -36,7 +36,21 @@ export default function GoogleCallback() {
       } catch (_e) {
         setError('Authentication failed');
       } finally {
-        navigate('/', {replace: true});
+        // Return the user to wherever they kicked off the OAuth flow from
+        // (set in LoginModal.handleGoogleLogin). Falls back to '/' if it
+        // wasn't set or got mangled. Only same-origin relative paths are
+        // accepted so this can't be hijacked into an open-redirect.
+        let returnTo = '/';
+        try {
+          const stored = sessionStorage.getItem('post_login_return_to');
+          sessionStorage.removeItem('post_login_return_to');
+          if (stored && stored.startsWith('/') && !stored.startsWith('//')) {
+            returnTo = stored;
+          }
+        } catch {
+          // sessionStorage unavailable
+        }
+        navigate(returnTo, {replace: true});
       }
     })();
   }, [location.search, handleLoginSuccess, navigate]);
