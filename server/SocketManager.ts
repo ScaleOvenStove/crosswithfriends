@@ -8,9 +8,11 @@ import {addRoomEvent, getRoomEvents} from './model/room';
 import {verifyAccessToken} from './auth/jwt';
 import {
   getGameOwner,
+  isActionRestricted,
   isGameLocked,
   isIdentityBanned,
   isOwner,
+  RestrictableAction,
   wasParticipantOfGame,
 } from './model/game_moderation';
 import {getDfacIdsForUser} from './model/user';
@@ -19,6 +21,16 @@ import {getDfacIdsForUser} from './model/user';
 // updateCursor and addPing are high-frequency and only meaningful in real-time.
 // updateDisplayName and updateColor are persisted so players remain visible on reload.
 const EPHEMERAL_EVENT_TYPES = new Set(['updateCursor', 'addPing']);
+
+// Event types that the owner can restrict to themselves via /api/game/:gid/restrictions/:action.
+// Null-prototype object so external-input lookups (event.type from the
+// socket payload) can't pick up inherited Object.prototype members like
+// `toString` and return a truthy non-action value.
+const RESTRICTABLE_EVENT_TYPES: Record<string, RestrictableAction> = Object.assign(Object.create(null), {
+  check: 'check',
+  reveal: 'reveal',
+  reset: 'reset',
+});
 
 // ============== Socket Manager ==============
 
@@ -216,6 +228,23 @@ class SocketManager {
           if (!socket.rooms.has(`game-${message.gid}`)) {
             if (typeof ack === 'function') ack({error: 'not in game'});
             return;
+          }
+          // Per-action restrictions: owner can mark check/reveal/reset as
+          // owner-only. isActionRestricted is cache-hit fast path; we only
+          // resolve the caller's owner status (which itself hits user_identity_map
+          // for linked dfac ids) when a restriction actually exists. Mirrors
+          // the lock-bypass logic in join_game — we only trust the
+          // authenticated identity for owner status, not the handshake's
+          // client-supplied dfacId.
+          const restrictableAction = RESTRICTABLE_EVENT_TYPES[event.type];
+          if (restrictableAction && (await isActionRestricted(message.gid, restrictableAction))) {
+            const owner = await getGameOwner(message.gid);
+            const callerUserId = socket.data.authUser?.userId;
+            const dfacIds = callerUserId ? await getDfacIdsForUser(callerUserId) : [];
+            if (!isOwner(owner, {userId: callerUserId, dfacIds})) {
+              if (typeof ack === 'function') ack({error: 'restricted'});
+              return;
+            }
           }
           // Reject persisted events for gids that don't have a create event
           // or snapshot — prevents orphan rows from accumulating for legacy

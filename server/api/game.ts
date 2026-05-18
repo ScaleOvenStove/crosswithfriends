@@ -11,12 +11,17 @@ import {invalidateUserGamesCacheForUser, invalidateAuthPuzzleStatusCache} from '
 import {getDfacIdsForUser, getUserIdByDfacId} from '../model/user';
 import {
   addGameBan,
+  clearGameRestriction,
   getGameOwner,
+  getGameRestrictions,
   getKickedDfacIds,
   isGameLocked,
   isOwner,
   lockGame,
   removeGameBan,
+  RESTRICTABLE_ACTIONS,
+  RestrictableAction,
+  setGameRestriction,
   unlockGame,
 } from '../model/game_moderation';
 import {getSocketIo} from '../socket_instance';
@@ -246,10 +251,11 @@ router.post<{gid: string}>('/:gid/undismiss', async (req, res, next) => {
 router.get<{gid: string}>('/:gid/moderation', async (req, res, next) => {
   try {
     const {gid} = req.params;
-    const [locked, owner, kickedDfacIds] = await Promise.all([
+    const [locked, owner, kickedDfacIds, restrictions] = await Promise.all([
       isGameLocked(gid),
       getGameOwner(gid),
       getKickedDfacIds(gid),
+      getGameRestrictions(gid),
     ]);
     // Resolve isOwner server-side when the caller is authenticated. The
     // client-side equivalent only knows the local dfac_id, which misses the
@@ -268,11 +274,15 @@ router.get<{gid: string}>('/:gid/moderation', async (req, res, next) => {
         isOwnerForCaller = isOwner(owner, {userId: payload.userId, dfacIds});
       }
     }
-    res.json({locked, owner, kickedDfacIds, isOwner: isOwnerForCaller});
+    res.json({locked, owner, kickedDfacIds, restrictions, isOwner: isOwnerForCaller});
   } catch (e) {
     next(e);
   }
 });
+
+function isRestrictableAction(value: string): value is RestrictableAction {
+  return (RESTRICTABLE_ACTIONS as readonly string[]).includes(value);
+}
 
 type KickRequest = {dfac_id?: string; user_id?: string};
 
@@ -536,5 +546,105 @@ router.post<{gid: string}>('/:gid/unlock', async (req, res, next) => {
   }
   return undefined;
 });
+
+/**
+ * @openapi
+ * /game/{gid}/restrictions/{action}:
+ *   post:
+ *     tags: [Games]
+ *     summary: Restrict a player action to the owner
+ *     description: Owner-only. Marks one of `check`, `reveal`, or `reset` as
+ *       owner-only — non-owners in the room cannot dispatch that event. Other
+ *       restrictions and the lock state are unaffected.
+ *     security: [{bearerAuth: []}]
+ *     parameters:
+ *       - in: path
+ *         name: gid
+ *         required: true
+ *         schema: {type: string}
+ *       - in: path
+ *         name: action
+ *         required: true
+ *         schema: {type: string, enum: [check, reveal, reset]}
+ *     responses:
+ *       204: {description: Restriction set}
+ *       400: {description: Unknown action}
+ *       401: {description: Not authenticated}
+ *       403: {description: Caller is not the owner}
+ *   delete:
+ *     tags: [Games]
+ *     summary: Lift a restriction
+ *     description: Owner-only. Removes an owner-only restriction for the given action.
+ *     security: [{bearerAuth: []}]
+ *     parameters:
+ *       - in: path
+ *         name: gid
+ *         required: true
+ *         schema: {type: string}
+ *       - in: path
+ *         name: action
+ *         required: true
+ *         schema: {type: string, enum: [check, reveal, reset]}
+ *     responses:
+ *       204: {description: Restriction cleared}
+ *       400: {description: Unknown action}
+ *       401: {description: Not authenticated}
+ *       403: {description: Caller is not the owner}
+ */
+router.post<{gid: string; action: string}, {} | {error: string}>(
+  '/:gid/restrictions/:action',
+  async (req, res, next) => {
+    try {
+      const {gid, action} = req.params;
+      if (!isRestrictableAction(action)) {
+        return res.status(400).json({error: 'unknown action'});
+      }
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
+      const payload = verifyAccessToken(authHeader.slice(7));
+      if (!payload) return res.sendStatus(401);
+
+      const owner = await getGameOwner(gid);
+      const dfacIds = await getDfacIdsForUser(payload.userId);
+      if (!isOwner(owner, {userId: payload.userId, dfacIds})) {
+        return res.sendStatus(403);
+      }
+
+      await setGameRestriction(gid, action, {userId: payload.userId, dfacId: dfacIds[0] || null});
+      res.sendStatus(204);
+    } catch (e) {
+      next(e);
+    }
+    return undefined;
+  }
+);
+
+router.delete<{gid: string; action: string}, {} | {error: string}>(
+  '/:gid/restrictions/:action',
+  async (req, res, next) => {
+    try {
+      const {gid, action} = req.params;
+      if (!isRestrictableAction(action)) {
+        return res.status(400).json({error: 'unknown action'});
+      }
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
+      const payload = verifyAccessToken(authHeader.slice(7));
+      if (!payload) return res.sendStatus(401);
+
+      const owner = await getGameOwner(gid);
+      const dfacIds = await getDfacIdsForUser(payload.userId);
+      if (!isOwner(owner, {userId: payload.userId, dfacIds})) {
+        return res.sendStatus(403);
+      }
+
+      await clearGameRestriction(gid, action);
+      res.sendStatus(204);
+    } catch (e) {
+      next(e);
+    }
+    return undefined;
+  }
+);
 
 export default router;

@@ -94,3 +94,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- 15. game_locks (depends on users)
 -- ============================================================
 \ir create_game_locks.sql
+
+-- ============================================================
+-- 16. game_restrictions (depends on users)
+-- ============================================================
+\ir create_game_restrictions.sql

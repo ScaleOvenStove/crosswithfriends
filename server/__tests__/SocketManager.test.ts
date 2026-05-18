@@ -189,8 +189,10 @@ describe('SocketManager', () => {
       const sm = new SocketManager(io);
       sm.listen();
 
-      // isIdentityBanned reads moderation state (bans + locks + create event
-      // for owner caching) on first contact with this gid.
+      // isIdentityBanned reads moderation state (bans + locks +
+      // restrictions + create event for owner caching) on first contact
+      // with this gid.
+      pool.query.mockResolvedValueOnce({rows: []});
       pool.query.mockResolvedValueOnce({rows: []});
       pool.query.mockResolvedValueOnce({rows: []});
       pool.query.mockResolvedValueOnce({rows: []});
@@ -380,6 +382,130 @@ describe('SocketManager', () => {
       );
       expect(ack).toHaveBeenCalledWith({error: 'not in game'});
       expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    describe('owner-only action restrictions', () => {
+      // Moderation state is loaded by 4 parallel queries in this order:
+      // bans, locks, restrictions, create event (creator). Each test uses
+      // a unique gid so the per-gid moderation cache doesn't leak.
+      function mockModerationState({
+        restrictions = [],
+        creator = null,
+      }: {
+        restrictions?: Array<'check' | 'reveal' | 'reset'>;
+        creator?: {userId?: string; dfacId?: string} | null;
+      }): void {
+        pool.query.mockResolvedValueOnce({rows: []}); // bans
+        pool.query.mockResolvedValueOnce({rows: []}); // locks
+        pool.query.mockResolvedValueOnce({rows: restrictions.map((action) => ({action}))});
+        pool.query.mockResolvedValueOnce({rows: creator ? [{creator}] : []});
+      }
+
+      it('rejects a restricted reveal from a non-owner', async () => {
+        (verifyAccessToken as jest.Mock).mockReturnValue({userId: 'not-owner'});
+        const {io, socketHandlers, mockSocket} = createMockIo();
+        mockSocket.handshake.auth = {token: 'valid'};
+        mockSocket.rooms.add('game-r1');
+        const sm = new SocketManager(io);
+        sm.listen();
+
+        mockModerationState({restrictions: ['reveal'], creator: {userId: 'real-owner'}});
+        // getDfacIdsForUser call (linked dfac ids for the caller)
+        pool.query.mockResolvedValueOnce({rows: []});
+
+        const ack = jest.fn();
+        await socketHandlers['game_event'](
+          {gid: 'r1', event: {type: 'reveal', timestamp: 1000, params: {scope: 'puzzle'}}},
+          ack
+        );
+
+        expect(ack).toHaveBeenCalledWith({error: 'restricted'});
+      });
+
+      it('allows a restricted reveal from the owner', async () => {
+        (verifyAccessToken as jest.Mock).mockReturnValue({userId: 'real-owner'});
+        const {io, socketHandlers, mockSocket} = createMockIo();
+        mockSocket.handshake.auth = {token: 'valid'};
+        mockSocket.rooms.add('game-r2');
+        const sm = new SocketManager(io);
+        sm.listen();
+
+        mockModerationState({restrictions: ['reveal'], creator: {userId: 'real-owner'}});
+        pool.query.mockResolvedValueOnce({rows: []}); // getDfacIdsForUser
+        pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]}); // gameExists
+        pool.query.mockResolvedValueOnce({rows: []}); // INSERT
+
+        const ack = jest.fn();
+        await socketHandlers['game_event'](
+          {gid: 'r2', event: {type: 'reveal', timestamp: 1000, params: {scope: 'puzzle'}}},
+          ack
+        );
+
+        expect(ack).toHaveBeenCalledWith();
+      });
+
+      it('rejects a restricted check from an unauthenticated socket', async () => {
+        (verifyAccessToken as jest.Mock).mockReturnValue(null);
+        const {io, socketHandlers, mockSocket} = createMockIo();
+        mockSocket.rooms.add('game-r3');
+        const sm = new SocketManager(io);
+        sm.listen();
+
+        mockModerationState({restrictions: ['check'], creator: {userId: 'real-owner'}});
+        // No getDfacIdsForUser call expected — caller has no userId.
+
+        const ack = jest.fn();
+        await socketHandlers['game_event'](
+          {gid: 'r3', event: {type: 'check', timestamp: 1000, params: {scope: 'square'}}},
+          ack
+        );
+
+        expect(ack).toHaveBeenCalledWith({error: 'restricted'});
+      });
+
+      it('lets reveal through when no restriction is set, without resolving owner', async () => {
+        (verifyAccessToken as jest.Mock).mockReturnValue({userId: 'anyone'});
+        const {io, socketHandlers, mockSocket} = createMockIo();
+        mockSocket.handshake.auth = {token: 'valid'};
+        mockSocket.rooms.add('game-r4');
+        const sm = new SocketManager(io);
+        sm.listen();
+
+        mockModerationState({restrictions: [], creator: {userId: 'real-owner'}});
+        // No getDfacIdsForUser call — restriction short-circuits before owner resolution.
+        pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]}); // gameExists
+        pool.query.mockResolvedValueOnce({rows: []}); // INSERT
+
+        const ack = jest.fn();
+        await socketHandlers['game_event'](
+          {gid: 'r4', event: {type: 'reveal', timestamp: 1000, params: {scope: 'square'}}},
+          ack
+        );
+
+        expect(ack).toHaveBeenCalledWith();
+      });
+
+      it('does not gate non-restrictable event types (updateCell)', async () => {
+        (verifyAccessToken as jest.Mock).mockReturnValue({userId: 'anyone'});
+        const {io, socketHandlers, mockSocket} = createMockIo();
+        mockSocket.handshake.auth = {token: 'valid'};
+        mockSocket.rooms.add('game-r5');
+        const sm = new SocketManager(io);
+        sm.listen();
+
+        // Even with reveal restricted, updateCell flows through unaffected.
+        mockModerationState({restrictions: ['reveal'], creator: {userId: 'real-owner'}});
+        pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]}); // gameExists
+        pool.query.mockResolvedValueOnce({rows: []}); // INSERT
+
+        const ack = jest.fn();
+        await socketHandlers['game_event'](
+          {gid: 'r5', event: {type: 'updateCell', timestamp: 1000, params: {id: 'p1'}}},
+          ack
+        );
+
+        expect(ack).toHaveBeenCalledWith();
+      });
     });
   });
 

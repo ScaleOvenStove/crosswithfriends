@@ -4,12 +4,17 @@ jest.mock('../../model/pool', () => require('../../__mocks__/pool'));
 
 import {
   addGameBan,
+  clearGameRestriction,
   clearModerationCache,
   getGameOwner,
+  getGameRestrictions,
+  isActionRestricted,
   isGameLocked,
   isIdentityBanned,
   isOwner,
   lockGame,
+  RestrictableAction,
+  setGameRestriction,
   unlockGame,
   wasParticipantOfGame,
 } from '../../model/game_moderation';
@@ -19,19 +24,23 @@ beforeEach(() => {
   clearModerationCache();
 });
 
-// Moderation state is loaded with 3 parallel queries: bans, locks, and the
-// create event (for owner caching). Tests need to mock all three.
+// Moderation state is loaded with 4 parallel queries: bans, locks,
+// restrictions, and the create event (for owner caching). Tests need to
+// mock all four.
 function mockState({
   bans = [],
   locked = false,
+  restrictions = [],
   creator = null,
 }: {
   bans?: Array<{identity: string; identity_type: 'user' | 'dfac'}>;
   locked?: boolean;
+  restrictions?: RestrictableAction[];
   creator?: {userId?: string; dfacId?: string} | null;
 }): void {
   pool.query.mockResolvedValueOnce({rows: bans});
   pool.query.mockResolvedValueOnce({rows: locked ? [{gid: 'g1'}] : []});
+  pool.query.mockResolvedValueOnce({rows: restrictions.map((action) => ({action}))});
   // The moderation loader extracts event_payload->'params'->'creator' as
   // `creator` directly in SQL, so the mocked row matches that shape.
   pool.query.mockResolvedValueOnce({rows: creator ? [{creator}] : []});
@@ -57,9 +66,9 @@ describe('isIdentityBanned', () => {
     mockState({});
     await isIdentityBanned('g1', {userId: 'user-1'});
     await isIdentityBanned('g1', {userId: 'user-2'});
-    // First call hit the DB (3 queries — bans, locks, create event), second
-    // call should be cached (0 additional).
-    expect(pool.query).toHaveBeenCalledTimes(3);
+    // First call hit the DB (4 queries — bans, locks, restrictions, create
+    // event), second call should be cached (0 additional).
+    expect(pool.query).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -88,9 +97,10 @@ describe('getGameOwner', () => {
 
   it('returns null when create event has no creator field (legacy game)', async () => {
     // create event row present, JSON path returns NULL for missing creator.
-    pool.query.mockResolvedValueOnce({rows: []});
-    pool.query.mockResolvedValueOnce({rows: []});
-    pool.query.mockResolvedValueOnce({rows: [{creator: null}]});
+    pool.query.mockResolvedValueOnce({rows: []}); // bans
+    pool.query.mockResolvedValueOnce({rows: []}); // locks
+    pool.query.mockResolvedValueOnce({rows: []}); // restrictions
+    pool.query.mockResolvedValueOnce({rows: [{creator: null}]}); // create event
     expect(await getGameOwner('g1')).toBeNull();
   });
 });
@@ -184,5 +194,67 @@ describe('addGameBan / lockGame / unlockGame', () => {
     await unlockGame('g1');
     const sql = pool.query.mock.calls[0][0] as string;
     expect(sql).toContain('DELETE FROM game_locks');
+  });
+});
+
+describe('game restrictions', () => {
+  it('isActionRestricted returns true when a row exists for the action', async () => {
+    mockState({restrictions: ['reveal']});
+    expect(await isActionRestricted('g1', 'reveal')).toBe(true);
+    expect(await isActionRestricted('g1', 'check')).toBe(false);
+    expect(await isActionRestricted('g1', 'reset')).toBe(false);
+  });
+
+  it('isActionRestricted defaults to false when no restrictions are set', async () => {
+    mockState({});
+    expect(await isActionRestricted('g1', 'check')).toBe(false);
+    expect(await isActionRestricted('g1', 'reveal')).toBe(false);
+    expect(await isActionRestricted('g1', 'reset')).toBe(false);
+  });
+
+  it('getGameRestrictions returns the full action map', async () => {
+    mockState({restrictions: ['check', 'reset']});
+    expect(await getGameRestrictions('g1')).toEqual({check: true, reveal: false, reset: true});
+  });
+
+  it('getGameRestrictions returns a defensive copy so callers cannot mutate the cache', async () => {
+    mockState({restrictions: ['reveal']});
+    const first = await getGameRestrictions('g1');
+    first.reveal = false;
+    // Second call hits the cache; should still report the original state.
+    const second = await getGameRestrictions('g1');
+    expect(second.reveal).toBe(true);
+  });
+
+  it('setGameRestriction upserts and invalidates cache', async () => {
+    // Prime cache with no restrictions
+    mockState({});
+    expect(await isActionRestricted('g1', 'reveal')).toBe(false);
+
+    pool.query.mockResolvedValueOnce({rows: []});
+    await setGameRestriction('g1', 'reveal', {userId: 'u1', dfacId: 'd1'});
+    const insertSql = pool.query.mock.calls[pool.query.mock.calls.length - 1][0] as string;
+    expect(insertSql).toContain('INSERT INTO game_restrictions');
+    expect(insertSql).toContain('ON CONFLICT (gid, action) DO NOTHING');
+
+    // Next read hits the DB again and now sees the row.
+    mockState({restrictions: ['reveal']});
+    expect(await isActionRestricted('g1', 'reveal')).toBe(true);
+  });
+
+  it('clearGameRestriction deletes the row and invalidates cache', async () => {
+    // Prime cache with reveal restricted
+    mockState({restrictions: ['reveal']});
+    expect(await isActionRestricted('g1', 'reveal')).toBe(true);
+
+    pool.query.mockResolvedValueOnce({rows: []});
+    await clearGameRestriction('g1', 'reveal');
+    const sql = pool.query.mock.calls[pool.query.mock.calls.length - 1][0] as string;
+    expect(sql).toContain('DELETE FROM game_restrictions');
+    expect(sql).toContain('action = $2');
+
+    // Next read hits the DB again with no rows; restriction is gone.
+    mockState({});
+    expect(await isActionRestricted('g1', 'reveal')).toBe(false);
   });
 });

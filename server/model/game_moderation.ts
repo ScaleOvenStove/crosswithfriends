@@ -5,14 +5,25 @@ export type Identity = {userId?: string | null; dfacId?: string | null};
 
 export type GameCreator = {userId?: string; dfacId?: string};
 
+export type RestrictableAction = 'check' | 'reveal' | 'reset';
+export const RESTRICTABLE_ACTIONS: readonly RestrictableAction[] = ['check', 'reveal', 'reset'];
+
+export type GameRestrictions = Record<RestrictableAction, boolean>;
+
+function emptyRestrictions(): GameRestrictions {
+  return {check: false, reveal: false, reset: false};
+}
+
 // Per-gid cache so the socket fast-path doesn't hit Postgres on every event.
-// Bans, locks, and ownership change rarely; 5 minutes is generous but
-// bounded. Invalidated explicitly on ban/lock/unlock writes. Ownership
-// itself is immutable but we still recompute it on cache miss for code
-// simplicity — the create event lookup is a single PK probe.
+// Bans, locks, restrictions, and ownership change rarely; 5 minutes is
+// generous but bounded. Invalidated explicitly on ban/lock/restriction
+// writes. Ownership itself is immutable but we still recompute it on
+// cache miss for code simplicity — the create event lookup is a single
+// PK probe.
 type ModerationState = {
   banned: {userIds: Set<string>; dfacIds: Set<string>};
   locked: boolean;
+  restrictions: GameRestrictions;
   owner: GameCreator | null;
 };
 const moderationCache = new TTLCache<ModerationState>({ttlMs: 5 * 60_000, maxSize: 10_000});
@@ -26,12 +37,13 @@ export function clearModerationCache(): void {
 }
 
 async function loadModerationState(gid: string): Promise<ModerationState> {
-  const [bans, locks, creator] = await Promise.all([
+  const [bans, locks, restrictionRows, creator] = await Promise.all([
     pool.query<{identity: string; identity_type: 'user' | 'dfac'}>(
       `SELECT identity, identity_type FROM game_bans WHERE gid = $1`,
       [gid]
     ),
     pool.query<{gid: string}>(`SELECT gid FROM game_locks WHERE gid = $1`, [gid]),
+    pool.query<{action: RestrictableAction}>(`SELECT action FROM game_restrictions WHERE gid = $1`, [gid]),
     // Extract just the creator subtree from the create event's payload.
     // Pulling the full event_payload would drag the whole bootstrap blob
     // (grid + clues + solution) across the wire for every cache miss; the
@@ -51,6 +63,12 @@ async function loadModerationState(gid: string): Promise<ModerationState> {
     if (row.identity_type === 'user') userIds.add(row.identity);
     else dfacIds.add(row.identity);
   }
+  const restrictions = emptyRestrictions();
+  for (const row of restrictionRows.rows) {
+    // CHECK constraint at the DB layer guarantees row.action is one of
+    // the three; the type assertion keeps the loop terse.
+    restrictions[row.action] = true;
+  }
   let owner: GameCreator | null = null;
   const creatorPayload = creator.rows[0]?.creator;
   if (creatorPayload) {
@@ -59,7 +77,7 @@ async function loadModerationState(gid: string): Promise<ModerationState> {
     if (creatorPayload.dfacId) owner.dfacId = creatorPayload.dfacId;
     if (Object.keys(owner).length === 0) owner = null;
   }
-  return {banned: {userIds, dfacIds}, locked: locks.rows.length > 0, owner};
+  return {banned: {userIds, dfacIds}, locked: locks.rows.length > 0, restrictions, owner};
 }
 
 async function getModerationState(gid: string): Promise<ModerationState> {
@@ -205,5 +223,40 @@ export async function lockGame(gid: string, by: Identity): Promise<void> {
 
 export async function unlockGame(gid: string): Promise<void> {
   await pool.query(`DELETE FROM game_locks WHERE gid = $1`, [gid]);
+  invalidateModerationCacheForGid(gid);
+}
+
+// Restrictions: presence row per (gid, action) = the action is owner-only.
+// Setters mirror the lock pattern — INSERT to enable, DELETE to clear.
+
+export async function getGameRestrictions(gid: string): Promise<GameRestrictions> {
+  const state = await getModerationState(gid);
+  // Defensive copy so callers can't mutate the cached state.
+  return {...state.restrictions};
+}
+
+// Fast-path used by the socket layer on every check/reveal/reset event.
+// Reads from the same cached moderation state as everything else.
+export async function isActionRestricted(gid: string, action: RestrictableAction): Promise<boolean> {
+  const state = await getModerationState(gid);
+  return state.restrictions[action];
+}
+
+export async function setGameRestriction(
+  gid: string,
+  action: RestrictableAction,
+  by: Identity
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO game_restrictions (gid, action, restricted_by_user_id, restricted_by_dfac_id)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (gid, action) DO NOTHING`,
+    [gid, action, by.userId || null, by.dfacId || null]
+  );
+  invalidateModerationCacheForGid(gid);
+}
+
+export async function clearGameRestriction(gid: string, action: RestrictableAction): Promise<void> {
+  await pool.query(`DELETE FROM game_restrictions WHERE gid = $1 AND action = $2`, [gid, action]);
   invalidateModerationCacheForGid(gid);
 }
