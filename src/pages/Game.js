@@ -268,6 +268,15 @@ class Game extends Component {
     this.maybeUndismiss();
   }
 
+  // Imperative refresh trigger handed to OwnerControls so a successful
+  // lock/restriction toggle re-syncs the panel even if the socket bounces
+  // or drops the lock_changed / restrictions_changed broadcast. The
+  // broadcast still handles the common path (and updates other tabs);
+  // this is just a defensive backstop for the owner's own tab.
+  handleRefreshModeration = () => {
+    if (this.state.gid) this.fetchModerationState(this.state.gid);
+  };
+
   fetchModerationState = async (gid) => {
     try {
       const accessToken = this.context?.accessToken;
@@ -573,6 +582,7 @@ class Game extends Component {
         isOwner={this.isOwner}
         locked={this.state.locked}
         restrictions={this.state.restrictions}
+        onRefreshModeration={this.handleRefreshModeration}
         onUnkick={this.handleUnkick}
         id={id}
         myColor={color}

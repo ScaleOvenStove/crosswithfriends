@@ -356,6 +356,7 @@ export default class Chat extends Component {
             gid={this.props.gid}
             locked={!!this.props.locked}
             restrictions={this.props.restrictions}
+            onRefreshModeration={this.props.onRefreshModeration}
           />
         )}
         {this.renderFencingOptions()}

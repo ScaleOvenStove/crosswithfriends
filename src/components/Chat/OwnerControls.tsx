@@ -20,6 +20,11 @@ interface Props {
   // the lock_changed socket broadcast stay in sync with this panel.
   locked: boolean;
   restrictions: GameRestrictions;
+  // Optional defensive refresh — invoked after a successful toggle so
+  // the panel re-syncs even if the matching socket broadcast is missed
+  // (mid-bounce, transient disconnect). The broadcast still drives the
+  // common path; this is a backstop.
+  onRefreshModeration?: () => void;
 }
 
 interface AuthCtx {
@@ -64,7 +69,7 @@ function RestrictionRow({action, label, isRestricted, busy, onToggle}: Restricti
   );
 }
 
-export default function OwnerControls({gid, locked, restrictions}: Props) {
+export default function OwnerControls({gid, locked, restrictions, onRefreshModeration}: Props) {
   const {accessToken} = useContext(AuthContext) as AuthCtx;
   // Per-row busy state so toggling one restriction doesn't disable the
   // others. Keyed by action; 'lock' is the lock toggle's slot. Local UI
@@ -90,14 +95,16 @@ export default function OwnerControls({gid, locked, restrictions}: Props) {
       } else {
         await lockGame(gid, accessToken);
       }
-      // No local setState — the lock_changed broadcast lands in the
-      // pages/Game.js handler and re-renders us with updated props.
+      // The lock_changed broadcast normally updates the upstream state
+      // and re-renders us with new props. Also refetch as a backstop in
+      // case the broadcast was missed (mid-bounce, transient disconnect).
+      onRefreshModeration?.();
     } catch (err) {
       Sentry.captureException(err);
     } finally {
       setBusyFor('lock', false);
     }
-  }, [accessToken, busy.lock, gid, locked, setBusyFor]);
+  }, [accessToken, busy.lock, gid, locked, onRefreshModeration, setBusyFor]);
 
   const handleToggleRestriction = useCallback(
     async (action: RestrictableAction) => {
@@ -110,15 +117,16 @@ export default function OwnerControls({gid, locked, restrictions}: Props) {
         } else {
           await setGameRestriction(gid, action, accessToken);
         }
-        // Same as lock — restrictions_changed broadcast updates the
-        // source-of-truth state upstream; we re-render via props.
+        // Same backstop as lock — broadcast is the common path, this is
+        // defensive in case it doesn't arrive.
+        onRefreshModeration?.();
       } catch (err) {
         Sentry.captureException(err);
       } finally {
         setBusyFor(action, false);
       }
     },
-    [accessToken, busy, gid, restrictions, setBusyFor]
+    [accessToken, busy, gid, restrictions, onRefreshModeration, setBusyFor]
   );
 
   // Guest-owner state: keep the buttons in place so the layout doesn't
