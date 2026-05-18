@@ -62,7 +62,8 @@
       "follow-redirects": ">=1.16.0",
       "postcss": ">=8.5.10",
       "ip-address": ">=10.1.1",
-      "fast-uri": ">=3.1.1"
+      "fast-uri": ">=3.1.1",
+      "brace-expansion@5": ">=5.0.6"
     },
     "onlyBuiltDependencies": [
       "bcrypt",
