@@ -8,7 +8,7 @@ import yoyo from './emojiPacks/yoyo';
 // The pricklyPear pack was dropped — every URL pointed at the legacy
 // downforacross S3 bucket which is no longer reachable, so every
 // emoji in the pack rendered as a broken-image placeholder. See
-// issue for re-sourcing the pack from the original Facebook
+// issue #538 for re-sourcing the pack from the original Facebook
 // Messenger sticker set.
 const allEmojiData = {
   ...defaultPack,
