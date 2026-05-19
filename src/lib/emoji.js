@@ -1,15 +1,18 @@
 import _ from 'lodash';
 import defaultPack from './emojiPacks/default';
-import pricklyPear from './emojiPacks/pricklyPear.json';
 import custom from './emojiPacks/custom';
 import partyParrot from './emojiPacks/partyParrot';
 import yoyo from './emojiPacks/yoyo';
 
-// spread in reverse-order of priority, in case of name collisions
+// spread in reverse-order of priority, in case of name collisions.
+// The pricklyPear pack was dropped — every URL pointed at the legacy
+// downforacross S3 bucket which is no longer reachable, so every
+// emoji in the pack rendered as a broken-image placeholder. See
+// issue #538 for re-sourcing the pack from the original Facebook
+// Messenger sticker set.
 const allEmojiData = {
   ...defaultPack,
   ...partyParrot,
-  ...pricklyPear,
   ...yoyo,
   ...custom,
 };
