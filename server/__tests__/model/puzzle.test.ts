@@ -485,6 +485,14 @@ describe('addPuzzle', () => {
     await expect(addPuzzle(invalidPuzzle as any)).rejects.toThrow();
   });
 
+  it('rejects an empty/incomplete puzzle object with an Invalid puzzle: error (becomes 400, not 500)', async () => {
+    // Without grid/info/clues as .required(), Joi accepted {} and addPuzzle
+    // reached computePuzzleHash, throwing a raw TypeError that bubbled up
+    // as a 500. The validator now rejects this shape so the API can return
+    // a proper 400.
+    await expect(addPuzzle({} as any, false, 'empty-pid')).rejects.toThrow(/^Invalid puzzle:/);
+  });
+
   it('accepts puzzle with data URI images', async () => {
     pool.query.mockResolvedValue({rows: []});
     const puzzleWithImages = {

@@ -9,14 +9,20 @@ const fixtureDir = join(process.cwd(), 'e2e', 'fixtures');
 
 // Each test POSTs to /api/puzzle and expects a 400 rejection from the
 // server-side validator (see server/model/puzzle.ts:findBrokenPlaceholderField).
-// Because the validator runs before any DB write, these tests are safe to
-// run against any environment — a rejection leaves no side effects.
 //
-// Note on local runs: with `pnpm start` (the default for `pnpm test:e2e`),
-// the Vite dev server proxies /api/* to the production backend. So locally
-// these tests effectively probe prod; once this PR is merged + deployed they
-// pass. For pre-merge local testing, run `pnpm devfrontend` alongside
-// `pnpm devbackend` and set BASE_URL=http://localhost:3020.
+// IMPORTANT: only run when targeting an environment that has the validator
+// deployed. By default, `pnpm test:e2e` runs against http://localhost:3020
+// where Vite proxies /api/* to the *production* backend — if the validator
+// isn't deployed yet, the POST creates a real (private, anonymous) puzzle
+// row in prod. Gating to the testing env avoids that and matches how the
+// post-deploy workflow (`.github/workflows/deploy-tests.yml`) invokes us.
+const VALIDATED_BACKENDS = new Set([
+  'https://testing.crosswithfriends.com',
+  // Add 'http://localhost:3021' if you've wired up a local backend and want
+  // to run these tests against it directly.
+]);
+const baseURL = process.env.BASE_URL || '';
+const validatorDeployed = VALIDATED_BACKENDS.has(baseURL);
 
 // The PuzzleJson shape that POST /api/puzzle expects, with no [?] markers
 // anywhere — mirrors what iPUZtoJSON would output for the clean fixture.
@@ -43,6 +49,13 @@ function buildCleanPuzzleJson() {
 }
 
 test.describe('POST /api/puzzle — broken-placeholder rejection', () => {
+  test.skip(
+    !validatorDeployed,
+    `Skipped: set BASE_URL to a backend with the rejection deployed ` +
+      `(e.g. https://testing.crosswithfriends.com) to run these. By default they would hit prod via ` +
+      `the local Vite proxy and could create real rows.`
+  );
+
   test('rejects a puzzle whose clue contains "[?]"', async ({request}) => {
     const puzzle = buildCleanPuzzleJson();
     puzzle.clues.down[1] = 'A[?] 9[?] 6[?] 4[?] 2[?], e.g.';

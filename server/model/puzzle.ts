@@ -272,7 +272,11 @@ export async function listPuzzles(
 const string = () => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
 
 const puzzleValidator = Joi.object({
-  grid: Joi.array().items(Joi.array().items(string())),
+  // grid / info / clues are required: without them, addPuzzle reaches
+  // computePuzzleHash and crashes with a raw TypeError, which the API
+  // handler can't distinguish from an internal server error. Requiring
+  // them here lets the validation path emit a proper 400.
+  grid: Joi.array().items(Joi.array().items(string())).required(),
   info: Joi.object({
     type: string().optional(),
     title: string(),
@@ -281,7 +285,7 @@ const puzzleValidator = Joi.object({
     description: string().optional(),
     titleOverride: string().optional(),
     authorOverride: string().optional(),
-  }),
+  }).required(),
   circles: Joi.array().optional(),
   shades: Joi.array().optional(),
   images: Joi.object()
@@ -295,7 +299,7 @@ const puzzleValidator = Joi.object({
   clues: Joi.object({
     across: Joi.array(),
     down: Joi.array(),
-  }),
+  }).required(),
   private: Joi.boolean().optional(),
   contest: Joi.boolean().optional(),
 });
