@@ -312,7 +312,20 @@ const BROKEN_PLACEHOLDER = '[?]';
 function findBrokenPlaceholderField(puzzle: any): string | null {
   const info = puzzle?.info;
   if (info && typeof info === 'object') {
-    for (const key of ['title', 'author', 'description', 'copyright', 'note']) {
+    // Includes titleOverride / authorOverride because the puzzle list and
+    // chat header display those preferentially over the underlying
+    // title / author (see COALESCE(..., 'title') queries elsewhere in this
+    // file). An upload that puts "[?]" into the override would otherwise
+    // bypass this scan and still surface the broken text to users.
+    for (const key of [
+      'title',
+      'author',
+      'description',
+      'copyright',
+      'note',
+      'titleOverride',
+      'authorOverride',
+    ]) {
       const val = info[key];
       if (typeof val === 'string' && val.includes(BROKEN_PLACEHOLDER)) {
         return `info.${key}`;
@@ -338,7 +351,9 @@ function findBrokenPlaceholderField(puzzle: any): string | null {
 function validatePuzzle(puzzle: any) {
   const {error} = puzzleValidator.validate(puzzle);
   if (error) {
-    throw new Error(error.message);
+    // Prefix so the API handler's `startsWith('Invalid puzzle')` check
+    // catches Joi failures too and surfaces them as 400 (not 500).
+    throw new Error(`Invalid puzzle: ${error.message}`);
   }
   const brokenField = findBrokenPlaceholderField(puzzle);
   if (brokenField) {

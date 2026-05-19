@@ -524,6 +524,19 @@ describe('addPuzzle', () => {
     );
   });
 
+  it('rejects puzzle whose titleOverride contains "[?]" (overrides display the override)', async () => {
+    // The puzzle list / chat header show titleOverride preferentially over
+    // title via COALESCE — a broken override would surface to users even
+    // if the underlying title was clean.
+    const puzzleWithBrokenOverride = {
+      ...validPuzzle,
+      info: {...validPuzzle.info, titleOverride: 'My version [?]'},
+    };
+    await expect(addPuzzle(puzzleWithBrokenOverride as any, false, 'broken-override-pid')).rejects.toThrow(
+      /info\.titleOverride contains "\[\?\]"/
+    );
+  });
+
   it('accepts a puzzle that mentions [?] outside the scanned fields (e.g. in grid)', async () => {
     // The scan covers info text + clues only; grid solutions are not scanned
     // because crossword cells are single letters and "[?]" couldn't be a
