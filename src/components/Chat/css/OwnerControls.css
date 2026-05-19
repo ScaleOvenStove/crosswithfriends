@@ -1,14 +1,15 @@
 .owner-controls {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
 }
 
 .owner-controls--lock-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 4px 0;
 }
 
 .owner-controls--lock-btn {
