@@ -272,7 +272,11 @@ export async function listPuzzles(
 const string = () => Joi.string().allow(''); // https://github.com/sideway/joi/blob/master/API.md#string
 
 const puzzleValidator = Joi.object({
-  grid: Joi.array().items(Joi.array().items(string())),
+  // grid / info / clues are required: without them, addPuzzle reaches
+  // computePuzzleHash and crashes with a raw TypeError, which the API
+  // handler can't distinguish from an internal server error. Requiring
+  // them here lets the validation path emit a proper 400.
+  grid: Joi.array().items(Joi.array().items(string())).required(),
   info: Joi.object({
     type: string().optional(),
     title: string(),
@@ -281,7 +285,7 @@ const puzzleValidator = Joi.object({
     description: string().optional(),
     titleOverride: string().optional(),
     authorOverride: string().optional(),
-  }),
+  }).required(),
   circles: Joi.array().optional(),
   shades: Joi.array().optional(),
   images: Joi.object()
@@ -295,15 +299,73 @@ const puzzleValidator = Joi.object({
   clues: Joi.object({
     across: Joi.array(),
     down: Joi.array(),
-  }),
+  }).required(),
   private: Joi.boolean().optional(),
   contest: Joi.boolean().optional(),
 });
 
+// Some upstream .puz generators (esp. ones that did PDF→text extraction
+// of NYT/Vulture/Morning Brew puzzles) replace characters they couldn't
+// render — card suits, decorative emoji — with the literal three chars
+// "[?]". We've accumulated ~100 of these in prod from external bots
+// hitting this endpoint over the past year. Reject new uploads with
+// this marker so we don't keep collecting them, and give a clear
+// message pointing the uploader at the actual problem (their source).
+const BROKEN_PLACEHOLDER = '[?]';
+
+function findBrokenPlaceholderField(puzzle: any): string | null {
+  const info = puzzle?.info;
+  if (info && typeof info === 'object') {
+    // Includes titleOverride / authorOverride because the puzzle list and
+    // chat header display those preferentially over the underlying
+    // title / author (see COALESCE(..., 'title') queries elsewhere in this
+    // file). An upload that puts "[?]" into the override would otherwise
+    // bypass this scan and still surface the broken text to users.
+    for (const key of [
+      'title',
+      'author',
+      'description',
+      'copyright',
+      'note',
+      'titleOverride',
+      'authorOverride',
+    ]) {
+      const val = info[key];
+      if (typeof val === 'string' && val.includes(BROKEN_PLACEHOLDER)) {
+        return `info.${key}`;
+      }
+    }
+  }
+  const clues = puzzle?.clues;
+  if (clues && typeof clues === 'object') {
+    for (const direction of ['across', 'down'] as const) {
+      const arr = clues[direction];
+      if (!Array.isArray(arr)) continue;
+      for (let i = 0; i < arr.length; i += 1) {
+        const clue = arr[i];
+        if (typeof clue === 'string' && clue.includes(BROKEN_PLACEHOLDER)) {
+          return `clues.${direction}[${i}]`;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function validatePuzzle(puzzle: any) {
   const {error} = puzzleValidator.validate(puzzle);
   if (error) {
-    throw new Error(error.message);
+    // Prefix so the API handler's `startsWith('Invalid puzzle')` check
+    // catches Joi failures too and surfaces them as 400 (not 500).
+    throw new Error(`Invalid puzzle: ${error.message}`);
+  }
+  const brokenField = findBrokenPlaceholderField(puzzle);
+  if (brokenField) {
+    throw new Error(
+      `Invalid puzzle: ${brokenField} contains "[?]" placeholders, which usually means the source ` +
+        `pipeline stripped a card suit or decorative emoji. Try re-exporting from iPUZ, or fix the ` +
+        `source file before re-uploading.`
+    );
   }
 }
 

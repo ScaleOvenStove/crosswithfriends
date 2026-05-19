@@ -1,0 +1,21 @@
+{
+  "version": "http://ipuz.org/v2",
+  "kind": ["http://ipuz.org/crossword#1"],
+  "dimensions": {"width": 3, "height": 3},
+  "title": "Suit Test (clean)",
+  "author": "tester",
+  "puzzle": [
+    [1, 2, 3],
+    [4, 0, 0],
+    [5, 0, 0]
+  ],
+  "solution": [
+    ["A", "B", "C"],
+    ["D", "E", "F"],
+    ["G", "H", "I"]
+  ],
+  "clues": {
+    "Across": [[1, "Top row"], [4, "Middle row"], [5, "Bottom row"]],
+    "Down": [[1, "Left col"], [2, "Middle col"], [3, "Right col"]]
+  }
+}

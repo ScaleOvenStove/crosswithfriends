@@ -485,6 +485,14 @@ describe('addPuzzle', () => {
     await expect(addPuzzle(invalidPuzzle as any)).rejects.toThrow();
   });
 
+  it('rejects an empty/incomplete puzzle object with an Invalid puzzle: error (becomes 400, not 500)', async () => {
+    // Without grid/info/clues as .required(), Joi accepted {} and addPuzzle
+    // reached computePuzzleHash, throwing a raw TypeError that bubbled up
+    // as a 500. The validator now rejects this shape so the API can return
+    // a proper 400.
+    await expect(addPuzzle({} as any, false, 'empty-pid')).rejects.toThrow(/^Invalid puzzle:/);
+  });
+
   it('accepts puzzle with data URI images', async () => {
     pool.query.mockResolvedValue({rows: []});
     const puzzleWithImages = {
@@ -502,6 +510,56 @@ describe('addPuzzle', () => {
     await expect(addPuzzle(puzzleWithBadImages as any, false, 'bad-pid')).rejects.toThrow(
       'Image values must be data: URIs'
     );
+  });
+
+  it('rejects puzzle whose clue contains the upstream "[?]" placeholder', async () => {
+    const puzzleWithBrokenClue = {
+      ...validPuzzle,
+      clues: {across: ['clue1', 'clue2'], down: ['ok', 'A[?] 9[?] 6[?] 4[?] 2[?], e.g.']},
+    };
+    await expect(addPuzzle(puzzleWithBrokenClue as any, false, 'broken-pid')).rejects.toThrow(
+      /clues\.down\[1\] contains "\[\?\]"/
+    );
+  });
+
+  it('rejects puzzle whose title contains the upstream "[?]" placeholder', async () => {
+    const puzzleWithBrokenTitle = {
+      ...validPuzzle,
+      info: {...validPuzzle.info, title: 'Moral High Ground [?]'},
+    };
+    await expect(addPuzzle(puzzleWithBrokenTitle as any, false, 'broken-title-pid')).rejects.toThrow(
+      /info\.title contains "\[\?\]"/
+    );
+  });
+
+  it('rejects puzzle whose titleOverride contains "[?]" (overrides display the override)', async () => {
+    // The puzzle list / chat header show titleOverride preferentially over
+    // title via COALESCE — a broken override would surface to users even
+    // if the underlying title was clean.
+    const puzzleWithBrokenOverride = {
+      ...validPuzzle,
+      info: {...validPuzzle.info, titleOverride: 'My version [?]'},
+    };
+    await expect(addPuzzle(puzzleWithBrokenOverride as any, false, 'broken-override-pid')).rejects.toThrow(
+      /info\.titleOverride contains "\[\?\]"/
+    );
+  });
+
+  it('accepts a puzzle that mentions [?] outside the scanned fields (e.g. in grid)', async () => {
+    // The scan covers info text + clues only; grid solutions are not scanned
+    // because crossword cells are single letters and "[?]" couldn't be a
+    // real solution anyway. Confirm we don't false-positive on adjacent data.
+    pool.query.mockResolvedValue({rows: []});
+    const fineExceptForGrid = {
+      ...validPuzzle,
+      // A solution string with brackets/? — unlikely in practice, but
+      // documents the scope of the validator.
+      grid: [
+        ['A', '[?]'],
+        ['C', 'D'],
+      ],
+    };
+    await expect(addPuzzle(fineExceptForGrid as any, false, 'grid-pid')).resolves.not.toThrow();
   });
 });
 

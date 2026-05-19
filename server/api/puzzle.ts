@@ -36,7 +36,7 @@ const router = express.Router();
  *                 pid: {type: string}
  *                 duplicate: {type: string, description: PID of existing duplicate if found}
  */
-router.post<{}, AddPuzzleResponse, AddPuzzleRequest>('/', async (req, res) => {
+router.post<{}, AddPuzzleResponse | {error: string}, AddPuzzleRequest>('/', async (req, res, next) => {
   // Optional auth: extract userId if token is present
   let userId: string | null = null;
   const authHeader = req.headers.authorization;
@@ -45,11 +45,23 @@ router.post<{}, AddPuzzleResponse, AddPuzzleRequest>('/', async (req, res) => {
     if (payload) userId = payload.userId;
   }
 
-  const result = await addPuzzle(req.body.puzzle, req.body.isPublic, req.body.pid, userId);
-  res.json({
-    pid: result.pid,
-    duplicate: result.duplicate || undefined,
-  });
+  try {
+    const result = await addPuzzle(req.body.puzzle, req.body.isPublic, req.body.pid, userId);
+    res.json({
+      pid: result.pid,
+      duplicate: result.duplicate || undefined,
+    });
+  } catch (e) {
+    // addPuzzle's validatePuzzle throws Error('Invalid puzzle: ...') for
+    // structural / placeholder issues. Surface those as 400s so external
+    // uploaders get something actionable instead of a generic 500.
+    if (e instanceof Error && e.message.startsWith('Invalid puzzle')) {
+      console.warn(`[POST /api/puzzle] Rejected upload: ${e.message}`);
+      res.status(400).json({error: e.message});
+      return;
+    }
+    next(e);
+  }
 });
 
 /**
