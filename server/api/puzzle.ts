@@ -3,13 +3,14 @@ import express from 'express';
 
 import {addPuzzle, getPuzzleInfo, getPuzzleStats} from '../model/puzzle';
 import {verifyAccessToken} from '../auth/jwt';
-import rateLimit from 'express-rate-limit';
+import rateLimit, {ipKeyGenerator} from 'express-rate-limit';
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   limit: 20,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip || 'unknown'),
   message: {error: 'Upload limit exceeded. You can upload up to 20 puzzles per hour.'},
   skip: () => process.env.DISABLE_RATE_LIMITS === 'true' || process.env.NODE_ENV === 'test',
 });

@@ -25,13 +25,14 @@ import {
   unlockGame,
 } from '../model/game_moderation';
 import {getSocketIo} from '../socket_instance';
-import rateLimit from 'express-rate-limit';
+import rateLimit, {ipKeyGenerator} from 'express-rate-limit';
 
 const createGameLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 20,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip || 'unknown'),
   message: {error: 'Game creation limit exceeded. Please try again later.'},
   skip: () => process.env.DISABLE_RATE_LIMITS === 'true' || process.env.NODE_ENV === 'test',
 });
