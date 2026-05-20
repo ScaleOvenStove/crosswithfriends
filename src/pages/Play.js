@@ -76,11 +76,19 @@ class Play extends Component {
     });
   }
 
-  async loadGames() {
+  async loadGames(skipCache = false) {
     try {
       const accessToken = this.context?.accessToken;
       const dfacId = getLocalId();
-      const games = await fetchUserGames(this.pid, accessToken, dfacId);
+      let games = await fetchUserGames(this.pid, accessToken, dfacId, skipCache);
+      if (!accessToken) {
+        try {
+          const guestDismissed = JSON.parse(localStorage.getItem('cwf:guest_dismissed_games') || '[]');
+          games = games.filter((g) => !guestDismissed.includes(g.gid));
+        } catch (err) {
+          console.warn('Failed to parse guest dismissed games:', err);
+        }
+      }
       this.setState({games});
     } catch (e) {
       console.warn('Failed to load games:', e);
@@ -208,13 +216,36 @@ class Play extends Component {
     const {abandonGid} = this.state;
     if (!abandonGid) return;
     const accessToken = this.context?.accessToken;
-    if (accessToken) {
-      await dismissGame(abandonGid, accessToken);
+    const priorGames = this.state.games;
+
+    if (priorGames) {
+      this.setState({
+        games: priorGames.filter((g) => g.gid !== abandonGid),
+      });
     }
-    // Re-fetch games from API (dismissed games are excluded server-side for auth'd users)
-    // For guests, the game will still appear since there's no server-side dismissal
-    await this.loadGames();
-    this.setState({abandonGid: null});
+
+    try {
+      if (accessToken) {
+        await dismissGame(abandonGid, accessToken);
+      } else {
+        try {
+          const guestDismissed = JSON.parse(localStorage.getItem('cwf:guest_dismissed_games') || '[]');
+          if (!guestDismissed.includes(abandonGid)) {
+            guestDismissed.push(abandonGid);
+            localStorage.setItem('cwf:guest_dismissed_games', JSON.stringify(guestDismissed));
+          }
+        } catch (err) {
+          console.warn('Failed to store guest dismissed game:', err);
+        }
+      }
+      await this.loadGames(true);
+    } catch (err) {
+      console.warn('Failed to abandon game:', err);
+      Sentry.captureException(err, {extra: {phase: 'confirmAbandon', gid: abandonGid}});
+      if (priorGames) this.setState({games: priorGames});
+    } finally {
+      this.setState({abandonGid: null});
+    }
   }
 
   renderMain() {

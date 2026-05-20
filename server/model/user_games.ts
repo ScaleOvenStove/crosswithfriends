@@ -36,6 +36,15 @@ export function invalidateUserGamesCacheForUser(dfacId: string): void {
   });
 }
 
+/** Invalidate caches for a specific user ID. */
+export function invalidateUserGamesCacheForUserId(userId: string): void {
+  userGamesForPuzzleCache.deleteWhere((key) => {
+    const parts = key.split(':');
+    const userSegment = parts[2];
+    return userSegment === userId;
+  });
+}
+
 /** Invalidate authenticated puzzle status cache for a specific user. */
 export function invalidateAuthPuzzleStatusCache(userId: string): void {
   authPuzzleStatusCache.delete(userId);

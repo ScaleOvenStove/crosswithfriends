@@ -7,7 +7,11 @@ import {getPuzzleSolves, invalidateInProgressCacheForUser} from '../model/puzzle
 import {getPuzzleInfo} from '../model/puzzle';
 import {verifyAccessToken} from '../auth/jwt';
 import {dismissGameForUser, undismissGameForUser} from '../model/game_dismissal';
-import {invalidateUserGamesCacheForUser, invalidateAuthPuzzleStatusCache} from '../model/user_games';
+import {
+  invalidateUserGamesCacheForUser,
+  invalidateUserGamesCacheForUserId,
+  invalidateAuthPuzzleStatusCache,
+} from '../model/user_games';
 import {getDfacIdsForUser, getUserIdByDfacId} from '../model/user';
 import {
   addGameBan,
@@ -90,6 +94,9 @@ router.post<{}, CreateGameResponse | {error: string}, CreateGameRequest>(
       // Invalidate user games cache so the "Your Games" page reflects the new game immediately
       if (req.body.dfac_id) {
         invalidateUserGamesCacheForUser(req.body.dfac_id);
+      }
+      if (userId) {
+        invalidateUserGamesCacheForUserId(userId);
       }
       res.json({gid});
     } catch (e) {
@@ -198,6 +205,7 @@ router.post<{gid: string}>('/:gid/dismiss', async (req, res, next) => {
     // the homepage until the 10-min TTL expires.
     invalidateInProgressCacheForUser(payload.userId);
     invalidateAuthPuzzleStatusCache(payload.userId);
+    invalidateUserGamesCacheForUserId(payload.userId);
     const dfacIds = await getDfacIdsForUser(payload.userId);
     for (const dfacId of dfacIds) invalidateUserGamesCacheForUser(dfacId);
     res.sendStatus(204);
@@ -238,6 +246,7 @@ router.post<{gid: string}>('/:gid/undismiss', async (req, res, next) => {
     await undismissGameForUser(payload.userId, gid);
     invalidateInProgressCacheForUser(payload.userId);
     invalidateAuthPuzzleStatusCache(payload.userId);
+    invalidateUserGamesCacheForUserId(payload.userId);
     const dfacIds = await getDfacIdsForUser(payload.userId);
     for (const dfacId of dfacIds) invalidateUserGamesCacheForUser(dfacId);
     res.sendStatus(204);
