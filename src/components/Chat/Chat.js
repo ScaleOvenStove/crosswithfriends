@@ -209,9 +209,10 @@ export default class Chat extends Component {
     link.classList.add('flashBlue');
   };
 
-  handleCopyPuzzleIdClick = () => {
+  handleCopyPuzzleIdClick = async () => {
     const pid = this.props.game?.pid;
-    if (!copyPuzzleId(pid)) return;
+    const ok = await copyPuzzleId(pid);
+    if (!ok) return;
     this.setState({copiedPuzzleId: true});
     clearTimeout(this.copyPuzzleIdTimeout);
     this.copyPuzzleIdTimeout = setTimeout(() => {
@@ -343,7 +344,7 @@ export default class Chat extends Component {
             className="chat--header--puzzle-id"
             onClick={this.handleCopyPuzzleIdClick}
             title={this.state.copiedPuzzleId ? 'Puzzle ID copied' : 'Copy puzzle ID'}
-            aria-label={`Copy puzzle ID ${pid}`}
+            aria-label={this.state.copiedPuzzleId ? 'Puzzle ID copied' : `Copy puzzle ID ${pid}`}
           >
             <span className="chat--header--puzzle-id-label">Puzzle ID</span>
             <span className="chat--header--puzzle-id-value">{pid}</span>
