@@ -73,6 +73,29 @@ class SocketManager {
     });
 
     this.io.on('connection', (socket) => {
+      // Rate-limiting middleware: drop packets if client sends >50 messages/sec
+      socket.use(([_event, ...args], next) => {
+        if (process.env.DISABLE_RATE_LIMITS === 'true' || process.env.NODE_ENV === 'test') {
+          next();
+          return;
+        }
+        const now = Date.now();
+        const rl = (socket.data.rateLimit ||= {count: 0, resetTime: now + 1000});
+        if (now > rl.resetTime) {
+          rl.count = 0;
+          rl.resetTime = now + 1000;
+        }
+        rl.count += 1;
+        if (rl.count > 50) {
+          const ack = args[args.length - 1];
+          if (typeof ack === 'function') {
+            ack({error: 'rate limit exceeded'});
+          }
+          return; // Discard packet
+        }
+        next();
+      });
+
       // ======== Game Events ========= //
       socket.on('join_game', async (gid, ack) => {
         try {

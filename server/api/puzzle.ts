@@ -3,6 +3,17 @@ import express from 'express';
 
 import {addPuzzle, getPuzzleInfo, getPuzzleStats} from '../model/puzzle';
 import {verifyAccessToken} from '../auth/jwt';
+import rateLimit, {ipKeyGenerator} from 'express-rate-limit';
+
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip || 'unknown'),
+  message: {error: 'Upload limit exceeded. You can upload up to 20 puzzles per hour.'},
+  skip: () => process.env.DISABLE_RATE_LIMITS === 'true' || process.env.NODE_ENV === 'test',
+});
 
 const router = express.Router();
 
@@ -36,33 +47,37 @@ const router = express.Router();
  *                 pid: {type: string}
  *                 duplicate: {type: string, description: PID of existing duplicate if found}
  */
-router.post<{}, AddPuzzleResponse | {error: string}, AddPuzzleRequest>('/', async (req, res, next) => {
-  // Optional auth: extract userId if token is present
-  let userId: string | null = null;
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    const payload = verifyAccessToken(authHeader.slice(7));
-    if (payload) userId = payload.userId;
-  }
-
-  try {
-    const result = await addPuzzle(req.body.puzzle, req.body.isPublic, req.body.pid, userId);
-    res.json({
-      pid: result.pid,
-      duplicate: result.duplicate || undefined,
-    });
-  } catch (e) {
-    // addPuzzle's validatePuzzle throws Error('Invalid puzzle: ...') for
-    // structural / placeholder issues. Surface those as 400s so external
-    // uploaders get something actionable instead of a generic 500.
-    if (e instanceof Error && e.message.startsWith('Invalid puzzle')) {
-      console.warn(`[POST /api/puzzle] Rejected upload: ${e.message}`);
-      res.status(400).json({error: e.message});
-      return;
+router.post<{}, AddPuzzleResponse | {error: string}, AddPuzzleRequest>(
+  '/',
+  uploadLimiter,
+  async (req, res, next) => {
+    // Optional auth: extract userId if token is present
+    let userId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const payload = verifyAccessToken(authHeader.slice(7));
+      if (payload) userId = payload.userId;
     }
-    next(e);
+
+    try {
+      const result = await addPuzzle(req.body.puzzle, req.body.isPublic, req.body.pid, userId);
+      res.json({
+        pid: result.pid,
+        duplicate: result.duplicate || undefined,
+      });
+    } catch (e) {
+      // addPuzzle's validatePuzzle throws Error('Invalid puzzle: ...') for
+      // structural / placeholder issues. Surface those as 400s so external
+      // uploaders get something actionable instead of a generic 500.
+      if (e instanceof Error && e.message.startsWith('Invalid puzzle')) {
+        console.warn(`[POST /api/puzzle] Rejected upload: ${e.message}`);
+        res.status(400).json({error: e.message});
+        return;
+      }
+      next(e);
+    }
   }
-});
+);
 
 /**
  * @openapi

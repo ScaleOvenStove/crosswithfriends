@@ -31,6 +31,7 @@ function createMockIo() {
     rooms,
     join: jest.fn((room: string) => rooms.add(room)),
     leave: jest.fn((room: string) => rooms.delete(room)),
+    use: jest.fn(),
     on: jest.fn((event: string, handler: AnyFn) => {
       socketHandlers[event] = handler;
     }),

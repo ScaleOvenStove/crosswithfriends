@@ -2,7 +2,6 @@
 //
 // These are the endpoints most likely to cause DB pressure under load:
 //   - GET /api/puzzle_list  (complex SQL with trigram search, filters, joins)
-//   - POST /api/game-progress (replays game events to compute %)
 //   - GET /api/user-stats/:userId (aggregation queries across puzzle_solves)
 //   - GET /api/game-snapshot/:gid
 //   - GET /api/puzzle/:pid/info
@@ -14,7 +13,6 @@ import {BASE_URL, defaultThresholds, getStages} from './config.js';
 
 // Custom metrics per endpoint so you can pinpoint which one is slow.
 const puzzleListDuration = new Trend('puzzle_list_duration', true);
-const gameProgressDuration = new Trend('game_progress_duration', true);
 const puzzleInfoDuration = new Trend('puzzle_info_duration', true);
 const errorRate = new Rate('errors');
 
@@ -23,7 +21,6 @@ export const options = {
   thresholds: {
     ...defaultThresholds,
     puzzle_list_duration: ['p(95)<800'], // allow more for this heavy query
-    game_progress_duration: ['p(95)<600'],
     puzzle_info_duration: ['p(95)<250'],
   },
 };
@@ -58,28 +55,6 @@ export default function () {
     const res = http.get(url, {tags: {name: 'GET /api/puzzle_list (search)'}});
     puzzleListDuration.add(res.timings.duration);
     check(res, {'puzzle_list search: status 200': (r) => r.status === 200});
-  }
-
-  sleep(0.5);
-
-  // --- Game progress (batch event replay) ---
-  {
-    // Use placeholder gids — the endpoint returns {} for unknown gids, which
-    // still exercises the query path. Replace with real gids for staging tests.
-    // Default gids from seed.sql (lt-game-1 through lt-game-2000)
-    const gids = __ENV.TEST_GIDS
-      ? __ENV.TEST_GIDS.split(',')
-      : ['lt-game-1', 'lt-game-50', 'lt-game-100', 'lt-game-500', 'lt-game-1000'];
-    const res = http.post(
-      `${BASE_URL}/api/game-progress`,
-      JSON.stringify({gids}),
-      {headers: {'Content-Type': 'application/json'}, tags: {name: 'POST /api/game-progress'}}
-    );
-    gameProgressDuration.add(res.timings.duration);
-    const ok = check(res, {
-      'game-progress: status 200': (r) => r.status === 200,
-    });
-    errorRate.add(!ok);
   }
 
   sleep(0.5);

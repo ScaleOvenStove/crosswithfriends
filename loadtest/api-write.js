@@ -4,7 +4,6 @@
 // contention or slow down under concurrent load:
 //   - POST /api/game (create game — counter increment + event insert)
 //   - POST /api/record_solve/:pid (solve recording + snapshot save)
-//   - POST /api/game-progress (read, but triggers event replay)
 //
 // IMPORTANT: This test creates real data. Only run against a test/staging
 // database, never production. Set BASE_URL to your staging server.
