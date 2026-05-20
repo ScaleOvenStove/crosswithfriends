@@ -48,11 +48,12 @@ class Game extends Component {
       locked: false,
     };
     this.initializeUser();
-    window.addEventListener('resize', () => {
+    this.handleResize = () => {
       this.setState({
         mobile: isMobile(),
       });
-    });
+    };
+    window.addEventListener('resize', this.handleResize);
     this.initialUsername =
       localStorage.getItem(this.usernameKey) !== null
         ? // If localStorage has a username for this game use that, if not
@@ -307,6 +308,7 @@ class Game extends Component {
   componentWillUnmount() {
     if (this._retryTimer) clearInterval(this._retryTimer);
     if (this._connectionTimer) clearTimeout(this._connectionTimer);
+    window.removeEventListener('resize', this.handleResize);
   }
 
   componentDidUpdate(prevProps, prevState) {
