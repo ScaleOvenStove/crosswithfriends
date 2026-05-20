@@ -20,6 +20,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import InfoDialog from '../common/InfoDialog';
 import AuthContext from '../../lib/AuthContext';
 import {kickPlayer, unkickPlayer} from '../../api/create_game';
+import {copyPuzzleId} from './puzzleId';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -37,6 +38,7 @@ export default class Chat extends Component {
       kickTarget: null,
       unkickTarget: null,
       showLockInfo: false,
+      copiedPuzzleId: false,
     };
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
@@ -135,6 +137,10 @@ export default class Chat extends Component {
     this.handleUpdateDisplayName(username);
   }
 
+  componentWillUnmount() {
+    clearTimeout(this.copyPuzzleIdTimeout);
+  }
+
   static get usernameKey() {
     return `username_${window.location.href}`;
   }
@@ -201,6 +207,17 @@ export default class Chat extends Component {
     // Force reflow to restart CSS animation
     void link.offsetWidth;
     link.classList.add('flashBlue');
+  };
+
+  handleCopyPuzzleIdClick = async () => {
+    const pid = this.props.game?.pid;
+    const ok = await copyPuzzleId(pid);
+    if (!ok) return;
+    this.setState({copiedPuzzleId: true});
+    clearTimeout(this.copyPuzzleIdTimeout);
+    this.copyPuzzleIdTimeout = setTimeout(() => {
+      this.setState({copiedPuzzleId: false});
+    }, 1200);
   };
 
   handleShareScoreClick = () => {
@@ -320,6 +337,19 @@ export default class Chat extends Component {
             Battle
             {bid}
           </div>
+        )}
+        {pid && (
+          <button
+            type="button"
+            className="chat--header--puzzle-id"
+            onClick={this.handleCopyPuzzleIdClick}
+            title={this.state.copiedPuzzleId ? 'Puzzle ID copied' : 'Copy puzzle ID'}
+            aria-label={this.state.copiedPuzzleId ? 'Puzzle ID copied' : `Copy puzzle ID ${pid}`}
+          >
+            <span className="chat--header--puzzle-id-label">Puzzle ID</span>
+            <span className="chat--header--puzzle-id-value">{pid}</span>
+            {this.state.copiedPuzzleId && <span className="chat--header--puzzle-id-copied">Copied</span>}
+          </button>
         )}
         {pid && <PuzzleStatsLine pid={String(pid)} />}
         {pid && <RatingWidget pid={String(pid)} />}
