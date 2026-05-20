@@ -72,6 +72,36 @@ export default function Help() {
           and author at upload time if you want a custom name.
         </p>
 
+        <h2>Game Moderation &amp; Controls</h2>
+
+        <h3>How do I manage access to a game room I created?</h3>
+        <p>
+          As the creator and owner of a game room, you have access to room controls in the game&apos;s
+          settings (requires being signed in). You can lock the game room to prevent any new players from
+          joining, while allowing active participants to continue solving.
+        </p>
+
+        <h3>Can I kick or ban players from a game room?</h3>
+        <p>
+          Yes. If a user is disrupting your game, the owner (requires being signed in) can kick/ban them from
+          the room. This will immediately disconnect their session and permanently prevent them from rejoining
+          the room.
+        </p>
+
+        <h3>How do I restrict who can Check, Reveal, or Reset answers?</h3>
+        <p>
+          To prevent accidental resets or cheats in competitive solves, owners (requires being signed in) can
+          restrict Check, Reveal, and Reset actions to the owner only. You can configure these restrictions
+          from the game settings/moderation menu.
+        </p>
+
+        <h3>Are there any limits on uploads or room creation?</h3>
+        <p>
+          Yes. To prevent abuse and keep the site fast for everyone, there are rate limits in place: you can
+          upload up to 20 puzzles per hour and create up to 20 game rooms every 15 minutes. Standard gameplay
+          is never restricted by these limits.
+        </p>
+
         <h2>In-Game Features</h2>
 
         <h3>How do I check, reveal, or reset my answers?</h3>
