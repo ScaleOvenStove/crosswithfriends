@@ -25,6 +25,17 @@ import {
   unlockGame,
 } from '../model/game_moderation';
 import {getSocketIo} from '../socket_instance';
+import rateLimit, {ipKeyGenerator} from 'express-rate-limit';
+
+const createGameLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip || 'unknown'),
+  message: {error: 'Game creation limit exceeded. Please try again later.'},
+  skip: () => process.env.DISABLE_RATE_LIMITS === 'true' || process.env.NODE_ENV === 'test',
+});
 
 const router = express.Router();
 
@@ -56,39 +67,43 @@ const router = express.Router();
  *                 gid: {type: string}
  *       404: {description: Puzzle not found}
  */
-router.post<{}, CreateGameResponse | {error: string}, CreateGameRequest>('/', async (req, res, next) => {
-  try {
-    // Optional auth — if the caller is signed in, stamp their user_id onto
-    // the create event's creator field. The dfac_id from the body is the
-    // fallback identity for guests. Either is enough to anchor ownership;
-    // both is best (covers sign-out -> rejoin as guest).
-    let userId: string | null = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith('Bearer ')) {
-      const payload = verifyAccessToken(authHeader.slice(7));
-      if (payload) userId = payload.userId;
-    }
+router.post<{}, CreateGameResponse | {error: string}, CreateGameRequest>(
+  '/',
+  createGameLimiter,
+  async (req, res, next) => {
+    try {
+      // Optional auth — if the caller is signed in, stamp their user_id onto
+      // the create event's creator field. The dfac_id from the body is the
+      // fallback identity for guests. Either is enough to anchor ownership;
+      // both is best (covers sign-out -> rejoin as guest).
+      let userId: string | null = null;
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        const payload = verifyAccessToken(authHeader.slice(7));
+        if (payload) userId = payload.userId;
+      }
 
-    const gid = await addInitialGameEvent(req.body.gid, req.body.pid, {
-      userId,
-      dfacId: req.body.dfac_id,
-    });
-    // Invalidate user games cache so the "Your Games" page reflects the new game immediately
-    if (req.body.dfac_id) {
-      invalidateUserGamesCacheForUser(req.body.dfac_id);
-    }
-    res.json({gid});
-  } catch (e) {
-    if (e instanceof Error && e.message.startsWith('Puzzle not found')) {
-      console.error(`[POST /api/game] ${e.message} (gid=${req.body.gid}, pid=${req.body.pid})`);
-      res.status(404).json({error: e.message});
-    } else {
-      console.error(`[POST /api/game] Unexpected error (gid=${req.body.gid}, pid=${req.body.pid}):`, e);
-      Sentry.captureException(e, {extra: {gid: req.body.gid, pid: req.body.pid}});
-      next(e);
+      const gid = await addInitialGameEvent(req.body.gid, req.body.pid, {
+        userId,
+        dfacId: req.body.dfac_id,
+      });
+      // Invalidate user games cache so the "Your Games" page reflects the new game immediately
+      if (req.body.dfac_id) {
+        invalidateUserGamesCacheForUser(req.body.dfac_id);
+      }
+      res.json({gid});
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith('Puzzle not found')) {
+        console.error(`[POST /api/game] ${e.message} (gid=${req.body.gid}, pid=${req.body.pid})`);
+        res.status(404).json({error: e.message});
+      } else {
+        console.error(`[POST /api/game] Unexpected error (gid=${req.body.gid}, pid=${req.body.pid}):`, e);
+        Sentry.captureException(e, {extra: {gid: req.body.gid, pid: req.body.pid}});
+        next(e);
+      }
     }
   }
-});
+);
 
 /**
  * @openapi
