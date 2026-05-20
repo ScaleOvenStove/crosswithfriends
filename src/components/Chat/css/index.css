@@ -58,6 +58,51 @@
   font-style: italic;
 }
 
+.chat--header--puzzle-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: #555;
+  background: #f7f7f7;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+}
+
+.chat--header--puzzle-id:hover {
+  cursor: pointer;
+  background: #eee;
+}
+
+.chat--header--puzzle-id-label {
+  font-weight: 600;
+}
+
+.chat--header--puzzle-id-value {
+  overflow-wrap: anywhere;
+  font-family: monospace;
+}
+
+.chat--header--puzzle-id-copied {
+  color: var(--main-blue);
+  font-weight: 600;
+}
+
+.dark .chat--header--puzzle-id {
+  color: rgb(255 255 255 / 72%);
+  background: rgb(255 255 255 / 8%);
+  border-color: rgb(255 255 255 / 18%);
+}
+
+.dark .chat--header--puzzle-id:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
 .chat--lock-chip {
   display: inline-flex;
   align-items: center;
