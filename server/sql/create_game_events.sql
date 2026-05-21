@@ -13,7 +13,11 @@ CREATE TABLE public.game_events
     event_payload json
 )
 WITH (
-    OIDS = FALSE
+    OIDS = FALSE,
+    -- High-write table: tune autovacuum to run sooner and harder than defaults.
+    autovacuum_vacuum_scale_factor = 0.02,
+    autovacuum_vacuum_cost_limit = 1000,
+    autovacuum_vacuum_cost_delay = 10
 )
 TABLESPACE pg_default;
 

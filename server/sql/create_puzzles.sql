@@ -54,3 +54,12 @@ CREATE INDEX puzzle_pid_numeric_desc
 
 CREATE UNIQUE INDEX IF NOT EXISTS puzzles_content_hash_public
     ON puzzles (content_hash) WHERE is_public = true AND content_hash IS NOT NULL;
+
+-- Sort index for the rating_desc puzzle list (rating_weighted is the
+-- Bayesian-shrunk score; NULL until the puzzle has any ratings).
+CREATE INDEX IF NOT EXISTS puzzles_rating_weighted_idx
+    ON public.puzzles (rating_weighted DESC NULLS LAST) WHERE rating_weighted IS NOT NULL;
+
+-- Lookup by uploader for "my uploads" / profile queries.
+CREATE INDEX IF NOT EXISTS puzzles_uploaded_by_idx
+    ON public.puzzles (uploaded_by) WHERE uploaded_by IS NOT NULL;
