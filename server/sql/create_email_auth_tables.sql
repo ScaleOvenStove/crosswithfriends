@@ -26,3 +26,11 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
   used_at TIMESTAMP WITHOUT TIME ZONE
 );
+
+-- Partial indexes on user_id for fast lookup of unused tokens (verify/reset flows
+-- scan WHERE user_id = $1 AND used_at IS NULL).
+CREATE INDEX IF NOT EXISTS email_verification_tokens_user_id_idx
+  ON email_verification_tokens (user_id) WHERE used_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx
+  ON password_reset_tokens (user_id) WHERE used_at IS NULL;

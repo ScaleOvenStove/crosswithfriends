@@ -20,6 +20,10 @@ GRANT ALL ON SCHEMA public TO dfacadmin;
 -- Extension needed for trigram index on puzzles
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- pg_stat_statements is enabled on production (Render manages this at the
+-- cluster level). Local installs don't need it; it requires superuser and
+-- shared_preload_libraries='pg_stat_statements', so we skip it here.
+
 -- ============================================================
 -- 1. users (no dependencies)
 -- ============================================================
