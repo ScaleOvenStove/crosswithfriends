@@ -91,7 +91,11 @@ export async function getUserSolveStats(userId: string): Promise<{
       FROM all_solves WHERE dow IS NOT NULL GROUP BY dow`,
       [userId]
     ),
-    // Recent solve history — only extract needed JSONB fields
+    // Solve history — extracts needed JSONB fields. Limit is intentionally
+    // generous (rather than just "recent N"): the frontend uses this list
+    // to overlay 'solved' status on the puzzle list, so a low cap silently
+    // drops Complete flags for heavy users. Proper fix is a separate
+    // lightweight solvedPids endpoint; this LIMIT is the interim.
     pool.query(
       `SELECT
          ps.pid, ps.gid, ps.time_taken_to_solve, ps.solved_time, ps.player_count,
@@ -108,7 +112,7 @@ export async function getUserSolveStats(userId: string): Promise<{
        JOIN puzzles p ON ps.pid = p.pid
        WHERE ps.user_id = $1
        ORDER BY ps.solved_time DESC
-       LIMIT 100`,
+       LIMIT 5000`,
       [userId]
     ),
   ]);
