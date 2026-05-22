@@ -44,7 +44,7 @@ const router = express.Router();
  *                 history: {type: array, items: {type: object}}
  *                 uploads: {type: array, items: {type: object}}
  *                 inProgress: {type: array, items: {type: object}, description: Only present for the profile owner}
- *                 solvedPids: {type: array, items: {type: string}, description: "Distinct pids the user has solved. Only present for the profile owner. Used by the puzzle list to overlay the Complete badge."}
+ *                 solvedPids: {type: array, items: {type: string}, description: "Distinct pids the user has solved. Populated only for the profile owner (empty array otherwise). Used by the puzzle list to overlay the Complete badge."}
  *       404: {description: User not found}
  */
 router.get('/:userId', async (req, res, next) => {
