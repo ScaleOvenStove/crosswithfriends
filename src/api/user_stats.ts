@@ -78,6 +78,9 @@ export interface UserStatsResponse {
   uploads?: UploadedPuzzle[];
   inProgress?: InProgressGame[];
   snapshotStatuses?: {[pid: string]: 'solved' | 'started'};
+  // Distinct pids the user has solved. Owner-only. Drives the Complete-badge
+  // overlay on the homepage/search puzzle list; cheaper than walking history.
+  solvedPids?: string[];
 }
 
 export async function getUserStats(

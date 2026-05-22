@@ -13,6 +13,19 @@ export function invalidateInProgressCacheForUser(userId: string): void {
   inProgressGamesCache.delete(userId);
 }
 
+// ---- In-memory TTL cache for a user's solved-pid set ----
+// Drives the homepage/search Complete badge overlay. Changes infrequently
+// (only on recordSolve + link-identity backfill), so caching is safe.
+const solvedPidsCache = new TTLCache<string[]>({ttlMs: 10 * 60_000, maxSize: 2_000});
+
+export function clearSolvedPidsCache(): void {
+  solvedPidsCache.clear();
+}
+
+export function invalidateSolvedPidsCacheForUser(userId: string): void {
+  solvedPidsCache.delete(userId);
+}
+
 export type UserSolveHistoryItem = {
   pid: string;
   gid: string;
@@ -40,6 +53,23 @@ export type DayOfWeekStats = {
   count: number;
   avgTime: number;
 };
+
+/**
+ * Distinct pids the user has at least one puzzle_solves row for.
+ *
+ * Used by the homepage/search puzzle list to overlay the Complete badge.
+ * Replaces overlaying from `history` (which has a row cap and was silently
+ * dropping the badge for users with many solves).
+ */
+export async function getSolvedPidsForUser(userId: string): Promise<string[]> {
+  return solvedPidsCache.getOrFetch(userId, async () => {
+    const result = await pool.query<{pid: string}>(
+      `SELECT DISTINCT pid FROM puzzle_solves WHERE user_id = $1`,
+      [userId]
+    );
+    return result.rows.map((r) => r.pid);
+  });
+}
 
 export async function getUserSolveStats(userId: string): Promise<{
   totalSolved: number;

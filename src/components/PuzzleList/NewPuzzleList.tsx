@@ -60,6 +60,12 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       getUserStats(user.id, accessToken)
         .then((stats) => {
           if (stale || !stats) return;
+          // If the server couldn't produce solvedPids (transient failure), skip
+          // the status update entirely. Falling through with an empty solved
+          // set would persist authoritative-looking "no solves" data to
+          // localStorage and the user would lose their Complete badges until
+          // the next successful fetch.
+          if (stats.solvedPids === undefined) return;
           const statuses: PuzzleStatuses = {};
           // Apply snapshot-based statuses first (fallback from game_snapshots)
           if (stats.snapshotStatuses) {
@@ -69,9 +75,11 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
           (stats.inProgress || []).forEach((item) => {
             if (!statuses[item.pid]) statuses[item.pid] = 'started';
           });
-          // Overlay solved from puzzle_solves (highest priority)
-          (stats.history || []).forEach((item) => {
-            statuses[item.pid] = 'solved';
+          // Overlay solved from puzzle_solves (highest priority). solvedPids is
+          // the full distinct-pid set; history is capped and was silently
+          // dropping the Complete badge for users with many solves.
+          stats.solvedPids.forEach((pid) => {
+            statuses[pid] = 'solved';
           });
           updateStatuses(statuses);
         })
