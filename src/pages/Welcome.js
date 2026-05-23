@@ -41,10 +41,21 @@ export default class Welcome extends Component {
     this.mobile = isMobile();
     this.searchInput = React.createRef();
     this.nav = React.createRef();
+    // Initialize to 0 so the navStyle/navTextStyle/navLinkStyle getters
+    // produce real CSS values (0 px translateY, 0 px top, etc.) instead
+    // of NaN if the ref hasn't attached yet. Both work in practice (CSS
+    // ignores NaN), but 0 is cleaner and avoids React warnings about
+    // NaN values in inline style props.
+    this.navHeight = 0;
   }
 
   componentDidMount() {
-    this.navHeight = this.nav.current.getBoundingClientRect().height;
+    // Nav returns null when `hidden` is set, and ref attachment can also
+    // race with componentDidMount in dev/strict-mode double-render. Guard
+    // the deref so we don't throw a null-pointer error on the homepage.
+    if (this.nav.current) {
+      this.navHeight = this.nav.current.getBoundingClientRect().height;
+    }
   }
 
   get showingSidebar() {

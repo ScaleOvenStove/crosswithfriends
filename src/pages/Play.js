@@ -174,7 +174,8 @@ class Play extends Component {
           redirect(this.is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`);
         } catch (e) {
           console.error('Failed to create game:', e);
-          Sentry.captureException(e);
+          // createGame already reports to Sentry for unexpected errors.
+          // Rate-limit (e.rateLimited) is WAI noise — don't double-capture.
           this.setState({creating: false, error: e.message || 'Failed to create game'});
         }
       })
@@ -194,7 +195,7 @@ class Play extends Component {
           redirect(`/fencing/${gid}`);
         } catch (e) {
           console.error('Failed to create fencing game:', e);
-          Sentry.captureException(e);
+          // Same as create() — createGame handles Sentry capture and 429 marking.
           this.setState({creating: false, error: e.message || 'Failed to create game'});
         }
       })

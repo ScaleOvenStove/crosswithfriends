@@ -37,7 +37,9 @@ const createGameLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   keyGenerator: (req) => ipKeyGenerator(req.ip || 'unknown'),
-  message: {error: 'Game creation limit exceeded. Please try again later.'},
+  message: {
+    error: "You've created several games in a short time. Take a breather and try again in a few minutes.",
+  },
   skip: () => process.env.DISABLE_RATE_LIMITS === 'true' || process.env.NODE_ENV === 'test',
 });
 

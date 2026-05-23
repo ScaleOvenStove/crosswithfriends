@@ -34,9 +34,13 @@ export default class ConfettiWrapper extends Component {
     if (jingleAudio.readyState > 0) {
       jingleAudio.currentTime = 0;
     }
-    jingleAudio.play().catch((e) => {
-      console.error('Audio play failed:', e);
-    });
+    // Mobile browsers (notably iOS Safari) reject audio.play() if the page
+    // hasn't received a user-gesture interaction yet — solving a puzzle via
+    // autoplay or programmatic reveal counts as "no interaction" by some
+    // engines. Swallow the rejection rather than logging: the catch was
+    // ending up in Sentry via the console-error integration, masquerading
+    // as a real bug.
+    jingleAudio.play().catch(() => {});
   }
 
   handleConfettiComplete() {

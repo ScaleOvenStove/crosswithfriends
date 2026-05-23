@@ -9,11 +9,21 @@ export async function createGame(
   const url = `${SERVER_URL}/api/game`;
   const headers: Record<string, string> = {'Content-Type': 'application/json'};
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(data),
-  });
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+  } catch (fetchErr) {
+    // Network-level failure: offline, DNS, CORS, aborted request. fetch()
+    // throws before we get a Response, so the HTTP-error branch below
+    // never runs. Capture here so callers don't need to (the rateLimited
+    // shortcut in Play.js skips capture for any thrown createGame error).
+    Sentry.captureException(fetchErr, {extra: {gid: data.gid, pid: data.pid, phase: 'fetch'}});
+    throw fetchErr;
+  }
   if (!resp.ok) {
     let message = `Game creation failed (${resp.status})`;
     try {
@@ -22,11 +32,26 @@ export async function createGame(
     } catch {
       // response wasn't JSON, use default message
     }
-    const err = new Error(message);
-    Sentry.captureException(err, {extra: {gid: data.gid, pid: data.pid, status: resp.status}});
+    const err = new Error(message) as Error & {rateLimited?: boolean};
+    // 429 = user mashed the create button (or hit a popular puzzle); WAI,
+    // don't pollute Sentry. Mark the error so callers can offer a softer UI.
+    if (resp.status === 429) {
+      err.rateLimited = true;
+    } else {
+      Sentry.captureException(err, {extra: {gid: data.gid, pid: data.pid, status: resp.status}});
+    }
     throw err;
   }
-  return resp.json();
+  try {
+    return await resp.json();
+  } catch (parseErr) {
+    // Response was 2xx but the body wasn't valid JSON (server bug, proxy
+    // mangling the response). The Play.js catch can no longer Sentry-capture
+    // because of the rateLimited shortcut, so this is the last chance to
+    // report it.
+    Sentry.captureException(parseErr, {extra: {gid: data.gid, pid: data.pid, phase: 'parse'}});
+    throw parseErr;
+  }
 }
 
 export async function dismissGame(gid: string, accessToken: string): Promise<boolean> {
