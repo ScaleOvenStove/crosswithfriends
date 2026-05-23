@@ -65,6 +65,32 @@ const isChunkLoadError = (err) => {
     /Unable to preload CSS/i.test(message)
   );
 };
+// sessionStorage can throw SecurityError in privacy-restricted modes
+// (Safari "Block All Cookies", some embedded WebViews, in-app browsers).
+// Treat any read/write failure as "no flag set" — the worst case is we
+// reload once per stale-chunk error instead of once per session, which is
+// still strictly better than the un-retried "frozen UI" we're replacing.
+const safeStorageGet = (key) => {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const safeStorageSet = (key, value) => {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    /* storage blocked — proceed without the loop guard */
+  }
+};
+const safeStorageRemove = (key) => {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* storage blocked — nothing to do */
+  }
+};
 const lazyWithRetry = (importFn) =>
   React.lazy(async () => {
     try {
@@ -72,11 +98,11 @@ const lazyWithRetry = (importFn) =>
       // Successful load — clear the flag so a *future* stale deploy can
       // trigger another reload (otherwise we'd only ever auto-recover once
       // per browser session).
-      sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+      safeStorageRemove(CHUNK_RELOAD_KEY);
       return mod;
     } catch (err) {
-      if (isChunkLoadError(err) && !sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
-        sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+      if (isChunkLoadError(err) && !safeStorageGet(CHUNK_RELOAD_KEY)) {
+        safeStorageSet(CHUNK_RELOAD_KEY, '1');
         window.location.reload();
         // Hang the import so React doesn't render the error boundary during
         // the reload window.
