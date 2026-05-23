@@ -55,6 +55,10 @@ export default class Welcome extends Component {
     // the deref so we don't throw a null-pointer error on the homepage.
     if (this.nav.current) {
       this.navHeight = this.nav.current.getBoundingClientRect().height;
+      // First render uses navHeight=0 from the constructor, which collapses
+      // .welcome--nav to height: 0 on mobile and lets the search bar overlap
+      // the nav. Force a re-render now that we have the real measurement.
+      this.forceUpdate();
     }
   }
 
