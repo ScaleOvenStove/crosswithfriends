@@ -64,7 +64,10 @@ describe('API Rate Limiters Integration', () => {
       limit: 2, // lowered for testing
       standardHeaders: 'draft-7' as const,
       legacyHeaders: false,
-      message: {error: 'Game creation limit exceeded. Please try again later.'},
+      message: {
+        error:
+          "You've created several games in a short time. Take a breather and try again in a few minutes.",
+      },
     };
 
     it('blocks game creation after limit is exceeded', async () => {
@@ -75,7 +78,10 @@ describe('API Rate Limiters Integration', () => {
       }
       const blockedRes = await request(app).post('/test-route');
       expect(blockedRes.status).toBe(429);
-      expect(blockedRes.body).toEqual({error: 'Game creation limit exceeded. Please try again later.'});
+      expect(blockedRes.body).toEqual({
+        error:
+          "You've created several games in a short time. Take a breather and try again in a few minutes.",
+      });
     });
   });
 });
