@@ -21,6 +21,12 @@ interface Props {
 }
 
 const STORAGE_PREFIX = 'cwf:rating_prompt_dismissed:';
+// Survives the Google OAuth full-page redirect. When the user clicks
+// "Sign in" inside the rating modal, we set this flag so the modal can be
+// re-opened after the redirect lands them back on the game page (where
+// the false→true solved transition would otherwise not fire on the fresh
+// mount).
+const SIGN_IN_INTENT_PREFIX = 'cwf:rating_signin_intent:';
 const STAR_VALUES = [1, 2, 3, 4, 5];
 
 interface StarButtonProps {
@@ -71,6 +77,34 @@ function writeDismissed(pid: string): void {
   }
 }
 
+function signInIntentKey(pid: string): string {
+  return `${SIGN_IN_INTENT_PREFIX}${pid}`;
+}
+
+function readSignInIntent(pid: string): boolean {
+  try {
+    return sessionStorage.getItem(signInIntentKey(pid)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeSignInIntent(pid: string): void {
+  try {
+    sessionStorage.setItem(signInIntentKey(pid), '1');
+  } catch {
+    // sessionStorage may be unavailable
+  }
+}
+
+function clearSignInIntent(pid: string): void {
+  try {
+    sessionStorage.removeItem(signInIntentKey(pid));
+  } catch {
+    // sessionStorage may be unavailable
+  }
+}
+
 export default function RatingCompletionModal({
   pid,
   solved,
@@ -86,6 +120,7 @@ export default function RatingCompletionModal({
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [submittedRating, setSubmittedRating] = useState<number | null>(null);
   const [eligibilityError, setEligibilityError] = useState<number | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   // Track previous solved state so we only open on a false→true transition.
@@ -102,9 +137,19 @@ export default function RatingCompletionModal({
     const wasSolved = wasSolvedRef.current;
     wasSolvedRef.current = solved;
     if (!pid) return;
-    if (!solved || wasSolved) return;
+    if (!solved) return;
     if (readDismissed(pid)) return;
-    setOpen(true);
+    // Two open conditions:
+    //   1. Normal: false→true solved transition on this mount (just solved).
+    //   2. Sign-in return: the user clicked "Sign in" before solving was
+    //      remounted (Google OAuth full-page redirect), so wasSolved=true
+    //      and the transition check would skip. The intent flag carries
+    //      "user wanted to rate" across the redirect.
+    const cameBackFromSignIn = readSignInIntent(pid);
+    if (!wasSolved || cameBackFromSignIn) {
+      if (cameBackFromSignIn) clearSignInIntent(pid);
+      setOpen(true);
+    }
   }, [solved, pid]);
 
   const handleClose = useCallback(() => {
@@ -127,8 +172,13 @@ export default function RatingCompletionModal({
       setEligibilityError(null);
       try {
         await submitPuzzleRating(pid, rating, accessToken);
+        // Persist that the user has acted on this prompt so we don't pop it
+        // again next visit, but keep the modal open so they can still hit
+        // "Save replay" or just acknowledge with "Done". Previously the
+        // modal closed immediately after rating, hiding the save-replay
+        // button before it could be used.
         if (pid) writeDismissed(pid);
-        setOpen(false);
+        setSubmittedRating(rating);
       } catch (err) {
         if (err instanceof RatingNotEligibleError) {
           setEligibilityError(err.thresholdPercent);
@@ -142,7 +192,14 @@ export default function RatingCompletionModal({
     [pid, accessToken]
   );
 
-  const handleOpenLogin = useCallback(() => setShowLogin(true), []);
+  const handleOpenLogin = useCallback(() => {
+    // Persist that the user wanted to rate, in case sign-in goes through
+    // the Google OAuth full-page redirect — the modal will re-open on
+    // return. No-op for the email/password flow where the LoginModal
+    // resolves inline without a redirect.
+    if (pid) writeSignInIntent(pid);
+    setShowLogin(true);
+  }, [pid]);
   const handleCloseLogin = useCallback(() => setShowLogin(false), []);
   const handleStarsLeave = useCallback(() => setHover(0), []);
   const handleOpenAutoFocus = useCallback((e: Event) => {
@@ -151,7 +208,9 @@ export default function RatingCompletionModal({
     closeButtonRef.current?.focus();
   }, []);
 
-  const display = hover;
+  // Once a rating is submitted, freeze the stars to that value (no hover
+  // preview) so the visual confirms what the server now has.
+  const display = submittedRating ?? hover;
 
   return (
     <>
@@ -173,7 +232,7 @@ export default function RatingCompletionModal({
             <div className="confirm-dialog--body rating-completion--body">
               {user ? (
                 <>
-                  <p>How would you rate this puzzle?</p>
+                  <p>{submittedRating != null ? 'Thanks for rating!' : 'How would you rate this puzzle?'}</p>
                   <div className="rating-completion--stars" onMouseLeave={handleStarsLeave}>
                     {STAR_VALUES.map((n) => (
                       <StarButton
@@ -182,7 +241,7 @@ export default function RatingCompletionModal({
                         filled={n <= display}
                         onHover={setHover}
                         onClick={handleSubmit}
-                        disabled={submitting}
+                        disabled={submitting || submittedRating != null}
                       />
                     ))}
                   </div>
@@ -225,7 +284,7 @@ export default function RatingCompletionModal({
                 onClick={handleClose}
                 disabled={submitting}
               >
-                Maybe later
+                {submittedRating != null ? 'Done' : 'Maybe later'}
               </button>
             </div>
           </Dialog.Content>
