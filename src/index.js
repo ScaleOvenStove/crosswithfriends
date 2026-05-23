@@ -53,9 +53,9 @@ import {Game, Room, WrappedWelcome} from './pages';
 
 // Lazy-loaded pages (loaded on demand when route is visited).
 // When a deploy ships new bundle hashes, users with a stale index.html will
-// try to fetch the previous chunk filenames and 404. Catch that case once
-// per session and force-reload to pick up the new index.html + hashes.
-const CHUNK_RELOAD_KEY = 'cwf:chunk-reload-attempted';
+// try to fetch the previous chunk filenames and 404. Catch that case and
+// force-reload once per route to pick up the new index.html + hashes.
+const CHUNK_RELOAD_KEY_PREFIX = 'cwf:chunk-reload-attempted:';
 const isChunkLoadError = (err) => {
   const message = String(err?.message || err || '');
   return (
@@ -91,18 +91,24 @@ const safeStorageRemove = (key) => {
     /* storage blocked — nothing to do */
   }
 };
-const lazyWithRetry = (importFn) =>
+// `name` keys the per-route reload guard. Without per-route keying, a
+// reload triggered by route A failing would be cleared the moment route B
+// loads successfully, so a genuinely broken route A would loop-reload on
+// every subsequent visit instead of falling through to React's error
+// boundary. Tying the guard to the specific import keeps the loop bounded
+// per route.
+const lazyWithRetry = (name, importFn) =>
   React.lazy(async () => {
+    const key = `${CHUNK_RELOAD_KEY_PREFIX}${name}`;
     try {
       const mod = await importFn();
-      // Successful load — clear the flag so a *future* stale deploy can
-      // trigger another reload (otherwise we'd only ever auto-recover once
-      // per browser session).
-      safeStorageRemove(CHUNK_RELOAD_KEY);
+      // Same-route success — clear that route's guard so a *future* stale
+      // deploy affecting the same route can trigger another reload.
+      safeStorageRemove(key);
       return mod;
     } catch (err) {
-      if (isChunkLoadError(err) && !safeStorageGet(CHUNK_RELOAD_KEY)) {
-        safeStorageSet(CHUNK_RELOAD_KEY, '1');
+      if (isChunkLoadError(err) && !safeStorageGet(key)) {
+        safeStorageSet(key, '1');
         window.location.reload();
         // Hang the import so React doesn't render the error boundary during
         // the reload window.
@@ -112,17 +118,17 @@ const lazyWithRetry = (importFn) =>
     }
   });
 
-const Account = lazyWithRetry(() => import('./pages/Account'));
-const Fencing = lazyWithRetry(() => import('./pages/Fencing'));
-const ForgotPassword = lazyWithRetry(() => import('./pages/ForgotPassword'));
-const Help = lazyWithRetry(() => import('./pages/Help'));
-const Play = lazyWithRetry(() => import('./pages/Play'));
-const Privacy = lazyWithRetry(() => import('./pages/Privacy'));
-const Profile = lazyWithRetry(() => import('./pages/Profile'));
-const Replay = lazyWithRetry(() => import('./pages/Replay'));
-const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
-const Terms = lazyWithRetry(() => import('./pages/Terms'));
-const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
+const Account = lazyWithRetry('Account', () => import('./pages/Account'));
+const Fencing = lazyWithRetry('Fencing', () => import('./pages/Fencing'));
+const ForgotPassword = lazyWithRetry('ForgotPassword', () => import('./pages/ForgotPassword'));
+const Help = lazyWithRetry('Help', () => import('./pages/Help'));
+const Play = lazyWithRetry('Play', () => import('./pages/Play'));
+const Privacy = lazyWithRetry('Privacy', () => import('./pages/Privacy'));
+const Profile = lazyWithRetry('Profile', () => import('./pages/Profile'));
+const Replay = lazyWithRetry('Replay', () => import('./pages/Replay'));
+const ResetPassword = lazyWithRetry('ResetPassword', () => import('./pages/ResetPassword'));
+const Terms = lazyWithRetry('Terms', () => import('./pages/Terms'));
+const VerifyEmail = lazyWithRetry('VerifyEmail', () => import('./pages/VerifyEmail'));
 import GlobalContext from './lib/GlobalContext';
 import AuthContext, {AuthProvider} from './lib/AuthContext';
 import GoogleCallback from './components/Auth/GoogleCallback';
