@@ -67,9 +67,8 @@ const isChunkLoadError = (err) => {
 };
 // sessionStorage can throw SecurityError in privacy-restricted modes
 // (Safari "Block All Cookies", some embedded WebViews, in-app browsers).
-// Treat any read/write failure as "no flag set" — the worst case is we
-// reload once per stale-chunk error instead of once per session, which is
-// still strictly better than the un-retried "frozen UI" we're replacing.
+// Treat any read/write failure as "no flag set" so we don't bubble the
+// error up into the lazy import.
 const safeStorageGet = (key) => {
   try {
     return sessionStorage.getItem(key);
@@ -81,14 +80,59 @@ const safeStorageSet = (key, value) => {
   try {
     sessionStorage.setItem(key, value);
   } catch {
-    /* storage blocked — proceed without the loop guard */
+    /* storage blocked */
   }
 };
 const safeStorageRemove = (key) => {
   try {
     sessionStorage.removeItem(key);
   } catch {
-    /* storage blocked — nothing to do */
+    /* storage blocked */
+  }
+};
+// URL-param fallback guard for environments where sessionStorage is
+// unavailable (storage-only guard would loop forever on a genuinely
+// broken chunk because every read returns null and every write no-ops).
+// The URL persists across the reload itself, so the next page boot can
+// detect "we already tried" and fall through to the error boundary
+// instead of looping.
+const CHUNK_RELOAD_URL_PARAM = '_cwf_chunk_reload';
+const readUrlReloadAttempts = () => {
+  try {
+    const value = new URLSearchParams(window.location.search).get(CHUNK_RELOAD_URL_PARAM);
+    return value ? value.split(',').filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+};
+const urlHasReloadAttempt = (name) => readUrlReloadAttempts().includes(name);
+const reloadWithUrlGuard = (name) => {
+  try {
+    const url = new URL(window.location.href);
+    const attempts = readUrlReloadAttempts();
+    if (!attempts.includes(name)) attempts.push(name);
+    url.searchParams.set(CHUNK_RELOAD_URL_PARAM, attempts.join(','));
+    window.location.replace(url.toString());
+  } catch {
+    // URL APIs unavailable — fall back to a plain reload. If storage is
+    // also unavailable in this environment we may loop, but there's no
+    // way to prevent that without one of the two persistence channels.
+    window.location.reload();
+  }
+};
+const clearUrlReloadAttempt = (name) => {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(CHUNK_RELOAD_URL_PARAM)) return;
+    const remaining = readUrlReloadAttempts().filter((n) => n !== name);
+    if (remaining.length > 0) {
+      url.searchParams.set(CHUNK_RELOAD_URL_PARAM, remaining.join(','));
+    } else {
+      url.searchParams.delete(CHUNK_RELOAD_URL_PARAM);
+    }
+    window.history.replaceState(null, '', url.toString());
+  } catch {
+    /* no-op */
   }
 };
 // `name` keys the per-route reload guard. Without per-route keying, a
@@ -96,20 +140,25 @@ const safeStorageRemove = (key) => {
 // loads successfully, so a genuinely broken route A would loop-reload on
 // every subsequent visit instead of falling through to React's error
 // boundary. Tying the guard to the specific import keeps the loop bounded
-// per route.
+// per route, and the URL fallback keeps the loop bounded even when
+// sessionStorage is unavailable.
 const lazyWithRetry = (name, importFn) =>
   React.lazy(async () => {
     const key = `${CHUNK_RELOAD_KEY_PREFIX}${name}`;
     try {
       const mod = await importFn();
-      // Same-route success — clear that route's guard so a *future* stale
+      // Same-route success — clear both guard channels so a *future* stale
       // deploy affecting the same route can trigger another reload.
       safeStorageRemove(key);
+      clearUrlReloadAttempt(name);
       return mod;
     } catch (err) {
-      if (isChunkLoadError(err) && !safeStorageGet(key)) {
+      const alreadyAttempted = safeStorageGet(key) === '1' || urlHasReloadAttempt(name);
+      if (isChunkLoadError(err) && !alreadyAttempted) {
         safeStorageSet(key, '1');
-        window.location.reload();
+        // reloadWithUrlGuard also appends the route to the URL param so the
+        // guard survives a session-storage-less reload.
+        reloadWithUrlGuard(name);
         // Hang the import so React doesn't render the error boundary during
         // the reload window.
         return new Promise(() => {});
