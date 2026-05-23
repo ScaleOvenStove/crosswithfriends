@@ -16,7 +16,7 @@ overrides:
   flatted: '>=3.4.2'
   socket.io-parser: '>=4.2.6'
   axios: '>=1.15.2'
-  qs: '>=6.15.2'
+  qs: ^6.15.2
   follow-redirects: '>=1.16.0'
   postcss: '>=8.5.10'
   ip-address: '>=10.1.1'
@@ -98,7 +98,7 @@ importers:
         specifier: ^8.20.0
         version: 8.20.0
       qs:
-        specifier: '>=6.15.2'
+        specifier: ^6.15.2
         version: 6.15.2
       react:
         specifier: ^19.2.4

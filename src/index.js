@@ -51,18 +51,133 @@ import {isMobile} from './lib/jsUtils';
 // Eager-loaded pages (critical path)
 import {Game, Room, WrappedWelcome} from './pages';
 
-// Lazy-loaded pages (loaded on demand when route is visited)
-const Account = React.lazy(() => import('./pages/Account'));
-const Fencing = React.lazy(() => import('./pages/Fencing'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const Help = React.lazy(() => import('./pages/Help'));
-const Play = React.lazy(() => import('./pages/Play'));
-const Privacy = React.lazy(() => import('./pages/Privacy'));
-const Profile = React.lazy(() => import('./pages/Profile'));
-const Replay = React.lazy(() => import('./pages/Replay'));
-const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
-const Terms = React.lazy(() => import('./pages/Terms'));
-const VerifyEmail = React.lazy(() => import('./pages/VerifyEmail'));
+// Lazy-loaded pages (loaded on demand when route is visited).
+// When a deploy ships new bundle hashes, users with a stale index.html will
+// try to fetch the previous chunk filenames and 404. Catch that case and
+// force-reload once per route to pick up the new index.html + hashes.
+const CHUNK_RELOAD_KEY_PREFIX = 'cwf:chunk-reload-attempted:';
+const isChunkLoadError = (err) => {
+  const message = String(err?.message || err || '');
+  return (
+    /Failed to fetch dynamically imported module/i.test(message) ||
+    /error loading dynamically imported module/i.test(message) ||
+    /Importing a module script failed/i.test(message) ||
+    /Unable to preload CSS/i.test(message)
+  );
+};
+// sessionStorage can throw SecurityError in privacy-restricted modes
+// (Safari "Block All Cookies", some embedded WebViews, in-app browsers).
+// Treat any read/write failure as "no flag set" so we don't bubble the
+// error up into the lazy import.
+const safeStorageGet = (key) => {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const safeStorageSet = (key, value) => {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    /* storage blocked */
+  }
+};
+const safeStorageRemove = (key) => {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* storage blocked */
+  }
+};
+// URL-param fallback guard for environments where sessionStorage is
+// unavailable (storage-only guard would loop forever on a genuinely
+// broken chunk because every read returns null and every write no-ops).
+// The URL persists across the reload itself, so the next page boot can
+// detect "we already tried" and fall through to the error boundary
+// instead of looping.
+const CHUNK_RELOAD_URL_PARAM = '_cwf_chunk_reload';
+const readUrlReloadAttempts = () => {
+  try {
+    const value = new URLSearchParams(window.location.search).get(CHUNK_RELOAD_URL_PARAM);
+    return value ? value.split(',').filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+};
+const urlHasReloadAttempt = (name) => readUrlReloadAttempts().includes(name);
+const reloadWithUrlGuard = (name) => {
+  try {
+    const url = new URL(window.location.href);
+    const attempts = readUrlReloadAttempts();
+    if (!attempts.includes(name)) attempts.push(name);
+    url.searchParams.set(CHUNK_RELOAD_URL_PARAM, attempts.join(','));
+    window.location.replace(url.toString());
+  } catch {
+    // URL APIs unavailable — fall back to a plain reload. If storage is
+    // also unavailable in this environment we may loop, but there's no
+    // way to prevent that without one of the two persistence channels.
+    window.location.reload();
+  }
+};
+const clearUrlReloadAttempt = (name) => {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(CHUNK_RELOAD_URL_PARAM)) return;
+    const remaining = readUrlReloadAttempts().filter((n) => n !== name);
+    if (remaining.length > 0) {
+      url.searchParams.set(CHUNK_RELOAD_URL_PARAM, remaining.join(','));
+    } else {
+      url.searchParams.delete(CHUNK_RELOAD_URL_PARAM);
+    }
+    window.history.replaceState(null, '', url.toString());
+  } catch {
+    /* no-op */
+  }
+};
+// `name` keys the per-route reload guard. Without per-route keying, a
+// reload triggered by route A failing would be cleared the moment route B
+// loads successfully, so a genuinely broken route A would loop-reload on
+// every subsequent visit instead of falling through to React's error
+// boundary. Tying the guard to the specific import keeps the loop bounded
+// per route, and the URL fallback keeps the loop bounded even when
+// sessionStorage is unavailable.
+const lazyWithRetry = (name, importFn) =>
+  React.lazy(async () => {
+    const key = `${CHUNK_RELOAD_KEY_PREFIX}${name}`;
+    try {
+      const mod = await importFn();
+      // Same-route success — clear both guard channels so a *future* stale
+      // deploy affecting the same route can trigger another reload.
+      safeStorageRemove(key);
+      clearUrlReloadAttempt(name);
+      return mod;
+    } catch (err) {
+      const alreadyAttempted = safeStorageGet(key) === '1' || urlHasReloadAttempt(name);
+      if (isChunkLoadError(err) && !alreadyAttempted) {
+        safeStorageSet(key, '1');
+        // reloadWithUrlGuard also appends the route to the URL param so the
+        // guard survives a session-storage-less reload.
+        reloadWithUrlGuard(name);
+        // Hang the import so React doesn't render the error boundary during
+        // the reload window.
+        return new Promise(() => {});
+      }
+      throw err;
+    }
+  });
+
+const Account = lazyWithRetry('Account', () => import('./pages/Account'));
+const Fencing = lazyWithRetry('Fencing', () => import('./pages/Fencing'));
+const ForgotPassword = lazyWithRetry('ForgotPassword', () => import('./pages/ForgotPassword'));
+const Help = lazyWithRetry('Help', () => import('./pages/Help'));
+const Play = lazyWithRetry('Play', () => import('./pages/Play'));
+const Privacy = lazyWithRetry('Privacy', () => import('./pages/Privacy'));
+const Profile = lazyWithRetry('Profile', () => import('./pages/Profile'));
+const Replay = lazyWithRetry('Replay', () => import('./pages/Replay'));
+const ResetPassword = lazyWithRetry('ResetPassword', () => import('./pages/ResetPassword'));
+const Terms = lazyWithRetry('Terms', () => import('./pages/Terms'));
+const VerifyEmail = lazyWithRetry('VerifyEmail', () => import('./pages/VerifyEmail'));
 import GlobalContext from './lib/GlobalContext';
 import AuthContext, {AuthProvider} from './lib/AuthContext';
 import GoogleCallback from './components/Auth/GoogleCallback';

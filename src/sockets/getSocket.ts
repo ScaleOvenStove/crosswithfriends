@@ -48,9 +48,20 @@ export function resetSocket() {
 export const getSocket = () => {
   if (!websocketPromise) {
     websocketPromise = (async () => {
-      // Note: In attempt to increase websocket limit, use upgrade false
-      // https://stackoverflow.com/questions/15872788/maximum-concurrent-socket-io-connections
-      const socketOptions: Record<string, any> = {upgrade: false, transports: ['websocket']};
+      // Start with long-polling (works on every network we care about,
+      // including ones that strip WebSocket Upgrade headers — corporate
+      // proxies, some mobile carriers, captive portals) and let Engine.IO
+      // upgrade to WebSocket once connected. This is the canonical
+      // Engine.IO transport order and the recommended approach when you
+      // care about connection reliability — it guarantees a connection
+      // for any user whose network can handle plain HTTP requests.
+      //
+      // Trade-off: ~1 extra polling round-trip on initial connect for
+      // users on healthy WS networks (most of them). The upgrade itself
+      // happens transparently and subsequent traffic is full-duplex over
+      // WS as before. Worth it to make multiplayer reachable for the
+      // tail of users behind WS-hostile intermediaries.
+      const socketOptions: Record<string, any> = {transports: ['polling', 'websocket']};
       // dfacId always travels — it's the guest identity. The server uses
       // both this and the JWT-derived userId for ban/lock checks.
       const auth = buildAuth();
