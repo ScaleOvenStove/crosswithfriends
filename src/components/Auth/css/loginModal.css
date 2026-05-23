@@ -1,11 +1,37 @@
 /* LoginModal — Radix Dialog + Tabs styling */
 
+@keyframes cwf-login-modal-overlay-show {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cwf-login-modal-content-show {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 /* Dialog overlay */
 .login-modal--overlay {
   position: fixed;
   inset: 0;
   background-color: rgb(0 0 0 / 50%);
   z-index: 1300;
+}
+
+.login-modal--overlay[data-state='open'] {
+  animation: cwf-login-modal-overlay-show 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Dialog content panel */
@@ -16,7 +42,12 @@
   transform: translate(-50%, -50%);
   background: #fff;
   border-radius: 4px;
-  width: 100%;
+
+  /* Match the gutter on confirm-dialog--panel for visual consistency. The
+     previous width: 100% pushed this modal flush to the viewport edges on
+     phones; 24px each side gives breathing room without losing usable space
+     on small screens. */
+  width: calc(100% - 48px);
   max-width: 444px;
   max-height: 85vh;
   overflow-y: auto;
@@ -25,6 +56,10 @@
     0 11px 15px -7px rgb(0 0 0 / 20%),
     0 24px 38px 3px rgb(0 0 0 / 14%),
     0 9px 46px 8px rgb(0 0 0 / 12%);
+}
+
+.login-modal--panel[data-state='open'] {
+  animation: cwf-login-modal-content-show 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark .login-modal--panel {

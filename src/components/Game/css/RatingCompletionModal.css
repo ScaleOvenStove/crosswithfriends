@@ -37,3 +37,22 @@
 .dark .rating-completion--hint {
   color: rgb(255 255 255 / 60%);
 }
+
+.rating-completion--solve-time {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin: -4px 0 4px;
+}
+
+.dark .rating-completion--solve-time {
+  color: rgb(255 255 255 / 70%);
+}
+
+.rating-completion--save-replay {
+  margin-top: 12px;
+}
+
+.rating-completion--replay-saved {
+  margin-top: 8px;
+}

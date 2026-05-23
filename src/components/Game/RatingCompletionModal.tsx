@@ -5,11 +5,19 @@ import * as Sentry from '@sentry/react';
 import AuthContext from '../../lib/AuthContext';
 import LoginModal from '../Auth/LoginModal';
 import {submitPuzzleRating, RatingNotEligibleError} from '../../api/puzzle_rating';
+import {formatMilliseconds} from '../Toolbar/Clock';
 import './css/RatingCompletionModal.css';
 
 interface Props {
   pid: string;
   solved: boolean;
+  // Solve time in milliseconds; rendered as a subtitle when present.
+  solveTimeMs?: number;
+  // Save-replay wiring (owned by Game.js, plumbed through Game component).
+  // null = no snapshot yet, false = snapshot exists but not retained, true = retained.
+  replayRetained?: boolean | null;
+  savingReplay?: boolean;
+  onSaveReplay?: () => void;
 }
 
 const STORAGE_PREFIX = 'cwf:rating_prompt_dismissed:';
@@ -63,7 +71,14 @@ function writeDismissed(pid: string): void {
   }
 }
 
-export default function RatingCompletionModal({pid, solved}: Props) {
+export default function RatingCompletionModal({
+  pid,
+  solved,
+  solveTimeMs,
+  replayRetained,
+  savingReplay,
+  onSaveReplay,
+}: Props) {
   const {user, accessToken} = useContext(AuthContext) as {
     user: {id: string} | null;
     accessToken: string | null;
@@ -77,6 +92,11 @@ export default function RatingCompletionModal({pid, solved}: Props) {
   // Otherwise the modal would also pop on any mount where the puzzle is
   // already solved (e.g. revisiting a snapshot-loaded game).
   const wasSolvedRef = useRef(solved);
+  // Ref to the dismissal button — Radix auto-focuses the first focusable on
+  // open, which would land on the 1-star and visually look like a selection
+  // (the focus-triggered onHover also fills the star). Redirect focus here
+  // so Enter dismisses rather than accidentally submitting a 1-star rating.
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const wasSolved = wasSolvedRef.current;
@@ -125,6 +145,11 @@ export default function RatingCompletionModal({pid, solved}: Props) {
   const handleOpenLogin = useCallback(() => setShowLogin(true), []);
   const handleCloseLogin = useCallback(() => setShowLogin(false), []);
   const handleStarsLeave = useCallback(() => setHover(0), []);
+  const handleOpenAutoFocus = useCallback((e: Event) => {
+    // See closeButtonRef declaration above for the rationale.
+    e.preventDefault();
+    closeButtonRef.current?.focus();
+  }, []);
 
   const display = hover;
 
@@ -133,10 +158,18 @@ export default function RatingCompletionModal({pid, solved}: Props) {
       <Dialog.Root open={open} onOpenChange={handleOpenChange}>
         <Dialog.Portal>
           <Dialog.Overlay className="confirm-dialog--overlay" />
-          <Dialog.Content className="confirm-dialog--panel confirm-dialog--centered">
+          <Dialog.Content
+            className="confirm-dialog--panel confirm-dialog--centered"
+            onOpenAutoFocus={handleOpenAutoFocus}
+          >
             <Dialog.Title className="confirm-dialog--title confirm-dialog--title-centered">
               Nice solve!
             </Dialog.Title>
+            {solveTimeMs != null && solveTimeMs > 0 && (
+              <p className="rating-completion--solve-time">
+                Solved in <strong>{formatMilliseconds(solveTimeMs)}</strong>
+              </p>
+            )}
             <div className="confirm-dialog--body rating-completion--body">
               {user ? (
                 <>
@@ -158,6 +191,22 @@ export default function RatingCompletionModal({pid, solved}: Props) {
                       You need to reach {eligibilityError}% completion before rating.
                     </p>
                   )}
+                  {/* Save Replay: only shown for signed-in users who have a snapshot
+                      saved but haven't retained the replay yet. Mirrors the toolbar
+                      gating in src/components/Toolbar/index.js. */}
+                  {onSaveReplay && replayRetained === false && (
+                    <button
+                      type="button"
+                      className="btn btn--outlined rating-completion--save-replay"
+                      onClick={onSaveReplay}
+                      disabled={savingReplay}
+                    >
+                      {savingReplay ? 'Saving…' : 'Save replay'}
+                    </button>
+                  )}
+                  {replayRetained === true && (
+                    <p className="rating-completion--hint rating-completion--replay-saved">Replay saved.</p>
+                  )}
                 </>
               ) : (
                 <>
@@ -169,7 +218,13 @@ export default function RatingCompletionModal({pid, solved}: Props) {
               )}
             </div>
             <div className="confirm-dialog--actions">
-              <button type="button" className="btn btn--outlined" onClick={handleClose} disabled={submitting}>
+              <button
+                ref={closeButtonRef}
+                type="button"
+                className="btn btn--outlined"
+                onClick={handleClose}
+                disabled={submitting}
+              >
                 Maybe later
               </button>
             </div>

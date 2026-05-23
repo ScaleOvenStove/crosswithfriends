@@ -1,10 +1,36 @@
 /* ConfirmDialog / InfoDialog — Radix Dialog styling */
 
+@keyframes cwf-dialog-overlay-show {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cwf-dialog-content-show {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 .confirm-dialog--overlay {
   position: fixed;
   inset: 0;
   background-color: rgb(0 0 0 / 50%);
   z-index: 1300;
+}
+
+.confirm-dialog--overlay[data-state='open'] {
+  animation: cwf-dialog-overlay-show 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .confirm-dialog--panel {
@@ -14,7 +40,11 @@
   transform: translate(-50%, -50%);
   background: #fff;
   border-radius: 4px;
-  width: calc(100% - 32px);
+
+  /* Mobile gutter: 24px each side. The viewport-relative cap keeps a panel
+     from butting against device edges on smaller phones — confirmed against
+     375px-wide simulated viewport that the previous 16px gutter felt tight. */
+  width: calc(100% - 48px);
   max-width: 420px;
   z-index: 1300;
   box-shadow:
@@ -22,6 +52,10 @@
     0 24px 38px 3px rgb(0 0 0 / 14%),
     0 9px 46px 8px rgb(0 0 0 / 12%);
   padding: 20px 24px;
+}
+
+.confirm-dialog--panel[data-state='open'] {
+  animation: cwf-dialog-content-show 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark .confirm-dialog--panel {
