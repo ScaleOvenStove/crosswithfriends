@@ -570,8 +570,14 @@ export default class Game extends Component {
           {this.renderPlayer()}
         </div>
         {this.game.solved && <Confetti />}
-        {this.game.pid && (
+        {this.game?.pid && (
           <RatingCompletionModal
+            // Key by pid so navigating to a different puzzle inside the same
+            // SPA session gets a fresh modal instance — otherwise state like
+            // submittedRating, hover, and wasSolvedRef would carry over from
+            // the previously-rated puzzle and leave the new modal looking
+            // pre-rated with stars disabled.
+            key={String(this.game.pid)}
             pid={String(this.game.pid)}
             solved={!!this.game.solved}
             solveTimeMs={this.game.clock?.totalTime}
