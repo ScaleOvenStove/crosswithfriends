@@ -44,3 +44,9 @@ CREATE INDEX IF NOT EXISTS game_events_payload_id_idx
 
 CREATE INDEX IF NOT EXISTS game_events_gid_event_type_idx
     ON public.game_events (gid, event_type);
+
+-- Supports wasParticipantOfGame()'s verifiedUserId probe (gid + verifiedUserId).
+-- Partial: only authenticated events carry the field, keeping the index small.
+CREATE INDEX IF NOT EXISTS game_events_gid_verified_user_idx
+    ON public.game_events (gid, ((event_payload->>'verifiedUserId')))
+    WHERE (event_payload->>'verifiedUserId') IS NOT NULL;
