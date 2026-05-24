@@ -243,6 +243,26 @@ function DarkModeSync({darkModePreference, setDarkModePreference}) {
   return null;
 }
 
+function ErrorFallback({resetError}) {
+  const handleReload = React.useCallback(() => {
+    resetError();
+    window.location.reload();
+  }, [resetError]);
+  return (
+    <div style={{maxWidth: 480, margin: '15vh auto', padding: '0 24px', textAlign: 'center'}}>
+      <h2>Something went wrong</h2>
+      <p>The page hit an unexpected error. Reloading usually fixes it.</p>
+      <button
+        type="button"
+        onClick={handleReload}
+        style={{padding: '8px 16px', fontSize: 16, cursor: 'pointer'}}
+      >
+        Reload
+      </button>
+    </div>
+  );
+}
+
 const Root = () => {
   const urlDarkMode = window.location.search.indexOf('dark') !== -1;
   const savedDarkModePreference = (localStorage && localStorage.getItem(darkModeLocalStorageKey)) || '0';
@@ -285,36 +305,38 @@ const Root = () => {
               setDarkModePreference={setDarkModePreference}
             />
             <div className={clsx('router-wrapper', {mobile: isMobile(), dark: darkMode})}>
-              <VerificationGate>
-                <React.Suspense fallback={null}>
-                  <Routes>
-                    <Route path="/auth/google/callback" element={<GoogleCallback />} />
-                    <Route path="/verify-email" element={<VerifyEmail />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/" element={<WrappedWelcome />} />
-                    <Route path="/fencing" element={<WrappedWelcome fencing />} />
-                    <Route path="/game/:gid" element={<Game />} />
-                    <Route path="/embed/game/:gid" element={<Game />} />
-                    <Route path="/room/:rid" element={<Room />} />
-                    <Route path="/embed/room/:rid" element={<Room />} />
-                    <Route path="/replay/:gid" element={<Replay />} />
-                    <Route path="/beta/replay/:gid" element={<Replay />} />
-                    <Route path="/beta" element={<WrappedWelcome />} />
-                    <Route path="/beta/game/:gid" element={<Game />} />
-                    <Route path="/beta/play/:pid" element={<Play />} />
-                    <Route path="/privacy" element={<Privacy />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="/help" element={<Help />} />
-                    <Route path="/account" element={<Account />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/profile/:userId" element={<Profile />} />
-                    <Route path="/fencing/:gid" element={<Fencing />} />
-                    <Route path="/beta/fencing/:gid" element={<Fencing />} />
-                    <Route path="/discord" element={<DiscordRedirect />} />
-                  </Routes>
-                </React.Suspense>
-              </VerificationGate>
+              <Sentry.ErrorBoundary fallback={ErrorFallback}>
+                <VerificationGate>
+                  <React.Suspense fallback={null}>
+                    <Routes>
+                      <Route path="/auth/google/callback" element={<GoogleCallback />} />
+                      <Route path="/verify-email" element={<VerifyEmail />} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/" element={<WrappedWelcome />} />
+                      <Route path="/fencing" element={<WrappedWelcome fencing />} />
+                      <Route path="/game/:gid" element={<Game />} />
+                      <Route path="/embed/game/:gid" element={<Game />} />
+                      <Route path="/room/:rid" element={<Room />} />
+                      <Route path="/embed/room/:rid" element={<Room />} />
+                      <Route path="/replay/:gid" element={<Replay />} />
+                      <Route path="/beta/replay/:gid" element={<Replay />} />
+                      <Route path="/beta" element={<WrappedWelcome />} />
+                      <Route path="/beta/game/:gid" element={<Game />} />
+                      <Route path="/beta/play/:pid" element={<Play />} />
+                      <Route path="/privacy" element={<Privacy />} />
+                      <Route path="/terms" element={<Terms />} />
+                      <Route path="/help" element={<Help />} />
+                      <Route path="/account" element={<Account />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/profile/:userId" element={<Profile />} />
+                      <Route path="/fencing/:gid" element={<Fencing />} />
+                      <Route path="/beta/fencing/:gid" element={<Fencing />} />
+                      <Route path="/discord" element={<DiscordRedirect />} />
+                    </Routes>
+                  </React.Suspense>
+                </VerificationGate>
+              </Sentry.ErrorBoundary>
             </div>
           </GlobalContext>
         </AuthProvider>
