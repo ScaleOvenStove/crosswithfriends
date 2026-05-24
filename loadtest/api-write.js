@@ -18,6 +18,13 @@ const recordSolveDuration = new Trend('record_solve_duration', true);
 const gamesCreated = new Counter('games_created');
 const errorRate = new Rate('errors');
 
+// These synthetic requests legitimately return non-2xx: the test pid may not
+// exist (404), and record_solve now requires participation, so an unauth'd
+// solo create-then-solve is correctly rejected (403). Tell k6 these statuses
+// are expected so the built-in http_req_failed threshold only trips on real
+// failures (5xx / network), not on these by-design responses.
+http.setResponseCallback(http.expectedStatuses(200, 403, 404));
+
 export const options = {
   stages: getStages(),
   thresholds: {
