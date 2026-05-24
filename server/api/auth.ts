@@ -27,7 +27,7 @@ import {
 } from '../model/user';
 import {
   createRefreshToken,
-  validateRefreshToken,
+  rotateRefreshToken,
   revokeRefreshToken,
   revokeAllUserTokens,
 } from '../model/refresh_token';
@@ -412,30 +412,34 @@ router.post('/refresh', async (req, res) => {
     return;
   }
 
-  const userId = await validateRefreshToken(token);
-  if (!userId) {
+  // Atomically validate + rotate the token (revoke old, mint new) so a crash
+  // can't leave the user logged out and concurrent refreshes can't both mint.
+  const rotation = await rotateRefreshToken(token);
+  if (rotation.status !== 'rotated') {
     res.clearCookie(REFRESH_COOKIE, {path: '/api/auth'});
-    res.status(401).json({error: 'Invalid or expired refresh token'});
+    // 'reuse' means a rotated token was replayed — all sessions were revoked.
+    const error =
+      rotation.status === 'reuse'
+        ? 'Session security issue detected, please log in again'
+        : 'Invalid or expired refresh token';
+    res.status(401).json({error});
     return;
   }
 
-  const user = await getUserProfile(userId);
+  const user = await getUserProfile(rotation.userId);
   if (!user) {
     res.clearCookie(REFRESH_COOKIE, {path: '/api/auth'});
     res.status(401).json({error: 'User not found'});
     return;
   }
 
-  // Rotate refresh token
-  await revokeRefreshToken(token);
-  const newRefreshToken = await createRefreshToken(userId);
   const accessToken = signAccessToken({
     userId: user.id,
     email: user.email,
     displayName: user.display_name,
   });
 
-  res.cookie(REFRESH_COOKIE, newRefreshToken, REFRESH_COOKIE_OPTIONS);
+  res.cookie(REFRESH_COOKIE, rotation.token, REFRESH_COOKIE_OPTIONS);
   res.json({accessToken});
 });
 

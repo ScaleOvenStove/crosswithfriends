@@ -1,4 +1,4 @@
-import {pool, resetPoolMocks} from '../../__mocks__/pool';
+import {pool, mockClient, resetPoolMocks} from '../../__mocks__/pool';
 
 jest.mock('../../model/pool', () => require('../../__mocks__/pool'));
 
@@ -8,6 +8,7 @@ import {
   revokeRefreshToken,
   revokeAllUserTokens,
   cleanupExpiredTokens,
+  rotateRefreshToken,
 } from '../../model/refresh_token';
 
 describe('createRefreshToken', () => {
@@ -118,6 +119,92 @@ describe('revokeAllUserTokens', () => {
     expect(sql).toContain('revoked_at IS NULL');
     const params = pool.query.mock.calls[0][1] as any[];
     expect(params[0]).toBe('user-1');
+  });
+});
+
+describe('rotateRefreshToken', () => {
+  beforeEach(() => {
+    resetPoolMocks();
+  });
+
+  const future = () => new Date(Date.now() + 86400000).toISOString();
+
+  it('rotates a valid token: revokes old, inserts new, commits, returns new raw token', async () => {
+    mockClient.query
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: null}],
+      })
+      .mockResolvedValueOnce({}) // UPDATE revoke old
+      .mockResolvedValueOnce({}) // INSERT new
+      .mockResolvedValueOnce({}); // COMMIT
+
+    const result = await rotateRefreshToken('raw-token');
+    expect(result).toEqual({
+      status: 'rotated',
+      userId: 'user-1',
+      token: expect.stringMatching(/^[0-9a-f]{96}$/),
+    });
+
+    const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
+    expect(sqls[0]).toBe('BEGIN');
+    expect(sqls[1]).toContain('FOR UPDATE');
+    expect(sqls.some((s) => /UPDATE refresh_tokens SET revoked_at/.test(s))).toBe(true);
+    expect(sqls.some((s) => /INSERT INTO refresh_tokens/.test(s))).toBe(true);
+    expect(sqls[sqls.length - 1]).toBe('COMMIT');
+    expect(mockClient.release).toHaveBeenCalled();
+  });
+
+  it('returns invalid and rolls back when the token is not found', async () => {
+    mockClient.query.mockResolvedValueOnce({}).mockResolvedValueOnce({rows: []});
+    const result = await rotateRefreshToken('missing');
+    expect(result).toEqual({status: 'invalid'});
+    const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
+    expect(sqls).toContain('ROLLBACK');
+    expect(mockClient.release).toHaveBeenCalled();
+  });
+
+  it('returns invalid (benign) without revoking the family when revoked within the grace window', async () => {
+    mockClient.query.mockResolvedValueOnce({}).mockResolvedValueOnce({
+      rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: new Date().toISOString()}],
+    });
+    const result = await rotateRefreshToken('recently-rotated');
+    expect(result).toEqual({status: 'invalid'});
+    const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
+    expect(sqls.some((s) => /revoked_at IS NULL/.test(s))).toBe(false); // no family revocation
+    expect(sqls).toContain('ROLLBACK');
+  });
+
+  it('detects reuse and revokes the whole family when revoked long ago', async () => {
+    const longAgo = new Date(Date.now() - 60_000).toISOString();
+    mockClient.query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({
+        rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: longAgo}],
+      })
+      .mockResolvedValueOnce({}) // UPDATE family revoke
+      .mockResolvedValueOnce({}); // COMMIT
+    const result = await rotateRefreshToken('stolen-replayed');
+    expect(result).toEqual({status: 'reuse', userId: 'user-1'});
+    const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
+    expect(sqls.some((s) => /revoked_at IS NULL/.test(s))).toBe(true);
+    expect(sqls).toContain('COMMIT');
+  });
+
+  it('returns invalid when the token is expired', async () => {
+    mockClient.query.mockResolvedValueOnce({}).mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'tok-1',
+          user_id: 'user-1',
+          expires_at: new Date(Date.now() - 86400000).toISOString(),
+          revoked_at: null,
+        },
+      ],
+    });
+    const result = await rotateRefreshToken('expired');
+    expect(result).toEqual({status: 'invalid'});
+    expect(mockClient.query.mock.calls.map((c) => c[0] as string)).toContain('ROLLBACK');
   });
 });
 

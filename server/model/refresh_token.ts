@@ -19,6 +19,82 @@ export async function createRefreshToken(userId: string, expiresInDays = 7): Pro
   return rawToken;
 }
 
+// Grace window for treating a just-revoked token as a benign concurrent
+// rotation rather than reuse/theft. Two near-simultaneous /refresh calls with
+// the same cookie (tab restore, parallel 401 retries) are common: the loser of
+// the FOR UPDATE race sees the row already revoked. We don't want that to nuke
+// every session, so reuse of a token revoked within this window is simply
+// rejected. Reuse beyond it indicates a leaked token being replayed.
+const REUSE_GRACE_MS = 10_000;
+
+export type RotateRefreshResult =
+  | {status: 'invalid'}
+  | {status: 'reuse'; userId: string}
+  | {status: 'rotated'; userId: string; token: string};
+
+// Atomically rotate a refresh token: validate, revoke the old token, and mint
+// a replacement in a single serialized transaction (SELECT ... FOR UPDATE).
+// This closes three issues with the previous validate-then-revoke-then-create
+// sequence: a crash between revoke and create no longer logs the user out;
+// concurrent refreshes with the same token can't both mint new tokens; and
+// reuse of an already-rotated token is detected and revokes the whole family.
+export async function rotateRefreshToken(token: string, expiresInDays = 7): Promise<RotateRefreshResult> {
+  const tokenHash = hashToken(token);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const res = await client.query(
+      `SELECT id, user_id, expires_at, revoked_at
+       FROM refresh_tokens
+       WHERE token_hash = $1
+       FOR UPDATE`,
+      [tokenHash]
+    );
+    const row = res.rows[0];
+    if (!row) {
+      await client.query('ROLLBACK');
+      return {status: 'invalid'};
+    }
+    if (row.revoked_at) {
+      const revokedMsAgo = Date.now() - new Date(row.revoked_at).getTime();
+      if (revokedMsAgo > REUSE_GRACE_MS) {
+        // Replay of a token rotated long ago → treat as compromise and revoke
+        // every active token for the user, forcing a fresh login.
+        await client.query(
+          `UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL`,
+          [row.user_id]
+        );
+        await client.query('COMMIT');
+        return {status: 'reuse', userId: row.user_id};
+      }
+      // Benign concurrent rotation — reject without punishing the session.
+      await client.query('ROLLBACK');
+      return {status: 'invalid'};
+    }
+    if (new Date(row.expires_at) < new Date()) {
+      await client.query('ROLLBACK');
+      return {status: 'invalid'};
+    }
+
+    await client.query(`UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = $1`, [row.id]);
+    const rawToken = crypto.randomBytes(48).toString('hex');
+    const newHash = hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
+    await client.query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`, [
+      row.user_id,
+      newHash,
+      expiresAt.toISOString(),
+    ]);
+    await client.query('COMMIT');
+    return {status: 'rotated', userId: row.user_id, token: rawToken};
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 export async function validateRefreshToken(token: string): Promise<string | null> {
   const tokenHash = hashToken(token);
   const res = await pool.query(
