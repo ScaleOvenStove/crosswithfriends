@@ -305,8 +305,8 @@ const Root = () => {
               setDarkModePreference={setDarkModePreference}
             />
             <div className={clsx('router-wrapper', {mobile: isMobile(), dark: darkMode})}>
-              <VerificationGate>
-                <Sentry.ErrorBoundary fallback={ErrorFallback}>
+              <Sentry.ErrorBoundary fallback={ErrorFallback}>
+                <VerificationGate>
                   <React.Suspense fallback={null}>
                     <Routes>
                       <Route path="/auth/google/callback" element={<GoogleCallback />} />
@@ -335,8 +335,8 @@ const Root = () => {
                       <Route path="/discord" element={<DiscordRedirect />} />
                     </Routes>
                   </React.Suspense>
-                </Sentry.ErrorBoundary>
-              </VerificationGate>
+                </VerificationGate>
+              </Sentry.ErrorBoundary>
             </div>
           </GlobalContext>
         </AuthProvider>
