@@ -1,6 +1,8 @@
 import express from 'express';
 import {getGameSnapshot, setReplayRetained} from '../model/game_snapshot';
 import {getPuzzle} from '../model/puzzle';
+import {wasParticipantOfGame} from '../model/game_moderation';
+import {getDfacIdsForUser} from '../model/user';
 import {verifyAccessToken} from '../auth/jwt';
 import {pool} from '../model/pool';
 
@@ -114,7 +116,28 @@ router.post('/:gid/keep-replay', async (req, res, next) => {
       return;
     }
 
-    const updated = await setReplayRetained(req.params.gid, true);
+    // Only a participant of the game may retain its replay. Without this any
+    // authenticated user could flip replay_retained on an arbitrary gid by
+    // enumerating game ids. Check the verified user id first, then fall back
+    // to any of the user's linked legacy dfac ids (games they played as a
+    // guest before logging in).
+    const {gid} = req.params;
+    let participated = await wasParticipantOfGame(gid, {userId: payload.userId});
+    if (!participated) {
+      const dfacIds = await getDfacIdsForUser(payload.userId);
+      for (const dfacId of dfacIds) {
+        if (await wasParticipantOfGame(gid, {dfacId})) {
+          participated = true;
+          break;
+        }
+      }
+    }
+    if (!participated) {
+      res.status(403).json({error: 'Not a participant of this game'});
+      return;
+    }
+
+    const updated = await setReplayRetained(gid, true);
     if (!updated) {
       res.status(404).json({error: 'No snapshot found for this game'});
       return;
