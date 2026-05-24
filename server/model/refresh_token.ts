@@ -45,7 +45,7 @@ export async function rotateRefreshToken(token: string, expiresInDays = 7): Prom
   try {
     await client.query('BEGIN');
     const res = await client.query(
-      `SELECT id, user_id, expires_at, revoked_at
+      `SELECT id, user_id, expires_at, revoked_at, rotated
        FROM refresh_tokens
        WHERE token_hash = $1
        FOR UPDATE`,
@@ -57,10 +57,18 @@ export async function rotateRefreshToken(token: string, expiresInDays = 7): Prom
       return {status: 'invalid'};
     }
     if (row.revoked_at) {
+      // Only tokens revoked *by rotation* participate in reuse detection. A
+      // token revoked by logout or a security flow (revokeRefreshToken /
+      // revokeAllUserTokens) is simply dead — replaying it must NOT nuke the
+      // user's other sessions, so treat it as invalid.
+      if (!row.rotated) {
+        await client.query('ROLLBACK');
+        return {status: 'invalid'};
+      }
       const revokedMsAgo = Date.now() - new Date(row.revoked_at).getTime();
       if (revokedMsAgo > REUSE_GRACE_MS) {
-        // Replay of a token rotated long ago → treat as compromise and revoke
-        // every active token for the user, forcing a fresh login.
+        // Replay of a rotated token long after rotation → treat as compromise
+        // and revoke every active token for the user, forcing a fresh login.
         await client.query(
           `UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL`,
           [row.user_id]
@@ -79,7 +87,11 @@ export async function rotateRefreshToken(token: string, expiresInDays = 7): Prom
       return {status: 'invalid'};
     }
 
-    await client.query(`UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = $1`, [row.id]);
+    // Mark revoked AND rotated so a later replay is recognized as rotation
+    // reuse (not a logout-revoked token).
+    await client.query(`UPDATE refresh_tokens SET revoked_at = NOW(), rotated = true WHERE id = $1`, [
+      row.id,
+    ]);
     const rawToken = crypto.randomBytes(48).toString('hex');
     const newHash = hashToken(rawToken);
     const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);

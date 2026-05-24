@@ -164,9 +164,17 @@ describe('rotateRefreshToken', () => {
     expect(mockClient.release).toHaveBeenCalled();
   });
 
-  it('returns retry (benign) without revoking the family when revoked within the grace window', async () => {
+  it('returns retry (benign) without revoking the family when a rotated token is replayed within the grace window', async () => {
     mockClient.query.mockResolvedValueOnce({}).mockResolvedValueOnce({
-      rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: new Date().toISOString()}],
+      rows: [
+        {
+          id: 'tok-1',
+          user_id: 'user-1',
+          expires_at: future(),
+          revoked_at: new Date().toISOString(),
+          rotated: true,
+        },
+      ],
     });
     const result = await rotateRefreshToken('recently-rotated');
     expect(result).toEqual({status: 'retry'});
@@ -175,12 +183,12 @@ describe('rotateRefreshToken', () => {
     expect(sqls).toContain('ROLLBACK');
   });
 
-  it('detects reuse and revokes the whole family when revoked long ago', async () => {
+  it('detects reuse and revokes the whole family when a rotated token is replayed long after rotation', async () => {
     const longAgo = new Date(Date.now() - 60_000).toISOString();
     mockClient.query
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({
-        rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: longAgo}],
+        rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: longAgo, rotated: true}],
       })
       .mockResolvedValueOnce({}) // UPDATE family revoke
       .mockResolvedValueOnce({}); // COMMIT
@@ -189,6 +197,18 @@ describe('rotateRefreshToken', () => {
     const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
     expect(sqls.some((s) => /revoked_at IS NULL/.test(s))).toBe(true);
     expect(sqls).toContain('COMMIT');
+  });
+
+  it('treats a logout-revoked (not rotated) token as invalid without revoking the family, even beyond grace', async () => {
+    const longAgo = new Date(Date.now() - 60_000).toISOString();
+    mockClient.query.mockResolvedValueOnce({}).mockResolvedValueOnce({
+      rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: longAgo, rotated: false}],
+    });
+    const result = await rotateRefreshToken('logged-out-token');
+    expect(result).toEqual({status: 'invalid'});
+    const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
+    expect(sqls.some((s) => /revoked_at IS NULL/.test(s))).toBe(false); // no family revocation
+    expect(sqls).toContain('ROLLBACK');
   });
 
   it('returns invalid when the token is expired', async () => {
