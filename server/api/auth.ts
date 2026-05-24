@@ -27,6 +27,7 @@ import {
 } from '../model/user';
 import {
   createRefreshToken,
+  rotateRefreshToken,
   validateRefreshToken,
   revokeRefreshToken,
   revokeAllUserTokens,
@@ -412,30 +413,50 @@ router.post('/refresh', async (req, res) => {
     return;
   }
 
-  const userId = await validateRefreshToken(token);
-  if (!userId) {
+  // Resolve the user BEFORE rotating, while the current token is still valid.
+  // If the profile lookup fails transiently, the old token is untouched and the
+  // client can simply retry — whereas failing after rotation would strand the
+  // client with a revoked cookie and force a logout.
+  const currentUserId = await validateRefreshToken(token);
+  const user = currentUserId ? await getUserProfile(currentUserId) : null;
+
+  // Atomically validate + rotate the token (revoke old, mint new) so a crash
+  // can't leave the user logged out and concurrent refreshes can't both mint.
+  const rotation = await rotateRefreshToken(token);
+  if (rotation.status === 'retry') {
+    // Lost a benign concurrent rotation race: a parallel /refresh already
+    // issued a fresh cookie. Do NOT clear it — just ask the client to retry,
+    // which will use the new cookie.
+    res.status(401).json({error: 'Refresh in progress, please retry'});
+    return;
+  }
+  if (rotation.status !== 'rotated') {
+    // 'invalid' (dead token) or 'reuse' (replay → all sessions revoked).
     res.clearCookie(REFRESH_COOKIE, {path: '/api/auth'});
-    res.status(401).json({error: 'Invalid or expired refresh token'});
+    const error =
+      rotation.status === 'reuse'
+        ? 'Session security issue detected, please log in again'
+        : 'Invalid or expired refresh token';
+    res.status(401).json({error});
     return;
   }
 
-  const user = await getUserProfile(userId);
-  if (!user) {
+  // Normally the pre-rotation lookup already resolved this exact user. Re-fetch
+  // only if it didn't (e.g. the token validated right as it was being rotated).
+  const resolvedUser = user && user.id === rotation.userId ? user : await getUserProfile(rotation.userId);
+  if (!resolvedUser) {
     res.clearCookie(REFRESH_COOKIE, {path: '/api/auth'});
     res.status(401).json({error: 'User not found'});
     return;
   }
 
-  // Rotate refresh token
-  await revokeRefreshToken(token);
-  const newRefreshToken = await createRefreshToken(userId);
   const accessToken = signAccessToken({
-    userId: user.id,
-    email: user.email,
-    displayName: user.display_name,
+    userId: resolvedUser.id,
+    email: resolvedUser.email,
+    displayName: resolvedUser.display_name,
   });
 
-  res.cookie(REFRESH_COOKIE, newRefreshToken, REFRESH_COOKIE_OPTIONS);
+  res.cookie(REFRESH_COOKIE, rotation.token, REFRESH_COOKIE_OPTIONS);
   res.json({accessToken});
 });
 

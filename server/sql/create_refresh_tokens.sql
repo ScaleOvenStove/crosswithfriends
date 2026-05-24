@@ -4,7 +4,10 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   token_hash TEXT NOT NULL UNIQUE,
   expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
-  revoked_at TIMESTAMP WITHOUT TIME ZONE
+  revoked_at TIMESTAMP WITHOUT TIME ZONE,
+  -- True when this token was revoked specifically by rotation (vs. logout or a
+  -- security flow). Only rotation-revoked tokens drive reuse detection.
+  rotated BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX IF NOT EXISTS refresh_tokens_user_id_idx
