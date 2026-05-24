@@ -29,6 +29,8 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS game_dismissals_gid_user_idx
 -- keeps the index small: only authenticated events carry the field.
 -- Benefits: wasParticipantOfGame (lock-bypass on reconnect, keep-replay and
 --           record_solve participation checks).
+-- Schema-qualified to match create_game_events.sql and avoid depending on
+-- search_path across environments.
 CREATE INDEX CONCURRENTLY IF NOT EXISTS game_events_gid_verified_user_idx
-  ON game_events (gid, ((event_payload->>'verifiedUserId')))
+  ON public.game_events (gid, ((event_payload->>'verifiedUserId')))
   WHERE (event_payload->>'verifiedUserId') IS NOT NULL;
