@@ -164,12 +164,12 @@ describe('rotateRefreshToken', () => {
     expect(mockClient.release).toHaveBeenCalled();
   });
 
-  it('returns invalid (benign) without revoking the family when revoked within the grace window', async () => {
+  it('returns retry (benign) without revoking the family when revoked within the grace window', async () => {
     mockClient.query.mockResolvedValueOnce({}).mockResolvedValueOnce({
       rows: [{id: 'tok-1', user_id: 'user-1', expires_at: future(), revoked_at: new Date().toISOString()}],
     });
     const result = await rotateRefreshToken('recently-rotated');
-    expect(result).toEqual({status: 'invalid'});
+    expect(result).toEqual({status: 'retry'});
     const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
     expect(sqls.some((s) => /revoked_at IS NULL/.test(s))).toBe(false); // no family revocation
     expect(sqls).toContain('ROLLBACK');

@@ -415,9 +415,16 @@ router.post('/refresh', async (req, res) => {
   // Atomically validate + rotate the token (revoke old, mint new) so a crash
   // can't leave the user logged out and concurrent refreshes can't both mint.
   const rotation = await rotateRefreshToken(token);
+  if (rotation.status === 'retry') {
+    // Lost a benign concurrent rotation race: a parallel /refresh already
+    // issued a fresh cookie. Do NOT clear it — just ask the client to retry,
+    // which will use the new cookie.
+    res.status(401).json({error: 'Refresh in progress, please retry'});
+    return;
+  }
   if (rotation.status !== 'rotated') {
+    // 'invalid' (dead token) or 'reuse' (replay → all sessions revoked).
     res.clearCookie(REFRESH_COOKIE, {path: '/api/auth'});
-    // 'reuse' means a rotated token was replayed — all sessions were revoked.
     const error =
       rotation.status === 'reuse'
         ? 'Session security issue detected, please log in again'

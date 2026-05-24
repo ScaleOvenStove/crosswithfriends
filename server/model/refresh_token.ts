@@ -28,8 +28,9 @@ export async function createRefreshToken(userId: string, expiresInDays = 7): Pro
 const REUSE_GRACE_MS = 10_000;
 
 export type RotateRefreshResult =
-  | {status: 'invalid'}
-  | {status: 'reuse'; userId: string}
+  | {status: 'invalid'} // token not found or expired — the cookie is dead
+  | {status: 'retry'} // lost a benign concurrent rotation race — cookie is still valid
+  | {status: 'reuse'; userId: string} // replay of a rotated token — family revoked
   | {status: 'rotated'; userId: string; token: string};
 
 // Atomically rotate a refresh token: validate, revoke the old token, and mint
@@ -67,9 +68,11 @@ export async function rotateRefreshToken(token: string, expiresInDays = 7): Prom
         await client.query('COMMIT');
         return {status: 'reuse', userId: row.user_id};
       }
-      // Benign concurrent rotation — reject without punishing the session.
+      // Benign concurrent rotation — a parallel /refresh already rotated this
+      // token and issued a fresh cookie. Signal 'retry' so the caller leaves
+      // that new cookie intact instead of clearing it.
       await client.query('ROLLBACK');
-      return {status: 'invalid'};
+      return {status: 'retry'};
     }
     if (new Date(row.expires_at) < new Date()) {
       await client.query('ROLLBACK');
