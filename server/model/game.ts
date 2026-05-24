@@ -105,6 +105,22 @@ export async function getGameInfo(gid: string) {
   return {};
 }
 
+// The puzzle id a game was created for, taken from the create event's
+// params.pid. Returns null when there's no create event (archived game).
+// Used to verify a claimed gid actually belongs to the puzzle a solve is
+// being recorded against.
+export async function getGamePid(gid: string): Promise<string | null> {
+  const res = await pool.query<{pid: string | null}>(
+    `SELECT event_payload->'params'->>'pid' AS pid
+     FROM game_events
+     WHERE gid = $1 AND event_type = 'create'
+     ORDER BY ts ASC
+     LIMIT 1`,
+    [gid]
+  );
+  return res.rows[0]?.pid ?? null;
+}
+
 export interface GameEvent {
   user?: string; // always null actually
   timestamp: number;

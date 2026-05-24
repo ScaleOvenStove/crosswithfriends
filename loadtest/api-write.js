@@ -18,6 +18,13 @@ const recordSolveDuration = new Trend('record_solve_duration', true);
 const gamesCreated = new Counter('games_created');
 const errorRate = new Rate('errors');
 
+// These synthetic requests legitimately return non-2xx: the test pid may not
+// exist (404), and record_solve now requires participation, so an unauth'd
+// solo create-then-solve is correctly rejected (403). Tell k6 these statuses
+// are expected so the built-in http_req_failed threshold only trips on real
+// failures (5xx / network), not on these by-design responses.
+http.setResponseCallback(http.expectedStatuses(200, 403, 404));
+
 export const options = {
   stages: getStages(),
   thresholds: {
@@ -67,10 +74,15 @@ export default function () {
       }
     );
     recordSolveDuration.add(res.timings.duration);
-    // May fail if pid doesn't exist — that's fine for latency testing
+    // We're measuring latency, so several non-2xx outcomes are acceptable:
+    //   404 — the test pid doesn't exist
+    //   403 — record_solve now requires the caller to have participated in the
+    //         game; this VU only created the game over HTTP (no gameplay
+    //         events, no auth/dfacId), so it is correctly rejected. The request
+    //         still exercises the input-validation + participation-check path.
     const ok = check(res, {
-      'record-solve: status 200 or 404': (r) =>
-        r.status === 200 || r.status === 404,
+      'record-solve: status 200, 403, or 404': (r) =>
+        r.status === 200 || r.status === 403 || r.status === 404,
     });
     errorRate.add(!ok);
   }
