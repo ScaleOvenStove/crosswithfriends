@@ -16,10 +16,11 @@ import {verifyAccessToken} from '../auth/jwt';
 
 const router = express.Router();
 
-// 30 days. Solve time is wall-clock elapsed and large collaborative puzzles
-// can legitimately span days, but values beyond this are bogus and would
-// skew the median-solve-time aggregate.
-const MAX_SOLVE_MS = 30 * 24 * 60 * 60 * 1000;
+// 24 days. Solve time is wall-clock elapsed and large collaborative puzzles
+// can legitimately span days, but values beyond this are bogus and would skew
+// the median-solve-time aggregate. Capped under 2^31-1 ms (~24.8 days) because
+// puzzle_solves.time_taken_to_solve is a 4-byte integer column.
+const MAX_SOLVE_MS = 24 * 24 * 60 * 60 * 1000;
 const MAX_PLAYER_COUNT = 1000;
 
 /**
@@ -96,11 +97,28 @@ router.post<{pid: string}, RecordSolveResponse, RecordSolveRequest>('/:pid', asy
     // The caller must actually have played this game. Without this, anyone
     // could fabricate solves for an arbitrary gid (skewing solve-time stats)
     // and overwrite another game's solved-grid snapshot (saveGameSnapshot
-    // upserts by gid). Verify by the authenticated user id (server-stamped
-    // verifiedUserId) or the caller's local dfac id (the uid on their events).
+    // upserts by gid).
+    //
+    // For authenticated callers we only trust server-known identities — the
+    // server-stamped verifiedUserId and the dfac ids linked to their account.
+    // We deliberately ignore the request-body dfacId here: it's client-supplied
+    // and visible to co-players, so trusting it would let an authenticated user
+    // pass a victim's dfacId and bypass the check. Anonymous callers have no
+    // account, so their body dfacId is the only identity available (the legacy
+    // unauthenticated guest model).
     let participated = false;
-    if (userId) participated = await wasParticipantOfGame(gid, {userId});
-    if (!participated && typeof dfacId === 'string' && dfacId.length > 0) {
+    if (userId) {
+      participated = await wasParticipantOfGame(gid, {userId});
+      if (!participated) {
+        const linkedDfacIds = await getDfacIdsForUser(userId);
+        for (const linked of linkedDfacIds) {
+          if (await wasParticipantOfGame(gid, {dfacId: linked})) {
+            participated = true;
+            break;
+          }
+        }
+      }
+    } else if (typeof dfacId === 'string' && dfacId.length > 0) {
       participated = await wasParticipantOfGame(gid, {dfacId});
     }
     if (!participated) {
