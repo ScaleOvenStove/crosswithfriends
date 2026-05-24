@@ -488,7 +488,8 @@ class Game extends Component {
         solvedClock.totalTime,
         authToken,
         playerCount,
-        snapshot
+        snapshot,
+        this.userId
       );
       this.setState({replayRetained: false});
     }
