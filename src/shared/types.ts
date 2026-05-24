@@ -189,6 +189,9 @@ export interface RecordSolveRequest {
   player_count?: number;
   snapshot?: object;
   keep_replay?: boolean;
+  // The caller's local dfac id, so the server can verify (for guest/anonymous
+  // solves) that they actually played this game before recording the solve.
+  dfacId?: string;
 }
 
 export interface RecordSolveResponse {}

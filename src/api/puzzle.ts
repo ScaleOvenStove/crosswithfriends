@@ -77,7 +77,8 @@ export async function recordSolve(
   time_to_solve: number,
   accessToken?: string | null,
   playerCount?: number,
-  snapshot?: object
+  snapshot?: object,
+  dfacId?: string
 ): Promise<RecordSolveResponse> {
   const url = `${SERVER_URL}/api/record_solve/${pid}`;
   const data: RecordSolveRequest = {
@@ -85,6 +86,7 @@ export async function recordSolve(
     time_to_solve,
     player_count: playerCount,
     snapshot,
+    dfacId,
   };
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
