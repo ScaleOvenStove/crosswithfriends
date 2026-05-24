@@ -8,6 +8,18 @@ import {getPuzzleInfo} from '../model/puzzle';
 
 const router = express.Router();
 
+// Escape values interpolated into the HTML/attribute contexts below. Puzzle
+// and game info fields (title/author/description) are user-controlled and
+// upload is unauthenticated, so raw interpolation is a stored-XSS sink.
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // TODO: revisit link preview implementation
 router.get('/', async (req, res) => {
   let url;
@@ -58,13 +70,13 @@ router.get('/', async (req, res) => {
   res.send(String.raw`
         <html prefix="og: https://ogp.me/ns/website#">
             <head>
-                <title>${titlePropContent}</title>
-                <meta property="og:title" content="${titlePropContent}" />
+                <title>${escapeHtml(titlePropContent)}</title>
+                <meta property="og:title" content="${escapeHtml(titlePropContent)}" />
                 <meta property="og:type" content="website" />
-                <meta property="og:url" content="${url.href}" />
-                <meta property="og:description" content="${info.description}" />
+                <meta property="og:url" content="${escapeHtml(url.href)}" />
+                <meta property="og:description" content="${escapeHtml(info.description)}" />
                 <meta property="og:site_name" content="downforacross.com" />
-                <link type="application/json+oembed" href=${oembedEndpointUrl} />
+                <link type="application/json+oembed" href="${escapeHtml(oembedEndpointUrl)}" />
                 <meta name="theme-color" content="#6aa9f4">
             </head>
         </html>
