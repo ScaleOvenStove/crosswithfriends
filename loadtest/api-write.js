@@ -67,10 +67,15 @@ export default function () {
       }
     );
     recordSolveDuration.add(res.timings.duration);
-    // May fail if pid doesn't exist — that's fine for latency testing
+    // We're measuring latency, so several non-2xx outcomes are acceptable:
+    //   404 — the test pid doesn't exist
+    //   403 — record_solve now requires the caller to have participated in the
+    //         game; this VU only created the game over HTTP (no gameplay
+    //         events, no auth/dfacId), so it is correctly rejected. The request
+    //         still exercises the input-validation + participation-check path.
     const ok = check(res, {
-      'record-solve: status 200 or 404': (r) =>
-        r.status === 200 || r.status === 404,
+      'record-solve: status 200, 403, or 404': (r) =>
+        r.status === 200 || r.status === 403 || r.status === 404,
     });
     errorRate.add(!ok);
   }
