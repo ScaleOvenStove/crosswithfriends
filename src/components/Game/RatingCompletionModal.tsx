@@ -134,6 +134,12 @@ export default function RatingCompletionModal({
   // so Enter dismisses rather than accidentally submitting a 1-star rating.
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Clear the expired-session warning once a fresh token arrives (e.g. inline
+  // email/password re-login, which doesn't remount this component).
+  useEffect(() => {
+    setAuthError(false);
+  }, [accessToken]);
+
   useEffect(() => {
     const wasSolved = wasSolvedRef.current;
     wasSolvedRef.current = solved;
