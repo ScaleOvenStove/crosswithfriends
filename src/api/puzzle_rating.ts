@@ -15,6 +15,16 @@ export class RatingNotEligibleError extends Error {
   }
 }
 
+// Thrown when the request is rejected for an expired/invalid session (401).
+// This is an expected auth-expiry state, not a bug — callers should re-prompt
+// sign-in rather than reporting it to Sentry.
+export class RatingAuthError extends Error {
+  constructor() {
+    super('auth_required');
+    this.name = 'RatingAuthError';
+  }
+}
+
 function authHeaders(accessToken?: string | null): Record<string, string> {
   return accessToken ? {Authorization: `Bearer ${accessToken}`} : {};
 }
@@ -43,6 +53,9 @@ export async function submitPuzzleRating(
   if (resp.status === 403) {
     const body = await resp.json().catch(() => ({}));
     throw new RatingNotEligibleError(body.thresholdPercent ?? 25);
+  }
+  if (resp.status === 401) {
+    throw new RatingAuthError();
   }
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');

@@ -7,6 +7,7 @@ import {
   fetchPuzzleRating,
   submitPuzzleRating,
   RatingNotEligibleError,
+  RatingAuthError,
   PuzzleRatingAggregate,
 } from '../../api/puzzle_rating';
 import './css/RatingWidget.css';
@@ -85,6 +86,7 @@ export default function RatingWidget({pid}: RatingWidgetProps) {
   const [hover, setHover] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [eligibilityError, setEligibilityError] = useState<number | null>(null);
+  const [authError, setAuthError] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function RatingWidget({pid}: RatingWidgetProps) {
     // without a key in pages/Game.js so the same instance is reused.
     setAggregate(null);
     setEligibilityError(null);
+    setAuthError(false);
     setHover(0);
     setSubmitting(false);
     fetchPuzzleRating(pid, accessToken)
@@ -114,12 +117,17 @@ export default function RatingWidget({pid}: RatingWidgetProps) {
       if (!accessToken) return;
       setSubmitting(true);
       setEligibilityError(null);
+      setAuthError(false);
       try {
         const next = await submitPuzzleRating(pid, rating, accessToken);
         setAggregate(next);
       } catch (err) {
         if (err instanceof RatingNotEligibleError) {
           setEligibilityError(err.thresholdPercent);
+        } else if (err instanceof RatingAuthError) {
+          // Session expired — re-prompt sign-in instead of reporting noise.
+          setAuthError(true);
+          setShowLogin(true);
         } else {
           Sentry.captureException(err);
         }
@@ -156,7 +164,16 @@ export default function RatingWidget({pid}: RatingWidgetProps) {
       {eligibilityError != null && (
         <div className="rating-widget--hint">Reach {eligibilityError}% completion to rate this puzzle.</div>
       )}
-      {!user && <LoginModal open={showLogin} onClose={handleCloseLogin} />}
+      {authError && (
+        <div className="rating-widget--hint">
+          Your session expired —{' '}
+          <button type="button" className="rating-widget--cta" onClick={handleOpenLogin}>
+            sign in again
+          </button>{' '}
+          to rate.
+        </div>
+      )}
+      {(!user || authError) && <LoginModal open={showLogin} onClose={handleCloseLogin} />}
     </div>
   );
 }
