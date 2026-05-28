@@ -207,14 +207,14 @@
   border-bottom-color: var(--dark-blue-1);
 }
 
-.dark .entry--top--left {
-  color: var(--dark-primary-text);
-}
-
 .dark .entry {
   color: var(--dark-primary-text);
   background-color: var(--dark-background-1);
   border-color: rgb(255 255 255 / 30%);
+}
+
+.dark .entry--title {
+  color: var(--dark-primary-text);
 }
 
 .dark .file-uploader--wrapper.v2 {
@@ -415,16 +415,23 @@
   border-color: #f0a050;
 }
 
-.dark .entry--original {
-  color: rgb(255 255 255 / 35%);
-}
-
 .dark .entry--icon.fencing {
   fill: #8a9bb0;
 }
 
-.dark .entry--rating {
+.dark .entry--meta-line,
+.dark .entry--details > p,
+.dark .entry--rating,
+.dark .entry--unlisted {
   color: rgb(255 255 255 / 60%);
+}
+
+.dark .entry--unlisted {
+  border-color: rgb(255 255 255 / 30%);
+}
+
+.dark .entry--original {
+  color: rgb(255 255 255 / 40%);
 }
 
 .dark .entry--solve-time,

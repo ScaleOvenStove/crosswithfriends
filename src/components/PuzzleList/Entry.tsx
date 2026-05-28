@@ -80,7 +80,11 @@ export default class Entry extends Component<EntryProps> {
     const {title, author, originalTitle, originalAuthor, pid, status, stats, fencing, isPublic} = this.props;
     const numSolvesOld = _.size(stats?.solves || []);
     const numSolves = numSolvesOld + (stats?.numSolves || 0);
-    const displayName = _.compact([author.trim(), this.size]).join(' | ');
+    const displayName = _.compact([this.size, author.trim()]).join(' | ');
+    const originalDisplay =
+      originalTitle || originalAuthor
+        ? `Originally: ${originalTitle || title}${originalAuthor ? ` by ${originalAuthor}` : ''}`
+        : null;
     return (
       <Link
         to={`/beta/play/${pid}${fencing ? '?fencing=1' : ''}`}
@@ -89,15 +93,17 @@ export default class Entry extends Component<EntryProps> {
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- interactive via parent Link */}
         <div className="flex--column entry" onClick={handleClick} onMouseLeave={handleMouseLeave}>
           <div className="flex entry--top--left">
-            <div style={{minWidth: 0}}>
-              <p
-                style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}
-                title={displayName}
-              >
-                {displayName}
+            <div className="flex--column entry--title-block">
+              <p className="entry--title" title={title}>
+                {title}
               </p>
+              {originalDisplay && (
+                <p className="entry--original" title={originalDisplay}>
+                  {originalDisplay}
+                </p>
+              )}
             </div>
-            <div className="flex">
+            <div className="flex entry--status-icons">
               {status === 'started' && !this.props.contest && (
                 <MdRadioButtonUnchecked className="entry--icon" />
               )}
@@ -106,44 +112,33 @@ export default class Entry extends Component<EntryProps> {
               {fencing && <GiCrossedSwords className="entry--icon fencing" />}
             </div>
           </div>
-          <div className="flex entry--main">
-            <div style={{minWidth: 0}}>
-              <p style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}} title={title}>
-                {title}
-              </p>
-              {(originalTitle || originalAuthor) && (
-                <p
-                  className="entry--original"
-                  title={`Originally: ${originalTitle || title}${originalAuthor ? ` by ${originalAuthor}` : ''}`}
-                >
-                  Originally: {originalTitle || title}
-                  {originalAuthor ? ` by ${originalAuthor}` : ''}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex entry--details">
-            <p>
-              Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
+          <div className="flex--column entry--main">
+            <p className="entry--meta-line" title={displayName}>
+              {displayName}
             </p>
-            <div className="flex">
-              {stats?.medianSolveMs != null && (
-                <span
-                  className="entry--solve-time"
-                  title={typicalSolveTitle(stats.medianSolveMs, stats.solveSampleCount)}
-                >
-                  <MdAccessTime className="entry--solve-time-icon" />
-                  {formatMilliseconds(stats.medianSolveMs)}
+            <div className="flex entry--details">
+              <p>
+                Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
+              </p>
+              <div className="flex entry--detail-stats">
+                {stats?.medianSolveMs != null && (
+                  <span
+                    className="entry--solve-time"
+                    title={typicalSolveTitle(stats.medianSolveMs, stats.solveSampleCount)}
+                  >
+                    <MdAccessTime className="entry--solve-time-icon" />
+                    {formatMilliseconds(stats.medianSolveMs)}
+                  </span>
+                )}
+                <span className="entry--rating" title={ratingTitle(stats?.ratingAverage, stats?.ratingCount)}>
+                  <MdStar className="entry--rating-icon" />
+                  {stats?.ratingAverage != null
+                    ? `${stats.ratingAverage.toFixed(1)} (${stats.ratingCount ?? 0})`
+                    : 'Not yet rated'}
                 </span>
-              )}
-              <span className="entry--rating" title={ratingTitle(stats?.ratingAverage, stats?.ratingCount)}>
-                <MdStar className="entry--rating-icon" />
-                {stats?.ratingAverage != null
-                  ? `${stats.ratingAverage.toFixed(1)} (${stats.ratingCount ?? 0})`
-                  : 'Not yet rated'}
-              </span>
-              {this.props.contest && <span className="entry--contest">Contest</span>}
-              {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
+                {this.props.contest && <span className="entry--contest">Contest</span>}
+                {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
+              </div>
             </div>
           </div>
         </div>

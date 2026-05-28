@@ -145,14 +145,14 @@ describe('Entry size classification', () => {
 });
 
 describe('Entry display', () => {
-  it('formats displayName as author | size', () => {
+  it('formats displayName as size | author', () => {
     const entry = makeEntry({
       author: 'John Doe',
       title: 'Untitled',
       info: {type: 'Daily Puzzle'},
     });
-    const displayName = [entry.props.author.trim(), entry.size].filter(Boolean).join(' | ');
-    expect(displayName).toBe('John Doe | Standard');
+    const displayName = [entry.size, entry.props.author.trim()].filter(Boolean).join(' | ');
+    expect(displayName).toBe('Standard | John Doe');
   });
 
   it('handles empty author gracefully', () => {
@@ -161,7 +161,7 @@ describe('Entry display', () => {
       title: 'Untitled',
       info: {type: 'Mini Puzzle'},
     });
-    const displayName = [entry.props.author.trim(), entry.size].filter(Boolean).join(' | ');
+    const displayName = [entry.size, entry.props.author.trim()].filter(Boolean).join(' | ');
     expect(displayName).toBe('Mini');
   });
 
