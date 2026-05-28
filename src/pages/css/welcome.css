@@ -159,6 +159,7 @@
   color: rgb(0 0 0 / 87%);
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   overflow: hidden;
   white-space: normal;
@@ -180,6 +181,7 @@
   color: rgb(0 0 0 / 45%);
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   overflow: hidden;
   white-space: normal;
