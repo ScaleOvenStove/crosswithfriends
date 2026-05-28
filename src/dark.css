@@ -421,8 +421,13 @@
 
 .dark .entry--meta-line,
 .dark .entry--details > p,
-.dark .entry--rating {
+.dark .entry--rating,
+.dark .entry--unlisted {
   color: rgb(255 255 255 / 60%);
+}
+
+.dark .entry--unlisted {
+  border-color: rgb(255 255 255 / 30%);
 }
 
 .dark .entry--original {
