@@ -24,7 +24,7 @@ export interface SolveHistoryItem {
 export interface SizeStats {
   size: string;
   count: number;
-  avgTime: number;
+  avgTime: number | null;
 }
 
 export interface DayOfWeekStats {

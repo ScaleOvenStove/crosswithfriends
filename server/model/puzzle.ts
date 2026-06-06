@@ -70,14 +70,41 @@ export async function getPuzzle(pid: string): Promise<PuzzleJson | null> {
   return row ? row.content : null;
 }
 
-const GRID_MAX_DIM = `GREATEST(jsonb_array_length(content->'grid'), jsonb_array_length(content->'grid'->0))`;
-const TITLE_HAS_MINI = `(content->'info'->>'title') ~* '\\mmini\\M'`;
-const TITLE_HAS_MIDI = `(content->'info'->>'title') ~* '\\mmidi\\M'`;
+export const PUZZLE_SIZE_BUCKET_ORDER = ['Large', 'Standard', 'Midi', 'Mini'] as const;
+
+export function getPuzzleGridMaxDimSql(contentExpr: string): string {
+  return `GREATEST(jsonb_array_length(${contentExpr}->'grid'), jsonb_array_length(${contentExpr}->'grid'->0))`;
+}
+
+export function getPuzzleTitleHasMiniSql(contentExpr: string): string {
+  return `(${contentExpr}->'info'->>'title') ~* '\\mmini\\M'`;
+}
+
+export function getPuzzleTitleHasMidiSql(contentExpr: string): string {
+  return `(${contentExpr}->'info'->>'title') ~* '\\mmidi\\M'`;
+}
+
+export function getPuzzleSizeBucketSql(contentExpr: string): string {
+  const gridMaxDim = getPuzzleGridMaxDimSql(contentExpr);
+  const titleHasMini = getPuzzleTitleHasMiniSql(contentExpr);
+  const titleHasMidi = getPuzzleTitleHasMidiSql(contentExpr);
+
+  return `CASE
+    WHEN ${titleHasMidi} OR (${gridMaxDim} BETWEEN 9 AND 12 AND NOT ${titleHasMini}) THEN 'Midi'
+    WHEN (${titleHasMini} AND NOT ${titleHasMidi}) OR (${gridMaxDim} <= 8 AND NOT ${titleHasMidi}) THEN 'Mini'
+    WHEN ${gridMaxDim} BETWEEN 13 AND 16 AND NOT ${titleHasMini} AND NOT ${titleHasMidi} THEN 'Standard'
+    ELSE 'Large'
+  END`;
+}
 
 const buildSizeFilterClause = (sizeFilter: ListPuzzleRequestFilters['sizeFilter']): string => {
   const allSelected = sizeFilter.Mini && sizeFilter.Midi && sizeFilter.Standard && sizeFilter.Large;
   const noneSelected = !sizeFilter.Mini && !sizeFilter.Midi && !sizeFilter.Standard && !sizeFilter.Large;
   if (allSelected || noneSelected) return '';
+
+  const gridMaxDim = getPuzzleGridMaxDimSql('content');
+  const titleHasMini = getPuzzleTitleHasMiniSql('content');
+  const titleHasMidi = getPuzzleTitleHasMidiSql('content');
 
   // Size classification: title takes priority over grid size
   // Mini: title contains "mini" (not "midi"), OR grid ≤8 without "midi" in title
@@ -87,16 +114,16 @@ const buildSizeFilterClause = (sizeFilter: ListPuzzleRequestFilters['sizeFilter'
   const conditions: string[] = [];
   if (sizeFilter.Mini) {
     conditions.push(
-      `(${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}) OR (${GRID_MAX_DIM} <= 8 AND NOT ${TITLE_HAS_MIDI})`
+      `(${titleHasMini} AND NOT ${titleHasMidi}) OR (${gridMaxDim} <= 8 AND NOT ${titleHasMidi})`
     );
   }
   if (sizeFilter.Midi) {
-    conditions.push(`${TITLE_HAS_MIDI} OR (${GRID_MAX_DIM} BETWEEN 9 AND 12 AND NOT ${TITLE_HAS_MINI})`);
+    conditions.push(`${titleHasMidi} OR (${gridMaxDim} BETWEEN 9 AND 12 AND NOT ${titleHasMini})`);
   }
   if (sizeFilter.Standard)
-    conditions.push(`${GRID_MAX_DIM} BETWEEN 13 AND 16 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
+    conditions.push(`${gridMaxDim} BETWEEN 13 AND 16 AND NOT ${titleHasMini} AND NOT ${titleHasMidi}`);
   if (sizeFilter.Large)
-    conditions.push(`${GRID_MAX_DIM} >= 17 AND NOT ${TITLE_HAS_MINI} AND NOT ${TITLE_HAS_MIDI}`);
+    conditions.push(`${gridMaxDim} >= 17 AND NOT ${titleHasMini} AND NOT ${titleHasMidi}`);
 
   return `AND (${conditions.join(' OR ')})`;
 };

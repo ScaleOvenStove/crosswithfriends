@@ -191,7 +191,7 @@ function StatsCards({stats}) {
           <div key={s.size} className="profile--stat-card">
             <div className="profile--stat-card--value">{s.count}</div>
             <div className="profile--stat-card--label">{s.size}</div>
-            <div className="profile--stat-card--sub">avg {formatTime(s.avgTime)}</div>
+            {s.avgTime !== null && <div className="profile--stat-card--sub">avg {formatTime(s.avgTime)}</div>}
           </div>
         ))}
       </div>

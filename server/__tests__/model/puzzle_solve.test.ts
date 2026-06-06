@@ -80,8 +80,8 @@ describe('getUserSolveStats', () => {
     // Combined stats+day CTE query (size rows then day rows via UNION ALL)
     pool.query.mockResolvedValueOnce({
       rows: [
-        {stat_type: 'size', key: '15x15', count: 5, avg_time: 300},
-        {stat_type: 'day', key: 'Mon', count: 3, avg_time: 120},
+        {stat_type: 'size', solve_mode: 'all', key: 'Standard', count: 5, avg_time: 300},
+        {stat_type: 'day', solve_mode: 'all', key: 'Mon', count: 3, avg_time: 120},
       ],
     });
     // History query
@@ -94,6 +94,12 @@ describe('getUserSolveStats', () => {
     expect(result).toHaveProperty('bySize');
     expect(result).toHaveProperty('byDay');
     expect(result).toHaveProperty('history');
+    expect(result.bySize).toEqual([
+      {size: 'Large', count: 0, avgTime: null},
+      {size: 'Standard', count: 5, avgTime: 300},
+      {size: 'Midi', count: 0, avgTime: null},
+      {size: 'Mini', count: 0, avgTime: null},
+    ]);
     expect(result.byDay).toEqual([{day: 'Mon', count: 3, avgTime: 120}]);
   });
 
@@ -101,15 +107,47 @@ describe('getUserSolveStats', () => {
     // Combined stats CTE returns both size rows
     pool.query.mockResolvedValueOnce({
       rows: [
-        {stat_type: 'size', key: '5x5', count: 3, avg_time: 60},
-        {stat_type: 'size', key: '15x15', count: 7, avg_time: 300},
+        {stat_type: 'size', solve_mode: 'all', key: 'Mini', count: 3, avg_time: 60},
+        {stat_type: 'size', solve_mode: 'all', key: 'Standard', count: 7, avg_time: 300},
       ],
     });
     pool.query.mockResolvedValueOnce({rows: []}); // history
 
     const result = await getUserSolveStats('user-1');
     expect(result.totalSolved).toBe(10);
-    expect(result.bySize).toHaveLength(2);
+    expect(result.bySize).toEqual([
+      {size: 'Large', count: 0, avgTime: null},
+      {size: 'Standard', count: 7, avgTime: 300},
+      {size: 'Midi', count: 0, avgTime: null},
+      {size: 'Mini', count: 3, avgTime: 60},
+    ]);
+  });
+
+  it('returns four size buckets in fixed order for each mode', async () => {
+    pool.query.mockResolvedValueOnce({
+      rows: [
+        {stat_type: 'size', solve_mode: 'solo', key: 'Midi', count: 2, avg_time: 180},
+        {stat_type: 'size', solve_mode: 'coop', key: 'Large', count: 4, avg_time: 900},
+        {stat_type: 'size', solve_mode: 'all', key: 'Large', count: 4, avg_time: 900},
+        {stat_type: 'size', solve_mode: 'all', key: 'Midi', count: 2, avg_time: 180},
+      ],
+    });
+    pool.query.mockResolvedValueOnce({rows: []});
+
+    const result = await getUserSolveStats('user-1');
+
+    expect(result.bySizeSolo).toEqual([
+      {size: 'Large', count: 0, avgTime: null},
+      {size: 'Standard', count: 0, avgTime: null},
+      {size: 'Midi', count: 2, avgTime: 180},
+      {size: 'Mini', count: 0, avgTime: null},
+    ]);
+    expect(result.bySizeCoop).toEqual([
+      {size: 'Large', count: 4, avgTime: 900},
+      {size: 'Standard', count: 0, avgTime: null},
+      {size: 'Midi', count: 0, avgTime: null},
+      {size: 'Mini', count: 0, avgTime: null},
+    ]);
   });
 
   it('defaults title to "Untitled" and playerCount to 1', async () => {
