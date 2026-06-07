@@ -182,7 +182,7 @@ function StatsCards({stats}) {
           ))}
         </div>
       )}
-      <div className="profile--stats-grid">
+      <div className="profile--stats-grid profile--stats-grid--sizes">
         <div className="profile--stat-card">
           <div className="profile--stat-card--value">{total}</div>
           <div className="profile--stat-card--label">Puzzles Solved</div>
