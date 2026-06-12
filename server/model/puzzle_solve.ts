@@ -1,6 +1,7 @@
 import {pool} from './pool';
 import {dayOfWeekExtract} from './sql_helpers';
 import {TTLCache} from './ttl_cache';
+import {getPuzzleSizeBucketSql, PUZZLE_SIZE_BUCKET_ORDER} from './puzzle';
 
 // ---- In-memory TTL cache for in-progress games ----
 const inProgressGamesCache = new TTLCache<InProgressGameItem[]>({ttlMs: 5 * 60_000, maxSize: 2_000});
@@ -45,7 +46,7 @@ export type UserSolveHistoryItem = {
 export type SizeStats = {
   size: string;
   count: number;
-  avgTime: number;
+  avgTime: number | null;
 };
 
 export type DayOfWeekStats = {
@@ -83,6 +84,8 @@ export async function getUserSolveStats(userId: string): Promise<{
   byDayCoop: DayOfWeekStats[];
   history: UserSolveHistoryItem[];
 }> {
+  const puzzleSizeBucketSql = getPuzzleSizeBucketSql('p.content');
+
   // Run size+day stats query and history query in parallel.
   // Both use lightweight JSONB extraction (no full content fetch).
   const [combinedStatsResult, historyResult] = await Promise.all([
@@ -94,10 +97,7 @@ export async function getUserSolveStats(userId: string): Promise<{
           ps.pid,
           ps.time_taken_to_solve AS best_time,
           CASE WHEN COALESCE(ps.player_count, 1) = 1 THEN 'solo' ELSE 'coop' END AS solve_mode,
-          GREATEST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-            || 'x' ||
-          LEAST(jsonb_array_length(p.content->'grid'), jsonb_array_length(p.content->'grid'->0))::text
-            AS size,
+          ${puzzleSizeBucketSql} AS size,
           ${dayOfWeekExtract('p')} AS dow
         FROM puzzle_solves ps
         JOIN puzzles p ON ps.pid = p.pid
@@ -156,15 +156,22 @@ export async function getUserSolveStats(userId: string): Promise<{
   for (const r of combinedStatsResult.rows) {
     const bucket = statsByMode[r.solve_mode] || statsByMode.all;
     if (r.stat_type === 'size') {
-      bucket.bySize.push({size: r.key, count: r.count, avgTime: r.avg_time});
+      bucket.bySize.push({
+        size: r.key,
+        count: r.count,
+        avgTime: r.avg_time === null ? null : Number(r.avg_time),
+      });
       bucket.total += r.count;
     } else {
       bucket.byDay.push({day: r.key, count: r.count, avgTime: r.avg_time});
     }
   }
-  // Sort bySize by count descending for each mode
+
   for (const mode of Object.values(statsByMode)) {
-    mode.bySize.sort((a, b) => b.count - a.count);
+    const bySizeMap = new Map(mode.bySize.map((stat) => [stat.size, stat]));
+    mode.bySize = PUZZLE_SIZE_BUCKET_ORDER.map(
+      (size) => bySizeMap.get(size) || {size, count: 0, avgTime: null}
+    );
   }
 
   // For collaborative solves, batch co-solver + count into a single query

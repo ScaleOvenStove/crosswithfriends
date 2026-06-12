@@ -182,7 +182,7 @@ function StatsCards({stats}) {
           ))}
         </div>
       )}
-      <div className="profile--stats-grid">
+      <div className="profile--stats-grid profile--stats-grid--sizes">
         <div className="profile--stat-card">
           <div className="profile--stat-card--value">{total}</div>
           <div className="profile--stat-card--label">Puzzles Solved</div>
@@ -191,7 +191,7 @@ function StatsCards({stats}) {
           <div key={s.size} className="profile--stat-card">
             <div className="profile--stat-card--value">{s.count}</div>
             <div className="profile--stat-card--label">{s.size}</div>
-            <div className="profile--stat-card--sub">avg {formatTime(s.avgTime)}</div>
+            {s.avgTime !== null && <div className="profile--stat-card--sub">avg {formatTime(s.avgTime)}</div>}
           </div>
         ))}
       </div>
