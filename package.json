@@ -20,7 +20,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
     "helmet": "^8.1.0",
-    "joi": "^18.1.1",
+    "joi": "^18.2.1",
     "jsonwebtoken": "^9.0.3",
     "linkify-react": "^4.3.2",
     "linkifyjs": "^4.3.2",
