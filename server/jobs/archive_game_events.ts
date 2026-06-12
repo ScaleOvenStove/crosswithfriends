@@ -50,31 +50,56 @@ interface CleanupStats {
   eventsDeleted: number;
 }
 
-/** Delete (or in dry-run mode, count) events for the given gids, in batches. */
-async function deleteEventsForGids(gids: string[], onlyNonCreate: boolean): Promise<number> {
+/**
+ * Run a batched DELETE (or its COUNT equivalent in dry-run mode) over the
+ * given gids, DELETE_BATCH_SIZE gids per statement. Both statements take the
+ * gid batch as $1. Returns total rows affected.
+ */
+async function processGidBatches(gids: string[], deleteSql: string, countSql: string): Promise<number> {
   let affected = 0;
   for (let i = 0; i < gids.length; i += DELETE_BATCH_SIZE) {
     const batch = gids.slice(i, i + DELETE_BATCH_SIZE);
     if (DRY_RUN) {
       const {
         rows: [{count}],
-      } = await pool.query(
-        `SELECT COUNT(*) FROM game_events
-         WHERE gid = ANY($1)${onlyNonCreate ? ` AND event_type != 'create'` : ''}`,
-        [batch]
-      );
+      } = await pool.query(countSql, [batch]);
       affected += Number(count);
     } else {
-      const result = await pool.query(
-        `DELETE FROM game_events
-         WHERE gid = ANY($1)${onlyNonCreate ? ` AND event_type != 'create'` : ''}`,
-        [batch]
-      );
+      const result = await pool.query(deleteSql, [batch]);
       affected += result.rowCount || 0;
     }
   }
   return affected;
 }
+
+// Category 1 delete re-checks replay_retained at delete time, so a keep-replay
+// request landing between discovery and delete is still honored.
+const SOLVED_DELETE_SQL = `
+  DELETE FROM game_events ge
+  USING game_snapshots gs
+  WHERE gs.gid = ge.gid
+    AND gs.replay_retained = false
+    AND ge.gid = ANY($1)
+    AND ge.event_type != 'create'`;
+const SOLVED_COUNT_SQL = `
+  SELECT COUNT(*) FROM game_events ge
+  JOIN game_snapshots gs ON gs.gid = ge.gid
+  WHERE gs.replay_retained = false
+    AND ge.gid = ANY($1)
+    AND ge.event_type != 'create'`;
+
+// Category 2 delete re-checks that no snapshot or solve record appeared
+// between discovery and delete (e.g. the game was solved in that window).
+const ABANDONED_DELETE_SQL = `
+  DELETE FROM game_events ge
+  WHERE ge.gid = ANY($1)
+    AND NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = ge.gid)
+    AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = ge.gid)`;
+const ABANDONED_COUNT_SQL = `
+  SELECT COUNT(*) FROM game_events ge
+  WHERE ge.gid = ANY($1)
+    AND NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = ge.gid)
+    AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = ge.gid)`;
 
 /**
  * Category 1: Delete non-create events for solved games with snapshots.
@@ -113,7 +138,7 @@ async function cleanupSolvedGames(): Promise<CleanupStats> {
     const gids = rows.filter((r) => r.needs_cleanup).map((r) => r.gid);
     if (gids.length > 0) {
       stats.gamesProcessed += gids.length;
-      stats.eventsDeleted += await deleteEventsForGids(gids, true);
+      stats.eventsDeleted += await processGidBatches(gids, SOLVED_DELETE_SQL, SOLVED_COUNT_SQL);
     }
 
     if (rows.length < DISCOVERY_PAGE_SIZE) break;
@@ -148,7 +173,7 @@ async function cleanupAbandonedGames(): Promise<CleanupStats> {
          LIMIT $2
        )
        SELECT p.gid,
-              (p.last_ts < NOW() - ($3 || ' days')::interval
+              (p.last_ts < (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval
                AND NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = p.gid)
                AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = p.gid)) AS abandoned
        FROM page p
@@ -161,7 +186,7 @@ async function cleanupAbandonedGames(): Promise<CleanupStats> {
     const gids = rows.filter((r) => r.abandoned).map((r) => r.gid);
     if (gids.length > 0) {
       stats.gamesProcessed += gids.length;
-      const affected = await deleteEventsForGids(gids, false);
+      const affected = await processGidBatches(gids, ABANDONED_DELETE_SQL, ABANDONED_COUNT_SQL);
       stats.eventsDeleted += affected;
       console.log(
         `  ${DRY_RUN ? '[DRY RUN] Would delete' : 'Deleted'} ${affected} events from ${gids.length} abandoned games (through gid ${lastGid})`
