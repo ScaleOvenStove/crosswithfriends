@@ -6,6 +6,11 @@
  *   2. Abandoned games (no snapshot, no solve, inactive for N days) — delete all events
  *   3. (Optional) Expire replay_retained flag after N days
  *
+ * All discovery queries are keyset-paginated (bounded windows over an indexed
+ * key) and deletes are batched by gid, so no single statement scans the whole
+ * table or can approach the statement timeout. Deletes happen as each page is
+ * discovered, so progress is durable even if a run is interrupted.
+ *
  * Usage:
  *   # Via dotenv-cli (recommended):
  *   dotenv -e server/.env.local -- npx ts-node -P server/tsconfig.json server/jobs/archive_game_events.ts
@@ -34,6 +39,11 @@ const DRY_RUN = process.env.DRY_RUN === '1';
 const ABANDON_DAYS = parseInt(process.env.ABANDON_DAYS || '90', 10);
 const EXPIRE_REPLAY_DAYS = parseInt(process.env.EXPIRE_REPLAY_DAYS || '0', 10);
 
+// Each discovery statement scans at most this many gids (one bounded window of
+// an ordered index scan), and each DELETE targets at most DELETE_BATCH_SIZE gids.
+const DISCOVERY_PAGE_SIZE = 5000;
+const DELETE_BATCH_SIZE = 500;
+
 interface CleanupStats {
   category: string;
   gamesProcessed: number;
@@ -41,94 +51,154 @@ interface CleanupStats {
 }
 
 /**
+ * Run a batched DELETE (or its COUNT equivalent in dry-run mode) over the
+ * given gids, DELETE_BATCH_SIZE gids per statement. Both statements take the
+ * gid batch as $1. Returns total rows affected.
+ */
+async function processGidBatches(gids: string[], deleteSql: string, countSql: string): Promise<number> {
+  let affected = 0;
+  for (let i = 0; i < gids.length; i += DELETE_BATCH_SIZE) {
+    const batch = gids.slice(i, i + DELETE_BATCH_SIZE);
+    if (DRY_RUN) {
+      const {
+        rows: [{count}],
+      } = await pool.query(countSql, [batch]);
+      affected += Number(count);
+    } else {
+      const result = await pool.query(deleteSql, [batch]);
+      affected += result.rowCount || 0;
+    }
+  }
+  return affected;
+}
+
+// Category 1 delete re-checks replay_retained at delete time, so a keep-replay
+// request landing between discovery and delete is still honored.
+const SOLVED_DELETE_SQL = `
+  DELETE FROM game_events ge
+  USING game_snapshots gs
+  WHERE gs.gid = ge.gid
+    AND gs.replay_retained = false
+    AND ge.gid = ANY($1)
+    AND ge.event_type != 'create'`;
+const SOLVED_COUNT_SQL = `
+  SELECT COUNT(*) FROM game_events ge
+  JOIN game_snapshots gs ON gs.gid = ge.gid
+  WHERE gs.replay_retained = false
+    AND ge.gid = ANY($1)
+    AND ge.event_type != 'create'`;
+
+// Category 2 delete re-checks that no snapshot or solve record appeared
+// between discovery and delete (e.g. the game was solved in that window).
+const ABANDONED_DELETE_SQL = `
+  DELETE FROM game_events ge
+  WHERE ge.gid = ANY($1)
+    AND NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = ge.gid)
+    AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = ge.gid)`;
+const ABANDONED_COUNT_SQL = `
+  SELECT COUNT(*) FROM game_events ge
+  WHERE ge.gid = ANY($1)
+    AND NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = ge.gid)
+    AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = ge.gid)`;
+
+/**
  * Category 1: Delete non-create events for solved games with snapshots.
  * Keeps the create event (contains puzzle ID and game metadata).
+ *
+ * Pages over game_snapshots by gid (its PK); each page checks which snapshots
+ * still have non-create events left (cheap per-gid index probes) and cleans
+ * those before moving on.
  */
 async function cleanupSolvedGames(): Promise<CleanupStats> {
   const stats: CleanupStats = {category: 'solved', gamesProcessed: 0, eventsDeleted: 0};
 
-  if (DRY_RUN) {
-    const {
-      rows: [{games, events}],
-    } = await pool.query(
-      `SELECT
-         COUNT(DISTINCT ge.gid) AS games,
-         COUNT(*) AS events
-       FROM game_events ge
-       INNER JOIN game_snapshots gs ON gs.gid = ge.gid
-       WHERE gs.replay_retained = false
-         AND ge.event_type != 'create'`
+  let lastGid = '';
+  for (;;) {
+    const {rows} = await pool.query(
+      `WITH page AS (
+         SELECT gid, replay_retained
+         FROM game_snapshots
+         WHERE gid > $1
+         ORDER BY gid
+         LIMIT $2
+       )
+       SELECT p.gid,
+              (p.replay_retained = false
+               AND EXISTS (
+                 SELECT 1 FROM game_events ge
+                 WHERE ge.gid = p.gid AND ge.event_type != 'create'
+               )) AS needs_cleanup
+       FROM page p
+       ORDER BY p.gid`,
+      [lastGid, DISCOVERY_PAGE_SIZE]
     );
-    stats.gamesProcessed = Number(games);
-    stats.eventsDeleted = Number(events);
-    console.log(`  [DRY RUN] Would delete ${events} events from ${games} solved games`);
-    return stats;
+    if (rows.length === 0) break;
+    lastGid = rows[rows.length - 1].gid;
+
+    const gids = rows.filter((r) => r.needs_cleanup).map((r) => r.gid);
+    if (gids.length > 0) {
+      stats.gamesProcessed += gids.length;
+      stats.eventsDeleted += await processGidBatches(gids, SOLVED_DELETE_SQL, SOLVED_COUNT_SQL);
+    }
+
+    if (rows.length < DISCOVERY_PAGE_SIZE) break;
   }
 
-  const result = await pool.query(
-    `DELETE FROM game_events ge
-     USING game_snapshots gs
-     WHERE gs.gid = ge.gid
-       AND gs.replay_retained = false
-       AND ge.event_type != 'create'`
+  console.log(
+    `  ${DRY_RUN ? '[DRY RUN] Would delete' : 'Deleted'} ${stats.eventsDeleted} events from ${stats.gamesProcessed} solved games`
   );
-  stats.eventsDeleted = result.rowCount || 0;
-  console.log(`  Deleted ${stats.eventsDeleted} events from solved games`);
-
   return stats;
 }
 
 /**
  * Category 2: Delete all events for abandoned games.
  * Abandoned = no snapshot, no puzzle_solves record, no activity for ABANDON_DAYS.
+ *
+ * Pages over distinct gids via the (gid, ts) index — each window aggregates
+ * MAX(ts) for a bounded slice of gids, flags the abandoned ones with per-gid
+ * snapshot/solve probes, and deletes them before advancing the keyset.
  */
-const ABANDONED_BATCH_SIZE = 500;
-
 async function cleanupAbandonedGames(): Promise<CleanupStats> {
   const stats: CleanupStats = {category: 'abandoned', gamesProcessed: 0, eventsDeleted: 0};
 
-  // Step 1: Find abandoned gids (separate lightweight query)
-  const {rows: abandonedGids} = await pool.query(
-    `SELECT ge.gid
-     FROM game_events ge
-     LEFT JOIN game_snapshots gs ON gs.gid = ge.gid
-     LEFT JOIN puzzle_solves ps ON ps.gid = ge.gid
-     WHERE gs.gid IS NULL AND ps.gid IS NULL
-     GROUP BY ge.gid
-     HAVING MAX(ge.ts) < NOW() - ($1 || ' days')::interval`,
-    [String(ABANDON_DAYS)]
-  );
+  let lastGid = '';
+  for (;;) {
+    const {rows} = await pool.query(
+      `WITH page AS (
+         SELECT ge.gid, MAX(ge.ts) AS last_ts
+         FROM game_events ge
+         WHERE ge.gid > $1
+         GROUP BY ge.gid
+         ORDER BY ge.gid
+         LIMIT $2
+       )
+       SELECT p.gid,
+              (p.last_ts < (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval
+               AND NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = p.gid)
+               AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = p.gid)) AS abandoned
+       FROM page p
+       ORDER BY p.gid`,
+      [lastGid, DISCOVERY_PAGE_SIZE, String(ABANDON_DAYS)]
+    );
+    if (rows.length === 0) break;
+    lastGid = rows[rows.length - 1].gid;
 
-  stats.gamesProcessed = abandonedGids.length;
-  console.log(`  Found ${abandonedGids.length} abandoned games`);
-
-  if (DRY_RUN) {
-    const gids = abandonedGids.map((r) => r.gid);
+    const gids = rows.filter((r) => r.abandoned).map((r) => r.gid);
     if (gids.length > 0) {
-      const {
-        rows: [{count}],
-      } = await pool.query(`SELECT COUNT(*) FROM game_events WHERE gid = ANY($1)`, [gids]);
-      stats.eventsDeleted = Number(count);
+      stats.gamesProcessed += gids.length;
+      const affected = await processGidBatches(gids, ABANDONED_DELETE_SQL, ABANDONED_COUNT_SQL);
+      stats.eventsDeleted += affected;
+      console.log(
+        `  ${DRY_RUN ? '[DRY RUN] Would delete' : 'Deleted'} ${affected} events from ${gids.length} abandoned games (through gid ${lastGid})`
+      );
     }
-    console.log(
-      `  [DRY RUN] Would delete ${stats.eventsDeleted} events from ${stats.gamesProcessed} abandoned games`
-    );
-    return stats;
+
+    if (rows.length < DISCOVERY_PAGE_SIZE) break;
   }
 
-  // Step 2: Delete in batches by gid
-  const gids = abandonedGids.map((r) => r.gid);
-  for (let i = 0; i < gids.length; i += ABANDONED_BATCH_SIZE) {
-    const batch = gids.slice(i, i + ABANDONED_BATCH_SIZE);
-    const result = await pool.query(`DELETE FROM game_events WHERE gid = ANY($1)`, [batch]);
-    const deleted = result.rowCount || 0;
-    stats.eventsDeleted += deleted;
-    console.log(
-      `  Batch ${Math.floor(i / ABANDONED_BATCH_SIZE) + 1}: deleted ${deleted} events (${batch.length} games)`
-    );
-  }
-
-  console.log(`  Deleted ${stats.eventsDeleted} events from ${stats.gamesProcessed} abandoned games`);
+  console.log(
+    `  ${DRY_RUN ? '[DRY RUN] Would delete' : 'Deleted'} ${stats.eventsDeleted} events from ${stats.gamesProcessed} abandoned games total`
+  );
   return stats;
 }
 
