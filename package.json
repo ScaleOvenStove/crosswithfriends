@@ -50,7 +50,7 @@
     "overrides": {
       "@types/react": "^19.2.14",
       "@types/react-dom": "^19.2.3",
-      "esbuild": "^0.27.4",
+      "esbuild": "^0.28.1",
       "serialize-javascript": "^7.0.3",
       "diff": "^5.2.0",
       "glob": "^13.0.6",
@@ -103,7 +103,7 @@
     "argparse": "^2.0.1",
     "cross-env": "^10.1.0",
     "dotenv-cli": "^11.0.0",
-    "esbuild": "^0.27.4",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.2",
     "eslint-import-resolver-typescript": "^3.10.1",
