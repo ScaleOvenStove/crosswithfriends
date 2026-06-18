@@ -427,7 +427,7 @@ router.post('/refresh', async (req, res) => {
     // Lost a benign concurrent rotation race: a parallel /refresh already
     // issued a fresh cookie. Do NOT clear it — just ask the client to retry,
     // which will use the new cookie.
-    res.status(401).json({error: 'Refresh in progress, please retry'});
+    res.status(401).json({error: 'Refresh in progress, please retry', retry: true});
     return;
   }
   if (rotation.status !== 'rotated') {
