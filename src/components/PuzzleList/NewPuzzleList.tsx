@@ -195,7 +195,9 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         fencing: props.fencing,
         isPublic: puzzle.isPublic,
         contest: puzzle.content.contest,
-        zenMode: preferences?.zenMode,
+        // Zen mode is account-only — a guest must not inherit a stale
+        // localStorage flag left over from a previous logged-in session.
+        zenMode: !!user && preferences?.zenMode,
       },
     }))
     .filter((data) => {

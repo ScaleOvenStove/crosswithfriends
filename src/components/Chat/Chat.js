@@ -3,7 +3,7 @@ import React, {Component} from 'react';
 import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
-import {MdClose, MdErrorOutline, MdHelpOutline, MdLock} from 'react-icons/md';
+import {MdClose, MdErrorOutline, MdHelpOutline, MdLock, MdVisibilityOff} from 'react-icons/md';
 import {FaClone, FaCrown} from 'react-icons/fa6';
 import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
@@ -21,6 +21,7 @@ import InfoDialog from '../common/InfoDialog';
 import AuthContext from '../../lib/AuthContext';
 import {kickPlayer, unkickPlayer} from '../../api/create_game';
 import {copyPuzzleId} from './puzzleId';
+import {getUserStats} from '../../api/user_stats';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -39,6 +40,7 @@ export default class Chat extends Component {
       unkickTarget: null,
       showLockInfo: false,
       copiedPuzzleId: false,
+      solvedPids: null,
     };
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
@@ -135,6 +137,17 @@ export default class Chat extends Component {
     const username = this.props.initialUsername;
     this.setState({username});
     this.handleUpdateDisplayName(username);
+
+    // Zen mode hides spoilers per-puzzle, lifetime — not per-game-instance —
+    // so a fresh game on a puzzle you've already solved elsewhere shouldn't
+    // re-hide stats. Only authenticated users can have zen mode active (see
+    // showStats below), so only fetch for them.
+    const {isAuthenticated, user, accessToken} = this.context || {};
+    if (isAuthenticated && user?.id && accessToken) {
+      getUserStats(user.id, accessToken).then((stats) => {
+        if (stats?.solvedPids) this.setState({solvedPids: stats.solvedPids});
+      });
+    }
   }
 
   componentWillUnmount() {
@@ -315,7 +328,13 @@ export default class Chat extends Component {
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
     const hasOverride = titleOverride || authorOverride;
     // Zen mode: hide spoilers (median time, rating) until the puzzle is solved.
-    const showStats = !this.context?.preferences?.zenMode || !!game?.solved;
+    // Account-only — a guest must not inherit a stale localStorage flag left
+    // over from a previous logged-in session. "Solved" is lifetime per-pid
+    // (have you ever solved this puzzle), not per-game-instance, so a fresh
+    // game on an already-solved puzzle doesn't re-hide stats.
+    const zenModeActive = !!this.context?.isAuthenticated && !!this.context?.preferences?.zenMode;
+    const alreadySolved = !!game?.solved || !!(pid && this.state.solvedPids?.includes(pid));
+    const showStats = !zenModeActive || alreadySolved;
 
     return (
       <div className="chat--header">
@@ -355,6 +374,15 @@ export default class Chat extends Component {
         )}
         {pid && showStats && <PuzzleStatsLine pid={String(pid)} />}
         {pid && showStats && <RatingWidget pid={String(pid)} />}
+        {pid && !showStats && (
+          <span
+            className="chat--zen-hidden-chip"
+            title="Rating and solve time are hidden until you finish this puzzle (Zen Mode)"
+          >
+            <MdVisibilityOff className="chat--zen-hidden-chip-icon" />
+            Hidden by Zen Mode
+          </span>
+        )}
         {!this.isOwner && this.props.locked && (
           <>
             <button
