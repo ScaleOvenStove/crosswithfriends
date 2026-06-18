@@ -26,9 +26,10 @@ interface NewPuzzleListProps {
 }
 
 const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
-  const {accessToken, user} = useContext(AuthContext) as {
+  const {accessToken, user, preferences} = useContext(AuthContext) as {
     accessToken: string | null;
     user: {id: string} | null;
+    preferences: {zenMode?: boolean} | null;
   };
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -194,6 +195,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
         fencing: props.fencing,
         isPublic: puzzle.isPublic,
         contest: puzzle.content.contest,
+        zenMode: preferences?.zenMode,
       },
     }))
     .filter((data) => {
@@ -246,6 +248,7 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
             fencing={entryProps.fencing}
             isPublic={entryProps.isPublic}
             contest={entryProps.contest}
+            zenMode={entryProps.zenMode}
           />
         </div>
       ))}

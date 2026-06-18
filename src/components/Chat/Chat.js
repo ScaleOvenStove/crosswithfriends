@@ -314,6 +314,8 @@ export default class Chat extends Component {
     const displayAuthor = authorOverride || author;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
     const hasOverride = titleOverride || authorOverride;
+    // Zen mode: hide spoilers (median time, rating) until the puzzle is solved.
+    const showStats = !this.context?.preferences?.zenMode || !!game?.solved;
 
     return (
       <div className="chat--header">
@@ -351,8 +353,8 @@ export default class Chat extends Component {
             {this.state.copiedPuzzleId && <span className="chat--header--puzzle-id-copied">Copied</span>}
           </button>
         )}
-        {pid && <PuzzleStatsLine pid={String(pid)} />}
-        {pid && <RatingWidget pid={String(pid)} />}
+        {pid && showStats && <PuzzleStatsLine pid={String(pid)} />}
+        {pid && showStats && <RatingWidget pid={String(pid)} />}
         {!this.isOwner && this.props.locked && (
           <>
             <button
