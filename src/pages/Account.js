@@ -100,6 +100,11 @@ function GamePreferencesSection({preferences, savePreference, darkModePreference
     {key: 'showProgress', label: 'Show progress', value: preferences?.showProgress ?? true},
     {key: 'colorAttribution', label: 'Color Attribution', value: preferences?.colorAttribution ?? false},
     {key: 'sound', label: 'Sound on solve', value: preferences?.sound ?? true},
+    {
+      key: 'zenMode',
+      label: 'Zen mode (hide ratings & times until solved)',
+      value: preferences?.zenMode ?? false,
+    },
   ];
 
   return (

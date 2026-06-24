@@ -226,6 +226,22 @@
   white-space: nowrap;
 }
 
+.entry--zen-hidden {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8e6fc9;
+  border: 1px solid #8e6fc9;
+  border-radius: 3px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+
+.entry--zen-hidden-icon {
+  font-size: 1em;
+  line-height: 1;
+}
+
 .entry--icon {
   position: static;
   z-index: auto;

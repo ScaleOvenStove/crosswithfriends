@@ -11,7 +11,6 @@ import * as Sentry from '@sentry/react';
 import Nav from '../components/common/Nav';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import actions from '../actions';
-import redirect from '../lib/redirect';
 import {createGame, dismissGame} from '../api/create_game';
 import {fetchPuzzleInfo, fetchPuzzleStats} from '../api/puzzle';
 import {fetchUserGames} from '../api/user_games';
@@ -160,7 +159,7 @@ class Play extends Component {
         href = `/beta/game/${gid}`;
       }
 
-      redirect(href, null);
+      this.props.navigate(href);
     }
   }
 
@@ -171,7 +170,7 @@ class Play extends Component {
       .getNextGid(async (gid) => {
         try {
           await createGame({gid, pid: this.pid, dfac_id: getLocalId()}, accessToken);
-          redirect(this.is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`);
+          this.props.navigate(this.is_fencing ? `/fencing/${gid}` : `/beta/game/${gid}`);
         } catch (e) {
           console.error('Failed to create game:', e);
           // createGame already reports to Sentry for unexpected errors.
@@ -192,7 +191,7 @@ class Play extends Component {
       .getNextGid(async (gid) => {
         try {
           await createGame({gid, pid: this.pid, dfac_id: getLocalId()}, accessToken);
-          redirect(`/fencing/${gid}`);
+          this.props.navigate(`/fencing/${gid}`);
         } catch (e) {
           console.error('Failed to create fencing game:', e);
           // Same as create() — createGame handles Sentry capture and 429 marking.
