@@ -415,6 +415,11 @@
   border-color: #f0a050;
 }
 
+.dark .entry--zen-hidden {
+  color: #b79df0;
+  border-color: #b79df0;
+}
+
 .dark .entry--icon.fencing {
   fill: #8a9bb0;
 }

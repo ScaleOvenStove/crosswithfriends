@@ -1,6 +1,6 @@
 import {Component} from 'react';
 import _ from 'lodash';
-import {MdRadioButtonUnchecked, MdCheckCircle, MdStar, MdAccessTime} from 'react-icons/md';
+import {MdRadioButtonUnchecked, MdCheckCircle, MdStar, MdAccessTime, MdVisibilityOff} from 'react-icons/md';
 import {GiCrossedSwords} from 'react-icons/gi';
 import {Link} from 'react-router';
 import {formatMilliseconds} from '../Toolbar/Clock';
@@ -27,6 +27,7 @@ export interface EntryProps {
   fencing?: boolean;
   isPublic?: boolean;
   contest?: boolean;
+  zenMode?: boolean;
 }
 
 function ratingTitle(average: number | null | undefined, count: number | undefined): string {
@@ -78,6 +79,8 @@ export default class Entry extends Component<EntryProps> {
 
   render() {
     const {title, author, originalTitle, originalAuthor, pid, status, stats, fencing, isPublic} = this.props;
+    // Zen mode: hide spoilers (median time, rating) until this puzzle is solved.
+    const showStats = !this.props.zenMode || status === 'solved';
     const numSolvesOld = _.size(stats?.solves || []);
     const numSolves = numSolvesOld + (stats?.numSolves || 0);
     const displayName = _.compact([this.size, author.trim()]).join(' | ');
@@ -121,7 +124,7 @@ export default class Entry extends Component<EntryProps> {
                 Solved {numSolves} {numSolves === 1 ? 'time' : 'times'}
               </p>
               <div className="flex entry--detail-stats">
-                {stats?.medianSolveMs != null && (
+                {showStats && stats?.medianSolveMs != null && (
                   <span
                     className="entry--solve-time"
                     title={typicalSolveTitle(stats.medianSolveMs, stats.solveSampleCount)}
@@ -130,12 +133,26 @@ export default class Entry extends Component<EntryProps> {
                     {formatMilliseconds(stats.medianSolveMs)}
                   </span>
                 )}
-                <span className="entry--rating" title={ratingTitle(stats?.ratingAverage, stats?.ratingCount)}>
-                  <MdStar className="entry--rating-icon" />
-                  {stats?.ratingAverage != null
-                    ? `${stats.ratingAverage.toFixed(1)} (${stats.ratingCount ?? 0})`
-                    : 'Not yet rated'}
-                </span>
+                {showStats && (
+                  <span
+                    className="entry--rating"
+                    title={ratingTitle(stats?.ratingAverage, stats?.ratingCount)}
+                  >
+                    <MdStar className="entry--rating-icon" />
+                    {stats?.ratingAverage != null
+                      ? `${stats.ratingAverage.toFixed(1)} (${stats.ratingCount ?? 0})`
+                      : 'Not yet rated'}
+                  </span>
+                )}
+                {!showStats && (
+                  <span
+                    className="entry--zen-hidden"
+                    title="Rating and solve time are hidden until you finish this puzzle (Zen Mode)"
+                  >
+                    <MdVisibilityOff className="entry--zen-hidden-icon" />
+                    Hidden by Zen Mode
+                  </span>
+                )}
                 {this.props.contest && <span className="entry--contest">Contest</span>}
                 {isPublic === false && <span className="entry--unlisted">Unlisted</span>}
               </div>

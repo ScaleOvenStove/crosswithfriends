@@ -14,6 +14,7 @@ const PREF_STORAGE_MAP = {
   darkMode: {key: 'dark_mode_preference', type: 'string', default: '0'},
   colorAttribution: {key: null, type: 'json', default: false},
   sound: {key: 'sound', type: 'json', default: true},
+  zenMode: {key: 'zen-mode', type: 'json', default: false},
 };
 
 function readLocalStoragePrefs() {
