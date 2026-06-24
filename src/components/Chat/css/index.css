@@ -128,6 +128,31 @@
   border-color: rgb(240 212 136 / 35%);
 }
 
+.chat--zen-hidden-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #5b3f99;
+  background: #f1ecfb;
+  border: 1px solid #8e6fc9;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.chat--zen-hidden-chip-icon {
+  font-size: 13px;
+}
+
+.dark .chat--zen-hidden-chip {
+  color: #b79df0;
+  background: rgb(183 157 240 / 12%);
+  border-color: rgb(183 157 240 / 35%);
+}
+
 .chat--username {
   padding: 5px;
   padding-top: 10px;
