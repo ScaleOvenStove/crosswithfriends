@@ -33,7 +33,76 @@ const pool = new pg.Pool({
   database: process.env.PGDATABASE,
   ssl: process.env.NODE_ENV === 'production' ? {rejectUnauthorized: false} : undefined,
   statement_timeout: 600000, // 10 minutes
+  keepAlive: true, // keep TCP alive across idle gaps between pages so NAT/firewalls don't drop the socket
 });
+
+// A managed Postgres can sever a pooled connection while it sits idle between
+// pages (server restart, idle reaper, network blip). Without a listener, that
+// surfaces as an 'error' event on the idle client and crashes the process.
+// Log and swallow it — runQuery() will transparently open a fresh connection.
+pool.on('error', (err) => {
+  console.warn('Idle pool client error (will reconnect on next query):', err.message);
+});
+
+// Transient connection-level failures that are safe to retry. Each cleanup
+// statement is independently re-runnable (keyset pagination tracks progress,
+// and deletes re-check their predicates), so retrying on a fresh connection
+// can't double-apply or skip work.
+const RETRYABLE_ERROR_CODES = new Set([
+  'ECONNRESET',
+  'EPIPE',
+  'ETIMEDOUT',
+  '57P01', // admin_shutdown — server closed the connection
+  '57P02', // crash_shutdown
+  '57P03', // cannot_connect_now — server starting up
+  '08006', // connection_failure
+  '08003', // connection_does_not_exist
+  '08001', // sqlclient_unable_to_establish_sqlconnection
+]);
+
+function isRetryable(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as NodeJS.ErrnoException).code;
+  if (code && RETRYABLE_ERROR_CODES.has(code)) return true;
+  // pg-pool throws a plain Error with this message when a connection dies
+  // mid-query; it carries no code, so match on the message.
+  return /Connection terminated unexpectedly|terminating connection|server closed the connection/i.test(
+    err.message
+  );
+}
+
+const QUERY_MAX_ATTEMPTS = 5;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * pool.query with exponential-backoff retry on transient connection failures
+ * (2s, 4s, 8s, 16s). A retried query runs on a fresh pool connection, so a
+ * dropped socket no longer aborts the whole run. Statement errors (bad SQL,
+ * timeouts, constraint violations) are not retryable and rethrow immediately.
+ */
+async function runQuery<R extends pg.QueryResultRow = pg.QueryResultRow>(
+  text: string,
+  params?: unknown[]
+): Promise<pg.QueryResult<R>> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= QUERY_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await pool.query<R>(text, params);
+    } catch (err) {
+      lastErr = err;
+      if (attempt === QUERY_MAX_ATTEMPTS || !isRetryable(err)) throw err;
+      const delayMs = 2000 * 2 ** (attempt - 1);
+      console.warn(
+        `  Query failed (attempt ${attempt}/${QUERY_MAX_ATTEMPTS}): ${
+          err instanceof Error ? err.message : String(err)
+        }. Retrying in ${delayMs / 1000}s...`
+      );
+      await sleep(delayMs);
+    }
+  }
+  throw lastErr;
+}
 
 const DRY_RUN = process.env.DRY_RUN === '1';
 const ABANDON_DAYS = parseInt(process.env.ABANDON_DAYS || '90', 10);
@@ -62,10 +131,10 @@ async function processGidBatches(gids: string[], deleteSql: string, countSql: st
     if (DRY_RUN) {
       const {
         rows: [{count}],
-      } = await pool.query(countSql, [batch]);
+      } = await runQuery<{count: string}>(countSql, [batch]);
       affected += Number(count);
     } else {
-      const result = await pool.query(deleteSql, [batch]);
+      const result = await runQuery(deleteSql, [batch]);
       affected += result.rowCount || 0;
     }
   }
@@ -114,7 +183,7 @@ async function cleanupSolvedGames(): Promise<CleanupStats> {
 
   let lastGid = '';
   for (;;) {
-    const {rows} = await pool.query(
+    const {rows} = await runQuery<{gid: string; needs_cleanup: boolean}>(
       `WITH page AS (
          SELECT gid, replay_retained
          FROM game_snapshots
@@ -163,7 +232,7 @@ async function cleanupAbandonedGames(): Promise<CleanupStats> {
 
   let lastGid = '';
   for (;;) {
-    const {rows} = await pool.query(
+    const {rows} = await runQuery<{gid: string; abandoned: boolean}>(
       `WITH page AS (
          SELECT ge.gid, MAX(ge.ts) AS last_ts
          FROM game_events ge
@@ -212,7 +281,7 @@ async function expireReplayRetention(): Promise<number> {
   if (DRY_RUN) {
     const {
       rows: [{count}],
-    } = await pool.query(
+    } = await runQuery<{count: string}>(
       `SELECT COUNT(*) FROM game_snapshots
        WHERE replay_retained = true
          AND created_at < NOW() - ($1 || ' days')::interval`,
@@ -222,7 +291,7 @@ async function expireReplayRetention(): Promise<number> {
     return Number(count);
   }
 
-  const result = await pool.query(
+  const result = await runQuery(
     `UPDATE game_snapshots
      SET replay_retained = false
      WHERE replay_retained = true
@@ -272,7 +341,7 @@ async function main() {
   // Run ANALYZE after bulk deletes to update query planner statistics
   if (!DRY_RUN && solvedStats.eventsDeleted + abandonedStats.eventsDeleted > 0) {
     console.log('--- Running ANALYZE game_events ---');
-    await pool.query('ANALYZE game_events');
+    await runQuery('ANALYZE game_events');
     console.log('  Done.');
     console.log('');
   }
