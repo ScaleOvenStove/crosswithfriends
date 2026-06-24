@@ -41,7 +41,8 @@ const pool = new pg.Pool({
 // surfaces as an 'error' event on the idle client and crashes the process.
 // Log and swallow it — runQuery() will transparently open a fresh connection.
 pool.on('error', (err) => {
-  console.warn('Idle pool client error (will reconnect on next query):', err.message);
+  const message = err instanceof Error ? err.message : String(err);
+  console.warn('Idle pool client error (will reconnect on next query):', message);
 });
 
 // Transient connection-level failures that are safe to retry. Each cleanup
@@ -85,13 +86,13 @@ async function runQuery<R extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
   params?: unknown[]
 ): Promise<pg.QueryResult<R>> {
-  let lastErr: unknown;
+  let lastErr: unknown = new Error('runQuery exhausted retries without executing');
   for (let attempt = 1; attempt <= QUERY_MAX_ATTEMPTS; attempt++) {
     try {
       return await pool.query<R>(text, params);
     } catch (err) {
       lastErr = err;
-      if (attempt === QUERY_MAX_ATTEMPTS || !isRetryable(err)) throw err;
+      if (attempt === QUERY_MAX_ATTEMPTS || !isRetryable(err)) break;
       const delayMs = 2000 * 2 ** (attempt - 1);
       console.warn(
         `  Query failed (attempt ${attempt}/${QUERY_MAX_ATTEMPTS}): ${
