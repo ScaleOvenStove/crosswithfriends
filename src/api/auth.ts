@@ -7,6 +7,8 @@ export interface UserPreferences {
   showProgress?: boolean;
   darkMode?: string;
   colorAttribution?: boolean;
+  sound?: boolean;
+  zenMode?: boolean;
 }
 
 export interface AuthUser {
