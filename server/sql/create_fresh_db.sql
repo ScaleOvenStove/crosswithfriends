@@ -103,3 +103,14 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- 16. game_restrictions (depends on users)
 -- ============================================================
 \ir create_game_restrictions.sql
+
+-- ============================================================
+-- 17. denormalized puzzle rating/solve-time stats (depends on puzzles,
+--     puzzle_solves, puzzle_ratings)
+-- ============================================================
+\ir alter_puzzles_add_denorm_stats.sql
+
+-- ============================================================
+-- 18. refresh_tokens.rotated flag (depends on refresh_tokens)
+-- ============================================================
+\ir alter_refresh_tokens_add_rotated.sql
