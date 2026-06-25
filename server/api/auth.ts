@@ -607,6 +607,7 @@ const preferencesSchema = Joi.object({
   darkMode: Joi.string().valid('0', '1', '2'),
   colorAttribution: Joi.boolean(),
   sound: Joi.boolean(),
+  zenMode: Joi.boolean(),
 }).unknown(false);
 
 /**
@@ -630,6 +631,7 @@ const preferencesSchema = Joi.object({
  *               darkMode: {type: string, enum: ['0', '1', '2']}
  *               colorAttribution: {type: boolean}
  *               sound: {type: boolean}
+ *               zenMode: {type: boolean}
  *     responses:
  *       200:
  *         description: Preferences updated
