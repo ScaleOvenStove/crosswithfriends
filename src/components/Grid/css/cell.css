@@ -15,8 +15,34 @@
 }
 
 @media print {
+  /*
+   * Print a clean, light-mode grid regardless of the active theme (issue #572).
+   *  - Block cells were printing blank: `.cell` was forced white, and browsers
+   *    omit background fills unless print-color-adjust is set.
+   *  - Dark mode printed dark fills (wasted ink) with white clue numbers and
+   *    letters that vanished against the page, plus leftover highlight tints.
+   */
   .cell {
     background-color: white !important;
+    color: black !important;
+    border-color: transparent !important;
+  }
+
+  /* dark.css applies these tints with !important, so out-specify them
+     (body carries the .dark class, which lets body.dark win on specificity). */
+  body.dark .cell.highlighted,
+  body.dark .cell.referenced,
+  body.dark .cell.frozen.highlighted {
+    background-color: white !important;
+  }
+
+  /* Block cells stay solid black; force the fill to actually render in print. */
+  .cell.black,
+  .cell.black.selected,
+  body.dark .cell.black {
+    background-color: var(--main-black) !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }
 
