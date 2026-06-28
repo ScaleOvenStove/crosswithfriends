@@ -69,6 +69,29 @@
   }
 }
 
+@media print {
+  /*
+   * Light-mode clue highlights are already scoped to @media screen above, but
+   * dark.css's clue-list rules leak into print: the selected clue keeps its
+   * dark highlight and the text prints light-on-white. Force a light-mode
+   * clue list for print (issue #572). body.dark out-specifies dark.css.
+   */
+  body.dark .clues--list--scroll {
+    background-color: transparent !important;
+  }
+
+  body.dark .clues--list--scroll--clue,
+  body.dark .clues--list--scroll--clue.complete {
+    color: black !important;
+  }
+
+  body.dark .clues--list--scroll--clue.selected,
+  body.dark .clues--list--scroll--clue.half-selected {
+    background-color: transparent !important;
+    border-left-color: transparent !important;
+  }
+}
+
 .clues--list--scroll--clue--number {
   margin-left: 5px;
   line-height: 1.2em;
