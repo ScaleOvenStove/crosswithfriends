@@ -21,7 +21,16 @@
    *    omit background fills unless print-color-adjust is set.
    *  - Dark mode printed dark fills (wasted ink) with white clue numbers and
    *    letters that vanished against the page, plus leftover highlight tints.
+   *
+   * print-color-adjust: exact is set globally on body in style.css, so dark
+   * mode otherwise prints its dark page background and fills. Reset the page
+   * to a light background here so only intended fills (block cells) render.
    */
+  body.dark {
+    background-color: white !important;
+    color: black !important;
+  }
+
   .cell {
     background-color: white !important;
     color: black !important;
@@ -34,6 +43,32 @@
   body.dark .cell.referenced,
   body.dark .cell.frozen.highlighted {
     background-color: white !important;
+  }
+
+  /* Referenced values are forced white in dark.css; restore dark text so they
+     are not white-on-white once the cell background is reset to white. */
+  body.dark .cell.referenced .cell--value {
+    color: black !important;
+  }
+
+  /* Shading is white-on-dark in dark.css; restore the light-mode dark shade so
+     shaded squares stay visible on white paper. */
+  body.dark .cell--shade {
+    background-color: rgb(0 0 0 / 30%) !important;
+  }
+
+  /* Dark-mode check/reveal colors are low-contrast on white; use the
+     light-mode high-contrast colors for print. */
+  body.dark .cell.good .cell--value {
+    color: blue !important;
+  }
+
+  body.dark .cell.bad .cell--value {
+    color: red !important;
+  }
+
+  body.dark .cell.revealed .cell--value {
+    color: green !important;
   }
 
   /* Block cells stay solid black; force the fill to actually render in print. */
