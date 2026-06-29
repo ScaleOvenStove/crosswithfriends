@@ -23,10 +23,13 @@
    *    letters that vanished against the page, plus leftover highlight tints.
    *
    * print-color-adjust: exact is set globally on body in style.css, so dark
-   * mode otherwise prints its dark page background and fills. Reset the page
-   * to a light background here so only intended fills (block cells) render.
+   * mode otherwise prints its dark page background and fills. The .dark class
+   * is applied to both document.body and .router-wrapper (src/index.js), so
+   * reset both carriers to a light background here — otherwise the wrapper's
+   * dark fill paints over the page around the grid and clues.
    */
-  body.dark {
+  body.dark,
+  .router-wrapper.dark {
     background-color: white !important;
     color: black !important;
   }
