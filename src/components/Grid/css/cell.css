@@ -60,6 +60,13 @@
     background-color: rgb(0 0 0 / 30%) !important;
   }
 
+  /* The selected cell's wrapper carries its own translucent-black tint in dark
+     mode (dark.css), independent of the .cell background reset above; without
+     this it prints as light grey instead of white. */
+  body.dark .cell.selected .cell--wrapper {
+    background-color: transparent !important;
+  }
+
   /* Dark-mode check/reveal colors are low-contrast on white; use the
      light-mode high-contrast colors for print. */
   body.dark .cell.good .cell--value {
