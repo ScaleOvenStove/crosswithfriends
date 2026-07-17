@@ -33,3 +33,14 @@ pool.on('connect', (client) => {
     client.release(err);
   });
 });
+
+/**
+ * True when an error is a Postgres statement_timeout (query cancelled after
+ * exceeding `statement_timeout`). Postgres reports this with SQLSTATE 57014
+ * (query_canceled). Callers on read paths can use this to degrade gracefully —
+ * returning empty/partial data instead of surfacing a 500 that cascades into a
+ * client-side crash — rather than treating a slow query as a hard failure.
+ */
+export function isStatementTimeout(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as {code?: string}).code === '57014';
+}

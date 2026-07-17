@@ -1,6 +1,8 @@
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import {optionalAuth} from '../auth/middleware';
 import {getUserGamesForPuzzle, getGuestPuzzleStatuses} from '../model/user_games';
+import {isStatementTimeout} from '../model/pool';
 
 const router = express.Router();
 
@@ -53,6 +55,16 @@ router.get('/', optionalAuth, async (req, res, next) => {
     res.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=120');
     res.json({games});
   } catch (e) {
+    // A slow lookup that trips statement_timeout shouldn't hard-fail the client:
+    // the 500 became a 503 which the frontend then tried to JSON.parse, crashing
+    // with "unexpected end of data" (JAVASCRIPT-REACT-5A). Degrade to an empty
+    // list — the caller just sees no prior games — while still reporting to
+    // Sentry so the underlying slowness stays visible.
+    if (isStatementTimeout(e)) {
+      Sentry.captureException(e);
+      res.json({games: []});
+      return;
+    }
     next(e);
   }
 });

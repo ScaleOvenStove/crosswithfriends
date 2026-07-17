@@ -237,8 +237,18 @@ export async function getUserGamesForPuzzle(
          SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS last_activity, false AS v2, fh.solved AS fh_solved
          FROM firebase_history fh
          WHERE fh.dfac_id = ANY($1) AND fh.pid = ${pidIntParam}
+           -- Split into two NOT EXISTS instead of one with an OR. A correlated
+           -- NOT EXISTS whose predicate ORs two different columns can't use a
+           -- single index, so Postgres re-scans game_events per firebase_history
+           -- row — pathological for users with large legacy histories (the
+           -- statement_timeout offenders, NODE-EXPRESS-E). De Morgan makes these
+           -- equivalent: NOT EXISTS(A OR B) == NOT EXISTS(A) AND NOT EXISTS(B),
+           -- and each anti-join can now use its own index (uid / params->id).
            AND NOT EXISTS (
-             SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
+             SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND ge.uid = ANY($1)
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.event_payload->'params'->>'id') = ANY($1)
            )
            ${options.userId ? 'AND NOT EXISTS (SELECT 1 FROM game_dismissals gd WHERE gd.gid = fh.gid AND gd.user_id = $3)' : ''}
        )

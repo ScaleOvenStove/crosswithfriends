@@ -4,6 +4,7 @@ import {getUserSolveStats, getInProgressGames, getSolvedPidsForUser} from '../mo
 import {getUserById} from '../model/user';
 import {getUserUploadedPuzzles} from '../model/puzzle';
 import {getAuthenticatedPuzzleStatuses} from '../model/user_games';
+import {isStatementTimeout} from '../model/pool';
 import {verifyAccessToken} from '../auth/jwt';
 
 const router = express.Router();
@@ -73,6 +74,29 @@ router.get('/:userId', async (req, res, next) => {
       return;
     }
 
+    // Degrade gracefully if the stats query trips statement_timeout: render the
+    // profile with empty stats rather than 500-ing the whole page (which the
+    // frontend surfaces as a hard error). The underlying slowness is still
+    // reported to Sentry via the catch below.
+    let solveStats: Awaited<ReturnType<typeof getUserSolveStats>>;
+    try {
+      solveStats = await getUserSolveStats(userId);
+    } catch (err) {
+      if (!isStatementTimeout(err)) throw err;
+      Sentry.captureException(err);
+      solveStats = {
+        totalSolved: 0,
+        totalSolvedSolo: 0,
+        totalSolvedCoop: 0,
+        bySize: [],
+        byDay: [],
+        bySizeSolo: [],
+        bySizeCoop: [],
+        byDaySolo: [],
+        byDayCoop: [],
+        history: [],
+      };
+    }
     const {
       totalSolved,
       totalSolvedSolo,
@@ -84,7 +108,7 @@ router.get('/:userId', async (req, res, next) => {
       byDaySolo,
       byDayCoop,
       history,
-    } = await getUserSolveStats(userId);
+    } = solveStats;
 
     let uploads: Awaited<ReturnType<typeof getUserUploadedPuzzles>> = [];
     try {
