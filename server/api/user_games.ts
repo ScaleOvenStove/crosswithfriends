@@ -61,7 +61,10 @@ router.get('/', optionalAuth, async (req, res, next) => {
     // list — the caller just sees no prior games — while still reporting to
     // Sentry so the underlying slowness stays visible.
     if (isStatementTimeout(e)) {
-      Sentry.captureException(e);
+      Sentry.captureException(e, {level: 'warning'});
+      // Don't let a proxy/browser cache the degraded empty result — once the DB
+      // recovers the next request should be able to fetch the real games.
+      res.set('Cache-Control', 'no-store');
       res.json({games: []});
       return;
     }

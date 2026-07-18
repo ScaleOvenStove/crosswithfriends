@@ -70,7 +70,7 @@ ORDER BY pg_total_relation_size(oid) DESC;
 -- Find a HEAVY user to test with: the dfac_ids with the most firebase_history
 -- rows are the ones whose getUserGamesForPuzzle fans out widest and times out.
 SELECT dfac_id, count(*) AS fh_rows
-FROM firebase_history
+FROM public.firebase_history
 GROUP BY dfac_id
 ORDER BY fh_rows DESC
 LIMIT 10;
@@ -102,22 +102,22 @@ EXPLAIN (ANALYZE, BUFFERS)
 WITH user_games AS (
   SELECT gid, MAX(ts) AS last_activity, true AS v2, false AS fh_solved
   FROM (
-    SELECT gid, ts FROM game_events WHERE uid = ANY(:'dfac_ids'::text[])
+    SELECT gid, ts FROM public.game_events WHERE uid = ANY(:'dfac_ids'::text[])
     UNION ALL
-    SELECT gid, ts FROM game_events WHERE (event_payload->'params'->>'id') = ANY(:'dfac_ids'::text[])
+    SELECT gid, ts FROM public.game_events WHERE (event_payload->'params'->>'id') = ANY(:'dfac_ids'::text[])
   ) all_events
   GROUP BY gid
 
   UNION ALL
 
   SELECT fh.gid, to_timestamp(fh.activity_time / 1000) AS last_activity, false AS v2, fh.solved AS fh_solved
-  FROM firebase_history fh
+  FROM public.firebase_history fh
   WHERE fh.dfac_id = ANY(:'dfac_ids'::text[]) AND fh.pid = :pid_int
     AND NOT EXISTS (
-      SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND ge.uid = ANY(:'dfac_ids'::text[])
+      SELECT 1 FROM public.game_events ge WHERE ge.gid = fh.gid AND ge.uid = ANY(:'dfac_ids'::text[])
     )
     AND NOT EXISTS (
-      SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.event_payload->'params'->>'id') = ANY(:'dfac_ids'::text[])
+      SELECT 1 FROM public.game_events ge WHERE ge.gid = fh.gid AND (ge.event_payload->'params'->>'id') = ANY(:'dfac_ids'::text[])
     )
 )
 SELECT
@@ -127,10 +127,10 @@ SELECT
   ug.last_activity,
   ug.v2
 FROM user_games ug
-LEFT JOIN game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
-LEFT JOIN game_snapshots gs ON gs.gid = ug.gid
+LEFT JOIN public.game_events ce ON ce.gid = ug.gid AND ce.event_type = 'create'
+LEFT JOIN public.game_snapshots gs ON gs.gid = ug.gid
 LEFT JOIN LATERAL (
-  SELECT pid FROM firebase_history WHERE gid = ug.gid AND dfac_id = ANY(:'dfac_ids'::text[]) LIMIT 1
+  SELECT pid FROM public.firebase_history WHERE gid = ug.gid AND dfac_id = ANY(:'dfac_ids'::text[]) LIMIT 1
 ) fh ON true
 WHERE COALESCE(ce.event_payload->'params'->>'pid', gs.pid, fh.pid::text) = :'pid'
 ORDER BY ug.last_activity DESC;
@@ -140,10 +140,10 @@ ORDER BY ug.last_activity DESC;
 -- OLD shape (single NOT EXISTS with OR):
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT fh.gid
-FROM firebase_history fh
+FROM public.firebase_history fh
 WHERE fh.dfac_id = ANY(:'dfac_ids'::text[]) AND fh.pid = :pid_int
   AND NOT EXISTS (
-    SELECT 1 FROM game_events ge
+    SELECT 1 FROM public.game_events ge
     WHERE ge.gid = fh.gid
       AND (ge.uid = ANY(:'dfac_ids'::text[]) OR (ge.event_payload->'params'->>'id') = ANY(:'dfac_ids'::text[]))
   );
@@ -151,13 +151,13 @@ WHERE fh.dfac_id = ANY(:'dfac_ids'::text[]) AND fh.pid = :pid_int
 -- NEW shape (two NOT EXISTS — what this change ships):
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT fh.gid
-FROM firebase_history fh
+FROM public.firebase_history fh
 WHERE fh.dfac_id = ANY(:'dfac_ids'::text[]) AND fh.pid = :pid_int
   AND NOT EXISTS (
-    SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND ge.uid = ANY(:'dfac_ids'::text[])
+    SELECT 1 FROM public.game_events ge WHERE ge.gid = fh.gid AND ge.uid = ANY(:'dfac_ids'::text[])
   )
   AND NOT EXISTS (
-    SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.event_payload->'params'->>'id') = ANY(:'dfac_ids'::text[])
+    SELECT 1 FROM public.game_events ge WHERE ge.gid = fh.gid AND (ge.event_payload->'params'->>'id') = ANY(:'dfac_ids'::text[])
   );
 
 -- --- 3c. getUserSolveStats core scan (user-stats timeout path) ---
@@ -165,8 +165,8 @@ WHERE fh.dfac_id = ANY(:'dfac_ids'::text[]) AND fh.pid = :pid_int
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT DISTINCT ON (ps.pid, CASE WHEN COALESCE(ps.player_count, 1) = 1 THEN 'solo' ELSE 'coop' END)
   ps.pid, ps.time_taken_to_solve
-FROM puzzle_solves ps
-JOIN puzzles p ON ps.pid = p.pid
+FROM public.puzzle_solves ps
+JOIN public.puzzles p ON ps.pid = p.pid
 WHERE ps.user_id = :'user_id';
 
 \timing off
