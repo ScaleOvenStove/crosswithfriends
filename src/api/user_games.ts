@@ -9,6 +9,21 @@ export type UserGame = {
   percentComplete: number;
 };
 
+/**
+ * Thrown when the user-games lookup could not be completed — an HTTP error, or
+ * a response the server flagged `degraded` after a statement_timeout. Callers
+ * must NOT treat this as "the user has no games": Play.js autocreates a fresh
+ * blank game whenever the loaded list is empty, so surfacing a failed lookup as
+ * an empty list hides the user's real in-progress game (the "blank in-progress
+ * games" report). Surface it as a retryable failure instead.
+ */
+export class UserGamesUnavailableError extends Error {
+  constructor(message = 'user-games lookup unavailable') {
+    super(message);
+    this.name = 'UserGamesUnavailableError';
+  }
+}
+
 export async function fetchUserGames(
   pid: string | number,
   accessToken?: string | null,
@@ -28,9 +43,20 @@ export async function fetchUserGames(
   }
 
   const resp = await fetch(`${SERVER_URL}/api/user-games?${params}`, fetchOptions);
-  if (!resp.ok) return [];
+  // A failed request is not an authoritative "no games" result. Returning an
+  // empty list here makes Play.js autocreate a brand-new blank game over the
+  // user's existing one, so raise a retryable error the caller can surface.
+  if (!resp.ok) {
+    throw new UserGamesUnavailableError(`user-games request failed (${resp.status})`);
+  }
 
   const data = await resp.json();
+  // The server degrades to {games: [], degraded: true} when the lookup trips
+  // statement_timeout. Same reasoning: don't let the caller treat the degraded
+  // empty list as real, or the user gets dropped into a fresh blank game.
+  if (data.degraded) {
+    throw new UserGamesUnavailableError('user-games temporarily unavailable');
+  }
   return data.games;
 }
 

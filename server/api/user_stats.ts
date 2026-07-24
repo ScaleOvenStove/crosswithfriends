@@ -4,6 +4,7 @@ import {getUserSolveStats, getInProgressGames, getSolvedPidsForUser} from '../mo
 import {getUserById} from '../model/user';
 import {getUserUploadedPuzzles} from '../model/puzzle';
 import {getAuthenticatedPuzzleStatuses} from '../model/user_games';
+import {isStatementTimeout} from '../model/pool';
 import {verifyAccessToken} from '../auth/jwt';
 
 const router = express.Router();
@@ -73,6 +74,31 @@ router.get('/:userId', async (req, res, next) => {
       return;
     }
 
+    // Degrade gracefully if the stats query trips statement_timeout: render the
+    // profile with empty stats rather than 500-ing the whole page (which the
+    // frontend surfaces as a hard error). The underlying slowness is still
+    // reported to Sentry via the catch below.
+    let solveStats: Awaited<ReturnType<typeof getUserSolveStats>>;
+    let isDegraded = false;
+    try {
+      solveStats = await getUserSolveStats(userId);
+    } catch (err) {
+      if (!isStatementTimeout(err)) throw err;
+      isDegraded = true;
+      Sentry.captureException(err, {level: 'warning', extra: {userId}});
+      solveStats = {
+        totalSolved: 0,
+        totalSolvedSolo: 0,
+        totalSolvedCoop: 0,
+        bySize: [],
+        byDay: [],
+        bySizeSolo: [],
+        bySizeCoop: [],
+        byDaySolo: [],
+        byDayCoop: [],
+        history: [],
+      };
+    }
     const {
       totalSolved,
       totalSolvedSolo,
@@ -84,7 +110,7 @@ router.get('/:userId', async (req, res, next) => {
       byDaySolo,
       byDayCoop,
       history,
-    } = await getUserSolveStats(userId);
+    } = solveStats;
 
     let uploads: Awaited<ReturnType<typeof getUserUploadedPuzzles>> = [];
     try {
@@ -128,7 +154,9 @@ router.get('/:userId', async (req, res, next) => {
     // (dismiss, solve, rate) quickly. SWR=300 caused a 5-minute lag where a
     // just-dismissed game kept showing as in-progress. 30s is a compromise
     // between freshness and not refetching on every navigation.
-    res.set('Cache-Control', 'private, max-age=30');
+    // On a degraded (statement-timeout) response, don't cache the empty stats —
+    // the next request should get a fresh shot once the DB recovers.
+    res.set('Cache-Control', isDegraded ? 'no-store' : 'private, max-age=30');
     res.json({
       user: {
         displayName: user.display_name,
