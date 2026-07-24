@@ -33,7 +33,13 @@
   display: flex;
   font-size: 15px;
   flex: 1;
-  min-height: 20px;
+
+  /* Room for ~2 lines of clue text. Firefox on Android (153+) stopped
+     treating this bar's flex-stretched height as "definite", which collapsed
+     the descendants' percentage heights below and clipped 2-line clues to a
+     single scrollable line (#firefox-android clue-bar report). A concrete
+     min-height keeps the bar tall enough regardless. */
+  min-height: 48px;
   position: relative;
   overflow: hidden;
 }
@@ -47,7 +53,14 @@
   margin-left: 20px;
   display: inline-block;
   overflow-y: auto;
-  max-height: 100%;
+
+  /* Definite px cap (matches the bar's min-height) instead of `max-height:
+     100%`. A percentage max-height only resolves against an ancestor with a
+     definite height; the ancestors here are all sized by flex stretch, which
+     Firefox on Android stopped treating as definite, collapsing this scroll
+     box to one line. A px value resolves identically in every browser: up to
+     two lines show, longer clues scroll. */
+  max-height: 48px;
 }
 
 .mobile-grid-controls--clue-bar--text > span {
@@ -56,10 +69,11 @@
 
 .mobile-grid-controls--clue-bar--clues--container {
   position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
+
+  /* `inset: 0` sizes this box from its offsets rather than `height: 100%`, so
+     its height no longer depends on the flex-stretched bar height being
+     treated as definite (which Firefox on Android stopped doing). */
+  inset: 0;
   display: flex;
 }
 
