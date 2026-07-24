@@ -65,7 +65,13 @@ router.get('/', optionalAuth, async (req, res, next) => {
       // Don't let a proxy/browser cache the degraded empty result — once the DB
       // recovers the next request should be able to fetch the real games.
       res.set('Cache-Control', 'no-store');
-      res.json({games: []});
+      // Flag the result as degraded rather than sending a bare empty list. An
+      // empty list is indistinguishable from "user has no games", and Play.js
+      // autocreates a fresh blank game on games.length === 0 — which would hide
+      // the user's real in-progress game on every timeout (the "blank
+      // in-progress games" report). fetchUserGames treats `degraded` as a
+      // retryable failure, so the client shows an error instead of autocreating.
+      res.json({games: [], degraded: true});
       return;
     }
     next(e);
