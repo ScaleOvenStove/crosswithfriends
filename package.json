@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.22.0"
   },
   "packageManager": "pnpm@10.30.3",
   "dependencies": {
@@ -31,9 +31,9 @@
     "passport-local": "^1.0.0",
     "pg": "^8.20.0",
     "qs": "^6.15.2",
-    "react": "^19.2.4",
+    "react": "^19.2.8",
     "react-confetti": "^6.4.0",
-    "react-dom": "^19.2.4",
+    "react-dom": "^19.2.8",
     "react-dropzone": "^15.0.0",
     "react-helmet-async": "^2.0.5",
     "react-icons": "^5.6.0",
