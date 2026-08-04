@@ -201,6 +201,11 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '22'
+          # This job never runs `pnpm install`, so there is no pnpm store to
+          # cache. setup-node@v5 enables package-manager caching by default,
+          # which fails the post-job cache-save step ("Path Validation Error")
+          # on a cache miss. Disable it here.
+          package-manager-cache: false
 
       - name: Check for known vulnerabilities
         run: pnpm audit --ignore-registry-errors
