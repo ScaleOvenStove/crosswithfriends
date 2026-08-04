@@ -55,17 +55,32 @@ export async function login(email: string, password: string): Promise<AuthTokens
   return resp.json();
 }
 
-export async function refreshAccessToken(): Promise<{accessToken: string} | null> {
+async function attemptRefresh(): Promise<{accessToken: string} | null | 'retry'> {
   try {
     const resp = await fetch(`${SERVER_URL}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
-    if (!resp.ok) return null;
-    return await resp.json();
+    if (resp.ok) return resp.json();
+    if (resp.status === 401) {
+      const body = await resp.json().catch(() => ({}));
+      // Lost a benign concurrent rotation race (e.g. two tabs refreshing at
+      // once) — the cookie is still valid via the call that won. Not a real
+      // logout, so the caller should retry rather than dropping the session.
+      if (body?.retry) return 'retry';
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+export async function refreshAccessToken(): Promise<{accessToken: string} | null> {
+  const first = await attemptRefresh();
+  if (first !== 'retry') return first;
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const second = await attemptRefresh();
+  return second === 'retry' ? null : second;
 }
 
 export async function logout(): Promise<void> {
