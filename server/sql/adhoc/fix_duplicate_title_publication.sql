@@ -3,56 +3,60 @@
 --
 --   "Los Angeles Times Mini: Los Angeles Times Mini: ... August 05, 2026"  (x8)
 --     -> "Los Angeles Times Mini: August 05, 2026"
---   "Atlantic: Atlantic: Friday, June 26, 2026"
---     -> "Atlantic: Friday, June 26, 2026"
 --
--- The hard part is that most repeated titles are INTENTIONAL wordplay --
+-- Scoped to an explicit pid list -- the 23 affected puzzles, identified from a
+-- production dump of every title containing a repeated leading phrase. The new
+-- title is still computed by regex so nobody has to hand-type 23 strings, but
+-- the pid list bounds the blast radius: nothing outside it can be touched.
+--
+-- This matters because most repeated titles are INTENTIONAL wordplay --
 -- "Knock Knock", "Location, Location, Location", "Turn! Turn! Turn!",
--- "Teacher! Teacher! - Thursday, May 14, 2026" -- and must not be touched.
+-- "Teacher! Teacher! - Thursday, May 14, 2026" -- and none of them are here.
 --
--- Two guards separate the two cases. Both are applied to the repeated unit
--- itself, not to the whole title:
+-- Two things get updated, both in one transaction:
+--   1. puzzles.content -> info -> title
+--        The source of truth. Drives the puzzle list.
+--   2. game_events create payload -> params -> game -> info -> title
+--        A game freezes the puzzle's info when it is created (see getGameInfo
+--        in server/model/game.ts), so in-progress and finished games render
+--        their own stale copy. Skipping this leaves every existing game
+--        looking exactly as broken as before.
 --
---   1. The unit ends in a colon        -- "Los Angeles Times Mini:",
---                                         "Atlantic:", "Newsday Wednesday:"
---   2. The unit contains a 4-digit year -- "Thursday, Oct 02, 2025",
---                                         "USA Today Friday, Oct 31, 2025",
---                                         "Vulture Midi Tuesday, May 26, 2026"
---
--- No legitimate wordplay title in production satisfies either: they end in
--- "!", ",", "?", "." or nothing, and none carries a year. Note that
--- "Teacher! Teacher! - Thursday, May 14, 2026" is correctly skipped -- the
--- year is outside the repeated unit.
---
--- Matching is case-SENSITIVE on purpose. Pipeline headers repeat verbatim,
--- while case-varying wordplay ("Mini mini", "Love, love, love", "Row, row,
--- row") is excluded for free.
---
--- Rewrites info.title in place rather than setting info.titleOverride: an
+-- Titles are rewritten in place rather than via info.titleOverride: an
 -- override makes the puzzle list render an "Originally: <ugly title>" subline
 -- (see src/components/PuzzleList/Entry.tsx), which is wrong for a typo fix.
 
 BEGIN;
 
 CREATE TEMP TABLE title_fix ON COMMIT DROP AS
-WITH RECURSIVE candidates AS (
-  SELECT pid,
-         content -> 'info' ->> 'title' AS orig,
-         regexp_replace(btrim(content -> 'info' ->> 'title'), '\s+', ' ', 'g') AS norm
-  FROM puzzles
-  WHERE content -> 'info' ->> 'title' ~ '^(\S.*?)\s+\1(\s|$)'
-),
-guarded AS (
-  SELECT pid, orig, norm
-  FROM candidates
-  WHERE substring(norm from '^(\S.*?)\s+\1(?:\s|$)') ~ ':$'
-     OR substring(norm from '^(\S.*?)\s+\1(?:\s|$)') ~ '\d{4}'
+WITH RECURSIVE affected(pid) AS (VALUES
+  -- Los Angeles Times Mini, x8
+  ('100011097'), ('100011098'), ('100011099'), ('100011100'),
+  ('100011101'), ('100011102'), ('100011103'), ('100011104'),
+  -- Los Angeles Times Mini, x2
+  ('100010102'), ('100010106'), ('100010245'), ('100010249'),
+  -- Atlantic, x8
+  ('100011113'), ('100011114'),
+  -- Atlantic, x2
+  ('100010104'), ('100010108'), ('100010247'), ('100010251'),
+  -- Newsday Wednesday, x2
+  ('100011106'), ('100011112'),
+  -- one-offs
+  ('100008758'),  -- Vulture Midi Tuesday, May 26, 2026
+  ('49879'),      -- Thursday, Oct 02, 2025
+  ('51366')       -- USA Today Friday, Oct 31, 2025
 ),
 collapse AS (
-  SELECT pid, orig, norm AS cur, 0 AS pass FROM guarded
+  SELECT p.pid,
+         p.content -> 'info' ->> 'title' AS orig,
+         regexp_replace(btrim(p.content -> 'info' ->> 'title'), '\s+', ' ', 'g') AS cur,
+         0 AS pass
+  FROM puzzles p
+  JOIN affected a ON a.pid = p.pid
   UNION ALL
   -- Strip one leading copy per pass. Keeping capture group 2 (the second
   -- copy) preserves the punctuation of the copy nearest the real title.
+  -- Case-sensitive: these headers repeat verbatim.
   SELECT pid, orig, regexp_replace(cur, '^(\S.*?)\s+(\1)(\s|$)', '\2\3'), pass + 1
   FROM collapse
   WHERE pass < 30
@@ -62,12 +66,26 @@ SELECT pid, orig, cur AS new_title, pass + 1 AS copies_found
 FROM collapse c
 WHERE pass = (SELECT MAX(pass) FROM collapse c2 WHERE c2.pid = c.pid);
 
--- PREVIEW. Every row here should be a publication or date header, never
--- wordplay. Read it before committing.
+-- PREVIEW. Expect 23 rows, every "after" a single header plus the real title.
 SELECT copies_found, orig AS before, new_title AS after
 FROM title_fix
 ORDER BY copies_found DESC, pid;
 
+-- Any pid that did not resolve, or that the regex left unchanged. Expect none.
+SELECT a.pid AS unresolved_or_unchanged
+FROM (VALUES
+  ('100011097'), ('100011098'), ('100011099'), ('100011100'),
+  ('100011101'), ('100011102'), ('100011103'), ('100011104'),
+  ('100010102'), ('100010106'), ('100010245'), ('100010249'),
+  ('100011113'), ('100011114'),
+  ('100010104'), ('100010108'), ('100010247'), ('100010251'),
+  ('100011106'), ('100011112'),
+  ('100008758'), ('49879'), ('51366')
+) a(pid)
+LEFT JOIN title_fix f ON f.pid = a.pid AND f.new_title <> f.orig
+WHERE f.pid IS NULL;
+
+-- 1. The puzzles.
 UPDATE puzzles p
 SET content = jsonb_set(p.content, '{info,title}', to_jsonb(f.new_title), true)
 FROM title_fix f
@@ -76,45 +94,48 @@ WHERE p.pid = f.pid
   AND p.content -> 'info' ->> 'title' IS DISTINCT FROM f.new_title
 RETURNING p.pid, p.content -> 'info' ->> 'title' AS new_title;
 
+-- 2. Every existing game built from those puzzles, in-progress or finished.
+-- event_payload is `json`, not `jsonb`, hence the cast round-trip.
+UPDATE game_events ge
+SET event_payload = jsonb_set(
+      ge.event_payload::jsonb,
+      '{params,game,info,title}',
+      to_jsonb(f.new_title),
+      true
+    )::json
+FROM title_fix f
+WHERE ge.event_type = 'create'
+  AND ge.event_payload -> 'params' ->> 'pid' = f.pid
+  AND f.new_title <> ''
+  AND ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title'
+      IS DISTINCT FROM f.new_title
+RETURNING ge.gid, ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title' AS new_title;
+
 -- COMMIT;
 -- ROLLBACK;
 
 -- The puzzle list caches server-side for 5 minutes (TTLCache in
 -- server/model/puzzle.ts), so the homepage catches up on the next refresh.
+-- Open games read the create event on join, so a reload picks up the new title.
 
 
 -- =====================================================================
--- Existing games keep their own copy of the old title.
+-- The pipeline is still producing these
 -- =====================================================================
--- A game freezes the puzzle's info into its create event when it is made (see
--- getGameInfo in server/model/game.ts), so games already created from these
--- puzzles still render the repeated title. Run this in the SAME transaction,
--- before COMMIT. event_payload is `json`, not `jsonb`, hence the cast
--- round-trip.
+-- The affected dates run through August 2026, so whatever uploads these will
+-- keep adding more. To list new ones later, run the guarded scan below: it
+-- keys on the shape of the repeated unit -- ends in a colon, or contains a
+-- 4-digit year -- which is what separates a publication header from wordplay.
+-- "Teacher! Teacher! - Thursday, May 14, 2026" is correctly excluded, since
+-- its year falls outside the repeated unit.
 --
--- UPDATE game_events ge
--- SET event_payload = jsonb_set(
---       ge.event_payload::jsonb,
---       '{params,game,info,title}',
---       to_jsonb(f.new_title),
---       true
---     )::json
--- FROM title_fix f
--- WHERE ge.event_type = 'create'
---   AND ge.event_payload -> 'params' ->> 'pid' = f.pid
---   AND ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title'
---       IS DISTINCT FROM f.new_title
--- RETURNING ge.gid, ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title';
-
-
--- =====================================================================
--- Not covered
--- =====================================================================
--- A repeated header with neither a colon nor a year -- "USA Today USA Today
--- Crossword" -- fails both guards and is left alone. None exist in the
--- current data. If some show up later, fix them by pid rather than loosening
--- the guards, which is what protects the wordplay titles.
---
--- Separately, the "[?] [?] ..." titles in this list are a different bug: a
--- source pipeline that replaced card suits and emoji with literal "[?]".
--- See BROKEN_PLACEHOLDER in server/model/puzzle.ts. Not addressed here.
+-- SELECT pid, content -> 'info' ->> 'title' AS title
+-- FROM puzzles
+-- WHERE content -> 'info' ->> 'title' ~ '^(\S.*?)\s+\1(\s|$)'
+--   AND (
+--     substring(regexp_replace(btrim(content -> 'info' ->> 'title'), '\s+', ' ', 'g')
+--               from '^(\S.*?)\s+\1(?:\s|$)') ~ ':$'
+--     OR substring(regexp_replace(btrim(content -> 'info' ->> 'title'), '\s+', ' ', 'g')
+--               from '^(\S.*?)\s+\1(?:\s|$)') ~ '\d{4}'
+--   )
+-- ORDER BY pid;
