@@ -91,76 +91,24 @@ COMMIT;
 
 
 -- =====================================================================
--- STEP 2 -- Existing games. Slow: needs a raised timeout.
+-- STEP 2 -- Existing games. See the companion file.
 -- =====================================================================
 -- A game freezes the puzzle's info into its create event when it is made (see
 -- getGameInfo in server/model/game.ts), so in-progress and finished games
 -- render their own stale copy and STEP 1 does not touch them.
 --
--- game_events has indexes on gid, uid, params->>'id' and (gid, event_type) --
--- but nothing on params->>'pid'. Matching on pid therefore sequentially scans
--- the whole table, which is what trips a 30s statement_timeout. The write
--- itself is tiny; the scan is the entire cost.
+-- Matching those events means testing event_payload->'params'->>'pid', which
+-- game_events has no index for, so a naive UPDATE sequentially scans the table
+-- and detoasts every create payload. It does not finish inside a 10 minute
+-- statement_timeout on production.
 --
--- SET LOCAL applies only to this transaction and reverts on COMMIT.
-
-BEGIN;
-
-SET LOCAL statement_timeout = '10min';
-
-UPDATE game_events ge
-SET event_payload = jsonb_set(
-      ge.event_payload::jsonb,
-      '{params,game,info,title}',
-      to_jsonb(f.new_title),
-      true
-    )::json
-FROM title_fix f
-WHERE ge.event_type = 'create'
-  AND ge.event_payload -> 'params' ->> 'pid' = f.pid
-  AND f.new_title <> ''
-  AND ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title'
-      IS DISTINCT FROM f.new_title
-RETURNING ge.gid, ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title' AS new_title;
-
-COMMIT;
-
--- Open games read the create event on join, so a reload picks up the title.
-
-
--- =====================================================================
--- STEP 2, alternative -- if the timeout cannot be raised
--- =====================================================================
--- Resolves pid -> gid through game_snapshots (indexed on pid) and
--- puzzle_solves (indexed, and pid is its FK), then hits game_events by
--- (gid, event_type), which IS indexed. No sequential scan, runs in
--- milliseconds.
+-- The options -- including doing nothing, fixing individual gids, and a
+-- CONCURRENTLY index build that makes the UPDATE an index scan -- are in:
 --
--- The catch: both those tables only carry FINISHED games. In-progress games
--- appear in neither, so this silently misses exactly the games most likely to
--- be looked at. Use it only as a partial fix.
+--   fix_duplicate_title_publication_games.sql
 --
--- BEGIN;
---
--- WITH gids AS (
---   SELECT gs.gid, f.new_title
---     FROM game_snapshots gs JOIN title_fix f ON f.pid = gs.pid
---   UNION
---   SELECT ps.gid, f.new_title
---     FROM puzzle_solves ps JOIN title_fix f ON f.pid = ps.pid
--- )
--- UPDATE game_events ge
--- SET event_payload = jsonb_set(
---       ge.event_payload::jsonb, '{params,game,info,title}', to_jsonb(g.new_title), true
---     )::json
--- FROM gids g
--- WHERE ge.gid = g.gid
---   AND ge.event_type = 'create'
---   AND ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title'
---       IS DISTINCT FROM g.new_title
--- RETURNING ge.gid, ge.event_payload -> 'params' -> 'game' -> 'info' ->> 'title';
---
--- COMMIT;
+-- That file needs the title_fix table created above, so stay on this
+-- connection.
 
 
 -- =====================================================================
