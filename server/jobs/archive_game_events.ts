@@ -1,10 +1,11 @@
 /**
  * Automated archival/cleanup of game_events.
  *
- * Three categories of cleanup:
+ * Four categories of cleanup:
  *   1. Solved games with snapshots (replay_retained=false) — delete non-create events
  *   2. Abandoned games (no snapshot, no solve, inactive for N days) — delete all events
  *   3. (Optional) Expire replay_retained flag after N days
+ *   4. Strip the redundant params.game blob from create events of snapshotted games
  *
  * All discovery queries are keyset-paginated (bounded windows over an indexed
  * key) and deletes are batched by gid, so no single statement scans the whole
@@ -22,6 +23,12 @@
  *   DRY_RUN            - Set to "1" for read-only mode (default: 0)
  *   ABANDON_DAYS       - Inactivity threshold for abandoned games in days (default: 90)
  *   EXPIRE_REPLAY_DAYS - Auto-expire replay_retained after N days, 0 = disabled (default: 0)
+ *   STRIP_CREATE       - Set to "0" to skip Category 4 (default: 1)
+ *
+ * NOTE ON DISK SPACE: deleting and updating rows does not shrink the table on
+ * disk — it converts live rows into dead ones, which VACUUM then marks
+ * reusable by this table but never returns to the OS. To actually reclaim
+ * disk after a large run, see server/sql/adhoc/reclaim_space.sql.
  */
 
 import pg from 'pg';
@@ -108,6 +115,7 @@ async function runQuery<R extends pg.QueryResultRow = pg.QueryResultRow>(
 const DRY_RUN = process.env.DRY_RUN === '1';
 const ABANDON_DAYS = parseInt(process.env.ABANDON_DAYS || '90', 10);
 const EXPIRE_REPLAY_DAYS = parseInt(process.env.EXPIRE_REPLAY_DAYS || '0', 10);
+const STRIP_CREATE = process.env.STRIP_CREATE !== '0';
 
 // Each discovery statement scans at most this many gids (one bounded window of
 // an ordered index scan), and each DELETE targets at most DELETE_BATCH_SIZE gids.
@@ -170,6 +178,39 @@ const ABANDONED_COUNT_SQL = `
   WHERE ge.gid = ANY($1)
     AND NOT EXISTS (SELECT 1 FROM game_snapshots gs WHERE gs.gid = ge.gid)
     AND NOT EXISTS (SELECT 1 FROM puzzle_solves ps WHERE ps.gid = ge.gid)`;
+
+// Category 4 predicates. The create event for a snapshotted game carries a
+// full copy of the puzzle (grid, solution, clues, circles) under params.game,
+// which is pure duplication of the puzzles row — getGameEvents() rebuilds it
+// via buildCreateEventFromPuzzle() when it is absent. Stripping it keeps the
+// row (and with it params.pid and params.creator, which game_moderation reads
+// to determine game ownership) while dropping the bulk of its bytes.
+//
+// Guards, all re-checked at write time:
+//   - a snapshot exists with replay_retained = false (replay users need the
+//     full event history, so their create event must stay intact)
+//   - the referenced puzzle still exists, so the payload is reconstructable
+const STRIP_CREATE_PREDICATES = `
+    gs.gid = ge.gid
+    AND gs.replay_retained = false
+    AND ge.gid = ANY($1)
+    AND ge.event_type = 'create'
+    AND ge.event_payload->'params'->'game' IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM puzzles p
+      WHERE p.pid = ge.event_payload->'params'->>'pid'
+    )`;
+
+// event_payload is json (not jsonb), so cast to jsonb to use the #- path
+// delete operator, then cast back.
+const STRIP_CREATE_SQL = `
+  UPDATE game_events ge
+  SET event_payload = (ge.event_payload::jsonb #- '{params,game}')::json
+  FROM game_snapshots gs
+  WHERE ${STRIP_CREATE_PREDICATES}`;
+const STRIP_CREATE_COUNT_SQL = `
+  SELECT COUNT(*) FROM game_events ge
+  JOIN game_snapshots gs ON ${STRIP_CREATE_PREDICATES}`;
 
 /**
  * Category 1: Delete non-create events for solved games with snapshots.
@@ -273,6 +314,60 @@ async function cleanupAbandonedGames(): Promise<CleanupStats> {
 }
 
 /**
+ * Category 4: Strip the redundant params.game payload from create events of
+ * snapshotted, non-replay games.
+ *
+ * Unlike Categories 1 and 2 this is an UPDATE, not a DELETE, so it shrinks
+ * rows rather than removing them — but it is the larger win by bytes, because
+ * a create event carries an entire puzzle while an updateCell event carries a
+ * single character.
+ *
+ * Pages over game_snapshots by gid (its PK), same keyset scheme as Category 1.
+ */
+async function stripCreatePayloads(): Promise<CleanupStats> {
+  const stats: CleanupStats = {category: 'create-payloads', gamesProcessed: 0, eventsDeleted: 0};
+
+  let lastGid = '';
+  for (;;) {
+    const {rows} = await runQuery<{gid: string; needs_strip: boolean}>(
+      `WITH page AS (
+         SELECT gid, replay_retained
+         FROM game_snapshots
+         WHERE gid > $1
+         ORDER BY gid
+         LIMIT $2
+       )
+       SELECT p.gid,
+              (p.replay_retained = false
+               AND EXISTS (
+                 SELECT 1 FROM game_events ge
+                 WHERE ge.gid = p.gid
+                   AND ge.event_type = 'create'
+                   AND ge.event_payload->'params'->'game' IS NOT NULL
+               )) AS needs_strip
+       FROM page p
+       ORDER BY p.gid`,
+      [lastGid, DISCOVERY_PAGE_SIZE]
+    );
+    if (rows.length === 0) break;
+    lastGid = rows[rows.length - 1].gid;
+
+    const gids = rows.filter((r) => r.needs_strip).map((r) => r.gid);
+    if (gids.length > 0) {
+      stats.gamesProcessed += gids.length;
+      stats.eventsDeleted += await processGidBatches(gids, STRIP_CREATE_SQL, STRIP_CREATE_COUNT_SQL);
+    }
+
+    if (rows.length < DISCOVERY_PAGE_SIZE) break;
+  }
+
+  console.log(
+    `  ${DRY_RUN ? '[DRY RUN] Would strip' : 'Stripped'} ${stats.eventsDeleted} create payloads from ${stats.gamesProcessed} snapshotted games`
+  );
+  return stats;
+}
+
+/**
  * Category 3: Auto-expire replay_retained flag after EXPIRE_REPLAY_DAYS.
  * Disabled by default (EXPIRE_REPLAY_DAYS=0).
  */
@@ -311,6 +406,7 @@ async function main() {
   console.log(`Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
   console.log(`Settings: ABANDON_DAYS=${ABANDON_DAYS}`);
   console.log(`  EXPIRE_REPLAY_DAYS=${EXPIRE_REPLAY_DAYS}`);
+  console.log(`  STRIP_CREATE=${STRIP_CREATE ? 1 : 0}`);
   console.log('');
 
   // Category 3 first — expire replays so they become eligible for Category 1
@@ -339,8 +435,25 @@ async function main() {
   }
   console.log('');
 
+  // Category 4 — strip redundant create payloads. Runs after Category 1 so
+  // the games it touches have already shed their non-create events.
+  console.log('--- Category 4: Redundant create payloads ---');
+  let strippedStats: CleanupStats = {category: 'create-payloads', gamesProcessed: 0, eventsDeleted: 0};
+  if (STRIP_CREATE) {
+    strippedStats = await stripCreatePayloads();
+    if (strippedStats.eventsDeleted === 0) {
+      console.log('  Nothing to strip.');
+    }
+  } else {
+    console.log('  Disabled (STRIP_CREATE=0)');
+  }
+  console.log('');
+
   // Run ANALYZE after bulk deletes to update query planner statistics
-  if (!DRY_RUN && solvedStats.eventsDeleted + abandonedStats.eventsDeleted > 0) {
+  if (
+    !DRY_RUN &&
+    solvedStats.eventsDeleted + abandonedStats.eventsDeleted + strippedStats.eventsDeleted > 0
+  ) {
     console.log('--- Running ANALYZE game_events ---');
     await runQuery('ANALYZE game_events');
     console.log('  Done.');
@@ -351,12 +464,16 @@ async function main() {
   console.log('=== Summary ===');
   console.log(`Solved: ${solvedStats.eventsDeleted} events ${DRY_RUN ? '(would be)' : ''} deleted`);
   console.log(`Abandoned: ${abandonedStats.eventsDeleted} events ${DRY_RUN ? '(would be)' : ''} deleted`);
+  console.log(`Create payloads: ${strippedStats.eventsDeleted} ${DRY_RUN ? '(would be) ' : ''}stripped`);
   if (EXPIRE_REPLAY_DAYS > 0) {
     console.log(`Replay expirations: ${expired}`);
   }
   console.log(
     `Total: ${solvedStats.eventsDeleted + abandonedStats.eventsDeleted} events ${DRY_RUN ? '(would be)' : ''} deleted`
   );
+  console.log('');
+  console.log('NOTE: this frees space inside the table but does not shrink it on disk.');
+  console.log('      See server/sql/adhoc/reclaim_space.sql to return space to the OS.');
 
   await pool.end();
 }

@@ -64,7 +64,10 @@ export async function getGameEvents(gid: string) {
       "SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create' ORDER BY ts ASC LIMIT 1",
       [gid]
     );
-    if (createRes.rows.length > 0) {
+    // params.game may have been stripped by the archive job (Category 4) — it
+    // is a redundant full copy of the puzzle for snapshotted games. When it is
+    // gone, fall through and rebuild it from the puzzles table below.
+    if (createRes.rows.length > 0 && createRes.rows[0].event_payload?.params?.game) {
       const createEvent = createRes.rows[0].event_payload;
       const game = createEvent.params.game;
       const snap = snapshot.snapshot as any;
@@ -91,7 +94,9 @@ export async function getGameInfo(gid: string) {
   const res = await pool.query("SELECT event_payload FROM game_events WHERE gid=$1 AND event_type='create'", [
     gid,
   ]);
-  if (res.rowCount === 1) {
+  // As in getGameEvents, params.game may have been stripped by the archive
+  // job; treat that the same as a missing create event and use the fallback.
+  if (res.rowCount === 1 && res.rows[0].event_payload?.params?.game) {
     return res.rows[0].event_payload.params.game.info;
   }
 
