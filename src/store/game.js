@@ -3,6 +3,7 @@ import EventEmitter from 'events';
 import _ from 'lodash';
 import * as uuid from 'uuid';
 import * as colors from '../lib/colors';
+import {recordServerTimestamp} from '../lib/timing';
 import {emitAsync, emitAsyncWithTimeout} from '../sockets/emitAsync';
 import {getSocket, resetSocket} from '../sockets/getSocket';
 // ============ Serialize / Deserialize Helpers ========== //
@@ -115,6 +116,11 @@ export default class Game extends EventEmitter {
     });
     socket.on('game_event', (event) => {
       event = castNullsToUndefined(event);
+      // Live events are server-stamped, so each one is a fresh sample of the
+      // offset between server time and this device's clock. The game clock
+      // measures its live portion against that offset instead of a raw
+      // Date.now(), so a skewed local clock doesn't show up as solve time.
+      recordServerTimestamp(event.timestamp);
       this.emitWSEvent(event);
     });
     // Server broadcasts 'kicked' to the room when the owner kicks a player.
@@ -170,6 +176,7 @@ export default class Game extends EventEmitter {
         return;
       }
       console.log('reconnected...');
+      recordServerTimestamp(ack?.serverTime);
       this._joined = true;
       this.syncState = null;
       if (!this._initialSyncCompleted) {
@@ -200,6 +207,9 @@ export default class Game extends EventEmitter {
         console.warn('join_game returned non-terminal error:', joinAck.error);
         return;
       }
+      // Seed the server/local clock offset before the first live event, so a
+      // refresh mid-solve doesn't render the clock against a skewed device.
+      recordServerTimestamp(joinAck?.serverTime);
       this._joined = true;
     } catch (e) {
       // Ack lost mid-flight (bounce, transient network) — leave _joined

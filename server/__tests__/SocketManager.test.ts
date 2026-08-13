@@ -169,17 +169,50 @@ describe('SocketManager', () => {
       expect(ack).toHaveBeenCalled();
     });
 
-    it('preserves valid numeric timestamps', async () => {
+    // The game clock is accumulated from diffs between consecutive event
+    // timestamps, so client-supplied ones let a player's device clock skew be
+    // charged to the timer (the ~30s jump on the first letter typed).
+    it('overwrites client-supplied timestamps with server time', async () => {
       const {io, socketHandlers} = createMockIo();
       const sm = new SocketManager(io);
       sm.listen();
 
+      const now = Date.now();
       const ack = jest.fn();
-      const event = {type: 'updateCursor', timestamp: 1700000000000, params: {}};
+      // A device whose clock is 30s fast.
+      const event = {type: 'updateCursor', timestamp: now + 30_000, params: {}};
       await socketHandlers['game_event']({gid: 'g1', event}, ack);
 
-      expect(event.timestamp).toBe(1700000000000);
+      expect(event.timestamp).toBeGreaterThanOrEqual(now);
+      expect(event.timestamp).toBeLessThan(now + 30_000);
       expect(ack).toHaveBeenCalled();
+    });
+
+    it('persists and broadcasts the server timestamp, not the client one', async () => {
+      const {io, socketHandlers, emitFn} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      // gameExists: create event found
+      pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]});
+
+      const now = Date.now();
+      const ack = jest.fn();
+      const event = {type: 'updateCell', timestamp: 1700000000000, params: {id: 'p1'}};
+      await socketHandlers['game_event']({gid: 'g1', event}, ack);
+
+      expect(event.timestamp).toBeGreaterThanOrEqual(now);
+      // Broadcast payload carries the server timestamp...
+      expect(emitFn).toHaveBeenCalledWith(
+        'game_event',
+        expect.objectContaining({timestamp: event.timestamp})
+      );
+      // ...and so does the persisted row's ts column.
+      const insert = pool.query.mock.calls.find((call: unknown[]) =>
+        String(call[0]).includes('INSERT INTO game_events')
+      );
+      expect(insert).toBeDefined();
+      expect(new Date(insert![1][2] as string).getTime()).toBe(event.timestamp);
     });
 
     it('stamps verifiedUserId when socket is authenticated', async () => {
@@ -593,6 +626,26 @@ describe('SocketManager', () => {
       await socketHandlers['leave_game']('', ack);
 
       expect(ack).toHaveBeenCalledWith({error: 'invalid gid'});
+    });
+
+    // The client seeds its server/local clock offset from this, so the game
+    // clock renders against server time on a refresh mid-solve — before any
+    // live event has arrived to sample the offset from.
+    it('acks join_game with the current server time', async () => {
+      const {io, socketHandlers, mockSocket} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      const before = Date.now();
+      const ack = jest.fn();
+      await socketHandlers['join_game']('g1', ack);
+      const after = Date.now();
+
+      expect(mockSocket.join).toHaveBeenCalledWith('game-g1');
+      const [payload] = ack.mock.calls[0];
+      expect(payload.error).toBeUndefined();
+      expect(payload.serverTime).toBeGreaterThanOrEqual(before);
+      expect(payload.serverTime).toBeLessThanOrEqual(after);
     });
   });
 

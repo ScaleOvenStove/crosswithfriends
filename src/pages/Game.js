@@ -15,6 +15,7 @@ import MobilePanel from '../components/common/MobilePanel';
 import Chat from '../components/Chat';
 import {isMobile} from '../lib/jsUtils';
 import {pickDistinctColor} from '../lib/colorAssignment';
+import {serverNow} from '../lib/timing';
 import getLocalId from '../localAuth';
 
 import {recordSolve} from '../api/puzzle.ts';
@@ -469,8 +470,11 @@ class Game extends Component {
       // Compute the true total time: if the clock hasn't been ticked yet
       // (e.g. optimistic event just confirmed), add the unaccounted elapsed time.
       const gameClock = this.game.clock;
+      // lastUpdated is a server timestamp, so the elapsed time since it has to
+      // be measured on the server's clock — a skewed local Date.now() would be
+      // baked straight into the recorded solve time.
       const unaccountedTime =
-        gameClock.paused || !gameClock.lastUpdated ? 0 : Date.now() - gameClock.lastUpdated;
+        gameClock.paused || !gameClock.lastUpdated ? 0 : serverNow() - gameClock.lastUpdated;
       const solvedClock = {
         ...gameClock,
         totalTime: gameClock.totalTime + Math.max(0, unaccountedTime),

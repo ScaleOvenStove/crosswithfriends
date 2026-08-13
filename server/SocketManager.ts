@@ -148,7 +148,12 @@ class SocketManager {
             }
           }
           socket.join(`game-${gid}`);
-          if (typeof ack === 'function') ack();
+          // serverTime seeds the client's server/local clock offset before any
+          // live event arrives, so a page refresh mid-solve renders the clock
+          // against server time instead of a possibly-skewed device clock.
+          // Callers only inspect `error`, so the added field is backwards
+          // compatible with older clients.
+          if (typeof ack === 'function') ack({serverTime: Date.now()});
         } catch (err) {
           console.error(`[Socket] join_game error for gid=${gid}:`, err);
           Sentry.captureException(err);
@@ -286,10 +291,16 @@ class SocketManager {
               }
             }
           }
-          // Replace non-numeric timestamps with real server time
-          if (typeof event.timestamp !== 'number') {
-            event.timestamp = Date.now();
-          }
+          // Stamp every event with server time, overwriting whatever the
+          // client sent. The game clock is accumulated from the diff between
+          // consecutive event timestamps (see tick() in lib/reducers/game),
+          // and the client re-sorts history by timestamp, so mixing wall
+          // clocks from different devices charged each player's clock skew to
+          // the timer: a peer whose device was 30s off made the clock jump
+          // ~30s the moment their event interleaved with yours (usually the
+          // first letter typed). One clock for all events removes both the
+          // skew and the out-of-order re-sorting that surfaced it.
+          event.timestamp = Date.now();
           // Stamp verified user identity if authenticated, otherwise clear it
           // to prevent unauthenticated users from spoofing verifiedUserId
           if (socket.data.authUser) {

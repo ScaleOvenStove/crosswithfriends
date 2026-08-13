@@ -1,7 +1,7 @@
 import './css/clock.css';
 import {Component} from 'react';
 import {FaFlagCheckered, FaPause, FaStopwatch} from 'react-icons/fa6';
-import {MAX_CLOCK_INCREMENT} from '../../lib/timing';
+import {MAX_CLOCK_INCREMENT, serverNow} from '../../lib/timing';
 
 export const formatMilliseconds = (ms) => {
   function pad2(num) {
@@ -48,7 +48,9 @@ export default class Clock extends Component {
     const {pausedTime} = this.props;
     const start = this.props.startTime;
     const stop = this.props.stopTime;
-    const now = Date.now();
+    // startTime is clock.lastUpdated — a server timestamp — so compare it
+    // against server time, not this device's possibly-skewed clock.
+    const now = serverNow();
 
     let clock = 0; // start with pausedTime
     if (pausedTime) {
@@ -75,7 +77,7 @@ export default class Clock extends Component {
   get isCapped() {
     if (!this.props.v2) return false;
     const start = this.props.startTime;
-    const now = Date.now();
+    const now = serverNow();
     return now > start + MAX_CLOCK_INCREMENT;
   }
 
