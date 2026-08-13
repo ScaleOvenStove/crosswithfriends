@@ -272,17 +272,37 @@ describe('SocketManager', () => {
       }
     });
 
-    it('does not let the tie-breaker drift far ahead of real time', () => {
+    // Drift is the accepted cost of monotonicity. Bounding it would mean moving
+    // the sequence backward, which reorders whole seconds of history — much
+    // worse than the ties the sequence exists to break.
+    it('never moves the sequence backward, even past the drift a burst causes', () => {
       const {io} = createMockIo();
       const sm = new SocketManager(io);
 
       const frozen = 1700000000000;
       const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozen);
       try {
-        // A burst long enough to outrun the clock falls back to real time
-        // rather than stamping ever further into the future.
-        for (let i = 0; i < 1500; i += 1) sm.nextEventStamp();
-        expect(sm.nextEventStamp()).toBeLessThanOrEqual(frozen + 1000);
+        const stamps = [];
+        for (let i = 0; i < 3000; i += 1) stamps.push(sm.nextEventStamp());
+        for (let i = 1; i < stamps.length; i += 1) {
+          expect(stamps[i]).toBeGreaterThan(stamps[i - 1]);
+        }
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    it('catches back up to real time once the burst subsides', () => {
+      const {io} = createMockIo();
+      const sm = new SocketManager(io);
+
+      const frozen = 1700000000000;
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozen);
+      try {
+        for (let i = 0; i < 3000; i += 1) sm.nextEventStamp();
+        // Real time moves past the drifted sequence; stamps track it again.
+        nowSpy.mockReturnValue(frozen + 10_000);
+        expect(sm.nextEventStamp()).toBe(frozen + 10_000);
       } finally {
         nowSpy.mockRestore();
       }

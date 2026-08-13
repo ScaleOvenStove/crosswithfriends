@@ -50,14 +50,17 @@ class SocketManager {
   // still settle on the stale value. Strictly increasing stamps make the
   // ordering guarantee this file relies on — history order follows arrival
   // order — hold by construction rather than by luck of the clock.
+  //
+  // Deliberately unbounded: past 1000 events/sec in aggregate the +1 outruns
+  // real time and the sequence drifts ahead. Capping that drift would mean
+  // moving the sequence backward, which is far worse than drift — later events
+  // would sort before the preceding second of history and could leave stale
+  // cell values. Drift costs display precision only, needs a sustained rate
+  // this app doesn't see (normal solving is a few events/sec per player), and
+  // decays as soon as the rate drops. If it ever became real, the fix is an
+  // ordering key separate from the timestamp, not a backward reset.
   nextEventStamp(): number {
-    const now = Date.now();
-    const stamp = now > this.lastEventStamp ? now : this.lastEventStamp + 1;
-    // Under a sustained burst past 1000 events/sec the +1s would outrun real
-    // time. Cap the drift at a second and fall back to colliding stamps beyond
-    // that: clients derive their server/local clock offset from these, so the
-    // stamp staying close to real time matters more than the tie-break.
-    this.lastEventStamp = stamp > now + 1000 ? now : stamp;
+    this.lastEventStamp = Math.max(Date.now(), this.lastEventStamp + 1);
     return this.lastEventStamp;
   }
 

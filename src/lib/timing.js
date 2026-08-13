@@ -8,76 +8,58 @@ export const MAX_CLOCK_INCREMENT = 1000 * 60;
 // started), so we track the offset between server and local time and read
 // "now" through it.
 //
-// Only live socket events are valid samples: an event from the initial history
-// sync is legitimately old and would look like an enormous offset.
+// Estimating that offset comes down to one question per sample: how long did
+// this timestamp take to reach us? A sample is `serverStamp - Date.now()`, so
+// any delay in between lands entirely in the local term — network, the database
+// write that precedes the broadcast, a throttled or suspended tab draining its
+// callback queue. Every sample is therefore `trueOffset - delay`: a lower bound,
+// never an over-estimate.
 //
-// Every sample is biased LOW, and by an unknown amount. A sample is
-// `serverStamp - Date.now()`, so anything that delays the event between the
-// server stamping it and us processing it — network, the database write that
-// precedes the broadcast, a throttled background tab draining its callback
-// queue — lands entirely in the local term: sample = trueOffset - delay. That
-// makes each sample a lower bound on the true offset, so the best available
-// estimate is the LARGEST recent sample. Taking the most recent one instead
-// let a single late callback rewind serverNow() by the length of the delay,
-// stalling the displayed clock and under-counting the recorded solve time.
+// That asymmetry decides everything. A sample ABOVE the current estimate cannot
+// be explained by delay, so it is trustworthy on sight. A sample BELOW it is
+// ambiguous — either the device clock moved, or that event was slow — and no
+// amount of squinting at a one-way sample resolves which. Two earlier attempts
+// here tried and failed: adopting any sample once the estimate went stale, and
+// then requiring two lower samples to agree. Both broke on a suspended tab,
+// which delivers a batch of queued events whose delays are near-identical, so
+// batch-mates corroborate each other into a badly rewound clock.
 //
-// "Largest" alone would pin the estimate forever, so a lower sample can still
-// win — but only with corroboration, never on its own. A single lower sample is
-// ambiguous: it means either the device clock really moved, or that one event
-// was delayed. Adopting it unconditionally once the estimate went stale would
-// re-enable the very failure above, and at the worst possible moment, since a
-// long tab suspension produces a stale estimate and a delayed sample together.
-//
-// So a lower estimate requires two consecutive lower samples that agree to
-// within AGREEMENT_TOLERANCE_MS, plus a stale current estimate. Two independent
-// delays rarely agree closely, while two samples taken after a real clock change
-// agree exactly. The cost is that a genuine clock change takes up to
-// OFFSET_WINDOW_MS to be believed — acceptable because the common recovery path
-// is upward: a suspended tab's socket reconnects, and the join_game ack is a
-// fresh, undelayed sample that wins immediately on the "largest" rule.
-const OFFSET_WINDOW_MS = 5 * 60 * 1000;
-const AGREEMENT_TOLERANCE_MS = 1000;
-
+// So one-way samples may only ever raise the estimate. Lowering it requires
+// evidence of freshness, which only a measured round trip provides.
 let serverTimeOffset = 0;
 let hasSample = false;
-let sampledAt = 0;
-// Last lower-than-current sample, held as a candidate awaiting corroboration.
-let candidate = null;
 
-// Elapsed-time reference for the window. Monotonic where available so that a
-// device clock change can't make the current estimate look fresher than it is.
-const monotonicNow = () =>
-  typeof performance !== 'undefined' && typeof performance.now === 'function'
-    ? performance.now()
-    : Date.now();
+const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
 
-// Records a server-stamped timestamp from a just-received live event or the
-// join_game ack.
+// Beyond this a "round trip" tells us too little about the delay to be worth
+// trusting in the downward direction.
+const MAX_TRUSTED_ROUND_TRIP_MS = 10 * 1000;
+
+// A one-way sample: a server-stamped timestamp off a broadcast event, whose
+// delay is unbounded. Raises the estimate, never lowers it.
 export const recordServerTimestamp = (serverTimestamp) => {
-  if (typeof serverTimestamp !== 'number' || !Number.isFinite(serverTimestamp)) return;
+  if (!isFiniteNumber(serverTimestamp)) return;
   const sample = serverTimestamp - Date.now();
-  const now = monotonicNow();
-
-  // Delay can only bias a sample downward, so anything at or above the current
-  // estimate is trustworthy on sight.
-  if (!hasSample || sample >= serverTimeOffset) {
+  if (!hasSample || sample > serverTimeOffset) {
     serverTimeOffset = sample;
-    sampledAt = now;
     hasSample = true;
-    candidate = null;
-    return;
   }
+};
 
-  // Lower than what we have. Believe it only if the previous lower sample
-  // agrees and the estimate we'd be replacing has gone stale.
-  const corroborated = candidate !== null && Math.abs(sample - candidate.value) <= AGREEMENT_TOLERANCE_MS;
-  if (corroborated && now - sampledAt > OFFSET_WINDOW_MS) {
-    serverTimeOffset = sample;
-    sampledAt = now;
-    candidate = null;
+// A sample from a request whose round trip we timed — the join_game ack. The
+// server stamped it somewhere between our send and our receive, so the delay is
+// bounded by roundTripMs rather than unknown, which makes this the only
+// evidence that can lower the estimate. Assuming the stamp landed mid-flight
+// puts the residual error at ±roundTripMs / 2.
+export const recordServerTimeFromRoundTrip = (serverTimestamp, roundTripMs) => {
+  if (!isFiniteNumber(serverTimestamp)) return;
+  if (!isFiniteNumber(roundTripMs) || roundTripMs < 0 || roundTripMs > MAX_TRUSTED_ROUND_TRIP_MS) {
+    // Delay isn't bounded after all — treat it as an ordinary one-way sample.
+    recordServerTimestamp(serverTimestamp);
     return;
   }
-  candidate = {value: sample, at: now};
+  serverTimeOffset = serverTimestamp - Date.now() + roundTripMs / 2;
+  hasSample = true;
 };
 
 export const getServerTimeOffset = () => serverTimeOffset;
@@ -89,6 +71,4 @@ export const serverNow = () => Date.now() + serverTimeOffset;
 export const resetServerTimeOffset = () => {
   serverTimeOffset = 0;
   hasSample = false;
-  sampledAt = 0;
-  candidate = null;
 };
