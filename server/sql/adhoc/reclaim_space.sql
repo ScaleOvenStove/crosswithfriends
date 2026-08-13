@@ -22,30 +22,61 @@
 -- ===========================================================================
 -- Step 1 — REINDEX CONCURRENTLY (safe, online, do this first)
 -- ===========================================================================
--- B-tree indexes on high-churn tables bloat faster than the heap. Rebuilding
--- them is online (no exclusive lock, reads and writes continue) and needs
--- only about one index's worth of temporary headroom, not a full table copy.
--- On a bloated game_events this alone often recovers a large fraction of the
--- disk with essentially no risk.
+-- B-tree indexes do not self-compact. When old rows are deleted in key order,
+-- the emptied leaf pages are only reusable for that same key range, so they
+-- sit half-empty forever. Crucially this does NOT show up as dead tuples —
+-- a table can report a healthy 1% n_dead_tup while its indexes carry
+-- gigabytes of air, because autovacuum has already done its job and the
+-- pages are simply never returned.
 --
--- Run one at a time and watch free disk between each. If a REINDEX
--- CONCURRENTLY is interrupted it leaves an invalid index named *_ccnew —
--- see the cleanup query at the bottom.
+-- Rebuilding is online: no exclusive lock, reads and writes continue, and it
+-- needs only about one rebuilt index of temporary headroom rather than a full
+-- table copy. That makes this the only reclamation step that is safe to run
+-- while the disk is nearly full — and on this schema it is also the largest
+-- single win.
+--
+-- ORDERING: smallest first. Each completed rebuild frees space that gives the
+-- next one more headroom, so by the time the largest index is rebuilt there is
+-- room to build its replacement. Watch free disk between each.
+--
+-- To size the prize before running, use query C2 in diagnose_db_space.sql:
+-- divide each index's size by the table's live row count and compare against
+-- what the indexed columns should cost (~16 bytes overhead + column widths;
+-- a (text_id, timestamp) index should land near 50-70 bytes/row). Calibrate
+-- against a low-churn index in the same database — an append-only table's
+-- primary key is a good yardstick for an unbloated entry.
+--
+-- If an index is bloated 4x, roughly three quarters of its size comes back.
 
-REINDEX INDEX CONCURRENTLY game_events_gid_ts_idx;
-REINDEX INDEX CONCURRENTLY game_events_uid_idx;
-REINDEX INDEX CONCURRENTLY game_events_payload_id_idx;
-REINDEX INDEX CONCURRENTLY game_events_gid_event_type_idx;
+-- Cheap probes first: they validate the operation and free a little headroom.
 REINDEX INDEX CONCURRENTLY game_events_gid_verified_user_idx;
+REINDEX INDEX CONCURRENTLY game_events_payload_id_idx;
+REINDEX INDEX CONCURRENTLY game_events_uid_idx;
 
-REINDEX INDEX CONCURRENTLY room_events_rid_ts_idx;
+-- Then the larger ones, ascending.
+REINDEX INDEX CONCURRENTLY game_events_gid_event_type_idx;
 
+-- Largest last — on a heavily-churned game_events this is typically the most
+-- bloated index in the database by a wide margin, and the biggest single
+-- reclaim available anywhere in this runbook. Give it time; it rebuilds the
+-- whole index while writes continue.
+REINDEX INDEX CONCURRENTLY game_events_gid_ts_idx;
+
+-- firebase_history is effectively static (no writes, no dead tuples), so its
+-- indexes bloat little and the payoff here is modest. Run only if you still
+-- need headroom after the game_events rebuilds.
 REINDEX INDEX CONCURRENTLY idx_firebase_history_pid;
 REINDEX INDEX CONCURRENTLY idx_firebase_history_dfac_pid;
 REINDEX INDEX CONCURRENTLY idx_firebase_history_dfac_solved;
 REINDEX INDEX CONCURRENTLY idx_firebase_history_gid;
+REINDEX INDEX CONCURRENTLY firebase_history_pkey;
 
--- Whole-table form (rebuilds every index on the table, still online):
+REINDEX INDEX CONCURRENTLY puzzle_solves_anon_game_idx;
+REINDEX INDEX CONCURRENTLY puzzle_solves_gid_idx;
+
+-- Whole-table form (rebuilds every index on the table, still online) — simpler
+-- but gives up the incremental headroom that the ascending order buys you, so
+-- prefer the one-at-a-time form when the disk is tight:
 --   REINDEX TABLE CONCURRENTLY game_events;
 
 -- ===========================================================================
@@ -106,8 +137,14 @@ REINDEX INDEX CONCURRENTLY idx_firebase_history_gid;
 -- Step 5 — Keep it from coming back
 -- ===========================================================================
 -- game_events already carries tuned autovacuum settings (see
--- create_game_events.sql). room_events does not, and it has no cleanup job
--- at all. Apply the same treatment:
+-- create_game_events.sql), and if the diagnosis showed low dead-tuple
+-- percentages then autovacuum is doing its job — the bloat is structural
+-- (indexes never compacting), not a vacuum shortfall. In that case do NOT
+-- tune autovacuum harder; it will not help and only adds I/O.
+--
+-- room_events has no tuning and no cleanup job. It is small today, so this is
+-- future-proofing rather than a fix — cheap to apply, no reason to wait for
+-- it to become a problem:
 
 ALTER TABLE room_events SET (
   autovacuum_vacuum_scale_factor = 0.02,
@@ -115,14 +152,15 @@ ALTER TABLE room_events SET (
   autovacuum_vacuum_cost_delay = 10
 );
 
--- If the diagnosis showed dead tuples persistently climbing on game_events,
--- push it further — 0.01 means autovacuum triggers at 1% churn:
+-- The real recurrence control for index bloat is periodic REINDEX
+-- CONCURRENTLY, not vacuum settings. Schedule Step 1 for the largest
+-- game_events indexes on a recurring basis (quarterly is usually enough)
+-- alongside the archive job, since every large cleanup run re-creates the
+-- half-empty leaf pages that Step 1 reclaims.
+--
+-- Only if dead tuples ARE persistently climbing, push the trigger to 1%:
 --
 --   ALTER TABLE game_events SET (autovacuum_vacuum_scale_factor = 0.01);
---
--- On Postgres 13+, also let index cleanup run on every pass:
---
---   ALTER TABLE game_events SET (vacuum_index_cleanup = auto);
 
 -- ===========================================================================
 -- Cleanup after an interrupted REINDEX CONCURRENTLY

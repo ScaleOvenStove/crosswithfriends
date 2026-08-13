@@ -89,9 +89,41 @@ ORDER BY n_dead_tup DESC;
 -- SELECT 'game_snapshots' AS table_name, * FROM pgstattuple_approx('game_snapshots');
 -- SELECT 'firebase_history' AS table_name, * FROM pgstattuple_approx('firebase_history');
 
--- C2. Index bloat, if pgstattuple is available. B-tree indexes on high-churn
---     tables bloat faster than the heap and are far cheaper to fix
---     (REINDEX CONCURRENTLY — no exclusive lock, ~1x index size of headroom).
+-- C2. Index bloat WITHOUT pgstattuple — bytes per row per index.
+--     This is the most useful single query in the file, because B-tree indexes
+--     do not self-compact: after a mass delete, emptied leaf pages are only
+--     reused for the same key range, so a table that deletes old rows by an
+--     ascending key leaves permanently half-empty pages. n_dead_tup will look
+--     perfectly healthy while the index carries gigabytes of air.
+--
+--     Read it by comparing bytes_per_row against what the indexed columns
+--     should cost: roughly 16 bytes of per-entry overhead plus the column
+--     widths. A narrow (text_id, timestamp) index should land near 50-70
+--     bytes per row. Three or four times that is bloat, and REINDEX
+--     CONCURRENTLY reclaims the difference online.
+--
+--     Calibrate against a low-churn index in this same database rather than
+--     against theory — an append-only table's primary key makes a good
+--     baseline for what an unbloated entry costs here.
+SELECT s.relname AS table_name,
+       s.indexrelname AS index_name,
+       pg_size_pretty(pg_relation_size(s.indexrelid)) AS index_size,
+       t.n_live_tup,
+       round(pg_relation_size(s.indexrelid)::numeric / NULLIF(t.n_live_tup, 0), 1) AS bytes_per_row,
+       s.idx_scan
+FROM pg_stat_user_indexes s
+JOIN pg_stat_user_tables t ON t.relid = s.relid
+WHERE pg_relation_size(s.indexrelid) > 50 * 1024 * 1024
+ORDER BY pg_relation_size(s.indexrelid) DESC;
+
+-- C2b. If pgstattuple can be installed, it measures density directly rather
+--      than inferring it. Try this first — on managed Postgres it is often
+--      permitted even when other extensions are not:
+--
+--        CREATE EXTENSION IF NOT EXISTS pgstattuple;
+--
+--      Then avg_leaf_density is the answer outright: 90 is freshly built,
+--      anything under ~50 means roughly half the index is empty space.
 --
 -- SELECT indexrelname,
 --        pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
@@ -154,11 +186,20 @@ LIMIT 30;
 
 -- E1. game_events by type, with payload bytes. 'create' rows are a small
 --     count but carry a full copy of the puzzle (grid + solution + clues +
---     circles) per game, so they usually dominate bytes-per-row.
-SELECT event_type, COUNT(*) AS rows,
-       pg_size_pretty(SUM(pg_column_size(event_payload)::bigint)) AS payload_bytes,
-       pg_size_pretty(AVG(pg_column_size(event_payload))::bigint) AS avg_row
-FROM game_events
+--     circles) per game, so they dominate bytes-per-row and are what fills
+--     the TOAST segment.
+--
+--     SAMPLED: an unqualified aggregate over game_events detoasts every
+--     payload and will blow the statement timeout on a table this size.
+--     TABLESAMPLE SYSTEM reads a random fraction of PAGES, which is fast and
+--     plenty accurate for a size distribution. Raise the percentage for a
+--     tighter estimate; multiply the counts by (100 / pct) to extrapolate.
+SELECT event_type,
+       COUNT(*) AS sampled_rows,
+       COUNT(*) * 1000 AS est_total_rows,  -- 0.1% sample
+       pg_size_pretty(AVG(pg_column_size(event_payload))::bigint) AS avg_payload,
+       pg_size_pretty((SUM(pg_column_size(event_payload)::bigint) * 1000)) AS est_total_payload
+FROM game_events TABLESAMPLE SYSTEM (0.1)
 GROUP BY event_type
 ORDER BY SUM(pg_column_size(event_payload)::bigint) DESC;
 
@@ -167,14 +208,23 @@ ORDER BY SUM(pg_column_size(event_payload)::bigint) DESC;
 --     server rebuilds them from the puzzles table via
 --     buildCreateEventFromPuzzle() in server/model/game.ts.
 --     This is what Category 4 of archive_game_events.ts removes.
-SELECT COUNT(*) AS create_events,
-       pg_size_pretty(SUM(pg_column_size(ge.event_payload)::bigint)) AS current_bytes,
-       pg_size_pretty(AVG(pg_column_size(ge.event_payload))::bigint) AS avg_row
-FROM game_events ge
-JOIN game_snapshots gs ON gs.gid = ge.gid
-WHERE ge.event_type = 'create'
-  AND gs.replay_retained = false
-  AND ge.event_payload->'params'->'game' IS NOT NULL;
+--
+--     SAMPLED: driven off a bounded slice of game_snapshots so it does an
+--     indexed probe per sampled gid instead of scanning game_events. Scale
+--     the result by (total non-replay snapshots / SAMPLE_SIZE) — get that
+--     denominator from E2b below.
+WITH sample AS (
+  SELECT gid FROM game_snapshots WHERE replay_retained = false LIMIT 5000
+)
+SELECT COUNT(*) AS sampled_create_events,
+       pg_size_pretty(AVG(pg_column_size(ge.event_payload))::bigint) AS avg_create_payload,
+       pg_size_pretty(SUM(pg_column_size(ge.event_payload)::bigint)) AS sampled_bytes
+FROM sample s
+JOIN game_events ge ON ge.gid = s.gid AND ge.event_type = 'create'
+WHERE ge.event_payload->'params'->'game' IS NOT NULL;
+
+-- E2b. The scaling denominator for E2.
+SELECT COUNT(*) AS non_replay_snapshots FROM game_snapshots WHERE replay_retained = false;
 
 -- E3. room_events has no cleanup job and no autovacuum tuning. Check whether
 --     it has quietly become a growth driver.
@@ -210,11 +260,24 @@ FROM password_reset_tokens;
 --     -> Autovacuum is not keeping up. Deletes are converting live rows into
 --        dead rows without ever releasing the pages.
 --
--- C1/C3 show large free/reclaimable space, B3 is healthy
---     -> This is the normal case, and the answer to "is there unclaimed
---        space?" is yes. VACUUM has already freed the rows internally, but
---        Postgres never returns those pages to the OS on its own. You need a
---        rewrite: see server/sql/adhoc/reclaim_space.sql.
+-- B3 looks HEALTHY (low dead_pct, recent last_autovacuum) but the disk is
+-- still full
+--     -> Do not stop here, and do not conclude there is no reclaimable space.
+--        Healthy dead-tuple numbers mean autovacuum already ran; they say
+--        nothing about how much empty space it left behind. Go to C2: index
+--        bloat is invisible in these numbers and is usually the answer,
+--        because B-tree pages emptied by a mass delete are never returned.
+--
+-- C2 shows an index costing several times its expected bytes_per_row
+--     -> That difference is reclaimable online via REINDEX CONCURRENTLY, with
+--        no exclusive lock and no 2x-disk requirement. This is the safest and
+--        usually the largest single win. See reclaim_space.sql Step 1.
+--
+-- C1/C3 show large free/reclaimable space in the HEAP
+--     -> Real, but more expensive to collect: it needs a full table rewrite
+--        (pg_repack or VACUUM FULL), which requires free space greater than
+--        the table's total size. Do the index rebuilds first and add storage
+--        before attempting it.
 --
 -- E1/E2 show 'create' dominating payload bytes
 --     -> Structural growth, not bloat. Run Category 4 of
