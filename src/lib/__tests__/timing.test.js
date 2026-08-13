@@ -35,19 +35,61 @@ describe('server time offset', () => {
     expect(serverNow()).toBe(local - 30_000);
   });
 
-  it('tracks the most recent sample', () => {
+  // Every sample is biased low by however long the event was in flight, so the
+  // largest recent sample is the best estimate. Preferring the newest let one
+  // late callback rewind serverNow() and stall the displayed clock.
+  it('keeps the best sample rather than the newest one', () => {
     vi.useFakeTimers();
     const local = Date.now();
     recordServerTimestamp(local + 5_000);
+    // A delayed callback: same true offset, but 4s of queueing lands in the
+    // local term and makes the sample look smaller.
     recordServerTimestamp(local + 1_000);
 
-    expect(getServerTimeOffset()).toBe(1_000);
+    expect(getServerTimeOffset()).toBe(5_000);
+  });
+
+  it('adopts a better sample immediately', () => {
+    vi.useFakeTimers();
+    const local = Date.now();
+    recordServerTimestamp(local + 1_000);
+    recordServerTimestamp(local + 5_000);
+
+    expect(getServerTimeOffset()).toBe(5_000);
+  });
+
+  it('does not let a late event rewind server time', () => {
+    vi.useFakeTimers();
+    const local = Date.now();
+    recordServerTimestamp(local + 30_000);
+    const before = serverNow();
+
+    // Tab suspended: this event's callback runs two minutes after it was
+    // stamped, which would read as the device being 2min ahead of the server.
+    recordServerTimestamp(local + 30_000 - 120_000);
+
+    expect(serverNow()).toBe(before);
+  });
+
+  it('adapts to a genuine clock change once the estimate goes stale', () => {
+    vi.useFakeTimers();
+    const local = Date.now();
+    recordServerTimestamp(local + 30_000);
+    expect(getServerTimeOffset()).toBe(30_000);
+
+    // Past the window, a lower sample is trusted — the device clock really did
+    // move, rather than one event arriving late.
+    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    recordServerTimestamp(Date.now() + 2_000);
+
+    expect(getServerTimeOffset()).toBe(2_000);
   });
 
   it('ignores samples that are not finite numbers', () => {
     vi.useFakeTimers();
     const local = Date.now();
     recordServerTimestamp(local + 7_000);
+    // A non-sample must not be treated as "no offset yet" and reset anything.
 
     recordServerTimestamp(undefined);
     recordServerTimestamp(null);

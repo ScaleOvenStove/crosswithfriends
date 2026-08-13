@@ -215,6 +215,36 @@ describe('SocketManager', () => {
       expect(new Date(insert![1][2] as string).getTime()).toBe(event.timestamp);
     });
 
+    // The validation above the stamp awaits, so handlers for consecutive
+    // packets from one socket interleave. Stamping after those awaits let
+    // whichever handler cleared them first claim the earlier timestamp, which
+    // would persist two rapid edits to the same cell in reverse order.
+    it('stamps by arrival order even when validation awaits interleave', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      // Make the first event's gameExists lookup slow and the rest immediate.
+      let queries = 0;
+      pool.query.mockImplementation(async () => {
+        queries += 1;
+        if (queries === 1) await new Promise((resolve) => setTimeout(resolve, 50));
+        return {rowCount: 1, rows: [{}]};
+      });
+
+      const first = {type: 'updateCell', timestamp: 1, params: {id: 'p1', cell: {r: 0, c: 0}, value: 'A'}};
+      const second = {type: 'updateCell', timestamp: 2, params: {id: 'p1', cell: {r: 0, c: 0}, value: 'B'}};
+      await Promise.all([
+        socketHandlers['game_event']({gid: 'g1', event: first}, jest.fn()),
+        socketHandlers['game_event']({gid: 'g1', event: second}, jest.fn()),
+      ]);
+
+      // Arrival order is first → second, so its stamps must not invert.
+      expect(second.timestamp).toBeGreaterThanOrEqual(first.timestamp);
+      // And neither carries the 50ms the slow lookup spent waiting.
+      expect(second.timestamp - first.timestamp).toBeLessThan(50);
+    });
+
     it('stamps verifiedUserId when socket is authenticated', async () => {
       (verifyAccessToken as jest.Mock).mockReturnValue({userId: 'user-42'});
       const {io, socketHandlers, mockSocket} = createMockIo();

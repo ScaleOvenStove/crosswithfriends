@@ -214,6 +214,12 @@ class SocketManager {
       });
 
       socket.on('game_event', async (message, ack) => {
+        // Captured before any validation, because the checks below await and so
+        // interleave with the next packet from the same socket: whichever
+        // handler clears its awaits first would otherwise claim the earlier
+        // stamp, and two rapid edits to one cell could persist in reverse
+        // order. Reading the clock here makes the stamp reflect arrival order.
+        const receivedAt = Date.now();
         try {
           const event = message?.event;
           if (!event || typeof event.type !== 'string') {
@@ -300,7 +306,7 @@ class SocketManager {
           // ~30s the moment their event interleaved with yours (usually the
           // first letter typed). One clock for all events removes both the
           // skew and the out-of-order re-sorting that surfaced it.
-          event.timestamp = Date.now();
+          event.timestamp = receivedAt;
           // Stamp verified user identity if authenticated, otherwise clear it
           // to prevent unauthenticated users from spoofing verifiedUserId
           if (socket.data.authUser) {
