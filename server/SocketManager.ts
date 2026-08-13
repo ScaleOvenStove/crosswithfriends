@@ -37,8 +37,28 @@ const RESTRICTABLE_EVENT_TYPES: Record<string, RestrictableAction> = Object.assi
 class SocketManager {
   io: Server;
 
+  // Last stamp handed out by nextEventStamp, so stamps stay strictly increasing.
+  lastEventStamp = 0;
+
   constructor(io: Server) {
     this.io = io;
+  }
+
+  // Server time, but never the same millisecond twice. Equal timestamps have no
+  // tie-breaker in either the client's history sort or the `ORDER BY ts ASC`
+  // replay query, so two edits to one cell landing in the same millisecond could
+  // still settle on the stale value. Strictly increasing stamps make the
+  // ordering guarantee this file relies on — history order follows arrival
+  // order — hold by construction rather than by luck of the clock.
+  nextEventStamp(): number {
+    const now = Date.now();
+    const stamp = now > this.lastEventStamp ? now : this.lastEventStamp + 1;
+    // Under a sustained burst past 1000 events/sec the +1s would outrun real
+    // time. Cap the drift at a second and fall back to colliding stamps beyond
+    // that: clients derive their server/local clock offset from these, so the
+    // stamp staying close to real time matters more than the tie-break.
+    this.lastEventStamp = stamp > now + 1000 ? now : stamp;
+    return this.lastEventStamp;
   }
 
   async addGameEvent(gid: string, event: GameEvent) {
@@ -214,12 +234,12 @@ class SocketManager {
       });
 
       socket.on('game_event', async (message, ack) => {
-        // Captured before any validation, because the checks below await and so
+        // Claimed before any validation, because the checks below await and so
         // interleave with the next packet from the same socket: whichever
         // handler clears its awaits first would otherwise claim the earlier
         // stamp, and two rapid edits to one cell could persist in reverse
-        // order. Reading the clock here makes the stamp reflect arrival order.
-        const receivedAt = Date.now();
+        // order. Taking the stamp here makes it reflect arrival order.
+        const receivedAt = this.nextEventStamp();
         try {
           const event = message?.event;
           if (!event || typeof event.type !== 'string') {

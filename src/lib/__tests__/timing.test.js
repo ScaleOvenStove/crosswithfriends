@@ -71,18 +71,65 @@ describe('server time offset', () => {
     expect(serverNow()).toBe(before);
   });
 
-  it('adapts to a genuine clock change once the estimate goes stale', () => {
+  it('adapts to a genuine clock change once two samples agree', () => {
     vi.useFakeTimers();
     const local = Date.now();
     recordServerTimestamp(local + 30_000);
     expect(getServerTimeOffset()).toBe(30_000);
 
-    // Past the window, a lower sample is trusted — the device clock really did
-    // move, rather than one event arriving late.
+    // Past the window, two agreeing lower samples are believed — the device
+    // clock really did move, rather than one event arriving late.
     vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    recordServerTimestamp(Date.now() + 2_000);
+    expect(getServerTimeOffset()).toBe(30_000); // one lower sample proves nothing
     recordServerTimestamp(Date.now() + 2_000);
 
     expect(getServerTimeOffset()).toBe(2_000);
+  });
+
+  // A long suspension makes the estimate stale AND the queued sample delayed at
+  // the same time, so an expiry branch that trusted a lone sample would rewind
+  // the clock exactly when it is most likely to be wrong.
+  it('does not trust a lone delayed sample after a long suspension', () => {
+    vi.useFakeTimers();
+    const local = Date.now();
+    recordServerTimestamp(local + 30_000);
+    const before = serverNow();
+
+    // Tab suspended for ten minutes; on resume a queued event's callback runs
+    // with a stamp from before the suspension.
+    vi.advanceTimersByTime(10 * 60 * 1000);
+    recordServerTimestamp(Date.now() + 30_000 - 10 * 60 * 1000);
+
+    expect(getServerTimeOffset()).toBe(30_000);
+    expect(serverNow()).toBe(before + 10 * 60 * 1000);
+  });
+
+  it('recovers immediately from the join ack after a suspension', () => {
+    vi.useFakeTimers();
+    const local = Date.now();
+    recordServerTimestamp(local + 30_000);
+
+    vi.advanceTimersByTime(10 * 60 * 1000);
+    // Stale delayed sample first, then the reconnect's fresh ack.
+    recordServerTimestamp(Date.now() + 30_000 - 10 * 60 * 1000);
+    recordServerTimestamp(Date.now() + 45_000);
+
+    expect(getServerTimeOffset()).toBe(45_000);
+  });
+
+  it('disagreeing low samples never accumulate into an adoption', () => {
+    vi.useFakeTimers();
+    const local = Date.now();
+    recordServerTimestamp(local + 30_000);
+
+    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    // Independent delays of differing magnitude — no two agree.
+    recordServerTimestamp(Date.now() + 30_000 - 8_000);
+    recordServerTimestamp(Date.now() + 30_000 - 20_000);
+    recordServerTimestamp(Date.now() + 30_000 - 3_000);
+
+    expect(getServerTimeOffset()).toBe(30_000);
   });
 
   it('ignores samples that are not finite numbers', () => {

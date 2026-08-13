@@ -245,6 +245,49 @@ describe('SocketManager', () => {
       expect(second.timestamp - first.timestamp).toBeLessThan(50);
     });
 
+    // Equal stamps have no tie-breaker in the client's timestamp sort or in the
+    // `ORDER BY ts ASC` replay query, so same-millisecond events could still
+    // settle on the stale value.
+    it('never hands out the same stamp twice', async () => {
+      const {io, socketHandlers} = createMockIo();
+      const sm = new SocketManager(io);
+      sm.listen();
+
+      // Freeze the clock so every packet lands in the same millisecond.
+      const frozen = 1700000000000;
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozen);
+      try {
+        const events = [
+          {type: 'updateCursor', timestamp: 1, params: {}},
+          {type: 'updateCursor', timestamp: 2, params: {}},
+          {type: 'updateCursor', timestamp: 3, params: {}},
+        ];
+        for (const event of events) {
+          await socketHandlers['game_event']({gid: 'g1', event}, jest.fn());
+        }
+
+        expect(events.map((e) => e.timestamp)).toEqual([frozen, frozen + 1, frozen + 2]);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    it('does not let the tie-breaker drift far ahead of real time', () => {
+      const {io} = createMockIo();
+      const sm = new SocketManager(io);
+
+      const frozen = 1700000000000;
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozen);
+      try {
+        // A burst long enough to outrun the clock falls back to real time
+        // rather than stamping ever further into the future.
+        for (let i = 0; i < 1500; i += 1) sm.nextEventStamp();
+        expect(sm.nextEventStamp()).toBeLessThanOrEqual(frozen + 1000);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
     it('stamps verifiedUserId when socket is authenticated', async () => {
       (verifyAccessToken as jest.Mock).mockReturnValue({userId: 'user-42'});
       const {io, socketHandlers, mockSocket} = createMockIo();

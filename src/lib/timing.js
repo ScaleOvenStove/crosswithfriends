@@ -21,14 +21,28 @@ export const MAX_CLOCK_INCREMENT = 1000 * 60;
 // let a single late callback rewind serverNow() by the length of the delay,
 // stalling the displayed clock and under-counting the recorded solve time.
 //
-// The window keeps "largest" from pinning the estimate forever: once the
-// winning sample is older than OFFSET_WINDOW_MS, the next sample replaces it
-// outright, so a genuine device clock change is picked up within the window.
+// "Largest" alone would pin the estimate forever, so a lower sample can still
+// win — but only with corroboration, never on its own. A single lower sample is
+// ambiguous: it means either the device clock really moved, or that one event
+// was delayed. Adopting it unconditionally once the estimate went stale would
+// re-enable the very failure above, and at the worst possible moment, since a
+// long tab suspension produces a stale estimate and a delayed sample together.
+//
+// So a lower estimate requires two consecutive lower samples that agree to
+// within AGREEMENT_TOLERANCE_MS, plus a stale current estimate. Two independent
+// delays rarely agree closely, while two samples taken after a real clock change
+// agree exactly. The cost is that a genuine clock change takes up to
+// OFFSET_WINDOW_MS to be believed — acceptable because the common recovery path
+// is upward: a suspended tab's socket reconnects, and the join_game ack is a
+// fresh, undelayed sample that wins immediately on the "largest" rule.
 const OFFSET_WINDOW_MS = 5 * 60 * 1000;
+const AGREEMENT_TOLERANCE_MS = 1000;
 
 let serverTimeOffset = 0;
 let hasSample = false;
 let sampledAt = 0;
+// Last lower-than-current sample, held as a candidate awaiting corroboration.
+let candidate = null;
 
 // Elapsed-time reference for the window. Monotonic where available so that a
 // device clock change can't make the current estimate look fresher than it is.
@@ -43,13 +57,27 @@ export const recordServerTimestamp = (serverTimestamp) => {
   if (typeof serverTimestamp !== 'number' || !Number.isFinite(serverTimestamp)) return;
   const sample = serverTimestamp - Date.now();
   const now = monotonicNow();
-  // Adopt the first sample, any sample that beats the current estimate, or any
-  // sample at all once the current estimate has gone stale.
-  if (!hasSample || sample > serverTimeOffset || now - sampledAt > OFFSET_WINDOW_MS) {
+
+  // Delay can only bias a sample downward, so anything at or above the current
+  // estimate is trustworthy on sight.
+  if (!hasSample || sample >= serverTimeOffset) {
     serverTimeOffset = sample;
     sampledAt = now;
     hasSample = true;
+    candidate = null;
+    return;
   }
+
+  // Lower than what we have. Believe it only if the previous lower sample
+  // agrees and the estimate we'd be replacing has gone stale.
+  const corroborated = candidate !== null && Math.abs(sample - candidate.value) <= AGREEMENT_TOLERANCE_MS;
+  if (corroborated && now - sampledAt > OFFSET_WINDOW_MS) {
+    serverTimeOffset = sample;
+    sampledAt = now;
+    candidate = null;
+    return;
+  }
+  candidate = {value: sample, at: now};
 };
 
 export const getServerTimeOffset = () => serverTimeOffset;
@@ -62,4 +90,5 @@ export const resetServerTimeOffset = () => {
   serverTimeOffset = 0;
   hasSample = false;
   sampledAt = 0;
+  candidate = null;
 };
