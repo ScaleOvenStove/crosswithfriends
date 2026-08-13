@@ -37,8 +37,35 @@ const RESTRICTABLE_EVENT_TYPES: Record<string, RestrictableAction> = Object.assi
 class SocketManager {
   io: Server;
 
+  // Last stamp handed out by nextEventStamp, so stamps stay strictly increasing.
+  lastEventStamp = 0;
+
   constructor(io: Server) {
     this.io = io;
+  }
+
+  // Server time, clamped so it never moves backward. An NTP step back would
+  // otherwise emit stamps that sort into the middle of existing history.
+  //
+  // This deliberately does NOT invent sub-millisecond ticks to break ties.
+  // A `+1` per collision makes stamps strictly increasing, but past 1000
+  // events/sec in aggregate it outruns the clock, and the drift *grows* while
+  // that lasts. tick() in lib/reducers/game charges the difference between
+  // consecutive stamps to the timer, so growing drift is charged as solve time
+  // — and since this counter is per process, shared by every game, a burst in
+  // one game would inflate the clock in all of them, up to MAX_CLOCK_INCREMENT
+  // per event. That is the same phantom time this whole change exists to
+  // remove, so the timestamp stays a clock reading and nothing else.
+  //
+  // The cost is that two events can still share a millisecond, which leaves
+  // their relative order to the broadcast and to `ORDER BY ts ASC`. That needs
+  // two edits to one cell inside the same millisecond to matter, and it costs
+  // one stale letter that the next edit corrects. If it ever needs fixing, the
+  // fix is a sequence key stored alongside the timestamp — ordering and clock
+  // reading kept separate — not a counter smuggled into the clock.
+  nextEventStamp(): number {
+    this.lastEventStamp = Math.max(Date.now(), this.lastEventStamp);
+    return this.lastEventStamp;
   }
 
   async addGameEvent(gid: string, event: GameEvent) {
@@ -98,6 +125,10 @@ class SocketManager {
 
       // ======== Game Events ========= //
       socket.on('join_game', async (gid, ack) => {
+        // Both ends of our time on the server, so the client can estimate the
+        // clock offset without having to guess how much of the round trip was
+        // network and how much was the moderation lookups below. See the ack.
+        const serverReceivedAt = Date.now();
         try {
           if (typeof gid !== 'string' || !gid) {
             if (typeof ack === 'function') ack({error: 'invalid gid'});
@@ -148,7 +179,17 @@ class SocketManager {
             }
           }
           socket.join(`game-${gid}`);
-          if (typeof ack === 'function') ack();
+          // Seeds the client's server/local clock offset before any live event
+          // arrives, so a page refresh mid-solve renders the clock against
+          // server time instead of a possibly-skewed device clock.
+          //
+          // Both timestamps are sent because the gap between them is server
+          // processing time, not network travel: the checks above can miss the
+          // moderation cache and hit the database. Given the client's own send
+          // and receive times, the pair lets it cancel that processing out
+          // instead of mistaking it for flight time. Callers only inspect
+          // `error`, so the added fields are backwards compatible.
+          if (typeof ack === 'function') ack({serverTime: Date.now(), serverReceivedAt});
         } catch (err) {
           console.error(`[Socket] join_game error for gid=${gid}:`, err);
           Sentry.captureException(err);
@@ -209,6 +250,12 @@ class SocketManager {
       });
 
       socket.on('game_event', async (message, ack) => {
+        // Claimed before any validation, because the checks below await and so
+        // interleave with the next packet from the same socket: whichever
+        // handler clears its awaits first would otherwise claim the earlier
+        // stamp, and two rapid edits to one cell could persist in reverse
+        // order. Taking the stamp here makes it reflect arrival order.
+        const receivedAt = this.nextEventStamp();
         try {
           const event = message?.event;
           if (!event || typeof event.type !== 'string') {
@@ -286,10 +333,16 @@ class SocketManager {
               }
             }
           }
-          // Replace non-numeric timestamps with real server time
-          if (typeof event.timestamp !== 'number') {
-            event.timestamp = Date.now();
-          }
+          // Stamp every event with server time, overwriting whatever the
+          // client sent. The game clock is accumulated from the diff between
+          // consecutive event timestamps (see tick() in lib/reducers/game),
+          // and the client re-sorts history by timestamp, so mixing wall
+          // clocks from different devices charged each player's clock skew to
+          // the timer: a peer whose device was 30s off made the clock jump
+          // ~30s the moment their event interleaved with yours (usually the
+          // first letter typed). One clock for all events removes both the
+          // skew and the out-of-order re-sorting that surfaced it.
+          event.timestamp = receivedAt;
           // Stamp verified user identity if authenticated, otherwise clear it
           // to prevent unauthenticated users from spoofing verifiedUserId
           if (socket.data.authUser) {
