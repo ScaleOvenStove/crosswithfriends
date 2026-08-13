@@ -86,6 +86,20 @@ export const getServerTimeOffset = () => serverTimeOffset;
 // Local Date.now() translated into the server's clock.
 export const serverNow = () => Date.now() + serverTimeOffset;
 
+// Time elapsed since the clock was last ticked, for the caller that has to
+// settle a solve before the next event arrives to tick it.
+//
+// Capped at MAX_CLOCK_INCREMENT because that is exactly what tick() would have
+// charged had an event arrived instead, and it bounds the damage when
+// lastUpdated is further in the past than real solving explains — a device
+// clock stepped forward mid-session, or a gap the offset estimate hasn't
+// caught up with yet.
+export const unaccountedClockTime = (clock) => {
+  if (!clock || clock.paused || !clock.lastUpdated) return 0;
+  const elapsed = serverNow() - clock.lastUpdated;
+  return Math.max(0, Math.min(elapsed, MAX_CLOCK_INCREMENT));
+};
+
 // Test seam — the offset is module-level state shared by every game in the tab.
 export const resetServerTimeOffset = () => {
   serverTimeOffset = 0;

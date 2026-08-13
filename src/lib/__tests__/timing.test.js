@@ -1,10 +1,12 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {
+  MAX_CLOCK_INCREMENT,
   getServerTimeOffset,
   recordServerTimeExchange,
   recordServerTimestamp,
   resetServerTimeOffset,
   serverNow,
+  unaccountedClockTime,
 } from '../timing';
 
 describe('server time offset', () => {
@@ -99,6 +101,38 @@ describe('server time offset', () => {
       recordServerTimestamp(Date.now() + 30_000 - suspension + 200);
 
       expect(getServerTimeOffset()).toBe(30_000);
+    });
+  });
+
+  describe('unaccountedClockTime', () => {
+    it('is zero for a paused or never-started clock', () => {
+      vi.useFakeTimers();
+      expect(unaccountedClockTime(undefined)).toBe(0);
+      expect(unaccountedClockTime({paused: true, lastUpdated: Date.now() - 5_000})).toBe(0);
+      expect(unaccountedClockTime({paused: false, lastUpdated: 0})).toBe(0);
+    });
+
+    it('measures the gap on the server clock', () => {
+      vi.useFakeTimers();
+      recordServerTimestamp(Date.now() + 10_000);
+      // Last event was stamped 5s ago in server time.
+      expect(unaccountedClockTime({paused: false, lastUpdated: Date.now() + 10_000 - 5_000})).toBe(5_000);
+    });
+
+    // Same cap tick() applies to a gap, so a stale lastUpdated — a device clock
+    // stepped forward, an offset estimate not yet corrected — can't inflate a
+    // recorded solve without limit.
+    it('caps the gap the way tick does', () => {
+      vi.useFakeTimers();
+      const local = Date.now();
+      expect(unaccountedClockTime({paused: false, lastUpdated: local - 60 * 60 * 1000})).toBe(
+        MAX_CLOCK_INCREMENT
+      );
+    });
+
+    it('never goes negative when lastUpdated is in the future', () => {
+      vi.useFakeTimers();
+      expect(unaccountedClockTime({paused: false, lastUpdated: Date.now() + 30_000})).toBe(0);
     });
   });
 
