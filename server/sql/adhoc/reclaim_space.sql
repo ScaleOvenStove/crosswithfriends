@@ -35,10 +35,6 @@
 -- while the disk is nearly full — and on this schema it is also the largest
 -- single win.
 --
--- ORDERING: smallest first. Each completed rebuild frees space that gives the
--- next one more headroom, so by the time the largest index is rebuilt there is
--- room to build its replacement. Watch free disk between each.
---
 -- To size the prize before running, use query C2 in diagnose_db_space.sql:
 -- divide each index's size by the table's live row count and compare against
 -- what the indexed columns should cost (~16 bytes overhead + column widths;
@@ -47,20 +43,41 @@
 -- primary key is a good yardstick for an unbloated entry.
 --
 -- If an index is bloated 4x, roughly three quarters of its size comes back.
+--
+-- ORDERING — by reclaim, NOT by index size, and never by size alone:
+--
+--   1. Build COST is unrelated to index size. An expression or partial index
+--      over a TOASTed column (here: anything keyed on event_payload) must
+--      detoast every row in the table to evaluate its expression, so it can
+--      take longer to rebuild than an index fifty times its size. A plain
+--      index over ordinary heap columns never touches TOAST at all.
+--
+--   2. Partial indexes are small because they cover few rows, not because
+--      they are dense — so they usually have almost nothing to reclaim.
+--
+--   Together those mean the small expression indexes are the worst possible
+--   place to start: highest cost, lowest payoff. Lead with the largest plain
+--   B-tree instead. It is both the cheapest per byte to rebuild and where
+--   essentially all the reclaimable space lives.
+--
+-- Watch free disk between each. Each rebuild needs roughly the size of the
+-- REBUILT (unbloated) index as temporary headroom — for a 4x-bloated index
+-- that is about a quarter of its current size, which is why this step is
+-- still safe to run on a nearly-full disk.
 
--- Cheap probes first: they validate the operation and free a little headroom.
-REINDEX INDEX CONCURRENTLY game_events_gid_verified_user_idx;
-REINDEX INDEX CONCURRENTLY game_events_payload_id_idx;
+-- The prize: a plain (gid, ts) B-tree, no TOAST access, typically the most
+-- bloated object in the database by a wide margin. Give it time — it rebuilds
+-- the whole index while reads and writes continue.
+REINDEX INDEX CONCURRENTLY game_events_gid_ts_idx;
+
+REINDEX INDEX CONCURRENTLY game_events_gid_event_type_idx;
 REINDEX INDEX CONCURRENTLY game_events_uid_idx;
 
--- Then the larger ones, ascending.
-REINDEX INDEX CONCURRENTLY game_events_gid_event_type_idx;
-
--- Largest last — on a heavily-churned game_events this is typically the most
--- bloated index in the database by a wide margin, and the biggest single
--- reclaim available anywhere in this runbook. Give it time; it rebuilds the
--- whole index while writes continue.
-REINDEX INDEX CONCURRENTLY game_events_gid_ts_idx;
+-- Expression indexes over the json payload. Both must detoast the entire
+-- table to rebuild, and both are already near their minimum size, so the scan
+-- buys almost nothing. Run them only if you have a measured reason to.
+--   REINDEX INDEX CONCURRENTLY game_events_payload_id_idx;
+--   REINDEX INDEX CONCURRENTLY game_events_gid_verified_user_idx;
 
 -- firebase_history is effectively static (no writes, no dead tuples), so its
 -- indexes bloat little and the payoff here is modest. Run only if you still
@@ -74,10 +91,44 @@ REINDEX INDEX CONCURRENTLY firebase_history_pkey;
 REINDEX INDEX CONCURRENTLY puzzle_solves_anon_game_idx;
 REINDEX INDEX CONCURRENTLY puzzle_solves_gid_idx;
 
--- Whole-table form (rebuilds every index on the table, still online) — simpler
--- but gives up the incremental headroom that the ascending order buys you, so
--- prefer the one-at-a-time form when the disk is tight:
+-- Whole-table form (rebuilds every index on the table, still online) — simpler,
+-- but it also rebuilds the expression indexes that are not worth the scan, so
+-- prefer naming them one at a time:
 --   REINDEX TABLE CONCURRENTLY game_events;
+
+-- ---------------------------------------------------------------------------
+-- Step 1b — Is it working, or is it waiting?
+-- ---------------------------------------------------------------------------
+-- Run these from a SECOND session while a rebuild is in flight. A REINDEX
+-- CONCURRENTLY that appears hung is usually blocked on a lock rather than
+-- doing slow I/O: it must wait for every transaction that predates it to
+-- finish before it can proceed, twice (before validating, and before dropping
+-- the old index). One long-lived transaction in the application will stall it
+-- indefinitely while consuming no CPU.
+
+-- Real progress: blocks_done climbs and phase names the build stage.
+SELECT phase,
+       blocks_done, blocks_total,
+       round(100.0 * blocks_done / NULLIF(blocks_total, 0), 1) AS pct,
+       tuples_done, tuples_total
+FROM pg_stat_progress_create_index;
+
+-- Lock waits: a non-empty blocked_by is the answer — terminate that session
+-- (or wait for it) rather than the rebuild.
+SELECT a.pid, a.state, a.wait_event_type, a.wait_event,
+       now() - a.query_start AS runtime,
+       pg_blocking_pids(a.pid) AS blocked_by,
+       left(a.query, 80) AS query
+FROM pg_stat_activity a
+WHERE a.query ILIKE 'REINDEX%' AND a.pid <> pg_backend_pid();
+
+-- Cancelling is safe at any point: the original index keeps serving queries
+-- throughout, and only the half-built replacement is discarded. Always run the
+-- invalid-index cleanup at the bottom of this file afterwards — the abandoned
+-- *_ccnew still occupies disk until it is dropped.
+--
+--   SELECT pg_cancel_backend(pid) FROM pg_stat_activity
+--   WHERE query ILIKE 'REINDEX%' AND pid <> pg_backend_pid();
 
 -- ===========================================================================
 -- Step 2 — Drop unused indexes
