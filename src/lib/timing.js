@@ -31,8 +31,8 @@ let hasSample = false;
 
 const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
 
-// Beyond this a "round trip" tells us too little about the delay to be worth
-// trusting in the downward direction.
+// Beyond this the network round trip tells us too little about the delay to be
+// worth trusting in the downward direction.
 const MAX_TRUSTED_ROUND_TRIP_MS = 10 * 1000;
 
 // A one-way sample: a server-stamped timestamp off a broadcast event, whose
@@ -46,19 +46,38 @@ export const recordServerTimestamp = (serverTimestamp) => {
   }
 };
 
-// A sample from a request whose round trip we timed — the join_game ack. The
-// server stamped it somewhere between our send and our receive, so the delay is
-// bounded by roundTripMs rather than unknown, which makes this the only
-// evidence that can lower the estimate. Assuming the stamp landed mid-flight
-// puts the residual error at ±roundTripMs / 2.
-export const recordServerTimeFromRoundTrip = (serverTimestamp, roundTripMs) => {
-  if (!isFiniteNumber(serverTimestamp)) return;
-  if (!isFiniteNumber(roundTripMs) || roundTripMs < 0 || roundTripMs > MAX_TRUSTED_ROUND_TRIP_MS) {
-    // Delay isn't bounded after all — treat it as an ordinary one-way sample.
-    recordServerTimestamp(serverTimestamp);
+// A timed exchange — the join_game ack, which reports both when the server
+// received our request and when it answered. Four timestamps make this the only
+// evidence that can lower the estimate:
+//
+//   sentAt ──────► serverReceivedAt ··· serverSentAt ──────► receivedAt
+//
+// The two middle values bracket the server's own processing, which can be
+// slow (a moderation cache miss goes to the database) and is not flight time.
+// Halving the whole duration instead — the obvious shortcut — charges that
+// processing to the outbound flight and overestimates the offset by roughly
+// half of it, which then sticks, because one-way samples can only raise. So
+// take each direction separately and average, leaving only the asymmetry
+// between the two network paths:
+//
+//   offset      = ((serverReceivedAt - sentAt) + (serverSentAt - receivedAt)) / 2
+//   networkTrip = (receivedAt - sentAt) - (serverSentAt - serverReceivedAt)
+//
+// An older server sends no serverReceivedAt; without it the split is unknowable,
+// so the stamp degrades to an ordinary one-way sample rather than being guessed.
+export const recordServerTimeExchange = ({sentAt, serverReceivedAt, serverSentAt, receivedAt}) => {
+  if (!isFiniteNumber(serverSentAt)) return;
+  if (!isFiniteNumber(serverReceivedAt) || !isFiniteNumber(sentAt) || !isFiniteNumber(receivedAt)) {
+    recordServerTimestamp(serverSentAt);
     return;
   }
-  serverTimeOffset = serverTimestamp - Date.now() + roundTripMs / 2;
+  const serverProcessing = serverSentAt - serverReceivedAt;
+  const networkTrip = receivedAt - sentAt - serverProcessing;
+  if (serverProcessing < 0 || networkTrip < 0 || networkTrip > MAX_TRUSTED_ROUND_TRIP_MS) {
+    recordServerTimestamp(serverSentAt);
+    return;
+  }
+  serverTimeOffset = (serverReceivedAt - sentAt + (serverSentAt - receivedAt)) / 2;
   hasSample = true;
 };
 

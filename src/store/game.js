@@ -3,7 +3,7 @@ import EventEmitter from 'events';
 import _ from 'lodash';
 import * as uuid from 'uuid';
 import * as colors from '../lib/colors';
-import {recordServerTimeFromRoundTrip, recordServerTimestamp} from '../lib/timing';
+import {recordServerTimeExchange, recordServerTimestamp} from '../lib/timing';
 import {emitAsync, emitAsyncWithTimeout} from '../sockets/emitAsync';
 import {getSocket, resetSocket} from '../sockets/getSocket';
 // ============ Serialize / Deserialize Helpers ========== //
@@ -162,7 +162,7 @@ export default class Game extends EventEmitter {
       console.log('reconnecting...');
       const joinSentAt = Date.now();
       const ack = await emitAsync(socket, 'join_game', this.gid);
-      const joinRoundTrip = Date.now() - joinSentAt;
+      const joinReceivedAt = Date.now();
       if (ack && ack.error) {
         if (isTerminalJoinError(ack.error)) {
           this.joinRejected = ack.error;
@@ -178,7 +178,12 @@ export default class Game extends EventEmitter {
         return;
       }
       console.log('reconnected...');
-      recordServerTimeFromRoundTrip(ack?.serverTime, joinRoundTrip);
+      recordServerTimeExchange({
+        sentAt: joinSentAt,
+        serverReceivedAt: ack?.serverReceivedAt,
+        serverSentAt: ack?.serverTime,
+        receivedAt: joinReceivedAt,
+      });
       this._joined = true;
       this.syncState = null;
       if (!this._initialSyncCompleted) {
@@ -194,7 +199,7 @@ export default class Game extends EventEmitter {
     try {
       const joinSentAt = Date.now();
       const joinAck = await emitAsyncWithTimeout(socket, 10000, 'join_game', this.gid);
-      const joinRoundTrip = Date.now() - joinSentAt;
+      const joinReceivedAt = Date.now();
       if (joinAck && joinAck.error) {
         if (isTerminalJoinError(joinAck.error)) {
           // Server refused (banned/locked). Mark this connection terminal so
@@ -213,9 +218,14 @@ export default class Game extends EventEmitter {
       }
       // Seed the server/local clock offset before the first live event, so a
       // refresh mid-solve doesn't render the clock against a skewed device.
-      // The measured round trip is what lets this correct the offset downward
-      // as well as up — broadcast events can only ever raise it.
-      recordServerTimeFromRoundTrip(joinAck?.serverTime, joinRoundTrip);
+      // The timed exchange is what lets this correct the offset downward as
+      // well as up — broadcast events can only ever raise it.
+      recordServerTimeExchange({
+        sentAt: joinSentAt,
+        serverReceivedAt: joinAck?.serverReceivedAt,
+        serverSentAt: joinAck?.serverTime,
+        receivedAt: joinReceivedAt,
+      });
       this._joined = true;
     } catch (e) {
       // Ack lost mid-flight (bounce, transient network) — leave _joined

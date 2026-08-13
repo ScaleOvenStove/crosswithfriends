@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {
   getServerTimeOffset,
-  recordServerTimeFromRoundTrip,
+  recordServerTimeExchange,
   recordServerTimestamp,
   resetServerTimeOffset,
   serverNow,
@@ -102,67 +102,98 @@ describe('server time offset', () => {
     });
   });
 
-  describe('round-trip samples from the join ack', () => {
+  describe('timed exchange from the join ack', () => {
+    // Helper: build the four timestamps for a device whose clock is `offset`
+    // behind the server, with a given one-way network time and server think time.
+    const exchange = ({offset, oneWay, processing}) => {
+      const sentAt = Date.now();
+      const serverReceivedAt = sentAt + offset + oneWay;
+      return {
+        sentAt,
+        serverReceivedAt,
+        serverSentAt: serverReceivedAt + processing,
+        receivedAt: sentAt + 2 * oneWay + processing,
+      };
+    };
+
     it('corrects the offset downward, which broadcasts cannot', () => {
       vi.useFakeTimers();
-      const local = Date.now();
-      recordServerTimestamp(local + 30_000);
+      recordServerTimestamp(Date.now() + 30_000);
       expect(getServerTimeOffset()).toBe(30_000);
 
-      // The device clock really did move: a timed round trip proves the server
-      // is only 2s ahead now.
-      recordServerTimeFromRoundTrip(Date.now() + 2_000, 0);
+      // The device clock really did move: the exchange proves the server is
+      // only 2s ahead now.
+      recordServerTimeExchange(exchange({offset: 2_000, oneWay: 0, processing: 0}));
 
       expect(getServerTimeOffset()).toBe(2_000);
     });
 
-    // The stamp was taken somewhere between our send and our receive, so
-    // assuming the midpoint leaves ±rtt/2 of error rather than a systematic lag.
-    it('credits half the round trip to the flight out', () => {
+    it('recovers the offset exactly despite symmetric network delay', () => {
       vi.useFakeTimers();
-      const local = Date.now();
-      recordServerTimeFromRoundTrip(local + 1_000, 400);
+      recordServerTimeExchange(exchange({offset: 1_000, oneWay: 200, processing: 0}));
 
-      expect(getServerTimeOffset()).toBe(1_200);
+      expect(getServerTimeOffset()).toBe(1_000);
+    });
+
+    // The whole point of sending both server timestamps: halving the total
+    // duration would charge this processing to the outbound flight.
+    it('does not mistake slow server processing for flight time', () => {
+      vi.useFakeTimers();
+      recordServerTimeExchange(exchange({offset: 1_000, oneWay: 50, processing: 8_000}));
+
+      expect(getServerTimeOffset()).toBe(1_000);
     });
 
     it('recovers immediately after a suspension', () => {
       vi.useFakeTimers();
-      const local = Date.now();
-      recordServerTimestamp(local + 30_000);
+      recordServerTimestamp(Date.now() + 30_000);
 
       vi.advanceTimersByTime(10 * 60 * 1000);
-      // Stale delayed broadcast first, then the reconnect's timed ack.
+      // Stale delayed broadcast first, then the reconnect's timed exchange.
       recordServerTimestamp(Date.now() + 30_000 - 10 * 60 * 1000);
-      recordServerTimeFromRoundTrip(Date.now() + 45_000, 100);
+      recordServerTimeExchange(exchange({offset: 45_000, oneWay: 0, processing: 120}));
 
-      expect(getServerTimeOffset()).toBe(45_050);
+      expect(getServerTimeOffset()).toBe(45_000);
     });
 
-    it('falls back to raise-only when the round trip is too long to bound the delay', () => {
+    it('falls back to raise-only when the network trip is too long to bound', () => {
+      vi.useFakeTimers();
+      recordServerTimestamp(Date.now() + 30_000);
+
+      // A 30s network trip says nothing useful about where in that window the
+      // stamp was taken, so it must not be trusted downward.
+      recordServerTimeExchange(exchange({offset: 2_000, oneWay: 15_000, processing: 10}));
+      expect(getServerTimeOffset()).toBe(30_000);
+    });
+
+    it('degrades to a one-way sample when the server sends no receive time', () => {
       vi.useFakeTimers();
       const local = Date.now();
       recordServerTimestamp(local + 30_000);
 
-      // 30s round trip says nothing useful about where in that window the
-      // stamp was taken, so it must not be trusted downward.
-      recordServerTimeFromRoundTrip(Date.now() + 2_000, 30_000);
+      // Older server: can't split the round trip, so this may only raise.
+      recordServerTimeExchange({sentAt: local, serverSentAt: local + 2_000, receivedAt: local + 40});
       expect(getServerTimeOffset()).toBe(30_000);
 
-      // Still usable in the direction delay can't fake.
-      recordServerTimeFromRoundTrip(Date.now() + 60_000, 30_000);
+      recordServerTimeExchange({sentAt: local, serverSentAt: local + 60_000, receivedAt: local + 40});
       expect(getServerTimeOffset()).toBe(60_000);
     });
 
-    it('ignores a malformed round trip measurement', () => {
+    it('ignores an incoherent exchange', () => {
       vi.useFakeTimers();
       const local = Date.now();
       recordServerTimestamp(local + 30_000);
 
-      recordServerTimeFromRoundTrip(Date.now() + 2_000, -5);
-      recordServerTimeFromRoundTrip(Date.now() + 2_000, NaN);
-      recordServerTimeFromRoundTrip(Date.now() + 2_000, undefined);
+      // Server timestamps inverted, and a receive that precedes the send.
+      recordServerTimeExchange({
+        sentAt: local,
+        serverReceivedAt: local + 500,
+        serverSentAt: local + 100,
+        receivedAt: local + 600,
+      });
+      expect(getServerTimeOffset()).toBe(30_000);
 
+      recordServerTimeExchange({sentAt: local, serverSentAt: undefined, receivedAt: local + 40});
       expect(getServerTimeOffset()).toBe(30_000);
     });
   });

@@ -245,64 +245,37 @@ describe('SocketManager', () => {
       expect(second.timestamp - first.timestamp).toBeLessThan(50);
     });
 
-    // Equal stamps have no tie-breaker in the client's timestamp sort or in the
-    // `ORDER BY ts ASC` replay query, so same-millisecond events could still
-    // settle on the stale value.
-    it('never hands out the same stamp twice', async () => {
-      const {io, socketHandlers} = createMockIo();
-      const sm = new SocketManager(io);
-      sm.listen();
-
-      // Freeze the clock so every packet lands in the same millisecond.
-      const frozen = 1700000000000;
-      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozen);
-      try {
-        const events = [
-          {type: 'updateCursor', timestamp: 1, params: {}},
-          {type: 'updateCursor', timestamp: 2, params: {}},
-          {type: 'updateCursor', timestamp: 3, params: {}},
-        ];
-        for (const event of events) {
-          await socketHandlers['game_event']({gid: 'g1', event}, jest.fn());
-        }
-
-        expect(events.map((e) => e.timestamp)).toEqual([frozen, frozen + 1, frozen + 2]);
-      } finally {
-        nowSpy.mockRestore();
-      }
-    });
-
-    // Drift is the accepted cost of monotonicity. Bounding it would mean moving
-    // the sequence backward, which reorders whole seconds of history — much
-    // worse than the ties the sequence exists to break.
-    it('never moves the sequence backward, even past the drift a burst causes', () => {
+    // tick() charges the gap between consecutive stamps to the game clock, and
+    // this counter is shared by every game, so a stamp that runs ahead of real
+    // time turns into phantom solve time everywhere.
+    it('never runs the stamp ahead of real time, however long the burst', () => {
       const {io} = createMockIo();
       const sm = new SocketManager(io);
 
       const frozen = 1700000000000;
       const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozen);
       try {
-        const stamps = [];
-        for (let i = 0; i < 3000; i += 1) stamps.push(sm.nextEventStamp());
-        for (let i = 1; i < stamps.length; i += 1) {
-          expect(stamps[i]).toBeGreaterThan(stamps[i - 1]);
+        for (let i = 0; i < 3000; i += 1) {
+          expect(sm.nextEventStamp()).toBe(frozen);
         }
       } finally {
         nowSpy.mockRestore();
       }
     });
 
-    it('catches back up to real time once the burst subsides', () => {
+    it('does not move backward when the server clock steps back', () => {
       const {io} = createMockIo();
       const sm = new SocketManager(io);
 
-      const frozen = 1700000000000;
-      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozen);
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000005000);
       try {
-        for (let i = 0; i < 3000; i += 1) sm.nextEventStamp();
-        // Real time moves past the drifted sequence; stamps track it again.
-        nowSpy.mockReturnValue(frozen + 10_000);
-        expect(sm.nextEventStamp()).toBe(frozen + 10_000);
+        expect(sm.nextEventStamp()).toBe(1700000005000);
+        // NTP correction moves the clock back two seconds.
+        nowSpy.mockReturnValue(1700000003000);
+        expect(sm.nextEventStamp()).toBe(1700000005000);
+        // And it tracks real time again once the clock passes the clamp.
+        nowSpy.mockReturnValue(1700000006000);
+        expect(sm.nextEventStamp()).toBe(1700000006000);
       } finally {
         nowSpy.mockRestore();
       }
@@ -739,6 +712,10 @@ describe('SocketManager', () => {
       expect(payload.error).toBeUndefined();
       expect(payload.serverTime).toBeGreaterThanOrEqual(before);
       expect(payload.serverTime).toBeLessThanOrEqual(after);
+      // Both ends of the server's own processing, so the client can cancel it
+      // out rather than charging it to network flight time.
+      expect(payload.serverReceivedAt).toBeGreaterThanOrEqual(before);
+      expect(payload.serverReceivedAt).toBeLessThanOrEqual(payload.serverTime);
     });
   });
 

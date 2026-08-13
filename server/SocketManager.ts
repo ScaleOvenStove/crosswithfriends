@@ -44,23 +44,27 @@ class SocketManager {
     this.io = io;
   }
 
-  // Server time, but never the same millisecond twice. Equal timestamps have no
-  // tie-breaker in either the client's history sort or the `ORDER BY ts ASC`
-  // replay query, so two edits to one cell landing in the same millisecond could
-  // still settle on the stale value. Strictly increasing stamps make the
-  // ordering guarantee this file relies on — history order follows arrival
-  // order — hold by construction rather than by luck of the clock.
+  // Server time, clamped so it never moves backward. An NTP step back would
+  // otherwise emit stamps that sort into the middle of existing history.
   //
-  // Deliberately unbounded: past 1000 events/sec in aggregate the +1 outruns
-  // real time and the sequence drifts ahead. Capping that drift would mean
-  // moving the sequence backward, which is far worse than drift — later events
-  // would sort before the preceding second of history and could leave stale
-  // cell values. Drift costs display precision only, needs a sustained rate
-  // this app doesn't see (normal solving is a few events/sec per player), and
-  // decays as soon as the rate drops. If it ever became real, the fix is an
-  // ordering key separate from the timestamp, not a backward reset.
+  // This deliberately does NOT invent sub-millisecond ticks to break ties.
+  // A `+1` per collision makes stamps strictly increasing, but past 1000
+  // events/sec in aggregate it outruns the clock, and the drift *grows* while
+  // that lasts. tick() in lib/reducers/game charges the difference between
+  // consecutive stamps to the timer, so growing drift is charged as solve time
+  // — and since this counter is per process, shared by every game, a burst in
+  // one game would inflate the clock in all of them, up to MAX_CLOCK_INCREMENT
+  // per event. That is the same phantom time this whole change exists to
+  // remove, so the timestamp stays a clock reading and nothing else.
+  //
+  // The cost is that two events can still share a millisecond, which leaves
+  // their relative order to the broadcast and to `ORDER BY ts ASC`. That needs
+  // two edits to one cell inside the same millisecond to matter, and it costs
+  // one stale letter that the next edit corrects. If it ever needs fixing, the
+  // fix is a sequence key stored alongside the timestamp — ordering and clock
+  // reading kept separate — not a counter smuggled into the clock.
   nextEventStamp(): number {
-    this.lastEventStamp = Math.max(Date.now(), this.lastEventStamp + 1);
+    this.lastEventStamp = Math.max(Date.now(), this.lastEventStamp);
     return this.lastEventStamp;
   }
 
@@ -121,6 +125,10 @@ class SocketManager {
 
       // ======== Game Events ========= //
       socket.on('join_game', async (gid, ack) => {
+        // Both ends of our time on the server, so the client can estimate the
+        // clock offset without having to guess how much of the round trip was
+        // network and how much was the moderation lookups below. See the ack.
+        const serverReceivedAt = Date.now();
         try {
           if (typeof gid !== 'string' || !gid) {
             if (typeof ack === 'function') ack({error: 'invalid gid'});
@@ -171,12 +179,17 @@ class SocketManager {
             }
           }
           socket.join(`game-${gid}`);
-          // serverTime seeds the client's server/local clock offset before any
-          // live event arrives, so a page refresh mid-solve renders the clock
-          // against server time instead of a possibly-skewed device clock.
-          // Callers only inspect `error`, so the added field is backwards
-          // compatible with older clients.
-          if (typeof ack === 'function') ack({serverTime: Date.now()});
+          // Seeds the client's server/local clock offset before any live event
+          // arrives, so a page refresh mid-solve renders the clock against
+          // server time instead of a possibly-skewed device clock.
+          //
+          // Both timestamps are sent because the gap between them is server
+          // processing time, not network travel: the checks above can miss the
+          // moderation cache and hit the database. Given the client's own send
+          // and receive times, the pair lets it cancel that processing out
+          // instead of mistaking it for flight time. Callers only inspect
+          // `error`, so the added fields are backwards compatible.
+          if (typeof ack === 'function') ack({serverTime: Date.now(), serverReceivedAt});
         } catch (err) {
           console.error(`[Socket] join_game error for gid=${gid}:`, err);
           Sentry.captureException(err);
