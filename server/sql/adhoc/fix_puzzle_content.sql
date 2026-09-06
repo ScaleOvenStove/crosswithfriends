@@ -8,9 +8,19 @@
 -- next game created from this pid.
 --
 -- Caveats before you run this:
---   * Games that already exist keep the old data. addInitialGameEvent() copies
---     the grid/solution/clues into the create event (and game_snapshots), so
---     in-progress and solved games are NOT retroactively fixed.
+--   * Games that already exist mostly keep the old data: addInitialGameEvent()
+--     copies the grid/solution/clues into the create event, and getGameEvents()
+--     replays that copy, so in-progress and solved games are not retroactively
+--     fixed. The exception is a game whose create event is gone but whose
+--     snapshot survives — getGameEvents() then rebuilds the event from the live
+--     puzzles row (buildCreateEventFromPuzzle), and getGameInfo() likewise falls
+--     back to puzzles.content, so those games DO pick up this edit. The archive
+--     job keeps create events for snapshotted games, so it should be rare; list
+--     any before you run the update:
+--       SELECT gs.gid FROM game_snapshots gs
+--       WHERE gs.pid = :pid
+--         AND NOT EXISTS (SELECT 1 FROM game_events ge
+--                         WHERE ge.gid = gs.gid AND ge.event_type = 'create');
 --   * content_hash is the upload dedupe key (sha256 over the JS-canonical
 --     {clues, grid} — see computePuzzleHash). It cannot be recomputed
 --     faithfully in SQL, so the update below NULLs it. Consequence: a future
