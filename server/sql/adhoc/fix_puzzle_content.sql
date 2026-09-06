@@ -1,0 +1,80 @@
+-- Ad-hoc: correct a mistake inside an already-uploaded puzzle.
+--
+--   psql "$DATABASE_URL" -v pid="'100011842'" -f fix_puzzle_content.sql
+--
+-- `puzzles.content` is jsonb, so a targeted jsonb_set is enough — there is no
+-- update path through the API (server/model/puzzle.ts only ever INSERTs), and
+-- getPuzzle() reads the row uncached, so a corrected row is picked up by the
+-- next game created from this pid.
+--
+-- Caveats before you run this:
+--   * Games that already exist mostly keep the old data: addInitialGameEvent()
+--     copies the grid/solution/clues into the create event, and getGameEvents()
+--     replays that copy, so in-progress and solved games are not retroactively
+--     fixed. The exception is a game whose create event is gone but whose
+--     snapshot survives — getGameEvents() then rebuilds the event from the live
+--     puzzles row (buildCreateEventFromPuzzle), and getGameInfo() likewise falls
+--     back to puzzles.content, so those games DO pick up this edit. The archive
+--     job keeps create events for snapshotted games, so it should be rare; list
+--     any before you run the update:
+--       SELECT gs.gid FROM game_snapshots gs
+--       WHERE gs.pid = :pid
+--         AND NOT EXISTS (SELECT 1 FROM game_events ge
+--                         WHERE ge.gid = gs.gid AND ge.event_type = 'create');
+--   * content_hash is the upload dedupe key (sha256 over the JS-canonical
+--     {clues, grid} — see computePuzzleHash). It cannot be recomputed
+--     faithfully in SQL, so the update below NULLs it. Consequence: a future
+--     public upload of the corrected file won't dedupe against this row and
+--     will land as a new pid. To keep dedupe working, recompute it in node
+--     instead and set it explicitly:
+--       node -e 'const c=require("crypto");const p=<content json>;
+--         console.log(c.createHash("sha256").update(JSON.stringify(
+--           {clues:{across:p.clues.across,down:p.clues.down},grid:p.grid}
+--         )).digest("hex"))'
+--   * The puzzle list cache (5 min TTL) only holds info + grid dimensions, so
+--     grid/clue edits show up immediately; a title/author edit takes up to 5
+--     minutes (or a backend restart).
+
+\set ON_ERROR_STOP on
+
+-- 1. Inspect first. grid is [row][col], 0-indexed from the top-left, and black
+--    squares are '.'. Clue arrays are indexed BY CLUE NUMBER (sparse, holes
+--    serialize as null), so 8-Down is clues->'down'->8.
+SELECT
+  pid,
+  is_public,
+  content->'info'->>'title'    AS title,
+  content->'clues'->'down'->>8 AS clue_8d
+FROM puzzles
+WHERE pid = :pid;
+
+-- Do NOT assume clue 1 sits at grid[0][0] — a grid whose top-left is black
+-- starts its numbering further along, and updating {grid,0,0} there would turn
+-- a block into a letter. Derive the cell: clue 1 begins at the first non-black
+-- square in reading order. Use the row/col this returns to build the jsonb path.
+WITH cells AS (
+  SELECT r.ord - 1 AS row, c.ord - 1 AS col, c.val #>> '{}' AS letter
+  FROM puzzles p,
+       LATERAL jsonb_array_elements(p.content->'grid') WITH ORDINALITY AS r(row_json, ord),
+       LATERAL jsonb_array_elements(r.row_json)        WITH ORDINALITY AS c(val, ord)
+  WHERE p.pid = :pid
+)
+SELECT row, col, letter FROM cells WHERE letter <> '.' ORDER BY row, col LIMIT 1;
+
+-- 2. Apply the fix. Substitute the row/col from the query above into the path,
+--    edit the value, then uncomment. Wrapped in a transaction so you can
+--    ROLLBACK after re-running the SELECT.
+-- BEGIN;
+--
+-- UPDATE puzzles
+-- SET content = jsonb_set(content, '{grid,<row>,<col>}', '"S"'::jsonb),
+--     content_hash = NULL
+-- WHERE pid = :pid;
+--
+-- -- ...or a clue:
+-- -- UPDATE puzzles
+-- -- SET content = jsonb_set(content, '{clues,down,8}', to_jsonb('程序 : Program'::text)),
+-- --     content_hash = NULL
+-- -- WHERE pid = :pid;
+--
+-- COMMIT;

@@ -1,7 +1,23 @@
 import PUZtoJSON from '../PUZtoJSON';
 
+// Build one extension section: 4-byte code, little-endian length, checksum,
+// then `length` data bytes and a trailing null. The checksum bytes are
+// deliberately non-zero (as they are in any real file) so that a parser
+// overrunning the declared length trips over invalid UTF-8.
+function buildExtension({code, data}) {
+  return [
+    ...code.split('').map((c) => c.charCodeAt(0)),
+    data.length & 0xff,
+    (data.length >> 8) & 0xff,
+    0xb4,
+    0x9e,
+    ...data,
+    0,
+  ];
+}
+
 // Build a minimal valid .puz binary buffer
-function buildPuzBuffer({nrow, ncol, solution, clues, title, author, copyright, description}) {
+function buildPuzBuffer({nrow, ncol, solution, clues, title, author, copyright, description, extensions}) {
   const gridSize = nrow * ncol;
   // Header: 52 bytes, then solution grid, then player state grid, then strings
   const solutionBytes = [];
@@ -63,6 +79,7 @@ function buildPuzBuffer({nrow, ncol, solution, clues, title, author, copyright, 
     ...copyrightBytes,
     ...clueBytes,
     ...descBytes,
+    ...(extensions || []).flatMap(buildExtension),
   ];
 
   return new Uint8Array(allBytes).buffer;
@@ -360,6 +377,59 @@ describe('PUZtoJSON', () => {
 
       const result = PUZtoJSON(buffer);
       expect(result.contest).toBe(false);
+    });
+  });
+
+  describe('extension sections (GRBS / RTBL / GEXT)', () => {
+    const utf8 = (str) => Array.from(new TextEncoder().encode(str));
+
+    // 3x3 with a rebus in the top-left cell, so grid[0][0] is the first
+    // letter of both 1-Across and 1-Down.
+    const buildRebusPuzzle = (rtbl) => {
+      const solution = [
+        ['C', 'A', 'T'],
+        ['A', 'R', 'E'],
+        ['B', '.', 'N'],
+      ];
+      const grbs = new Array(9).fill(0);
+      grbs[0] = 1; // cell 0 -> rebus table key 0
+      const gext = new Array(9).fill(0);
+      gext[4] = 128; // circle in the middle cell
+      return buildPuzBuffer({
+        nrow: 3,
+        ncol: 3,
+        solution,
+        clues: ['c1', 'c2', 'c3', 'c4', 'c5'],
+        extensions: [
+          {code: 'GRBS', data: grbs},
+          {code: 'RTBL', data: utf8(rtbl)},
+          {code: 'LTIM', data: utf8('0,1')},
+          {code: 'GEXT', data: gext},
+          // RUSR (user-entered rebus) trails GEXT in real files; its header
+          // bytes are what a length-overrunning GEXT read would pick up.
+          {code: 'RUSR', data: new Array(9).fill(0)},
+        ],
+      });
+    };
+
+    it('reads a multi-letter rebus answer into the grid', () => {
+      const result = PUZtoJSON(buildRebusPuzzle(' 0:CAT;'));
+      expect(result.grid[0][0].solution).toBe('CAT');
+    });
+
+    it('reads a non-ASCII rebus answer without mojibake', () => {
+      // The RTBL length is declared in the header; reading past it drags in
+      // the next section's binary checksum, which fails the strict UTF-8
+      // decode and silently falls back to Windows-1252 (\u7a0b -> 'ç¨‹').
+      const result = PUZtoJSON(buildRebusPuzzle(' 0:\u7a0b;'));
+      expect(result.grid[0][0].solution).toBe('\u7a0b');
+    });
+
+    it('reads circles only from the declared GEXT length', () => {
+      // Reading past the declared length walks into the following section,
+      // whose header bytes have the high bit set and read as extra circles.
+      const result = PUZtoJSON(buildRebusPuzzle(' 0:CAT;'));
+      expect(result.circles).toEqual([4]);
     });
   });
 });
