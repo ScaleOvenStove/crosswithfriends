@@ -37,25 +37,37 @@
 
 \set ON_ERROR_STOP on
 
--- 1. Inspect first. grid is [row][col], 0-indexed from the top-left, so the
---    first letter of 1-Across / 1-Down is grid->0->0.
---    Clue arrays are indexed BY CLUE NUMBER (sparse, holes serialize as null),
---    so 8-Down is clues->'down'->8.
+-- 1. Inspect first. grid is [row][col], 0-indexed from the top-left, and black
+--    squares are '.'. Clue arrays are indexed BY CLUE NUMBER (sparse, holes
+--    serialize as null), so 8-Down is clues->'down'->8.
 SELECT
   pid,
   is_public,
-  content->'info'->>'title'   AS title,
-  content->'grid'->0->>0      AS cell_0_0,
+  content->'info'->>'title'    AS title,
   content->'clues'->'down'->>8 AS clue_8d
 FROM puzzles
 WHERE pid = :pid;
 
--- 2. Apply the fix. Edit the paths/values, then uncomment.
---    Wrapped in a transaction so you can ROLLBACK after re-running the SELECT.
+-- Do NOT assume clue 1 sits at grid[0][0] — a grid whose top-left is black
+-- starts its numbering further along, and updating {grid,0,0} there would turn
+-- a block into a letter. Derive the cell: clue 1 begins at the first non-black
+-- square in reading order. Use the row/col this returns to build the jsonb path.
+WITH cells AS (
+  SELECT r.ord - 1 AS row, c.ord - 1 AS col, c.val #>> '{}' AS letter
+  FROM puzzles p,
+       LATERAL jsonb_array_elements(p.content->'grid') WITH ORDINALITY AS r(row_json, ord),
+       LATERAL jsonb_array_elements(r.row_json)        WITH ORDINALITY AS c(val, ord)
+  WHERE p.pid = :pid
+)
+SELECT row, col, letter FROM cells WHERE letter <> '.' ORDER BY row, col LIMIT 1;
+
+-- 2. Apply the fix. Substitute the row/col from the query above into the path,
+--    edit the value, then uncomment. Wrapped in a transaction so you can
+--    ROLLBACK after re-running the SELECT.
 -- BEGIN;
 --
 -- UPDATE puzzles
--- SET content = jsonb_set(content, '{grid,0,0}', '"S"'::jsonb),
+-- SET content = jsonb_set(content, '{grid,<row>,<col>}', '"S"'::jsonb),
 --     content_hash = NULL
 -- WHERE pid = :pid;
 --
