@@ -53,7 +53,9 @@ function decodeString(byteArray) {
 }
 
 function getExtension(bytes, code) {
-  // struct byte format is 4S H H
+  // Extension header is 4 bytes of code, then a 2-byte length and a 2-byte
+  // checksum, both little-endian. The data section follows, `length` bytes
+  // long (the trailing null byte after string sections is not counted).
   let i = 0;
   let j = 0;
   for (i = 0; i < bytes.length; i += 1) {
@@ -66,8 +68,8 @@ function getExtension(bytes, code) {
   }
   if (j === code.length) {
     // we found the code
-    const length = bytes[i] * 256 + bytes[i + 1];
-    i += 4; // skip the H H
+    const length = bytes[i] + bytes[i + 1] * 256;
+    i += 4; // skip the length and the checksum
     return Array.from(bytes).slice(i, i + length);
   }
   return null; // could not find
