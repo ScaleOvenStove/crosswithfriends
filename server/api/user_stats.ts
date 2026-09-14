@@ -45,6 +45,7 @@ const router = express.Router();
  *                 history: {type: array, items: {type: object}}
  *                 uploads: {type: array, items: {type: object}}
  *                 inProgress: {type: array, items: {type: object}, description: Only present for the profile owner}
+ *                 degraded: {type: boolean, description: "Present and true when one or more sections could not be read (statement timeout, or no free DB connection) and fell back to empty data. The response is incomplete — do not cache or persist it as authoritative."}
  *                 solvedPids: {type: array, items: {type: string}, description: "Distinct pids the user has solved. Populated only for the profile owner (empty array otherwise). Used by the puzzle list to overlay the Complete badge."}
  *       404: {description: User not found}
  */
@@ -80,12 +81,20 @@ router.get('/:userId', async (req, res, next) => {
     // in Sentry via reportDegradedRead.
     let solveStats: Awaited<ReturnType<typeof getUserSolveStats>>;
     let isDegraded = false;
+    // Any section that fell back to empty data because the DB was saturated
+    // makes the whole response incomplete, not just that section — so record it
+    // centrally rather than only for the stats block. An incomplete profile that
+    // looks complete gets cached for 30s and, worse, persisted client-side as
+    // authoritative (see the `degraded` flag on the response below).
+    const degradeOn = (section: string, err: unknown): void => {
+      reportDegradedRead(section, err, {userId});
+      if (isTransientReadFailure(err)) isDegraded = true;
+    };
     try {
       solveStats = await getUserSolveStats(userId);
     } catch (err) {
       if (!isTransientReadFailure(err)) throw err;
-      isDegraded = true;
-      reportDegradedRead('getUserSolveStats', err, {userId});
+      degradeOn('getUserSolveStats', err);
       solveStats = {
         totalSolved: 0,
         totalSolvedSolo: 0,
@@ -116,7 +125,7 @@ router.get('/:userId', async (req, res, next) => {
     try {
       uploads = await getUserUploadedPuzzles(userId);
     } catch (err) {
-      reportDegradedRead('getUserUploadedPuzzles', err, {userId});
+      degradeOn('getUserUploadedPuzzles', err);
     }
 
     let inProgress: Awaited<ReturnType<typeof getInProgressGames>> = [];
@@ -130,17 +139,17 @@ router.get('/:userId', async (req, res, next) => {
       try {
         inProgress = await getInProgressGames(userId);
       } catch (err) {
-        reportDegradedRead('getInProgressGames', err, {userId});
+        degradeOn('getInProgressGames', err);
       }
       try {
         snapshotStatuses = await getAuthenticatedPuzzleStatuses(userId);
       } catch (err) {
-        reportDegradedRead('getAuthenticatedPuzzleStatuses', err, {userId});
+        degradeOn('getAuthenticatedPuzzleStatuses', err);
       }
       try {
         solvedPids = await getSolvedPidsForUser(userId);
       } catch (err) {
-        reportDegradedRead('getSolvedPidsForUser', err, {userId});
+        degradeOn('getSolvedPidsForUser', err);
         // intentionally leave undefined — see note above
       }
     }
@@ -154,6 +163,11 @@ router.get('/:userId', async (req, res, next) => {
     // the next request should get a fresh shot once the DB recovers.
     res.set('Cache-Control', isDegraded ? 'no-store' : 'private, max-age=30');
     res.json({
+      // Cache-Control alone only stops HTTP caching. NewPuzzleList writes the
+      // status map it derives from this response into localStorage, where a
+      // partial profile would outlive the response and read as authoritative —
+      // so the client needs to see the degradation, not just the cache layer.
+      degraded: isDegraded || undefined,
       user: {
         displayName: user.display_name,
         createdAt: user.created_at,

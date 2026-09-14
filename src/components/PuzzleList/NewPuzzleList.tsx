@@ -67,6 +67,11 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
           // localStorage and the user would lose their Complete badges until
           // the next successful fetch.
           if (stats.solvedPids === undefined) return;
+          // Same reasoning one level up: if any section of the profile fell
+          // back to empty data, the map built below is missing entries (a
+          // failed snapshotStatuses or inProgress drops older started games)
+          // and would overwrite the cache with a partial view.
+          if (stats.degraded) return;
           const statuses: PuzzleStatuses = {};
           // Apply snapshot-based statuses first (fallback from game_snapshots)
           if (stats.snapshotStatuses) {

@@ -130,6 +130,43 @@ describe('GET /user-stats/:userId — degraded reads', () => {
     expect(res.headers['cache-control']).toBe('no-store');
   });
 
+  // Cache-Control alone doesn't stop NewPuzzleList persisting the derived
+  // status map to localStorage, so the flag has to reach the client too.
+  it.each([
+    ['getInProgressGames', () => mockGetInProgressGames],
+    ['getAuthenticatedPuzzleStatuses', () => mockGetAuthenticatedPuzzleStatuses],
+    ['getSolvedPidsForUser', () => mockGetSolvedPidsForUser],
+    ['getUserUploadedPuzzles', () => mockGetUserUploadedPuzzles],
+  ])('marks the whole response degraded when %s times out', async (_section, getMock) => {
+    getMock().mockRejectedValue(statementTimeout());
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBe(true);
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+
+  it('leaves the response uncached-as-complete only when something actually failed', async () => {
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBeUndefined();
+    expect(res.headers['cache-control']).toBe('private, max-age=30');
+  });
+
+  it('does not mark the response degraded for a non-transient section failure', async () => {
+    // A real bug in one optional section isn't DB saturation: the rest of the
+    // profile is complete and still worth caching.
+    mockGetInProgressGames.mockRejectedValue(new Error('column does not exist'));
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBeUndefined();
+    expect(res.headers['cache-control']).toBe('private, max-age=30');
+  });
+
   it('still captures a non-timeout failure as an exception', async () => {
     mockGetInProgressGames.mockRejectedValue(new Error('column does not exist'));
 

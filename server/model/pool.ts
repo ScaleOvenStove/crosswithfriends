@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import pg from 'pg';
 // ============= Database Operations ============
 
@@ -67,6 +68,25 @@ const applySessionDefaults = (client: pg.PoolClient) => {
 };
 pool.on('connect', applySessionDefaults);
 readPool.on('connect', applySessionDefaults);
+
+/**
+ * pg.Pool is an EventEmitter, and it emits 'error' when Postgres or the network
+ * drops a connection sitting idle in the pool — a DB restart, a failover, or any
+ * transient disconnect. Node treats an 'error' event with no listener as an
+ * uncaught exception, so without this the process dies instead of reconnecting.
+ * Neither pool had a listener; adding readPool doubled the exposure.
+ *
+ * Nothing to recover here: pg-pool has already evicted the client, and the next
+ * query transparently opens a fresh connection. It is logged rather than
+ * captured because a single failover emits one of these per pooled connection,
+ * which would be an Issue storm describing one infrastructure event.
+ */
+const handleIdleClientError = (poolName: string) => (err: Error) => {
+  Sentry.logger.warn('idle DB connection dropped', {pool: poolName, message: err.message});
+  console.error(`[${poolName}] idle client error (connection evicted, will reconnect):`, err);
+};
+pool.on('error', handleIdleClientError('pool'));
+readPool.on('error', handleIdleClientError('readPool'));
 
 /**
  * True when an error is a Postgres statement_timeout (query cancelled after

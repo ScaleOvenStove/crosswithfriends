@@ -63,6 +63,12 @@ export interface UserStatsResponse {
     createdAt?: string;
   };
   isPrivate?: boolean;
+  /**
+   * True when one or more sections of the profile could not be read and fell
+   * back to empty data. The response is a partial view, so callers must not
+   * persist anything derived from it as authoritative.
+   */
+  degraded?: boolean;
   stats?: {
     totalSolved: number;
     totalSolvedSolo: number;
