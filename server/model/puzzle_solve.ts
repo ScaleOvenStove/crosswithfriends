@@ -1,4 +1,4 @@
-import {pool} from './pool';
+import {pool, readPool} from './pool';
 import {dayOfWeekExtract} from './sql_helpers';
 import {TTLCache} from './ttl_cache';
 import {getPuzzleSizeBucketSql, PUZZLE_SIZE_BUCKET_ORDER} from './puzzle';
@@ -64,7 +64,7 @@ export type DayOfWeekStats = {
  */
 export async function getSolvedPidsForUser(userId: string): Promise<string[]> {
   return solvedPidsCache.getOrFetch(userId, async () => {
-    const result = await pool.query<{pid: string}>(
+    const result = await readPool.query<{pid: string}>(
       `SELECT DISTINCT pid FROM puzzle_solves WHERE user_id = $1`,
       [userId]
     );
@@ -91,7 +91,7 @@ export async function getUserSolveStats(userId: string): Promise<{
   const [combinedStatsResult, historyResult] = await Promise.all([
     // Combined size + day stats split by solve mode (solo/coop/all) in a single scan.
     // mode_solves: best time per puzzle per mode; all_solves: best time per puzzle overall.
-    pool.query(
+    readPool.query(
       `WITH mode_solves AS (
         SELECT DISTINCT ON (ps.pid, CASE WHEN COALESCE(ps.player_count, 1) = 1 THEN 'solo' ELSE 'coop' END)
           ps.pid,
@@ -126,7 +126,7 @@ export async function getUserSolveStats(userId: string): Promise<{
     // to overlay 'solved' status on the puzzle list, so a low cap silently
     // drops Complete flags for heavy users. Proper fix is a separate
     // lightweight solvedPids endpoint; this LIMIT is the interim.
-    pool.query(
+    readPool.query(
       `SELECT
          ps.pid, ps.gid, ps.time_taken_to_solve, ps.solved_time, ps.player_count,
          COALESCE(p.content->'info'->>'titleOverride', p.content->'info'->>'title') AS title,
@@ -182,7 +182,7 @@ export async function getUserSolveStats(userId: string): Promise<{
 
   if (collabGids.length > 0) {
     // Single query for both co-solvers and solver counts
-    const coSolverResult = await pool.query(
+    const coSolverResult = await readPool.query(
       `SELECT ps.gid, ps.user_id, u.display_name,
               COUNT(*) OVER (PARTITION BY ps.gid) AS solver_count
        FROM puzzle_solves ps
@@ -249,7 +249,9 @@ export type InProgressGameItem = {
 export async function getInProgressGames(userId: string): Promise<InProgressGameItem[]> {
   return inProgressGamesCache.getOrFetch(userId, async () => {
     // Look up the user's legacy dfac_id(s)
-    const idResult = await pool.query('SELECT dfac_id FROM user_identity_map WHERE user_id = $1', [userId]);
+    const idResult = await readPool.query('SELECT dfac_id FROM user_identity_map WHERE user_id = $1', [
+      userId,
+    ]);
     const dfacIds = idResult.rows.map((r: {dfac_id: string}) => r.dfac_id);
 
     if (dfacIds.length === 0) {
@@ -262,8 +264,8 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
     // - Exclude solved games via NOT EXISTS on game_snapshots (PK lookup)
     // - Exclude user-dismissed games via NOT EXISTS on game_dismissals
     // - Join create event for pid, join puzzles for title and size
-    const result = await pool.query(
-      `WITH user_games AS (
+    const result = await readPool.query(
+      `WITH candidate_games AS (
          SELECT gid, MAX(ts) AS last_activity
          FROM (
            SELECT gid, ts FROM game_events WHERE uid = ANY($1)
@@ -278,13 +280,22 @@ export async function getInProgressGames(userId: string): Promise<InProgressGame
                SELECT 1 FROM game_events ge WHERE ge.gid = fh.gid AND (ge.uid = ANY($1) OR (ge.event_payload->'params'->>'id') = ANY($1))
              )
          ) all_events
+         GROUP BY gid
+       ),
+       user_games AS (
+         -- Filter AFTER collapsing to one row per gid. Both predicates depend
+         -- only on gid, so a game either passes for all its events or none —
+         -- but applied inside candidate_games they ran once per event row, and
+         -- a heavy user has tens of thousands of those (every keystroke is an
+         -- event). Grouping first turns O(events) index probes into O(games).
+         SELECT gid, last_activity
+         FROM candidate_games cg
          WHERE NOT EXISTS (
-           SELECT 1 FROM game_snapshots gs WHERE gs.gid = all_events.gid
+           SELECT 1 FROM game_snapshots gs WHERE gs.gid = cg.gid
          )
          AND NOT EXISTS (
-           SELECT 1 FROM game_dismissals gd WHERE gd.gid = all_events.gid AND gd.user_id = $2
+           SELECT 1 FROM game_dismissals gd WHERE gd.gid = cg.gid AND gd.user_id = $2
          )
-         GROUP BY gid
          ORDER BY last_activity DESC
          LIMIT 20
        )

@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import _ from 'lodash';
 import Joi from 'joi';
 import {PuzzleJson, ListPuzzleRequestFilters, AddPuzzleResult} from '@shared/types';
-import {pool} from './pool';
+import {pool, readPool} from './pool';
 import {dayOfWeekExtract} from './sql_helpers';
 import {TTLCache} from './ttl_cache';
 
@@ -437,7 +437,7 @@ export async function addPuzzle(
 }
 
 export async function getUserUploadedPuzzles(userId: string) {
-  const {rows} = await pool.query(
+  const {rows} = await readPool.query(
     `SELECT pid,
             COALESCE(content->'info'->>'titleOverride', content->'info'->>'title') as title,
             CASE WHEN content->'info'->>'titleOverride' IS NOT NULL THEN content->'info'->>'title' END as original_title,

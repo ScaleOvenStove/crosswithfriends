@@ -69,6 +69,29 @@ describe('getInProgressGames', () => {
     expect(result[0].lastActivity).toBe('');
     expect(result[0].percentComplete).toBe(0);
   });
+
+  // Regression guard for the statement_timeout on this query (Sentry
+  // NODE-EXPRESS-N). The solved/dismissed filters must run against the
+  // grouped-by-gid set, not against every raw event row — a heavy user has
+  // tens of thousands of events but only a handful of distinct games.
+  it('applies the solved/dismissed filters after grouping by gid', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{dfac_id: 'dfac-abc'}]});
+    pool.query.mockResolvedValueOnce({rows: []});
+
+    await getInProgressGames('user-123');
+
+    const sql: string = pool.query.mock.calls[1][0];
+    const groupBy = sql.indexOf('GROUP BY gid');
+    const snapshotFilter = sql.indexOf('FROM game_snapshots');
+    const dismissalFilter = sql.indexOf('FROM game_dismissals');
+
+    expect(groupBy).toBeGreaterThan(-1);
+    expect(snapshotFilter).toBeGreaterThan(groupBy);
+    expect(dismissalFilter).toBeGreaterThan(groupBy);
+    // ...and they reference the grouped CTE rather than the raw event rows.
+    expect(sql).toContain('FROM candidate_games cg');
+    expect(sql).not.toContain('all_events.gid');
+  });
 });
 
 describe('getUserSolveStats', () => {

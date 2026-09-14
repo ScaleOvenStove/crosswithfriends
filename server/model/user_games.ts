@@ -1,4 +1,4 @@
-import {pool} from './pool';
+import {readPool} from './pool';
 import {getDfacIdsForUser} from './user';
 import {TTLCache} from './ttl_cache';
 
@@ -60,7 +60,7 @@ export function invalidateAuthPuzzleStatusCache(userId: string): void {
  */
 export async function getGuestPuzzleStatuses(dfacId: string): Promise<PuzzleStatusMap> {
   return guestPuzzleStatusCache.getOrFetch(dfacId, async () => {
-    const result = await pool.query(
+    const result = await readPool.query(
       `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
        FROM (
          -- v2 games: find distinct gids for the user, then look up pid via
@@ -116,7 +116,7 @@ export async function getAuthenticatedPuzzleStatuses(userId: string): Promise<Pu
     // their only game for it — bool_or(solved=false) over the dismissed-but-
     // still-counted row → still 'started'. Snapshot games still count as
     // 'solved' even if dismissed, since the solve itself doesn't go away.
-    const result = await pool.query(
+    const result = await readPool.query(
       `SELECT pid, CASE WHEN bool_or(solved) THEN 'solved' ELSE 'started' END AS status
        FROM (
          SELECT
@@ -206,7 +206,7 @@ export async function getUserGamesForPuzzle(
     // If pid is non-numeric, pass null so the legacy branch returns no rows.
     const pidInt = Number.isFinite(Number(pid)) ? Number(pid) : null;
     const pidIntParam = options.userId ? '$4' : '$3';
-    const result = await pool.query(
+    const result = await readPool.query(
       `WITH user_games AS (
          -- v2 games from game_events. The inner UNION ALL also pulls in
          -- gids from puzzle_solves for authenticated users so we still find
