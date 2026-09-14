@@ -60,17 +60,30 @@ export async function fetchUserGames(
   return data.games;
 }
 
+/**
+ * Guest puzzle statuses, keyed by pid.
+ *
+ * Throws rather than returning `{}` on failure. NewPuzzleList persists whatever
+ * this resolves to into localStorage, so an empty map returned for a failed
+ * lookup reads as authoritative "this guest has played nothing" and wipes their
+ * Complete/In progress badges until the next successful refresh. The
+ * authenticated path already guards against this by skipping the update when
+ * `solvedPids` is undefined; a rejected promise gives the guest path the same
+ * protection, since the caller's catch leaves the cached statuses in place.
+ */
 export async function fetchGuestPuzzleStatuses(
   dfacId: string
 ): Promise<{[pid: string]: 'solved' | 'started'}> {
-  try {
-    const resp = await fetch(`${SERVER_URL}/api/user-games/statuses?dfac_id=${encodeURIComponent(dfacId)}`);
-    if (!resp.ok) return {};
-
-    const data = await resp.json();
-    return data.statuses;
-  } catch (error) {
-    console.warn('Failed to fetch guest puzzle statuses:', error);
-    return {};
+  const resp = await fetch(`${SERVER_URL}/api/user-games/statuses?dfac_id=${encodeURIComponent(dfacId)}`);
+  if (!resp.ok) {
+    throw new UserGamesUnavailableError(`guest statuses request failed (${resp.status})`);
   }
+
+  const data = await resp.json();
+  // The server degrades to {statuses: {}, degraded: true} when the read is
+  // cancelled or can't get a connection. Don't cache that as real.
+  if (data.degraded) {
+    throw new UserGamesUnavailableError('guest statuses temporarily unavailable');
+  }
+  return data.statuses;
 }
