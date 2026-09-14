@@ -44,10 +44,9 @@ const router = express.Router();
  *                     byDay: {type: object}
  *                 history: {type: array, items: {type: object}}
  *                 uploads: {type: array, items: {type: object}}
- *                 inProgress: {type: array, items: {type: object}, description: Only present for the profile owner}
+ *                 inProgress: {type: array, items: {type: object}, description: "Only present for the profile owner. Absent if the read failed, as opposed to empty, which means no in-progress games."}
+ *                 snapshotStatuses: {type: object, description: "Only present for the profile owner. Absent if the read failed, as opposed to empty, which means no snapshot statuses."}
  *                 degraded: {type: boolean, description: "Present and true when any section could not be read (statement timeout, or no free DB connection). The response is incomplete — do not cache it as authoritative. This is response-level; to tell whether a particular section is affected, check whether its field is absent."}
- *                 inProgress: {type: array, items: {type: object}, description: "Absent if the read failed (as opposed to empty, meaning no in-progress games)."}
- *                 snapshotStatuses: {type: object, description: "Absent if the read failed (as opposed to empty, meaning no snapshot statuses)."}
  *                 solvedPids: {type: array, items: {type: string}, description: "Distinct pids the user has solved. Populated only for the profile owner (empty array otherwise). Used by the puzzle list to overlay the Complete badge."}
  *       404: {description: User not found}
  */
