@@ -1,10 +1,10 @@
-import * as Sentry from '@sentry/node';
 import express from 'express';
 import {getUserSolveStats, getInProgressGames, getSolvedPidsForUser} from '../model/puzzle_solve';
 import {getUserById} from '../model/user';
 import {getUserUploadedPuzzles} from '../model/puzzle';
 import {getAuthenticatedPuzzleStatuses} from '../model/user_games';
-import {isStatementTimeout} from '../model/pool';
+import {isTransientReadFailure} from '../model/pool';
+import {reportDegradedRead} from './degraded_read';
 import {verifyAccessToken} from '../auth/jwt';
 
 const router = express.Router();
@@ -76,16 +76,16 @@ router.get('/:userId', async (req, res, next) => {
 
     // Degrade gracefully if the stats query trips statement_timeout: render the
     // profile with empty stats rather than 500-ing the whole page (which the
-    // frontend surfaces as a hard error). The underlying slowness is still
-    // reported to Sentry via the catch below.
+    // frontend surfaces as a hard error). The underlying slowness stays visible
+    // in Sentry via reportDegradedRead.
     let solveStats: Awaited<ReturnType<typeof getUserSolveStats>>;
     let isDegraded = false;
     try {
       solveStats = await getUserSolveStats(userId);
     } catch (err) {
-      if (!isStatementTimeout(err)) throw err;
+      if (!isTransientReadFailure(err)) throw err;
       isDegraded = true;
-      Sentry.captureException(err, {level: 'warning', extra: {userId}});
+      reportDegradedRead('getUserSolveStats', err, {userId});
       solveStats = {
         totalSolved: 0,
         totalSolvedSolo: 0,
@@ -116,8 +116,7 @@ router.get('/:userId', async (req, res, next) => {
     try {
       uploads = await getUserUploadedPuzzles(userId);
     } catch (err) {
-      Sentry.captureException(err);
-      console.error('getUserUploadedPuzzles error:', err);
+      reportDegradedRead('getUserUploadedPuzzles', err, {userId});
     }
 
     let inProgress: Awaited<ReturnType<typeof getInProgressGames>> = [];
@@ -131,20 +130,17 @@ router.get('/:userId', async (req, res, next) => {
       try {
         inProgress = await getInProgressGames(userId);
       } catch (err) {
-        Sentry.captureException(err);
-        console.error('getInProgressGames error:', err);
+        reportDegradedRead('getInProgressGames', err, {userId});
       }
       try {
         snapshotStatuses = await getAuthenticatedPuzzleStatuses(userId);
       } catch (err) {
-        Sentry.captureException(err);
-        console.error('getAuthenticatedPuzzleStatuses error:', err);
+        reportDegradedRead('getAuthenticatedPuzzleStatuses', err, {userId});
       }
       try {
         solvedPids = await getSolvedPidsForUser(userId);
       } catch (err) {
-        Sentry.captureException(err);
-        console.error('getSolvedPidsForUser error:', err);
+        reportDegradedRead('getSolvedPidsForUser', err, {userId});
         // intentionally leave undefined — see note above
       }
     }

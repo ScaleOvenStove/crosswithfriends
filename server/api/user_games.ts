@@ -1,8 +1,8 @@
-import * as Sentry from '@sentry/node';
 import express from 'express';
 import {optionalAuth} from '../auth/middleware';
 import {getUserGamesForPuzzle, getGuestPuzzleStatuses} from '../model/user_games';
-import {isStatementTimeout} from '../model/pool';
+import {isTransientReadFailure} from '../model/pool';
+import {reportDegradedRead} from './degraded_read';
 
 const router = express.Router();
 
@@ -33,6 +33,7 @@ const router = express.Router();
  *               type: object
  *               properties:
  *                 games: {type: array, items: {type: object}}
+ *                 degraded: {type: boolean, description: "Present and true when the lookup could not be completed (statement timeout, or no free DB connection). `games` is then empty for that reason, not because the user has none — treat it as a retryable failure, not an authoritative empty result."}
  *       400: {description: Missing pid or authentication}
  */
 router.get('/', optionalAuth, async (req, res, next) => {
@@ -55,13 +56,14 @@ router.get('/', optionalAuth, async (req, res, next) => {
     res.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=120');
     res.json({games});
   } catch (e) {
-    // A slow lookup that trips statement_timeout shouldn't hard-fail the client:
+    // A lookup the DB couldn't serve — cancelled for running too long, or
+    // never given a connection — shouldn't hard-fail the client:
     // the 500 became a 503 which the frontend then tried to JSON.parse, crashing
     // with "unexpected end of data" (JAVASCRIPT-REACT-5A). Degrade to an empty
     // list — the caller just sees no prior games — while still reporting to
     // Sentry so the underlying slowness stays visible.
-    if (isStatementTimeout(e)) {
-      Sentry.captureException(e, {level: 'warning'});
+    if (isTransientReadFailure(e)) {
+      reportDegradedRead('getUserGamesForPuzzle', e, {pid: req.query.pid});
       // Don't let a proxy/browser cache the degraded empty result — once the DB
       // recovers the next request should be able to fetch the real games.
       res.set('Cache-Control', 'no-store');
@@ -100,6 +102,7 @@ router.get('/', optionalAuth, async (req, res, next) => {
  *               type: object
  *               properties:
  *                 statuses: {type: object}
+ *                 degraded: {type: boolean, description: "Present and true when the lookup could not be completed. `statuses` is then empty for that reason, not because the guest has played nothing — callers must not cache it as authoritative."}
  *       400: {description: Missing dfac_id}
  */
 router.get('/statuses', async (req, res, next) => {
@@ -114,6 +117,19 @@ router.get('/statuses', async (req, res, next) => {
     res.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
     res.json({statuses});
   } catch (e) {
+    // Same degrade contract as the main route above, for the same reason. An
+    // empty status map is indistinguishable from "this guest has played
+    // nothing", and NewPuzzleList writes whatever it receives straight to
+    // localStorage — so a saturated read would wipe the guest's Complete and
+    // In progress badges until the next successful refresh. Flag it instead;
+    // fetchGuestPuzzleStatuses treats `degraded` as a retryable failure and
+    // leaves the cached badges alone.
+    if (isTransientReadFailure(e)) {
+      reportDegradedRead('getGuestPuzzleStatuses', e, {dfacId: req.query.dfac_id});
+      res.set('Cache-Control', 'no-store');
+      res.json({statuses: {}, degraded: true});
+      return;
+    }
     next(e);
   }
 });
