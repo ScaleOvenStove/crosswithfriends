@@ -94,7 +94,7 @@ describe('GET /user-stats/:userId — degraded reads', () => {
     const res = await getOwnProfile();
 
     expect(res.status).toBe(200);
-    expect(res.body.inProgress).toEqual([]);
+    expect(res.body.inProgress).toBeUndefined();
     expect(mockCaptureException).not.toHaveBeenCalled();
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       expect.stringContaining('degraded'),
@@ -112,7 +112,7 @@ describe('GET /user-stats/:userId — degraded reads', () => {
     const res = await getOwnProfile();
 
     expect(res.status).toBe(200);
-    expect(res.body.inProgress).toEqual([]);
+    expect(res.body.inProgress).toBeUndefined();
     expect(mockCaptureException).not.toHaveBeenCalled();
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       expect.any(String),
@@ -128,6 +128,80 @@ describe('GET /user-stats/:userId — degraded reads', () => {
     expect(res.status).toBe(200);
     expect(res.body.stats.totalSolved).toBe(0);
     expect(res.headers['cache-control']).toBe('no-store');
+  });
+
+  // Cache-Control alone doesn't stop NewPuzzleList persisting the derived
+  // status map to localStorage, so the flag has to reach the client too.
+  it.each([
+    ['getInProgressGames', () => mockGetInProgressGames],
+    ['getAuthenticatedPuzzleStatuses', () => mockGetAuthenticatedPuzzleStatuses],
+    ['getSolvedPidsForUser', () => mockGetSolvedPidsForUser],
+    ['getUserUploadedPuzzles', () => mockGetUserUploadedPuzzles],
+  ])('marks the whole response degraded when %s times out', async (_section, getMock) => {
+    getMock().mockRejectedValue(statementTimeout());
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBe(true);
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+
+  // The client rebuilds its puzzle-status map from these three and caches it,
+  // so a field it couldn't read must be absent rather than empty — empty reads
+  // as "you have none" and overwrites the cache.
+  it.each([
+    ['inProgress', () => mockGetInProgressGames],
+    ['snapshotStatuses', () => mockGetAuthenticatedPuzzleStatuses],
+    ['solvedPids', () => mockGetSolvedPidsForUser],
+  ])('omits %s entirely when its read fails', async (field, getMock) => {
+    getMock().mockRejectedValue(statementTimeout());
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body[field]).toBeUndefined();
+  });
+
+  // The counterpart: an unrelated section failing must NOT strip the status
+  // inputs, or the client throws away a perfectly good map and keeps a stale
+  // one for the rest of the session.
+  it.each([
+    ['getUserSolveStats', () => mockGetUserSolveStats],
+    ['getUserUploadedPuzzles', () => mockGetUserUploadedPuzzles],
+  ])('still sends the status inputs when only %s fails', async (_section, getMock) => {
+    mockGetInProgressGames.mockResolvedValue([{pid: '1', gid: 'g1'}]);
+    mockGetAuthenticatedPuzzleStatuses.mockResolvedValue({'2': 'started'});
+    mockGetSolvedPidsForUser.mockResolvedValue(['3']);
+    getMock().mockRejectedValue(statementTimeout());
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBe(true);
+    expect(res.body.inProgress).toEqual([{pid: '1', gid: 'g1'}]);
+    expect(res.body.snapshotStatuses).toEqual({'2': 'started'});
+    expect(res.body.solvedPids).toEqual(['3']);
+  });
+
+  it('leaves the response uncached-as-complete only when something actually failed', async () => {
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBeUndefined();
+    expect(res.headers['cache-control']).toBe('private, max-age=30');
+  });
+
+  it('does not mark the response degraded for a non-transient section failure', async () => {
+    // A real bug in one optional section isn't DB saturation: the rest of the
+    // profile is complete and still worth caching.
+    mockGetInProgressGames.mockRejectedValue(new Error('column does not exist'));
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBeUndefined();
+    expect(res.headers['cache-control']).toBe('private, max-age=30');
   });
 
   it('still captures a non-timeout failure as an exception', async () => {
