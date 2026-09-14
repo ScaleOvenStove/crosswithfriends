@@ -94,7 +94,7 @@ describe('GET /user-stats/:userId — degraded reads', () => {
     const res = await getOwnProfile();
 
     expect(res.status).toBe(200);
-    expect(res.body.inProgress).toEqual([]);
+    expect(res.body.inProgress).toBeUndefined();
     expect(mockCaptureException).not.toHaveBeenCalled();
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       expect.stringContaining('degraded'),
@@ -112,7 +112,7 @@ describe('GET /user-stats/:userId — degraded reads', () => {
     const res = await getOwnProfile();
 
     expect(res.status).toBe(200);
-    expect(res.body.inProgress).toEqual([]);
+    expect(res.body.inProgress).toBeUndefined();
     expect(mockCaptureException).not.toHaveBeenCalled();
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       expect.any(String),
@@ -145,6 +145,43 @@ describe('GET /user-stats/:userId — degraded reads', () => {
     expect(res.status).toBe(200);
     expect(res.body.degraded).toBe(true);
     expect(res.headers['cache-control']).toBe('no-store');
+  });
+
+  // The client rebuilds its puzzle-status map from these three and caches it,
+  // so a field it couldn't read must be absent rather than empty — empty reads
+  // as "you have none" and overwrites the cache.
+  it.each([
+    ['inProgress', () => mockGetInProgressGames],
+    ['snapshotStatuses', () => mockGetAuthenticatedPuzzleStatuses],
+    ['solvedPids', () => mockGetSolvedPidsForUser],
+  ])('omits %s entirely when its read fails', async (field, getMock) => {
+    getMock().mockRejectedValue(statementTimeout());
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body[field]).toBeUndefined();
+  });
+
+  // The counterpart: an unrelated section failing must NOT strip the status
+  // inputs, or the client throws away a perfectly good map and keeps a stale
+  // one for the rest of the session.
+  it.each([
+    ['getUserSolveStats', () => mockGetUserSolveStats],
+    ['getUserUploadedPuzzles', () => mockGetUserUploadedPuzzles],
+  ])('still sends the status inputs when only %s fails', async (_section, getMock) => {
+    mockGetInProgressGames.mockResolvedValue([{pid: '1', gid: 'g1'}]);
+    mockGetAuthenticatedPuzzleStatuses.mockResolvedValue({'2': 'started'});
+    mockGetSolvedPidsForUser.mockResolvedValue(['3']);
+    getMock().mockRejectedValue(statementTimeout());
+
+    const res = await getOwnProfile();
+
+    expect(res.status).toBe(200);
+    expect(res.body.degraded).toBe(true);
+    expect(res.body.inProgress).toEqual([{pid: '1', gid: 'g1'}]);
+    expect(res.body.snapshotStatuses).toEqual({'2': 'started'});
+    expect(res.body.solvedPids).toEqual(['3']);
   });
 
   it('leaves the response uncached-as-complete only when something actually failed', async () => {

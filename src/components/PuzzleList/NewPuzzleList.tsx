@@ -61,17 +61,23 @@ const NewPuzzleList: React.FC<NewPuzzleListProps> = (props) => {
       getUserStats(user.id, accessToken)
         .then((stats) => {
           if (stale || !stats) return;
-          // If the server couldn't produce solvedPids (transient failure), skip
-          // the status update entirely. Falling through with an empty solved
-          // set would persist authoritative-looking "no solves" data to
-          // localStorage and the user would lose their Complete badges until
-          // the next successful fetch.
-          if (stats.solvedPids === undefined) return;
-          // Same reasoning one level up: if any section of the profile fell
-          // back to empty data, the map built below is missing entries (a
-          // failed snapshotStatuses or inProgress drops older started games)
-          // and would overwrite the cache with a partial view.
-          if (stats.degraded) return;
+          // Skip when any input to the map below is missing — the server omits
+          // a field it couldn't read, rather than sending an empty value. Each
+          // one contributes entries (snapshotStatuses and inProgress carry
+          // older started games; solvedPids the Complete badges), so a partial
+          // map would overwrite the cache with a view that looks authoritative.
+          //
+          // Deliberately not gated on the response-level `degraded` flag: an
+          // unrelated section timing out (solve stats, uploads) leaves this map
+          // valid, and skipping there would strand the previous session's map —
+          // this effect doesn't re-run until its deps change or we remount.
+          if (
+            stats.solvedPids === undefined ||
+            stats.snapshotStatuses === undefined ||
+            stats.inProgress === undefined
+          ) {
+            return;
+          }
           const statuses: PuzzleStatuses = {};
           // Apply snapshot-based statuses first (fallback from game_snapshots)
           if (stats.snapshotStatuses) {

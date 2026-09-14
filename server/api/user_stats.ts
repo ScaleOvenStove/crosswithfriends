@@ -45,7 +45,9 @@ const router = express.Router();
  *                 history: {type: array, items: {type: object}}
  *                 uploads: {type: array, items: {type: object}}
  *                 inProgress: {type: array, items: {type: object}, description: Only present for the profile owner}
- *                 degraded: {type: boolean, description: "Present and true when one or more sections could not be read (statement timeout, or no free DB connection) and fell back to empty data. The response is incomplete — do not cache or persist it as authoritative."}
+ *                 degraded: {type: boolean, description: "Present and true when any section could not be read (statement timeout, or no free DB connection). The response is incomplete — do not cache it as authoritative. This is response-level; to tell whether a particular section is affected, check whether its field is absent."}
+ *                 inProgress: {type: array, items: {type: object}, description: "Absent if the read failed (as opposed to empty, meaning no in-progress games)."}
+ *                 snapshotStatuses: {type: object, description: "Absent if the read failed (as opposed to empty, meaning no snapshot statuses)."}
  *                 solvedPids: {type: array, items: {type: string}, description: "Distinct pids the user has solved. Populated only for the profile owner (empty array otherwise). Used by the puzzle list to overlay the Complete badge."}
  *       404: {description: User not found}
  */
@@ -128,23 +130,32 @@ router.get('/:userId', async (req, res, next) => {
       degradeOn('getUserUploadedPuzzles', err);
     }
 
-    let inProgress: Awaited<ReturnType<typeof getInProgressGames>> = [];
-    let snapshotStatuses: Awaited<ReturnType<typeof getAuthenticatedPuzzleStatuses>> = {};
-    // solvedPids stays undefined on failure (rather than defaulting to []) so
-    // the client can distinguish "user has zero solves" from "we couldn't
-    // fetch your solved set". An empty array would be treated as authoritative
-    // and would clobber the cached Complete badges in localStorage.
+    // These three are the inputs the client builds its puzzle-status map from.
+    // Each stays undefined if its read fails (rather than falling back to an
+    // empty value) so the client can distinguish "you have none" from "we
+    // couldn't fetch yours". An empty value reads as authoritative and clobbers
+    // the cached Complete/In progress badges in localStorage.
+    //
+    // Per-field rather than one response-level flag: a failure in an unrelated
+    // section (solve stats, uploads) leaves the status map perfectly valid, and
+    // discarding it there would strand a stale map for the rest of the session —
+    // this effect doesn't re-run until its dependencies change or the component
+    // remounts. Non-owners keep the empty defaults: not requested, not failed.
+    let inProgress: Awaited<ReturnType<typeof getInProgressGames>> | undefined = [];
+    let snapshotStatuses: Awaited<ReturnType<typeof getAuthenticatedPuzzleStatuses>> | undefined = {};
     let solvedPids: Awaited<ReturnType<typeof getSolvedPidsForUser>> | undefined;
     if (isOwner) {
       try {
         inProgress = await getInProgressGames(userId);
       } catch (err) {
         degradeOn('getInProgressGames', err);
+        inProgress = undefined;
       }
       try {
         snapshotStatuses = await getAuthenticatedPuzzleStatuses(userId);
       } catch (err) {
         degradeOn('getAuthenticatedPuzzleStatuses', err);
+        snapshotStatuses = undefined;
       }
       try {
         solvedPids = await getSolvedPidsForUser(userId);
