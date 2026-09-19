@@ -1,4 +1,6 @@
 import {test, expect} from '@playwright/test';
+
+import {isWritableBackend, WRITE_SKIP_REASON} from '../fixtures/writable-backend';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 
@@ -13,16 +15,10 @@ const fixtureDir = join(process.cwd(), 'e2e', 'fixtures');
 // IMPORTANT: these must never run against production. By default `pnpm start`
 // proxies /api/* to the *production* backend, and if the validator isn't
 // deployed there yet the POST creates a real (private, anonymous) puzzle row.
-// So the suite only runs when pointed at a backend we know is safe to write
-// to, named explicitly via API_BASE_URL (falling back to BASE_URL).
-const VALIDATED_BACKENDS = new Set([
-  'https://testing.crosswithfriends.com',
-  // The local stack CI stands up (postgres + `pnpm devbackend`-style server).
-  'http://localhost:3021',
-  'http://127.0.0.1:3021',
-]);
+// The allowlist in fixtures/writable-backend.ts decides; API_BASE_URL names the
+// backend directly (falling back to BASE_URL).
 const apiBaseURL = process.env.API_BASE_URL || process.env.BASE_URL || '';
-const validatorDeployed = VALIDATED_BACKENDS.has(apiBaseURL);
+const validatorDeployed = isWritableBackend(apiBaseURL);
 
 // The PuzzleJson shape that POST /api/puzzle expects, with no [?] markers
 // anywhere — mirrors what iPUZtoJSON would output for the clean fixture.
@@ -49,13 +45,7 @@ function buildCleanPuzzleJson() {
 }
 
 test.describe('POST /api/puzzle — broken-placeholder rejection', () => {
-  test.skip(
-    !validatorDeployed,
-    `Skipped: set API_BASE_URL to a backend that is safe to write to and has the ` +
-      `rejection deployed (http://localhost:3021 for the local stack, or ` +
-      `https://testing.crosswithfriends.com). Without it these would hit prod through the ` +
-      `local Vite proxy and could create real rows.`
-  );
+  test.skip(!validatorDeployed, WRITE_SKIP_REASON);
 
   test('rejects a puzzle whose clue contains "[?]"', async ({request}) => {
     const puzzle = buildCleanPuzzleJson();

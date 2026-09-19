@@ -1,5 +1,7 @@
 import {test, expect, Browser, BrowserContext, Page} from '@playwright/test';
 
+import {isWritableBackend, WRITE_SKIP_REASON} from '../fixtures/writable-backend';
+
 /**
  * Two-player tests for the real-time path: client -> Socket.IO -> SocketManager
  * -> game_events -> broadcast -> other client.
@@ -9,26 +11,21 @@ import {test, expect, Browser, BrowserContext, Page} from '@playwright/test';
  * queue well, but they mock the socket, so nothing else exercises the round
  * trip through the server and the database.
  *
- * These tests WRITE (they create a game and persist events), so they only run
- * against a backend that is safe to write to. `pnpm start` proxies to the
- * production backend, so the default localhost setup is skipped unless
- * VITE_USE_LOCAL_SERVER is set — which is what CI does after standing up a
- * local postgres and server.
+ * These tests WRITE (they create a game and persist events), so they run only
+ * against a backend on the allowlist in fixtures/writable-backend.ts. Note that
+ * plain localhost does not qualify: `pnpm start` proxies /api to the production
+ * backend and points Socket.IO there too, so VITE_USE_LOCAL_SERVER has to be
+ * set — which is what CI does after standing up a local postgres and server.
  */
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3020';
-const isLocal = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
-const targetsProductionBackend = isLocal && !process.env.VITE_USE_LOCAL_SERVER;
+const canWrite = isWritableBackend(BASE_URL);
 
 /** Puzzle seeded by e2e/fixtures/seed-e2e.sql. */
 const E2E_PID = process.env.E2E_PID || 'e2e-mini-1';
 
 test.describe('Multiplayer sync', () => {
-  test.skip(
-    targetsProductionBackend,
-    'Skipped: these create games and persist events. Run with VITE_USE_LOCAL_SERVER=1 against a ' +
-      'local backend, or set BASE_URL to the testing environment.'
-  );
+  test.skip(!canWrite, WRITE_SKIP_REASON);
 
   // Two browsers plus a page load is a lot of round trips for one test.
   test.setTimeout(90_000);
