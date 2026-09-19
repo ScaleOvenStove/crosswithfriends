@@ -35,5 +35,25 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/__tests__/**/*.test.{js,jsx,ts,tsx}'],
     exclude: ['node_modules', 'server', 'e2e'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcov'],
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
+      exclude: [
+        'src/**/__tests__/**',
+        // Static data, not logic.
+        'src/lib/emojiPacks/**',
+        'src/assets/**',
+      ],
+      // A floor, not a target. These sit just under the current numbers so a
+      // change that drops coverage fails the build; raise them as coverage
+      // improves rather than leaving them where they are.
+      thresholds: {
+        statements: 19,
+        branches: 16,
+        functions: 15,
+        lines: 19,
+      },
+    },
   },
 });

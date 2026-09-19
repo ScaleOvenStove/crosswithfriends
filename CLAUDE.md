@@ -20,7 +20,22 @@ pnpm test:watch                         # Frontend tests in watch mode
 pnpm test:server --ci                   # Server tests (Jest with ts-jest, separate config)
 pnpm vitest run -- path                 # Run a single frontend test file
 pnpm test:server -- --testPathPatterns=path  # Run a single server test file
+pnpm test --coverage                    # Frontend tests with coverage
+pnpm test:server --ci --coverage        # Server tests with coverage
 ```
+
+**Coverage floors.** Both suites fail below a threshold: `vitest.config.ts` for
+the frontend, `coverageThreshold` in `jest.config.server.js` for the server. The
+server config uses `collectCoverageFrom` over all of `server/`, so a module with
+no tests at all still drags the number down instead of being invisible. The
+floors are a ratchet against regression, not a target — when coverage goes up,
+raise them.
+
+Route handlers are tested by mounting the real router against a mocked model
+layer (`server/__mocks__/pool.ts`), not by rebuilding a stand-in app. See
+`server/__tests__/api/auth-routes.test.ts` for the pattern. Tests that assert on
+middleware wiring (rate limiting, `optionalAuth`) must mirror server.ts's
+middleware order, or they pass against a chain that does not exist in production.
 
 ### E2E Tests (Playwright)
 
@@ -33,10 +48,27 @@ pnpm test:e2e:prod                      # All browsers against production
 BASE_URL=https://testing.crosswithfriends.com pnpm test:e2e  # Against testing env
 pnpm test:e2e:headed                    # Debug with visible browsers
 pnpm test:e2e:ui                        # Playwright UI mode
+pnpm test:e2e:report                    # Open the HTML report from the last run
 npx playwright install                  # First-time: install browser binaries
 ```
 
-E2E tests live in `e2e/` with two layers. **Smoke tests**: page rendering, navigation, puzzle list, dark mode, game page loading. **Gameplay tests**: grid interactions (cell selection, letter entry, arrow keys, direction toggle, Tab/Backspace), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions. Configurable via `BASE_URL` env var (defaults to `http://localhost:3020`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server via `pnpm start` (or reuses one already running). Shared fixtures in `e2e/fixtures/` (`base.ts` for smoke, `game.ts` for gameplay).
+**Read-only vs write specs.** Plain `pnpm test:e2e:chromium` runs `pnpm start`,
+which proxies `/api` to the _production_ backend and points Socket.IO there too
+— anything a spec writes lands in the production database. Specs that write
+(`multiplayer.spec.ts`, `puzzle-upload.spec.ts`) skip themselves unless pointed
+at a backend that is safe to write to:
+
+```sh
+# Local stack: postgres + `psql -f server/sql/create_fresh_db.sql` +
+# `psql -f loadtest/seed.sql` + a server on :3021, then:
+VITE_USE_LOCAL_SERVER=1 API_BASE_URL=http://localhost:3021 pnpm test:e2e:chromium
+```
+
+`VITE_USE_LOCAL_SERVER` switches Playwright's `webServer` to `pnpm devfrontend`,
+which points the app at `:3021`. This is what the `e2e` job in `ci.yml` does, and
+it is the only configuration in which the whole suite runs.
+
+E2E tests live in `e2e/` with three layers. **Smoke tests**: page rendering, navigation, puzzle list, dark mode, game page loading. **Gameplay tests**: grid interactions (cell selection, letter entry, arrow keys, direction toggle, Tab/Backspace), toolbar actions (Check, Reveal, Reset, Pencil mode), and clue panel interactions. **Multiplayer tests** (`multiplayer.spec.ts`): two browser contexts on one game — live propagation both ways, history replay for a late joiner, reload restore, and the offline queue flushing on reconnect. That last one drives `window.socket.disconnect()`/`.connect()` rather than `context.setOffline()`, which leaves an already-open WebSocket alive and lets the event through without ever touching the queue. Configurable via `BASE_URL` env var (defaults to `http://localhost:3020`). When `BASE_URL` points to localhost, Playwright auto-starts the dev server (or reuses one already running). Shared fixtures in `e2e/fixtures/` (`base.ts` for smoke, `game.ts` for gameplay).
 
 ### Quality Checks
 
@@ -50,7 +82,13 @@ pnpm tsc --noEmit                       # Frontend type check
 pnpm tsc --noEmit -p server/tsconfig.json  # Server type check
 pnpm build                              # Production build (Vite)
 pnpm preview                            # Serve production build locally
+pnpm size                               # Bundle size budgets (requires pnpm build first)
+pnpm size:why                           # Explain what is in a chunk
 ```
+
+Budgets live in `.size-limit.json`, measured brotlied, set roughly 10% above
+each chunk's current size. A dependency that lands in the eager path fails the
+build instead of showing up in someone's page-load time.
 
 ### Full CI Equivalent
 
@@ -59,11 +97,12 @@ All of these must pass before merging to master:
 1. ESLint (zero warnings)
 2. Stylelint
 3. Prettier
-4. Frontend tests
-5. Server tests
+4. Frontend tests (with coverage floor)
+5. Server tests (with coverage floor)
 6. Frontend TypeCheck
 7. Server TypeCheck
-8. Build
+8. Playwright E2E against a local postgres + server stack
+9. Build, then bundle size budgets
 
 ## Architecture
 
@@ -81,7 +120,7 @@ All of these must pass before merging to master:
 
 **Email**: Transactional email goes through Resend (`server/model/mailer.ts`). The `RESEND_API_KEY` must be a Full Access key (Sending Access is not enough). `/api/health/email` exposes a probe endpoint for monitoring.
 
-**Rate limiting**: Auth endpoints use `express-rate-limit` with tiered limits — strict (10 req/15min) for login/signup, moderate (5 req/15min) for email-sending endpoints, and general (30 req/15min) for authenticated actions. Custom key generator falls back from user ID to normalized IP via `ipKeyGenerator`.
+**Rate limiting**: Auth endpoints use `express-rate-limit` with tiered limits — strict (10 req/15min) for login/signup, moderate (5 req/15min) for email-sending endpoints, and general (30 req/15min) for authenticated actions. Custom key generator falls back from user ID to normalized IP via `ipKeyGenerator`. The strict limiter is one instance shared across every credential endpoint, so the budget cannot be refreshed by switching routes. Per-user keying depends on the app-level `app.use(optionalAuth)` in server.ts running before the router: the limiters sit ahead of `requireAuth` in the route chain, so without it every authenticated caller silently shares one per-IP bucket. The app-wide `/api` limiter (500 req/15min) lives in `server/api/limiters.ts` so it can be tested without importing server.ts, which starts a listener.
 
 ## Key Conventions
 

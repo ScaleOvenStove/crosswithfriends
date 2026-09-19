@@ -10,19 +10,19 @@ const fixtureDir = join(process.cwd(), 'e2e', 'fixtures');
 // Each test POSTs to /api/puzzle and expects a 400 rejection from the
 // server-side validator (see server/model/puzzle.ts:findBrokenPlaceholderField).
 //
-// IMPORTANT: only run when targeting an environment that has the validator
-// deployed. By default, `pnpm test:e2e` runs against http://localhost:3020
-// where Vite proxies /api/* to the *production* backend — if the validator
-// isn't deployed yet, the POST creates a real (private, anonymous) puzzle
-// row in prod. Gating to the testing env avoids that and matches how the
-// post-deploy workflow (`.github/workflows/deploy-tests.yml`) invokes us.
+// IMPORTANT: these must never run against production. By default `pnpm start`
+// proxies /api/* to the *production* backend, and if the validator isn't
+// deployed there yet the POST creates a real (private, anonymous) puzzle row.
+// So the suite only runs when pointed at a backend we know is safe to write
+// to, named explicitly via API_BASE_URL (falling back to BASE_URL).
 const VALIDATED_BACKENDS = new Set([
   'https://testing.crosswithfriends.com',
-  // Add 'http://localhost:3021' if you've wired up a local backend and want
-  // to run these tests against it directly.
+  // The local stack CI stands up (postgres + `pnpm devbackend`-style server).
+  'http://localhost:3021',
+  'http://127.0.0.1:3021',
 ]);
-const baseURL = process.env.BASE_URL || '';
-const validatorDeployed = VALIDATED_BACKENDS.has(baseURL);
+const apiBaseURL = process.env.API_BASE_URL || process.env.BASE_URL || '';
+const validatorDeployed = VALIDATED_BACKENDS.has(apiBaseURL);
 
 // The PuzzleJson shape that POST /api/puzzle expects, with no [?] markers
 // anywhere — mirrors what iPUZtoJSON would output for the clean fixture.
@@ -51,16 +51,17 @@ function buildCleanPuzzleJson() {
 test.describe('POST /api/puzzle — broken-placeholder rejection', () => {
   test.skip(
     !validatorDeployed,
-    `Skipped: set BASE_URL to a backend with the rejection deployed ` +
-      `(e.g. https://testing.crosswithfriends.com) to run these. By default they would hit prod via ` +
-      `the local Vite proxy and could create real rows.`
+    `Skipped: set API_BASE_URL to a backend that is safe to write to and has the ` +
+      `rejection deployed (http://localhost:3021 for the local stack, or ` +
+      `https://testing.crosswithfriends.com). Without it these would hit prod through the ` +
+      `local Vite proxy and could create real rows.`
   );
 
   test('rejects a puzzle whose clue contains "[?]"', async ({request}) => {
     const puzzle = buildCleanPuzzleJson();
     puzzle.clues.down[1] = 'A[?] 9[?] 6[?] 4[?] 2[?], e.g.';
 
-    const resp = await request.post('/api/puzzle', {
+    const resp = await request.post(`${apiBaseURL}/api/puzzle`, {
       data: {puzzle, isPublic: false},
       failOnStatusCode: false,
     });
@@ -74,7 +75,7 @@ test.describe('POST /api/puzzle — broken-placeholder rejection', () => {
     const puzzle = buildCleanPuzzleJson();
     puzzle.info.title = 'Moral High Ground [?]';
 
-    const resp = await request.post('/api/puzzle', {
+    const resp = await request.post(`${apiBaseURL}/api/puzzle`, {
       data: {puzzle, isPublic: false},
       failOnStatusCode: false,
     });
@@ -96,7 +97,7 @@ test.describe('POST /api/puzzle — broken-placeholder rejection', () => {
     puzzle.info.title = ipuz.title;
     puzzle.clues.down[1] = downClueWithMarker;
 
-    const resp = await request.post('/api/puzzle', {
+    const resp = await request.post(`${apiBaseURL}/api/puzzle`, {
       data: {puzzle, isPublic: false},
       failOnStatusCode: false,
     });

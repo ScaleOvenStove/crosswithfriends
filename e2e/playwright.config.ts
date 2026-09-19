@@ -36,11 +36,17 @@ export default defineConfig({
   ],
   outputDir: './test-results',
 
-  // When testing against localhost, start the dev server automatically
+  // When testing against localhost, start the dev server automatically.
+  //
+  // `pnpm start` proxies /api to the *production* backend and points
+  // Socket.IO there too, so anything it writes lands in the production
+  // database. Setting VITE_USE_LOCAL_SERVER switches to `pnpm devfrontend`,
+  // which talks to a backend on :3021 instead — that is what CI uses, and
+  // it is required for any spec that writes (game creation, multiplayer).
   ...(isLocal
     ? {
         webServer: {
-          command: 'pnpm start',
+          command: process.env.VITE_USE_LOCAL_SERVER ? 'pnpm devfrontend' : 'pnpm start',
           url: BASE_URL,
           reuseExistingServer: true,
           timeout: 60_000,

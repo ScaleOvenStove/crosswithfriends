@@ -94,8 +94,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Coverage floors live in vitest.config.ts. They are a ratchet against
+      # regression, not a target — raise them as coverage improves.
       - name: Run frontend tests
-        run: pnpm test
+        run: pnpm test --coverage
+
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-frontend
+          path: coverage/
+          retention-days: 14
 
   test-server:
     name: Tests (Server)
@@ -117,8 +127,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Coverage floors live in jest.config.server.js, measured across every
+      # server file rather than only the ones a test imports.
       - name: Run server tests
-        run: pnpm test:server --ci
+        run: pnpm test:server --ci --coverage
+
+      - name: Upload server coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-server
+          path: coverage/
+          retention-days: 14
 
   typecheck-frontend:
     name: TypeCheck (Frontend)
@@ -210,9 +230,117 @@ jobs:
       - name: Check for known vulnerabilities
         run: pnpm audit --ignore-registry-errors
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # The e2e suite drives a real stack rather than the production backend.
+    # `pnpm start` proxies /api to production and points Socket.IO there too,
+    # so running the write-heavy specs (game creation, multiplayer, puzzle
+    # upload) against it would create real rows. Standing up postgres plus a
+    # local server here keeps those writes contained and makes the seeded data
+    # deterministic.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dfacadmin
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: crosswithfriends
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dfacadmin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PGHOST: localhost
+      PGUSER: dfacadmin
+      PGPASSWORD: testpassword
+      PGDATABASE: crosswithfriends
+      BASE_URL: http://localhost:3020
+      API_BASE_URL: http://localhost:3021
+      VITE_USE_LOCAL_SERVER: '1'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize test database
+        run: |
+          psql -f server/sql/create_fresh_db.sql
+          psql -f loadtest/seed.sql
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start backend server
+        env:
+          JWT_SECRET: e2e-test-secret-key-not-for-production
+          NODE_ENV: development
+          PORT: 3021
+          # The suite deliberately hammers some endpoints; limiter behaviour is
+          # covered by the server tests, not here.
+          DISABLE_RATE_LIMITS: 'true'
+        run: |
+          npx ts-node -P server/tsconfig.json server/server.ts > /tmp/backend.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:3021/api/puzzle_list?page=0&pageSize=1" > /dev/null 2>&1; then
+              echo "Backend is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not start in time"
+          cat /tmp/backend.log
+          exit 1
+
+      # Playwright starts the frontend itself (`pnpm devfrontend`, which points
+      # the app at :3021 instead of production) via the webServer config.
+      - name: Run Playwright tests
+        run: pnpm test:e2e:chromium
+
+      - name: Dump backend log on failure
+        if: failure()
+        run: cat /tmp/backend.log || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
   build:
     name: Build
-    needs: [lint, stylelint, format, test-frontend, test-server, typecheck-frontend, typecheck-server, lockfile, audit]
+    needs:
+      [
+        lint,
+        stylelint,
+        format,
+        test-frontend,
+        test-server,
+        typecheck-frontend,
+        typecheck-server,
+        lockfile,
+        audit,
+      ]
     runs-on: ubuntu-latest
 
     steps:
@@ -233,3 +361,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # Budgets live in .size-limit.json, measured brotlied, set roughly 10%
+      # above the current size of each chunk. A dependency that lands in the
+      # eager path shows up here instead of in someone's page-load time.
+      - name: Check bundle size budgets
+        run: pnpm size

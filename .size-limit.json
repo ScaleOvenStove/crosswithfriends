@@ -1,0 +1,42 @@
+[
+  {
+    "name": "app entry (JS)",
+    "path": "build/assets/index-*.js",
+    "limit": "127 kB"
+  },
+  {
+    "name": "app entry (CSS)",
+    "path": "build/assets/index-*.css",
+    "limit": "10.5 kB"
+  },
+  {
+    "name": "vendor: react + router",
+    "path": "build/assets/vendor-react-*.js",
+    "limit": "84 kB"
+  },
+  {
+    "name": "vendor: lodash",
+    "path": "build/assets/vendor-lodash-*.js",
+    "limit": "26 kB"
+  },
+  {
+    "name": "vendor: radix",
+    "path": "build/assets/vendor-radix-*.js",
+    "limit": "19.5 kB"
+  },
+  {
+    "name": "vendor: socket.io",
+    "path": "build/assets/vendor-socketio-*.js",
+    "limit": "13 kB"
+  },
+  {
+    "name": "vendor: sentry",
+    "path": "build/assets/vendor-sentry-*.js",
+    "limit": "8.5 kB"
+  },
+  {
+    "name": "initial page load (all eager chunks)",
+    "path": ["build/assets/index-*.js", "build/assets/index-*.css", "build/assets/vendor-*.js"],
+    "limit": "285 kB"
+  }
+]

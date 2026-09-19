@@ -1,6 +1,7 @@
 name: Post-Deploy Tests (Testing)
 
-# Runs Playwright E2E and k6 load tests against testing.crosswithfriends.com
+# Runs the full Playwright E2E suite and k6 load tests against
+# testing.crosswithfriends.com
 # after a deploy completes.
 #
 # Triggers:
@@ -86,10 +87,14 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright smoke tests
+      # The grid, toolbar, clue and multiplayer specs used to be excluded here,
+      # and since ci.yml had no Playwright job at all that meant they never ran
+      # anywhere. They run against the local stack on every PR now; this is the
+      # same suite against the deployed testing environment.
+      - name: Run Playwright tests
         env:
           BASE_URL: ${{ env.BASE_URL }}
-        run: npx playwright test --config=e2e/playwright.config.ts --project=chromium --grep-invert="Gameplay|Toolbar|Clue bar|Clue panel|Game page"
+        run: npx playwright test --config=e2e/playwright.config.ts --project=chromium
 
       - name: Upload test results
         if: always()
