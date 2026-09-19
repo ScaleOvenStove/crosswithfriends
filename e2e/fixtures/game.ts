@@ -27,6 +27,34 @@ export interface GameHelpers {
 }
 
 /**
+ * Where the app itself sends /api calls, mirroring src/api/constants.ts.
+ *
+ * Probing the wrong origin would be worse than not probing: against a local
+ * stack, asking BASE_URL (which Vite proxies to production) would answer "no
+ * fixture" and quietly drop every gameplay spec onto random seeded data.
+ */
+function apiOrigin(): string {
+  if (process.env.API_BASE_URL) return process.env.API_BASE_URL;
+  if (process.env.VITE_USE_LOCAL_SERVER) return 'http://localhost:3021';
+  return process.env.BASE_URL || 'http://localhost:3020';
+}
+
+/** Is the deterministic fixture puzzle present on the backend under test? */
+async function hasFixturePuzzle(page: Page): Promise<boolean> {
+  try {
+    const res = await page.request.get(`${apiOrigin()}/api/puzzle/${E2E_PID}/info`, {
+      timeout: 5_000,
+      failOnStatusCode: false,
+    });
+    return res.ok();
+  } catch {
+    // Unreachable or slow backend — fall back rather than fail the fixture here;
+    // the navigation below surfaces a real outage with a better message.
+    return false;
+  }
+}
+
+/**
  * Fixture that navigates to a puzzle, waits for the game to load,
  * clicks the first white cell to activate the grid, and provides helpers.
  */
@@ -50,15 +78,22 @@ export const test = base.extend<{gamePage: GameHelpers}>({
     // geometry, so entries numbered above 3 render with no clue — which specs
     // that assert on the selected clue trip over, depending on the roll.
     //
-    // Environments without the fixture fall back to the old behaviour so the
-    // read-only specs still work against a deployment that has not been seeded.
-    await page.goto(`/beta/play/${E2E_PID}`);
-    const landedOnGame = await page
-      .waitForURL(/\/beta\/game\/[^/]+$/, {timeout: 15_000})
-      .then(() => true)
-      .catch(() => false);
+    // Deployments without the fixture (production, anything unseeded) fall back
+    // to the old behaviour so the read-only specs still work there; real
+    // puzzles are internally consistent, so the fallback is sound on those.
+    //
+    // Availability is decided by a cheap API probe rather than by letting a
+    // navigation time out: the whole test budget is 30s, so waiting even a few
+    // seconds here eats into loading the puzzle list, creating a game and the
+    // test body itself. Shortening a navigation timeout instead would be worse
+    // than slow — a premature fallback on a *seeded* environment would silently
+    // pick a random incoherent puzzle and bring the clue bug back intermittently.
+    const fixtureAvailable = await hasFixturePuzzle(page);
 
-    if (!landedOnGame) {
+    if (fixtureAvailable) {
+      await page.goto(`/beta/play/${E2E_PID}`);
+      await page.waitForURL(/\/beta\/game\/[^/]+$/, {timeout: 15_000});
+    } else {
       await page.goto('/');
       await expect(page.locator('.entry').first()).toBeVisible({timeout: 15_000});
       const firstPuzzleLink = page.locator('a[href*="/beta/play/"]').first();
