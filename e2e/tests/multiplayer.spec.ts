@@ -20,6 +20,9 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3020';
 const isLocal = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
 const targetsProductionBackend = isLocal && !process.env.VITE_USE_LOCAL_SERVER;
 
+/** Puzzle seeded by e2e/fixtures/seed-e2e.sql. */
+const E2E_PID = process.env.E2E_PID || 'e2e-mini-1';
+
 test.describe('Multiplayer sync', () => {
   test.skip(
     targetsProductionBackend,
@@ -49,11 +52,9 @@ test.describe('Multiplayer sync', () => {
     await expect(page.locator('td.grid--cell').first()).toBeVisible({timeout: 15_000});
   }
 
-  /** Create a game by picking the first puzzle, and return its /beta/game/:gid URL. */
+  /** Create a game on the fixture puzzle, and return its /beta/game/:gid URL. */
   async function createGame(page: Page): Promise<string> {
-    await page.goto('/');
-    await expect(page.locator('.entry').first()).toBeVisible({timeout: 20_000});
-    await page.locator('a[href*="/beta/play/"]').first().click();
+    await page.goto(`/beta/play/${E2E_PID}`);
     await page.waitForURL(/\/beta\/game\/[^/]+$/, {timeout: 20_000});
     await waitForGrid(page);
     return page.url();

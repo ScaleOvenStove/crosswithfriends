@@ -60,9 +60,20 @@ at a backend that is safe to write to:
 
 ```sh
 # Local stack: postgres + `psql -f server/sql/create_fresh_db.sql` +
-# `psql -f loadtest/seed.sql` + a server on :3021, then:
+# `psql -f loadtest/seed.sql` + `psql -f e2e/fixtures/seed-e2e.sql` +
+# a server on :3021, then:
 VITE_USE_LOCAL_SERVER=1 API_BASE_URL=http://localhost:3021 pnpm test:e2e:chromium
 ```
+
+**The suite needs `e2e/fixtures/seed-e2e.sql`, not just the load-test seed.**
+`loadtest/seed.sql` generates random grids but defines only clues 1–3, and clue
+numbers come from grid geometry (`GridWrapper.assignNumbers`), not from the
+stored clue keys — so every seeded mini has entries numbered above 3 that render
+with no clue at all. Fine for load tests, which only exercise query shape;
+fatal for any spec that asserts on the selected clue. `seed-e2e.sql` inserts
+`e2e-mini-1`, a 5×5 double word square with no black squares whose numbering is
+fixed (across 1/6/7/8/9, down 1/2/3/4/5). The `gamePage` fixture and the
+multiplayer spec navigate straight to it; override with `E2E_PID`.
 
 `VITE_USE_LOCAL_SERVER` switches Playwright's `webServer` to `pnpm devfrontend`,
 which points the app at `:3021`. This is what the `e2e` job in `ci.yml` does, and

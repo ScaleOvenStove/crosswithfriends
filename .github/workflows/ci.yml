@@ -285,6 +285,10 @@ jobs:
         run: |
           psql -f server/sql/create_fresh_db.sql
           psql -f loadtest/seed.sql
+          # Deterministic puzzle the UI specs run against. The load-test seed
+          # alone is not enough: its grids are random and only define clues
+          # 1-3, so entries numbered above that render with no clue.
+          psql -f e2e/fixtures/seed-e2e.sql
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

@@ -1,5 +1,8 @@
 import {test as base, expect, Page, Locator} from '@playwright/test';
 
+/** Puzzle seeded by e2e/fixtures/seed-e2e.sql. */
+const E2E_PID = process.env.E2E_PID || 'e2e-mini-1';
+
 export interface GameHelpers {
   page: Page;
   consoleErrors: string[];
@@ -41,13 +44,26 @@ export const test = base.extend<{gamePage: GameHelpers}>({
       consoleErrors.push(err.message);
     });
 
-    // Navigate to home and wait for puzzle entries
-    await page.goto('/');
-    await expect(page.locator('.entry').first()).toBeVisible({timeout: 15_000});
+    // Go straight to the fixture puzzle (e2e/fixtures/seed-e2e.sql) rather than
+    // clicking whatever is first in the list. The load-test seed generates
+    // random grids with only clues 1-3 defined, and clue numbers come from grid
+    // geometry, so entries numbered above 3 render with no clue — which specs
+    // that assert on the selected clue trip over, depending on the roll.
+    //
+    // Environments without the fixture fall back to the old behaviour so the
+    // read-only specs still work against a deployment that has not been seeded.
+    await page.goto(`/beta/play/${E2E_PID}`);
+    const landedOnGame = await page
+      .waitForURL(/\/beta\/game\/[^/]+$/, {timeout: 15_000})
+      .then(() => true)
+      .catch(() => false);
 
-    // Click the first puzzle link to create a game
-    const firstPuzzleLink = page.locator('a[href*="/beta/play/"]').first();
-    await firstPuzzleLink.click();
+    if (!landedOnGame) {
+      await page.goto('/');
+      await expect(page.locator('.entry').first()).toBeVisible({timeout: 15_000});
+      const firstPuzzleLink = page.locator('a[href*="/beta/play/"]').first();
+      await firstPuzzleLink.click();
+    }
 
     // Wait for game page to load — .room container and grid table
     await expect(page.locator('.room')).toBeVisible({timeout: 15_000});
