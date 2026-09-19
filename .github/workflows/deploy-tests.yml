@@ -66,7 +66,10 @@ jobs:
 
   playwright:
     name: Playwright E2E
-    needs: wait-for-deploy
+    # Also needs the seed: the multiplayer spec navigates straight to the
+    # fixture puzzle with no fallback, so it 404s if it starts before
+    # seed-testing-db has inserted e2e-mini-1 (first run, or a recreated db).
+    needs: [wait-for-deploy, seed-testing-db]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

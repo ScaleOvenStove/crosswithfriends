@@ -22,11 +22,28 @@
 --
 -- Clues are sparse arrays indexed by clue number, matching CluesJson.
 
-DELETE FROM game_snapshots WHERE gid LIKE 'e2e-%';
-DELETE FROM puzzle_solves WHERE pid LIKE 'e2e-%' OR gid LIKE 'e2e-%';
-DELETE FROM game_events WHERE gid LIKE 'e2e-%';
-DELETE FROM puzzle_ratings WHERE pid LIKE 'e2e-%';
-DELETE FROM puzzles WHERE pid LIKE 'e2e-%';
+-- Clean up anything a previous run left behind.
+--
+-- Games the suite creates do NOT get an e2e-prefixed gid: Play.create() mints
+-- `<counter>-<word>` (e.g. 100002001-strod), so matching on `gid LIKE 'e2e-%'`
+-- finds nothing and every post-deploy run would pile more events onto the
+-- shared testing database — and onto the load-test baseline measured against
+-- it. The create event is what ties a game back to the puzzle, so the gids have
+-- to come from there.
+BEGIN;
+
+CREATE TEMP TABLE e2e_gids ON COMMIT DROP AS
+SELECT DISTINCT gid
+FROM game_events
+WHERE event_type = 'create'
+  AND event_payload -> 'params' ->> 'pid' = 'e2e-mini-1';
+
+DELETE FROM game_snapshots WHERE pid = 'e2e-mini-1' OR gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM puzzle_solves WHERE pid = 'e2e-mini-1' OR gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM game_events WHERE gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM game_dismissals WHERE gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM puzzle_ratings WHERE pid = 'e2e-mini-1';
+DELETE FROM puzzles WHERE pid = 'e2e-mini-1';
 
 INSERT INTO puzzles (pid, is_public, uploaded_at, content, uploaded_by, content_hash)
 VALUES (
@@ -80,3 +97,5 @@ VALUES (
   NULL,
   'e2e-fixture-mini-1'
 );
+
+COMMIT;
