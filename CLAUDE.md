@@ -26,10 +26,11 @@ pnpm test:server --ci --coverage        # Server tests with coverage
 
 **Coverage floors.** Both suites fail below a threshold: `vitest.config.ts` for
 the frontend, `coverageThreshold` in `jest.config.server.js` for the server. The
-server config uses `collectCoverageFrom` over all of `server/`, so a module with
-no tests at all still drags the number down instead of being invisible. The
-floors are a ratchet against regression, not a target — when coverage goes up,
-raise them.
+server config uses `collectCoverageFrom` over all of `server/**/*.{ts,js}`, so a
+module with no tests at all still drags the number down instead of being
+invisible — JS included, since `server/gameUtils.js` is production code that
+`model/game.ts` imports. The floors are a ratchet against regression, not a
+target — when coverage goes up, raise them.
 
 Route handlers are tested by mounting the real router against a mocked model
 layer (`server/__mocks__/pool.ts`), not by rebuilding a stand-in app. See
