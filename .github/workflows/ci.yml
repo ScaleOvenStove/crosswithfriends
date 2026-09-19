@@ -299,16 +299,21 @@ jobs:
           DISABLE_RATE_LIMITS: 'true'
         run: |
           npx ts-node -P server/tsconfig.json server/server.ts > /tmp/backend.log 2>&1 &
+          ready=""
           for i in $(seq 1 60); do
             if curl -sf "http://localhost:3021/api/puzzle_list?page=0&pageSize=1" > /dev/null 2>&1; then
+              ready="yes"
               echo "Backend is ready"
-              exit 0
+              break
             fi
+            echo "Waiting for backend... ($i)"
             sleep 1
           done
-          echo "Backend did not start in time"
-          cat /tmp/backend.log
-          exit 1
+          if [ -z "$ready" ]; then
+            echo "Backend did not start in time"
+            cat /tmp/backend.log
+            exit 1
+          fi
 
       # Playwright starts the frontend itself (`pnpm devfrontend`, which points
       # the app at :3021 instead of production) via the webServer config.
