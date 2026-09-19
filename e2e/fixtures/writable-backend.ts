@@ -1,3 +1,5 @@
+import {expect, Page} from '@playwright/test';
+
 /**
  * Which backends the write-heavy specs are allowed to run against.
  *
@@ -32,6 +34,11 @@ function isLoopback(url: string): boolean {
  * A loopback baseURL only qualifies when VITE_USE_LOCAL_SERVER is set: without
  * it the Vite dev server proxies /api to the production backend and points
  * Socket.IO there too, so "localhost" writes land in production.
+ *
+ * Note that the env var only states which dev server Playwright would START.
+ * It is not by itself proof of what is answering on the port — see
+ * `reuseExistingServer` in playwright.config.ts, and assertLocalBackend below,
+ * which checks the app that actually loaded.
  */
 export function isWritableBackend(
   baseURL: string | undefined,
@@ -48,3 +55,54 @@ export const WRITE_SKIP_REASON =
   'Skipped: this spec writes (creates games, persists events, uploads puzzles). Run it with ' +
   'VITE_USE_LOCAL_SERVER=1 against a local backend, or set BASE_URL to the testing environment. ' +
   'It never runs against production.';
+
+/**
+ * Fail if the app being served is not pointed at a loopback backend.
+ *
+ * Belt and braces behind `reuseExistingServer` in playwright.config.ts.
+ * VITE_USE_LOCAL_SERVER only describes the dev server Playwright would START;
+ * it says nothing about what is actually answering on the port, and the backend
+ * host is baked into the bundle at build time. This reads what the loaded app
+ * resolved.
+ *
+ * It navigates to "/" rather than a game page on purpose: this has to run
+ * BEFORE anything that writes, and the home page creates no socket (so the
+ * signal is the host that src/api/constants.ts logs on every page load, not a
+ * live connection). Checked once per process — the answer cannot change within
+ * a run.
+ *
+ * Only meaningful for loopback runs; an allowlisted deployment serves its own
+ * frontend pointed at its own backend.
+ */
+let localBackendCheck: Promise<void> | null = null;
+
+export function assertLocalBackend(page: Page, baseURL: string | undefined): Promise<void> {
+  if (!isLoopback(normalize(baseURL || ''))) return Promise.resolve();
+  if (!localBackendCheck) localBackendCheck = runLocalBackendCheck(page);
+  return localBackendCheck;
+}
+
+async function runLocalBackendCheck(page: Page): Promise<void> {
+  const marker = 'Frontend Socket at:';
+  let resolvedHost: string | null = null;
+
+  page.on('console', (msg) => {
+    const text = msg.text();
+    if (resolvedHost === null && text.includes(marker)) {
+      resolvedHost = text.slice(text.indexOf(marker) + marker.length).trim();
+    }
+  });
+
+  await page.goto('/');
+  await expect
+    .poll(() => resolvedHost, {timeout: 20_000, message: `Never saw "${marker}" logged by the app`})
+    .not.toBeNull();
+
+  if (!isLoopback(resolvedHost as unknown as string)) {
+    throw new Error(
+      `Refusing to run write-heavy specs: the frontend on this port is pointed at ` +
+        `${resolvedHost}, not a local backend. A dev server started with \`pnpm start\` proxies ` +
+        `to production. Stop it and let Playwright start \`pnpm devfrontend\` itself.`
+    );
+  }
+}

@@ -48,7 +48,13 @@ export default defineConfig({
         webServer: {
           command: process.env.VITE_USE_LOCAL_SERVER ? 'pnpm devfrontend' : 'pnpm start',
           url: BASE_URL,
-          reuseExistingServer: true,
+          // Never adopt a server we did not start on a run that is allowed to
+          // write. Playwright cannot see which command is behind an already-open
+          // port, so with reuse a developer who left `pnpm start` running would
+          // get the production-proxying frontend while VITE_USE_LOCAL_SERVER
+          // told the specs it was safe to create games. Failing on a busy port
+          // is the right outcome there.
+          reuseExistingServer: !process.env.VITE_USE_LOCAL_SERVER,
           timeout: 60_000,
         },
       }

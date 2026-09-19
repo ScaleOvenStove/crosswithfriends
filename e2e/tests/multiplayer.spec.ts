@@ -1,6 +1,6 @@
 import {test, expect, Browser, BrowserContext, Page} from '@playwright/test';
 
-import {isWritableBackend, WRITE_SKIP_REASON} from '../fixtures/writable-backend';
+import {assertLocalBackend, isWritableBackend, WRITE_SKIP_REASON} from '../fixtures/writable-backend';
 
 /**
  * Two-player tests for the real-time path: client -> Socket.IO -> SocketManager
@@ -51,6 +51,11 @@ test.describe('Multiplayer sync', () => {
 
   /** Create a game on the fixture puzzle, and return its /beta/game/:gid URL. */
   async function createGame(page: Page): Promise<string> {
+    // The allowlist trusts an env var; this checks what the served app really
+    // points at. It has to happen before the navigation below, because that
+    // navigation is itself a write — it creates the game.
+    await assertLocalBackend(page, BASE_URL);
+
     await page.goto(`/beta/play/${E2E_PID}`);
     await page.waitForURL(/\/beta\/game\/[^/]+$/, {timeout: 20_000});
     await waitForGrid(page);
