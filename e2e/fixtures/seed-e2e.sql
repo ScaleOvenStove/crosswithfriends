@@ -22,27 +22,21 @@
 --
 -- Clues are sparse arrays indexed by clue number, matching CluesJson.
 
--- Clean up anything a previous run left behind.
+-- Step 1: the fixture itself. Everything here is keyed on pid, which is either
+-- the primary key or an indexed column, so it cannot be slow.
 --
--- Games the suite creates do NOT get an e2e-prefixed gid: Play.create() mints
--- `<counter>-<word>` (e.g. 100002001-strod), so matching on `gid LIKE 'e2e-%'`
--- finds nothing and every post-deploy run would pile more events onto the
--- shared testing database — and onto the load-test baseline measured against
--- it. The create event is what ties a game back to the puzzle, so the gids have
--- to come from there.
+-- This runs BEFORE the housekeeping below, in its own transaction, and that
+-- ordering is the whole point. The first version put a reverse lookup over
+-- game_events in the same transaction as this INSERT; on the testing database
+-- that scan hit the 30s statement_timeout, which aborted the transaction and
+-- rolled the INSERT back with it. The fixture was silently absent and six
+-- Playwright specs failed. Nothing that is merely nice to have may sit between
+-- this INSERT and its COMMIT.
 BEGIN;
 
-CREATE TEMP TABLE e2e_gids ON COMMIT DROP AS
-SELECT DISTINCT gid
-FROM game_events
-WHERE event_type = 'create'
-  AND event_payload -> 'params' ->> 'pid' = 'e2e-mini-1';
-
-DELETE FROM game_snapshots WHERE pid = 'e2e-mini-1' OR gid IN (SELECT gid FROM e2e_gids);
-DELETE FROM puzzle_solves WHERE pid = 'e2e-mini-1' OR gid IN (SELECT gid FROM e2e_gids);
-DELETE FROM game_events WHERE gid IN (SELECT gid FROM e2e_gids);
-DELETE FROM game_dismissals WHERE gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM game_snapshots WHERE pid = 'e2e-mini-1';
 DELETE FROM puzzle_ratings WHERE pid = 'e2e-mini-1';
+-- puzzle_solves.pid is ON DELETE CASCADE, so this clears those too.
 DELETE FROM puzzles WHERE pid = 'e2e-mini-1';
 
 INSERT INTO puzzles (pid, is_public, uploaded_at, content, uploaded_by, content_hash)
@@ -97,5 +91,34 @@ VALUES (
   NULL,
   'e2e-fixture-mini-1'
 );
+
+COMMIT;
+
+-- Step 2: best-effort housekeeping, deliberately after the commit above.
+--
+-- Games the suite creates do NOT get an e2e-prefixed gid: Play.create() mints
+-- `<counter>-<word>` (e.g. 100002001-thrump), so the only thing tying a game
+-- back to this puzzle is its create event. Every index on game_events is
+-- gid-leading, so that lookup is a full scan with a JSON extraction per row and
+-- there is no index that would make it reliably fast.
+--
+-- So it is bounded and disposable: its own transaction, its own short timeout.
+-- If it times out or blocks on a lock, this transaction rolls back alone, the
+-- fixture from step 1 is already committed, and the suite runs regardless. The
+-- events it failed to collect are picked up by the next run.
+BEGIN;
+
+SET LOCAL statement_timeout = '10s';
+
+CREATE TEMP TABLE e2e_gids ON COMMIT DROP AS
+SELECT DISTINCT gid
+FROM game_events
+WHERE event_type = 'create'
+  AND event_payload -> 'params' ->> 'pid' = 'e2e-mini-1';
+
+DELETE FROM game_snapshots WHERE gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM puzzle_solves WHERE gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM game_dismissals WHERE gid IN (SELECT gid FROM e2e_gids);
+DELETE FROM game_events WHERE gid IN (SELECT gid FROM e2e_gids);
 
 COMMIT;

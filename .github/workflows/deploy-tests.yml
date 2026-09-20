@@ -64,6 +64,18 @@ jobs:
           psql "$DATABASE_URL" -f loadtest/seed.sql
           psql "$DATABASE_URL" -f e2e/fixtures/seed-e2e.sql
 
+          # psql exits 0 even when every statement in the script failed, so a
+          # seed that rolled back still reported this job green — which is how
+          # a missing fixture reached the Playwright job instead of failing
+          # here. Assert the one thing the suite actually depends on.
+          echo "Verifying the E2E fixture puzzle is present..."
+          psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "DO \$\$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM puzzles WHERE pid = 'e2e-mini-1') THEN
+              RAISE EXCEPTION 'e2e-mini-1 is missing: seed-e2e.sql did not commit. Check the psql output above for a statement timeout or error.';
+            END IF;
+          END \$\$"
+          echo "Fixture present."
+
   playwright:
     name: Playwright E2E
     # Also needs the seed: the multiplayer spec navigates straight to the
