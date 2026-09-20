@@ -4,7 +4,6 @@ import express from 'express';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
 
 import path from 'path';
 import http from 'http';
@@ -14,6 +13,7 @@ import swaggerUi from 'swagger-ui-express';
 import SocketManager from './SocketManager';
 import {setSocketIo} from './socket_instance';
 import apiRouter from './api/router';
+import {globalLimiter} from './api/limiters';
 import {swaggerSpec} from './swagger';
 import passport from './auth/passport';
 import {optionalAuth} from './auth/middleware';
@@ -75,14 +75,6 @@ app.get('/api/version', (_req, res) => {
 });
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 500,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: {error: 'Too many requests, please try again later.'},
-  skip: () => process.env.DISABLE_RATE_LIMITS === 'true' || process.env.NODE_ENV === 'test',
-});
 app.use('/api', globalLimiter);
 app.use('/api', apiRouter);
 
