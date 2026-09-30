@@ -22,6 +22,10 @@
  *   DRY_RUN            - Set to "1" for read-only mode (default: 0)
  *   ABANDON_DAYS       - Inactivity threshold for abandoned games in days (default: 90)
  *   EXPIRE_REPLAY_DAYS - Auto-expire replay_retained after N days, 0 = disabled (default: 0)
+ *   DELETE_BATCH_SIZE  - Gids per DELETE statement (default: 50)
+ *   THROTTLE_MS        - Pause after each DELETE and discovery page, in ms (default: 250)
+ *
+ * Schedule this off-peak: it runs against the live gameplay database.
  */
 
 import pg from 'pg';
@@ -112,7 +116,29 @@ const EXPIRE_REPLAY_DAYS = parseInt(process.env.EXPIRE_REPLAY_DAYS || '0', 10);
 // Each discovery statement scans at most this many gids (one bounded window of
 // an ordered index scan), and each DELETE targets at most DELETE_BATCH_SIZE gids.
 const DISCOVERY_PAGE_SIZE = 5000;
-const DELETE_BATCH_SIZE = 500;
+/** Parse an integer env var, failing fast if it is non-numeric or below `min`. */
+function intEnv(name: string, fallback: number, min: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < min) {
+    throw new Error(`${name} must be an integer >= ${min}, got "${raw}"`);
+  }
+  return value;
+}
+
+// A batch size of 0 would never advance processGidBatches' loop, and NaN would
+// silently skip every discovered game, so both are rejected at startup.
+const DELETE_BATCH_SIZE = intEnv('DELETE_BATCH_SIZE', 50, 1);
+
+// This job shares the production database with live gameplay. A 500-gid DELETE
+// commits whole event histories in one transaction, and the resulting WAL flush
+// stalls concurrent game_events INSERTs for seconds — long enough to fill the
+// app's pool and fail every waiting query with "timeout exceeded when trying to
+// connect" (Sentry NODE-EXPRESS-H: every burst landed minutes after the 16:00 UTC
+// run). Smaller batches plus a pause between statements keep each write burst
+// short and give the app's inserts room to commit in between.
+const THROTTLE_MS = intEnv('THROTTLE_MS', 250, 0);
 
 interface CleanupStats {
   category: string;
@@ -137,6 +163,7 @@ async function processGidBatches(gids: string[], deleteSql: string, countSql: st
     } else {
       const result = await runQuery(deleteSql, [batch]);
       affected += result.rowCount || 0;
+      await sleep(THROTTLE_MS);
     }
   }
   return affected;
@@ -212,6 +239,7 @@ async function cleanupSolvedGames(): Promise<CleanupStats> {
     }
 
     if (rows.length < DISCOVERY_PAGE_SIZE) break;
+    await sleep(THROTTLE_MS);
   }
 
   console.log(
@@ -264,6 +292,7 @@ async function cleanupAbandonedGames(): Promise<CleanupStats> {
     }
 
     if (rows.length < DISCOVERY_PAGE_SIZE) break;
+    await sleep(THROTTLE_MS);
   }
 
   console.log(
