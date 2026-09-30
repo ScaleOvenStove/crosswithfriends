@@ -1,4 +1,9 @@
-import {ListPuzzleResponse, ListPuzzleRequestFilters, PuzzleSortBy, isPuzzleSortBy} from '@shared/types';
+import {
+  ListPuzzleResponse,
+  ListPuzzleRequestFilters,
+  PuzzleSortBy,
+  isPuzzleSortBy,
+} from '../../src/shared/types';
 import express from 'express';
 import _ from 'lodash';
 import {listPuzzles} from '../model/puzzle';
