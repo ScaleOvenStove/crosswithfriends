@@ -1,4 +1,4 @@
-import {ListPuzzleResponse, ListPuzzleRequestFilters, PuzzleSortBy} from '@shared/types';
+import {ListPuzzleResponse, ListPuzzleRequestFilters, PuzzleSortBy, isPuzzleSortBy} from '@shared/types';
 import express from 'express';
 import _ from 'lodash';
 import {listPuzzles} from '../model/puzzle';
@@ -13,8 +13,7 @@ function parseMinRating(raw: unknown): number {
 }
 
 function parseSortBy(raw: unknown): PuzzleSortBy {
-  if (raw === 'rating_desc' || raw === 'rating_asc') return raw;
-  return 'default';
+  return isPuzzleSortBy(raw) ? raw : 'default';
 }
 
 /**

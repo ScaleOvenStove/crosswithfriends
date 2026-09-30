@@ -188,6 +188,20 @@ describe('listPuzzles', () => {
     expect(sql).toContain('ORDER BY rating_weighted ASC NULLS LAST, pid_numeric DESC');
   });
 
+  it('orders by median solve time DESC when sortBy is time_desc', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, sortBy: 'time_desc'}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ORDER BY median_solve_ms DESC NULLS LAST, pid_numeric DESC');
+  });
+
+  it('orders by median solve time ASC when sortBy is time_asc', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, sortBy: 'time_asc'}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ORDER BY median_solve_ms ASC NULLS LAST, pid_numeric DESC');
+  });
+
   it('skips the rating filter clause when minRating is not set', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles(defaultFilter, 50, 0);

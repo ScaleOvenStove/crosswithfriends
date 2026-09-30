@@ -224,6 +224,12 @@ export async function listPuzzles(
       orderByClause = `ORDER BY rating_weighted DESC NULLS LAST, pid_numeric DESC`;
     } else if (filter.sortBy === 'rating_asc') {
       orderByClause = `ORDER BY rating_weighted ASC NULLS LAST, pid_numeric DESC`;
+    } else if (filter.sortBy === 'time_desc') {
+      // median_solve_ms is NULL below PUZZLE_STATS_MIN_SAMPLES, so puzzles
+      // without a stable median sink to the end in both directions.
+      orderByClause = `ORDER BY median_solve_ms DESC NULLS LAST, pid_numeric DESC`;
+    } else if (filter.sortBy === 'time_asc') {
+      orderByClause = `ORDER BY median_solve_ms ASC NULLS LAST, pid_numeric DESC`;
     } else {
       orderByClause = `ORDER BY pid_numeric DESC`;
     }

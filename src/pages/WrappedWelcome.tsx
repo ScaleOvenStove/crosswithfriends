@@ -1,6 +1,6 @@
 import {useEffect} from 'react';
 import useStateParams from '../lib/hooks/useStateParams';
-import {PuzzleSortBy} from '../shared/types';
+import {PuzzleSortBy, isPuzzleSortBy} from '../shared/types';
 import Welcome from './Welcome';
 
 interface UseFencing {
@@ -118,7 +118,7 @@ const WrappedWelcome = (props: UseFencing) => {
     'default',
     'sort',
     (s) => s,
-    (s) => (s === 'rating_desc' || s === 'rating_asc' ? (s as PuzzleSortBy) : 'default')
+    (s) => (isPuzzleSortBy(s) ? s : 'default')
   );
 
   function setStatusFilter(statusFilter: StatusFilter) {
