@@ -398,6 +398,8 @@ export default class Welcome extends Component {
           <option value="default">Newest</option>
           <option value="rating_desc">Highest rated</option>
           <option value="rating_asc">Lowest rated</option>
+          <option value="time_desc">Longest solve time</option>
+          <option value="time_asc">Shortest solve time</option>
         </select>
       </div>
     );

@@ -60,6 +60,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS puzzles_content_hash_public
 CREATE INDEX IF NOT EXISTS puzzles_rating_weighted_idx
     ON public.puzzles (rating_weighted DESC NULLS LAST) WHERE rating_weighted IS NOT NULL;
 
+-- Sort indexes for the time_desc / time_asc puzzle list. One per direction:
+-- both sort NULLS LAST, which a backward scan of one index cannot produce.
+CREATE INDEX IF NOT EXISTS puzzles_median_solve_desc_idx
+    ON public.puzzles (median_solve_ms DESC NULLS LAST, pid_numeric DESC);
+CREATE INDEX IF NOT EXISTS puzzles_median_solve_asc_idx
+    ON public.puzzles (median_solve_ms ASC NULLS LAST, pid_numeric DESC);
+
 -- Lookup by uploader for "my uploads" / profile queries.
 CREATE INDEX IF NOT EXISTS puzzles_uploaded_by_idx
     ON public.puzzles (uploaded_by) WHERE uploaded_by IS NOT NULL;
