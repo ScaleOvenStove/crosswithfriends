@@ -21,6 +21,7 @@ import InfoDialog from '../common/InfoDialog';
 import AuthContext from '../../lib/AuthContext';
 import {kickPlayer, unkickPlayer} from '../../api/create_game';
 import {copyPuzzleId} from './puzzleId';
+import {getPuzzleSizeLabel} from '@shared/puzzleSize';
 import {getUserStats} from '../../api/user_stats';
 
 const isEmojis = (str) => {
@@ -327,6 +328,10 @@ export default class Chat extends Component {
     const displayAuthor = authorOverride || author;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
     const hasOverride = titleOverride || authorOverride;
+    // Same classification as the puzzle list and its size filter, rather than
+    // the coarse upload-time `type` (any grid with ≤10 rows is a "Mini Puzzle").
+    const size = type || game?.grid?.length ? getPuzzleSizeLabel(title, game?.grid, type) : null;
+    const sizeLabel = size && (size === 'Puzzle' ? size : `${size} Puzzle`);
     // Zen mode: hide spoilers (median time, rating) until the puzzle is solved.
     // Account-only — a guest must not inherit a stale localStorage flag left
     // over from a previous logged-in session. "Solved" is lifetime per-pid
@@ -339,7 +344,7 @@ export default class Chat extends Component {
     return (
       <div className="chat--header">
         <div className="chat--header--title">{displayTitle}</div>
-        <div className="chat--header--subtitle">{type && `${type} | By ${displayAuthor}`}</div>
+        <div className="chat--header--subtitle">{sizeLabel && `${sizeLabel} | By ${displayAuthor}`}</div>
         {hasOverride && (
           <div className="chat--header--original">
             Originally: {title}
