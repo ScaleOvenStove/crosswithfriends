@@ -4,6 +4,7 @@ import {MdRadioButtonUnchecked, MdCheckCircle, MdStar, MdAccessTime, MdVisibilit
 import {GiCrossedSwords} from 'react-icons/gi';
 import {Link} from 'react-router';
 import {formatMilliseconds} from '../Toolbar/Clock';
+import {getPuzzleSizeLabel} from '@shared/puzzleSize';
 
 export interface EntryProps {
   info: {
@@ -53,28 +54,8 @@ const handleMouseLeave = () => {};
 
 export default class Entry extends Component<EntryProps> {
   get size() {
-    const {grid, title} = this.props;
-    const titleLower = (title || '').toLowerCase();
-    const titleHasMini = /\bmini\b/.test(titleLower);
-    const titleHasMidi = /\bmidi\b/.test(titleLower);
-
-    // Title-based classification takes priority
-    if (titleHasMidi) return 'Midi';
-    if (titleHasMini) return 'Mini';
-
-    // Fall back to grid size
-    if (grid) {
-      const maxDim = Math.max(grid.length, grid[0]?.length ?? 0);
-      if (maxDim <= 8) return 'Mini';
-      if (maxDim <= 12) return 'Midi';
-      if (maxDim <= 16) return 'Standard';
-      return 'Large';
-    }
-    // Fallback to type field if grid not available
-    const {type} = this.props.info;
-    if (type === 'Daily Puzzle') return 'Standard';
-    if (type === 'Mini Puzzle') return 'Mini';
-    return 'Puzzle';
+    const {grid, title, originalTitle, info} = this.props;
+    return getPuzzleSizeLabel(originalTitle || title, grid, info.type);
   }
 
   render() {
