@@ -198,7 +198,26 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
     instance.handleInputChange({target, nativeEvent: {isComposing: true}});
     vi.runAllTimers();
     expect(props.updateGrid.mock.calls.map((c) => c[2])).toEqual(['D']);
-    expect(target.value).toBe('$');
+    expect(target.value).toBe('abcd');
+    vi.useRealTimers();
+  });
+
+  it('does not backspace a letter when a rejected character is removed', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'N'}})});
+    vi.useFakeTimers();
+    const target = typeComposed(instance, ['$d', '$do', '$don', "$don'", '$don']);
+    vi.runAllTimers();
+    expect(props.updateGrid.mock.calls.map((c) => c[2])).toEqual(['D', 'O', 'N']);
+    expect(target.value).toBe('$don');
+    vi.useRealTimers();
+  });
+
+  it('keeps an active composition intact when the "$" was dropped', () => {
+    const {instance} = makeMobileInstance();
+    vi.useFakeTimers();
+    const target = typeComposed(instance, ['$a', 'ab']);
+    vi.runAllTimers();
+    expect(target.value).toBe('ab');
     vi.useRealTimers();
   });
 

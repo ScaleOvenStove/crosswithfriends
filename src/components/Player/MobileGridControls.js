@@ -39,6 +39,21 @@ function handleVolumeKeyBlur(ev) {
   }
 }
 
+// Splits the change from prev to next into [number of characters deleted from the end, string appended].
+function diffValues(prev, next) {
+  let common = 0;
+  while (common < prev.length && common < next.length && prev[common] === next[common]) {
+    common += 1;
+  }
+  return [prev.length - common, next.slice(common)];
+}
+
+// The "$" sentinel followed by only the characters that get typed into the grid.
+function gridChars(value) {
+  if (value === '') return '';
+  return value[0] + [...value.slice(1)].filter((char) => validLetter(char.toUpperCase())).join('');
+}
+
 export default class MobileGridControls extends GridControls {
   constructor() {
     super();
@@ -541,46 +556,43 @@ export default class MobileGridControls extends GridControls {
     this.lastInputValues.set(textArea, input);
     this.setState({dbgstr: `INPUT IS [${raw}]`});
 
-    let common = 0;
-    while (common < prev.length && common < input.length && prev[common] === input[common]) {
-      common += 1;
-    }
-    const deleted = prev.length - common;
-    const inserted = input.slice(common);
+    const [rawDeleted, rawInserted] = diffValues(prev, input);
+    // Grid letters are diffed over only the characters that reach the grid, so composing and then removing
+    // something the grid ignores (the apostrophe in "don't") doesn't backspace over a real letter.
+    const [deleted, inserted] = diffValues(gridChars(prev), gridChars(input));
 
     // Each step reads props.selected / props.grid, which only update after the parent re-renders, so steps
     // after the first are spaced out instead of all acting on the same cell.
     const steps = [];
-    for (let i = 0; i < deleted; i += 1) {
-      steps.push(() => this.backspace());
-    }
-
-    if (inserted === ' ' || inserted === '@') {
+    if (rawDeleted === 0 && (rawInserted === ' ' || rawInserted === '@')) {
       // hack hack
       // for some reason, email input [on ios safari & chrome mobile inspector] doesn't fire onChange at all when pressing spacebar
       steps.push(() => this.handleAction('space'));
-    } else if (inserted === ',') {
+    } else if (rawDeleted === 0 && rawInserted === ',') {
       steps.push(() => this.handleAction('tab'));
-    } else if (inserted === '.') {
+    } else if (rawDeleted === 0 && rawInserted === '.') {
       steps.push(() => this.props.onPressPeriod && this.props.onPressPeriod());
     } else {
+      for (let i = 0; i < deleted; i += 1) {
+        steps.push(() => this.backspace());
+      }
       // support gesture-based keyboards that allow inputting words at a time
       for (const char of inserted) {
-        if (validLetter(char.toUpperCase())) {
-          this.setState({dbgstr: `TYPE letter ${char.toUpperCase()}`});
-          steps.push(() =>
-            this.typeLetter(char.toUpperCase(), char.toUpperCase() === char, {
-              nextClueIfFilled: this.props.autoAdvanceCursor,
-            })
-          );
-        }
+        this.setState({dbgstr: `TYPE letter ${char.toUpperCase()}`});
+        steps.push(() =>
+          this.typeLetter(char.toUpperCase(), char.toUpperCase() === char, {
+            nextClueIfFilled: this.props.autoAdvanceCursor,
+          })
+        );
       }
     }
 
     steps.forEach((step, i) => (i ? setTimeout(step, i * 20) : step()));
 
+    // Never reset under an active composition, even if the IME dropped the "$" (input is normalized above).
+    // An empty box has no sentinel left to backspace over, so it is always restored.
     const composing = this.imeComposing || e.nativeEvent?.isComposing;
-    if (!composing || !raw.startsWith('$')) {
+    if (!composing || raw === '') {
       this.resetInput(textArea);
     }
   };
