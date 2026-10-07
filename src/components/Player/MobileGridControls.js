@@ -48,12 +48,21 @@ function diffValues(prev, next) {
   return [prev.length - common, next.slice(common)];
 }
 
-// The "$" sentinel followed by only the characters that get typed into the grid. A "$" anywhere else is the
-// sentinel displaced by the IME, never something the user typed, so it is dropped too.
+// Spacebar, comma and period trigger grid actions (flip direction, next clue) rather than typing. They stay in
+// the box, so deleting one has to count as a grid backspace, the same as it did when the box was reset after
+// every key.
+const ACTION_CHARS = ' ,.';
+
+// The "$" sentinel followed by only the characters that count for the grid: letters it accepts, plus the action
+// characters (so backspacing over one reaches the grid). Anything else, like the apostrophe in "don't", is
+// ignored both when typed and when deleted.
 function gridChars(value) {
   if (value === '') return '';
   return (
-    value[0] + [...value.slice(1)].filter((char) => char !== '$' && validLetter(char.toUpperCase())).join('')
+    value[0] +
+    [...value.slice(1)]
+      .filter((char) => ACTION_CHARS.includes(char) || validLetter(char.toUpperCase()))
+      .join('')
   );
 }
 
@@ -541,9 +550,10 @@ export default class MobileGridControls extends GridControls {
   handleInputChange = (e) => {
     const textArea = e.target;
     const raw = textArea.value;
-    // An IME that rewrites the whole value can drop the "$"; diff as if it were still there so the previous
-    // composition isn't read as deleted. An empty value is still a backspace over the "$".
-    const input = raw === '' || raw.startsWith('$') ? raw : `$${raw}`;
+    // An IME that rewrites the whole value can push the "$" out of first place or drop it; move it back to the
+    // front so the previous text isn't read as deleted and the displaced "$" isn't typed. A "$" the user typed
+    // comes after the sentinel and is kept (theme puzzles use it). An empty value is a backspace over the "$".
+    const input = raw === '' || raw.startsWith('$') ? raw : `$${raw.replace('$', '')}`;
     const prev = this.lastInputValues.get(textArea) ?? '$';
     this.lastInputValues.set(textArea, input);
     this.logDebug(`[${prev}] -> [${raw}] ${e.nativeEvent?.inputType ?? ''}`);
@@ -568,6 +578,7 @@ export default class MobileGridControls extends GridControls {
       }
       // support gesture-based keyboards that allow inputting words at a time
       for (const char of inserted) {
+        if (ACTION_CHARS.includes(char)) continue;
         steps.push(() =>
           this.typeLetter(char.toUpperCase(), char.toUpperCase() === char, {
             nextClueIfFilled: this.props.autoAdvanceCursor,

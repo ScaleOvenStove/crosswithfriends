@@ -250,6 +250,30 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
     vi.useRealTimers();
   });
 
+  it('types a "$" the user entered', () => {
+    const {instance, props} = makeMobileInstance();
+    vi.useFakeTimers();
+    const target = {value: '$$', selectionStart: 2, selectionEnd: 2};
+    instance.handleInputChange({target});
+    vi.runAllTimers();
+    expect(props.updateGrid.mock.calls.map((c) => c[2])).toEqual(['$']);
+    vi.useRealTimers();
+  });
+
+  it('backspace after a space reaches the grid', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'C'}})});
+    vi.useFakeTimers();
+    const target = {value: '$abc ', selectionStart: 5, selectionEnd: 5};
+    instance.lastInputValues.set(target, '$abc');
+    instance.handleInputChange({target});
+    expect(props.onSetDirection).toHaveBeenCalledTimes(1);
+    target.value = '$abc';
+    instance.handleInputChange({target});
+    vi.runAllTimers();
+    expect(props.updateGrid.mock.calls).toEqual([[0, 0, '']]);
+    vi.useRealTimers();
+  });
+
   it('restores the "$" once the box is emptied', () => {
     const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'A'}})});
     vi.useFakeTimers();
