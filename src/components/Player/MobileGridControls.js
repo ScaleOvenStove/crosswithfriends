@@ -545,39 +545,36 @@ export default class MobileGridControls extends GridControls {
     const deleted = prev.length - common;
     const inserted = input.slice(common);
 
+    // Each step reads props.selected / props.grid, which only update after the parent re-renders, so steps
+    // after the first are spaced out instead of all acting on the same cell.
+    const steps = [];
     for (let i = 0; i < deleted; i += 1) {
-      this.backspace();
+      steps.push(() => this.backspace());
     }
 
     if (inserted === ' ' || inserted === '@') {
       // hack hack
       // for some reason, email input [on ios safari & chrome mobile inspector] doesn't fire onChange at all when pressing spacebar
-      this.handleAction('space');
+      steps.push(() => this.handleAction('space'));
     } else if (inserted === ',') {
-      this.handleAction('tab');
+      steps.push(() => this.handleAction('tab'));
     } else if (inserted === '.') {
-      this.props.onPressPeriod && this.props.onPressPeriod();
+      steps.push(() => this.props.onPressPeriod && this.props.onPressPeriod());
     } else {
       // support gesture-based keyboards that allow inputting words at a time
-      let delay = 0;
       for (const char of inserted) {
         if (validLetter(char.toUpperCase())) {
           this.setState({dbgstr: `TYPE letter ${char.toUpperCase()}`});
-          if (delay) {
-            setTimeout(() => {
-              this.typeLetter(char.toUpperCase(), char.toUpperCase() === char, {
-                nextClueIfFilled: this.props.autoAdvanceCursor,
-              });
-            }, delay);
-          } else {
+          steps.push(() =>
             this.typeLetter(char.toUpperCase(), char.toUpperCase() === char, {
               nextClueIfFilled: this.props.autoAdvanceCursor,
-            });
-          }
-          delay += 20;
+            })
+          );
         }
       }
     }
+
+    steps.forEach((step, i) => (i ? setTimeout(step, i * 20) : step()));
 
     const composing = this.imeComposing || e.nativeEvent?.isComposing;
     if (!composing || !input.startsWith('$')) {

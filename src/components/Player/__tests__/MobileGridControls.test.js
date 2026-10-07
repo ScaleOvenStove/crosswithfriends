@@ -175,6 +175,20 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
     vi.useRealTimers();
   });
 
+  it('spaces out backspaces when the keyboard rewrites several composed letters', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'A'}})});
+    vi.useFakeTimers();
+    instance.handleCompositionStart({});
+    const target = {value: '$ax', selectionStart: 3, selectionEnd: 3};
+    instance.lastInputValues.set(target, '$abc');
+    instance.handleInputChange({target, nativeEvent: {isComposing: true}});
+    // Only the first step runs synchronously; the rest wait for the parent to re-render.
+    expect(props.updateGrid).toHaveBeenCalledTimes(1);
+    vi.runAllTimers();
+    expect(props.updateGrid.mock.calls.map((c) => c[2])).toEqual(['', '', 'X']);
+    vi.useRealTimers();
+  });
+
   it('resets the box once the composition ends', () => {
     const {instance, props} = makeMobileInstance();
     vi.useFakeTimers();
