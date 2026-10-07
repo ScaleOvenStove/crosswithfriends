@@ -76,9 +76,17 @@
       "js-yaml": ">=5.4.1",
       "engine.io": ">=6.6.10",
       "body-parser": ">=2.3.0",
-      "sharp": ">=0.35.4",
+      "sharp": ">=0.35.5",
       "@opentelemetry/core": ">=2.8.0",
-      "colord": ">=2.9.4"
+      "colord": ">=2.9.4",
+      "proxy-addr": ">=2.0.8",
+      "source-map-js": ">=1.2.2",
+      "@opentelemetry/instrumentation-pg": ">=0.73.0",
+      "@opentelemetry/instrumentation-mysql2": ">=0.67.0",
+      "@opentelemetry/instrumentation-knex": ">=0.65.0",
+      "@opentelemetry/instrumentation-mysql": ">=0.67.0",
+      "@opentelemetry/instrumentation-mongoose": ">=0.67.0",
+      "@opentelemetry/instrumentation-tedious": ">=0.40.0"
     },
     "onlyBuiltDependencies": [
       "bcrypt",
@@ -87,7 +95,8 @@
     ],
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-mh99-v99m-4gvg"
+        "GHSA-mh99-v99m-4gvg",
+        "GHSA-vfj7-8cjw-p6xm"
       ]
     }
   },
