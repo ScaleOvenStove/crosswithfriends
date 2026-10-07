@@ -140,11 +140,10 @@ describe('MobileGridControls — validLetter regression', () => {
 });
 
 describe('MobileGridControls.handleInputChange — IME composition (Android keyboards)', () => {
-  // Gboard / FUTO / SwiftKey keep a composing word across keystrokes. The box must not be reset under
-  // them, and each event must only relay what changed, or every key replays the whole word.
+  // Gboard / FUTO / SwiftKey keep their own copy of the text and compose words across keystrokes. The box
+  // must never be rewritten under them while focused, and each event must only relay what changed.
   function typeComposed(instance, values) {
     const target = {value: '$', selectionStart: 1, selectionEnd: 1};
-    instance.handleCompositionStart({target});
     for (const value of values) {
       target.value = value;
       instance.handleInputChange({target, nativeEvent: {isComposing: true}});
@@ -165,7 +164,6 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
   it('treats a shrinking composition as a single backspace', () => {
     const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'A'}})});
     vi.useFakeTimers();
-    instance.handleCompositionStart({});
     const target = {value: '$a', selectionStart: 2, selectionEnd: 2};
     instance.lastInputValues.set(target, '$ab');
     instance.handleInputChange({target, nativeEvent: {isComposing: true}});
@@ -178,7 +176,6 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
   it('spaces out backspaces when the keyboard rewrites several composed letters', () => {
     const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'A'}})});
     vi.useFakeTimers();
-    instance.handleCompositionStart({});
     const target = {value: '$ax', selectionStart: 3, selectionEnd: 3};
     instance.lastInputValues.set(target, '$abc');
     instance.handleInputChange({target, nativeEvent: {isComposing: true}});
@@ -192,7 +189,6 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
   it('does not treat a dropped "$" as deleting the composition', () => {
     const {instance, props} = makeMobileInstance();
     vi.useFakeTimers();
-    instance.handleCompositionStart({});
     const target = {value: 'abcd', selectionStart: 4, selectionEnd: 4};
     instance.lastInputValues.set(target, '$abc');
     instance.handleInputChange({target, nativeEvent: {isComposing: true}});
@@ -221,28 +217,55 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
     vi.useRealTimers();
   });
 
-  it('resets the box once the composition ends', () => {
+  it('never rewrites the box while typing, even after the keyboard finishes a word', () => {
+    const {instance} = makeMobileInstance();
+    vi.useFakeTimers();
+    const target = typeComposed(instance, ['$a', '$ab', '$ab ']);
+    vi.runAllTimers();
+    expect(target.value).toBe('$ab ');
+    vi.useRealTimers();
+  });
+
+  it('backspace that reopens the last word deletes one letter instead of retyping it', () => {
+    // The Discord report: type a word, press backspace, and the whole word came back followed by "$".
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'S'}})});
+    vi.useFakeTimers();
+    const target = typeComposed(instance, ['$i', '$id', '$idi', '$idib', '$idibs']);
+    vi.runAllTimers();
+    props.updateGrid.mockClear();
+    target.value = '$idib';
+    instance.handleInputChange({target, nativeEvent: {isComposing: true}});
+    vi.runAllTimers();
+    expect(props.updateGrid.mock.calls).toEqual([[0, 0, '']]);
+    vi.useRealTimers();
+  });
+
+  it('never types a displaced "$" into the grid', () => {
     const {instance, props} = makeMobileInstance();
     vi.useFakeTimers();
-    const target = typeComposed(instance, ['$a']);
-    instance.handleCompositionEnd({target});
-    vi.runAllTimers();
-    expect(target.value).toBe('$');
-    target.value = '$b';
+    const target = {value: 'ab$', selectionStart: 3, selectionEnd: 3};
     instance.handleInputChange({target});
     vi.runAllTimers();
     expect(props.updateGrid.mock.calls.map((c) => c[2])).toEqual(['A', 'B']);
     vi.useRealTimers();
   });
 
-  it('resets the box after each change when not composing', () => {
-    const {instance} = makeMobileInstance();
+  it('restores the "$" once the box is emptied', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'A'}})});
     vi.useFakeTimers();
-    const target = {value: '$a', selectionStart: 2, selectionEnd: 2};
+    const target = {value: '', selectionStart: 0, selectionEnd: 0};
     instance.handleInputChange({target});
     vi.runAllTimers();
+    expect(props.updateGrid.mock.calls).toEqual([[0, 0, '']]);
     expect(target.value).toBe('$');
     vi.useRealTimers();
+  });
+
+  it('resets the box on blur', () => {
+    const {instance} = makeMobileInstance();
+    const target = {name: '2', value: '$abc', selectionStart: 4, selectionEnd: 4};
+    instance.handleInputBlur({target});
+    expect(target.value).toBe('$');
   });
 });
 
@@ -251,7 +274,6 @@ describe('MobileGridControls.handleInputChange — ordering across events', () =
     const {instance, props} = makeMobileInstance();
     vi.useFakeTimers();
     const target = {value: '$hello', selectionStart: 6, selectionEnd: 6};
-    instance.handleCompositionStart({});
     instance.handleInputChange({target, nativeEvent: {isComposing: true}});
     target.value = '$hello ';
     instance.handleInputChange({target, nativeEvent: {isComposing: true}});

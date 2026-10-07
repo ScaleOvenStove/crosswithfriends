@@ -48,10 +48,13 @@ function diffValues(prev, next) {
   return [prev.length - common, next.slice(common)];
 }
 
-// The "$" sentinel followed by only the characters that get typed into the grid.
+// The "$" sentinel followed by only the characters that get typed into the grid. A "$" anywhere else is the
+// sentinel displaced by the IME, never something the user typed, so it is dropped too.
 function gridChars(value) {
   if (value === '') return '';
-  return value[0] + [...value.slice(1)].filter((char) => validLetter(char.toUpperCase())).join('');
+  return (
+    value[0] + [...value.slice(1)].filter((char) => char !== '$' && validLetter(char.toUpperCase())).join('')
+  );
 }
 
 export default class MobileGridControls extends GridControls {
@@ -63,8 +66,8 @@ export default class MobileGridControls extends GridControls {
       dbgstr: undefined,
     };
     this.lastInputValues = new WeakMap();
-    this.imeComposing = false;
     this.nextStepAt = 0;
+    this.debugLog = [];
     this.inputRef = React.createRef();
     this.zoomContainer = React.createRef();
     this.gridControlsRef = React.createRef();
@@ -488,7 +491,7 @@ export default class MobileGridControls extends GridControls {
   handleInputFocus = (e) => {
     this.resetInput(e.target);
     this.focusKeyboard();
-    this.setState({dbgstr: `INPUT FOCUS ${e.target.name}`});
+    this.logDebug(`focus ${e.target.name}`);
     if (e.target.name === '1') {
       this.selectNextClue(true);
     } else if (e.target.name === '3') {
@@ -498,29 +501,16 @@ export default class MobileGridControls extends GridControls {
   };
 
   handleInputBlur = (e) => {
-    this.imeComposing = false;
     this.resetInput(e.target);
     if (e.target.name === '2') {
       this.wasUnfocused = Date.now();
     }
   };
 
-  handleCompositionStart = () => {
-    this.imeComposing = true;
-  };
-
-  handleCompositionEnd = (e) => {
-    this.imeComposing = false;
-    const textArea = e.target;
-    // Some browsers fire the final input event after compositionend; let it be diffed against the
-    // composed text before the box goes back to "$".
-    setTimeout(() => {
-      if (!this.imeComposing) this.resetInput(textArea);
-    });
-  };
-
   /**
-   * Puts a hidden input box back in its well-defined initial state: a value of "$" with the cursor at the end.
+   * Puts a hidden input box back in its initial state: a value of "$" with the cursor at the end. Only safe
+   * when the keyboard has nothing to remember about the box's old contents (on focus/blur, or once it is
+   * empty); see handleInputChange.
    */
   resetInput(textArea) {
     if (!textArea) return;
@@ -541,11 +531,12 @@ export default class MobileGridControls extends GridControls {
    * what the user did by diffing the new value against the previous one: "$" -> "$a" typed "a",
    * "$" -> "" was a backspace.
    *
-   * Android keyboards (Gboard, FUTO, SwiftKey, ...) treat the box as a text field and keep a composing word
-   * that spans several keystrokes. If the value is reset underneath them mid-composition, they re-send the
-   * whole word on the next key, so "abc" would arrive as "$a", "$ab", "$abc" and get typed as a, a, b, a, b,
-   * c. So while a composition is active we leave the value alone and only relay what changed since the last
-   * event; the box is reset once the composition ends.
+   * Android keyboards (Gboard, FUTO, SwiftKey, ...) keep their own copy of the text before the cursor: they
+   * compose a word across keystrokes, and backspace at the end of a word reopens it for editing. Any time we
+   * rewrite the value while the box is focused, that copy goes stale, and the keyboard writes its stale word
+   * back on the next key (the whole word typed again, sometimes around a displaced "$"). So the value is
+   * never rewritten while focused: it grows as the user types, every event is diffed against the previous
+   * value, and the box is only reset on focus/blur or once it is empty.
    */
   handleInputChange = (e) => {
     const textArea = e.target;
@@ -555,7 +546,7 @@ export default class MobileGridControls extends GridControls {
     const input = raw === '' || raw.startsWith('$') ? raw : `$${raw}`;
     const prev = this.lastInputValues.get(textArea) ?? '$';
     this.lastInputValues.set(textArea, input);
-    this.setState({dbgstr: `INPUT IS [${raw}]`});
+    this.logDebug(`[${prev}] -> [${raw}] ${e.nativeEvent?.inputType ?? ''}`);
 
     const [rawDeleted, rawInserted] = diffValues(prev, input);
     // Grid letters are diffed over only the characters that reach the grid, so composing and then removing
@@ -577,7 +568,6 @@ export default class MobileGridControls extends GridControls {
       }
       // support gesture-based keyboards that allow inputting words at a time
       for (const char of inserted) {
-        this.setState({dbgstr: `TYPE letter ${char.toUpperCase()}`});
         steps.push(() =>
           this.typeLetter(char.toUpperCase(), char.toUpperCase() === char, {
             nextClueIfFilled: this.props.autoAdvanceCursor,
@@ -588,10 +578,9 @@ export default class MobileGridControls extends GridControls {
 
     this.enqueueSteps(steps);
 
-    // Never reset under an active composition, even if the IME dropped the "$" (input is normalized above).
-    // An empty box has no sentinel left to backspace over, so it is always restored.
-    const composing = this.imeComposing || e.nativeEvent?.isComposing;
-    if (!composing || raw === '') {
+    // An empty box has no sentinel left to backspace over. The keyboard has no word to reopen in it either,
+    // so this is the one in-focus reset that can't leave it with a stale copy.
+    if (raw === '') {
       this.resetInput(textArea);
     }
   };
@@ -618,11 +607,19 @@ export default class MobileGridControls extends GridControls {
   }
 
   handleKeyUp = (ev) => {
-    this.setState({dbgstr: `[${ev.target.value}]`});
+    this.logDebug(`keyup ${ev.key ?? ''} [${ev.target.value}]`);
   };
 
+  // With ?debug in the URL, show the last few input events under the grid so a tester's screenshot captures
+  // exactly what their keyboard sent.
+  logDebug(message) {
+    if (!this.props.enableDebug) return;
+    this.debugLog = [...this.debugLog.slice(-7), message];
+    this.setState({dbgstr: this.debugLog.join('\n')});
+  }
+
   renderMobileInputs() {
-    // Initial value only; the boxes are uncontrolled and reset via resetInput(), never mid-composition.
+    // Initial value only; the boxes are uncontrolled and reset via resetInput(), never while typing.
     const inputValue = '$';
     const inputStyle = {
       opacity: 0,
@@ -665,8 +662,6 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
-            onCompositionStart={this.handleCompositionStart}
-            onCompositionEnd={this.handleCompositionEnd}
             onKeyDown={handleVolumeKeyBlur}
           />
           <textarea
@@ -686,8 +681,6 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
-            onCompositionStart={this.handleCompositionStart}
-            onCompositionEnd={this.handleCompositionEnd}
             onKeyDown={handleVolumeKeyBlur}
             onKeyUp={this.handleKeyUp}
           />
@@ -707,8 +700,6 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
-            onCompositionStart={this.handleCompositionStart}
-            onCompositionEnd={this.handleCompositionEnd}
             onKeyDown={handleVolumeKeyBlur}
           />
         </>
@@ -733,8 +724,6 @@ export default class MobileGridControls extends GridControls {
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
-          onCompositionStart={this.handleCompositionStart}
-          onCompositionEnd={this.handleCompositionEnd}
         />
         <input
           name="2"
@@ -754,8 +743,6 @@ export default class MobileGridControls extends GridControls {
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
-          onCompositionStart={this.handleCompositionStart}
-          onCompositionEnd={this.handleCompositionEnd}
           onKeyUp={this.handleKeyUp}
         />
         <input
@@ -775,8 +762,6 @@ export default class MobileGridControls extends GridControls {
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
-          onCompositionStart={this.handleCompositionStart}
-          onCompositionEnd={this.handleCompositionEnd}
         />
       </>
     );
@@ -788,7 +773,9 @@ export default class MobileGridControls extends GridControls {
         {this.renderClueBar()}
         {this.renderGridContent()}
         {this.renderMobileInputs()}
-        {this.props.enableDebug && (this.state.dbgstr || 'No message')}
+        {this.props.enableDebug && (
+          <pre style={{whiteSpace: 'pre-wrap', fontSize: 11}}>{this.state.dbgstr || 'No message'}</pre>
+        )}
         <RunOnce effect={this.boundCenterGridX} />
       </div>
     );
