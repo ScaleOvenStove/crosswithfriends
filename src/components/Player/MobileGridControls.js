@@ -533,10 +533,13 @@ export default class MobileGridControls extends GridControls {
    */
   handleInputChange = (e) => {
     const textArea = e.target;
-    const input = textArea.value;
+    const raw = textArea.value;
+    // An IME that rewrites the whole value can drop the "$"; diff as if it were still there so the previous
+    // composition isn't read as deleted. An empty value is still a backspace over the "$".
+    const input = raw === '' || raw.startsWith('$') ? raw : `$${raw}`;
     const prev = this.lastInputValues.get(textArea) ?? '$';
     this.lastInputValues.set(textArea, input);
-    this.setState({dbgstr: `INPUT IS [${input}]`});
+    this.setState({dbgstr: `INPUT IS [${raw}]`});
 
     let common = 0;
     while (common < prev.length && common < input.length && prev[common] === input[common]) {
@@ -577,7 +580,7 @@ export default class MobileGridControls extends GridControls {
     steps.forEach((step, i) => (i ? setTimeout(step, i * 20) : step()));
 
     const composing = this.imeComposing || e.nativeEvent?.isComposing;
-    if (!composing || !input.startsWith('$')) {
+    if (!composing || !raw.startsWith('$')) {
       this.resetInput(textArea);
     }
   };

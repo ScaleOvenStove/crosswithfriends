@@ -189,6 +189,19 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
     vi.useRealTimers();
   });
 
+  it('does not treat a dropped "$" as deleting the composition', () => {
+    const {instance, props} = makeMobileInstance();
+    vi.useFakeTimers();
+    instance.handleCompositionStart({});
+    const target = {value: 'abcd', selectionStart: 4, selectionEnd: 4};
+    instance.lastInputValues.set(target, '$abc');
+    instance.handleInputChange({target, nativeEvent: {isComposing: true}});
+    vi.runAllTimers();
+    expect(props.updateGrid.mock.calls.map((c) => c[2])).toEqual(['D']);
+    expect(target.value).toBe('$');
+    vi.useRealTimers();
+  });
+
   it('resets the box once the composition ends', () => {
     const {instance, props} = makeMobileInstance();
     vi.useFakeTimers();
