@@ -64,6 +64,7 @@ export default class MobileGridControls extends GridControls {
     };
     this.lastInputValues = new WeakMap();
     this.imeComposing = false;
+    this.nextStepAt = 0;
     this.inputRef = React.createRef();
     this.zoomContainer = React.createRef();
     this.gridControlsRef = React.createRef();
@@ -561,8 +562,6 @@ export default class MobileGridControls extends GridControls {
     // something the grid ignores (the apostrophe in "don't") doesn't backspace over a real letter.
     const [deleted, inserted] = diffValues(gridChars(prev), gridChars(input));
 
-    // Each step reads props.selected / props.grid, which only update after the parent re-renders, so steps
-    // after the first are spaced out instead of all acting on the same cell.
     const steps = [];
     if (rawDeleted === 0 && (rawInserted === ' ' || rawInserted === '@')) {
       // hack hack
@@ -587,7 +586,7 @@ export default class MobileGridControls extends GridControls {
       }
     }
 
-    steps.forEach((step, i) => (i ? setTimeout(step, i * 20) : step()));
+    this.enqueueSteps(steps);
 
     // Never reset under an active composition, even if the IME dropped the "$" (input is normalized above).
     // An empty box has no sentinel left to backspace over, so it is always restored.
@@ -596,6 +595,27 @@ export default class MobileGridControls extends GridControls {
       this.resetInput(textArea);
     }
   };
+
+  /**
+   * Each step reads props.selected / props.grid, which only update after the parent re-renders, so steps are
+   * spaced 30ms apart (the pacing typeLetter already uses for its own deferred write) instead of all acting on
+   * the same cell. The queue is shared across input events so a later event (e.g. the space after a
+   * gesture-typed word) can't run ahead of letters still pending.
+   */
+  enqueueSteps(steps) {
+    const now = Date.now();
+    let at = Math.max(now, this.nextStepAt);
+    for (const step of steps) {
+      const delay = at - now;
+      if (delay > 0) {
+        setTimeout(step, delay);
+      } else {
+        step();
+      }
+      at += 30;
+    }
+    this.nextStepAt = at;
+  }
 
   handleKeyUp = (ev) => {
     this.setState({dbgstr: `[${ev.target.value}]`});

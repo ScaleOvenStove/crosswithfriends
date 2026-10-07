@@ -245,3 +245,21 @@ describe('MobileGridControls.handleInputChange — IME composition (Android keyb
     vi.useRealTimers();
   });
 });
+
+describe('MobileGridControls.handleInputChange — ordering across events', () => {
+  it('runs a space after letters still pending from the previous event', () => {
+    const {instance, props} = makeMobileInstance();
+    vi.useFakeTimers();
+    const target = {value: '$hello', selectionStart: 6, selectionEnd: 6};
+    instance.handleCompositionStart({});
+    instance.handleInputChange({target, nativeEvent: {isComposing: true}});
+    target.value = '$hello ';
+    instance.handleInputChange({target, nativeEvent: {isComposing: true}});
+    expect(props.onSetDirection).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    const lastLetter = Math.max(...props.updateGrid.mock.invocationCallOrder);
+    expect(props.updateGrid).toHaveBeenCalledTimes(5);
+    expect(props.onSetDirection.mock.invocationCallOrder[0]).toBeGreaterThan(lastLetter);
+    vi.useRealTimers();
+  });
+});
