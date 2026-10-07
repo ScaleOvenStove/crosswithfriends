@@ -47,7 +47,8 @@ export default class MobileGridControls extends GridControls {
       transform: {scale: 1, translateX: 0, translateY: 0},
       dbgstr: undefined,
     };
-    this.prvInput = '';
+    this.lastInputValues = new WeakMap();
+    this.imeComposing = false;
     this.inputRef = React.createRef();
     this.zoomContainer = React.createRef();
     this.gridControlsRef = React.createRef();
@@ -469,6 +470,7 @@ export default class MobileGridControls extends GridControls {
   };
 
   handleInputFocus = (e) => {
+    this.resetInput(e.target);
     this.focusKeyboard();
     this.setState({dbgstr: `INPUT FOCUS ${e.target.name}`});
     if (e.target.name === '1') {
@@ -480,50 +482,85 @@ export default class MobileGridControls extends GridControls {
   };
 
   handleInputBlur = (e) => {
+    this.imeComposing = false;
+    this.resetInput(e.target);
     if (e.target.name === '2') {
       this.wasUnfocused = Date.now();
     }
   };
 
+  handleCompositionStart = () => {
+    this.imeComposing = true;
+  };
+
+  handleCompositionEnd = (e) => {
+    this.imeComposing = false;
+    const textArea = e.target;
+    // Some browsers fire the final input event after compositionend; let it be diffed against the
+    // composed text before the box goes back to "$".
+    setTimeout(() => {
+      if (!this.imeComposing) this.resetInput(textArea);
+    });
+  };
+
+  /**
+   * Puts a hidden input box back in its well-defined initial state: a value of "$" with the cursor at the end.
+   */
+  resetInput(textArea) {
+    if (!textArea) return;
+    textArea.value = '$';
+    this.lastInputValues.set(textArea, '$');
+    // On some devices, the cursor gets stuck at position 0, even after the input box resets its value to "$".
+    // To counter that, wait until after the render and then set it to the end. Use a direct reference to the
+    // input in the timeout closure; the event is not reliable, nor is this.inputRef.
+    setTimeout(() => {
+      textArea.selectionStart = textArea.value.length;
+      textArea.selectionEnd = textArea.value.length;
+    });
+  }
+
   /**
    * There are hidden input boxes on the page, this handler listens for changes and then relays the inferred
-   * user input to the crossword grid. The input box has a well-defined initial state that we always reset to:
-   * It has a value of "$", and the cursor is always at the end.
+   * user input to the crossword grid. The input box starts as "$" with the cursor at the end, and we infer
+   * what the user did by diffing the new value against the previous one: "$" -> "$a" typed "a",
+   * "$" -> "" was a backspace.
    *
-   * By comparing with this initial state, we can infer what the user did, i.e. if the new value is "$a" they
-   * input the letter "a", if the new value is "", then they did a backspace.
+   * Android keyboards (Gboard, FUTO, SwiftKey, ...) treat the box as a text field and keep a composing word
+   * that spans several keystrokes. If the value is reset underneath them mid-composition, they re-send the
+   * whole word on the next key, so "abc" would arrive as "$a", "$ab", "$abc" and get typed as a, a, b, a, b,
+   * c. So while a composition is active we leave the value alone and only relay what changed since the last
+   * event; the box is reset once the composition ends.
    */
   handleInputChange = (e) => {
     const textArea = e.target;
-    let input = textArea.value;
+    const input = textArea.value;
+    const prev = this.lastInputValues.get(textArea) ?? '$';
+    this.lastInputValues.set(textArea, input);
     this.setState({dbgstr: `INPUT IS [${input}]`});
 
-    if (input === '') {
-      this.backspace();
+    let common = 0;
+    while (common < prev.length && common < input.length && prev[common] === input[common]) {
+      common += 1;
+    }
+    const deleted = prev.length - common;
+    const inserted = input.slice(common);
 
-      // On some devices, the cursor gets stuck at position 0, even after the input box resets its value to "$".
-      // To counter that, wait until after the render and then set it to the end. Use a direct reference to the
-      // input in the timeout closure; the event is not reliable, nor is this.inputRef.
-      setTimeout(() => {
-        textArea.selectionStart = textArea.value.length;
-      });
-      return;
+    for (let i = 0; i < deleted; i += 1) {
+      this.backspace();
     }
 
-    // get rid of the $ at the beginning
-    input = input.substring(1);
-    if (input === ' ' || input === '@') {
+    if (inserted === ' ' || inserted === '@') {
       // hack hack
       // for some reason, email input [on ios safari & chrome mobile inspector] doesn't fire onChange at all when pressing spacebar
       this.handleAction('space');
-    } else if (input === ',') {
+    } else if (inserted === ',') {
       this.handleAction('tab');
-    } else if (input === '.') {
+    } else if (inserted === '.') {
       this.props.onPressPeriod && this.props.onPressPeriod();
     } else {
       // support gesture-based keyboards that allow inputting words at a time
       let delay = 0;
-      for (const char of input) {
+      for (const char of inserted) {
         if (validLetter(char.toUpperCase())) {
           this.setState({dbgstr: `TYPE letter ${char.toUpperCase()}`});
           if (delay) {
@@ -541,6 +578,11 @@ export default class MobileGridControls extends GridControls {
         }
       }
     }
+
+    const composing = this.imeComposing || e.nativeEvent?.isComposing;
+    if (!composing || !input.startsWith('$')) {
+      this.resetInput(textArea);
+    }
   };
 
   handleKeyUp = (ev) => {
@@ -548,7 +590,7 @@ export default class MobileGridControls extends GridControls {
   };
 
   renderMobileInputs() {
-    // This resets the input to contain just "$" on every render.
+    // Initial value only; the boxes are uncontrolled and reset via resetInput(), never mid-composition.
     const inputValue = '$';
     const inputStyle = {
       opacity: 0,
@@ -577,7 +619,7 @@ export default class MobileGridControls extends GridControls {
         <>
           <textarea
             name="1"
-            value={inputValue}
+            defaultValue={inputValue}
             style={inputStyle}
             autoComplete="off"
             autoCapitalize="none"
@@ -591,12 +633,14 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
+            onCompositionStart={this.handleCompositionStart}
+            onCompositionEnd={this.handleCompositionEnd}
             onKeyDown={handleVolumeKeyBlur}
           />
           <textarea
             name="2"
             ref={this.inputRef}
-            value={inputValue}
+            defaultValue={inputValue}
             style={inputStyle}
             autoComplete="off"
             autoCapitalize="none"
@@ -610,12 +654,14 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
+            onCompositionStart={this.handleCompositionStart}
+            onCompositionEnd={this.handleCompositionEnd}
             onKeyDown={handleVolumeKeyBlur}
             onKeyUp={this.handleKeyUp}
           />
           <textarea
             name="3"
-            value={inputValue}
+            defaultValue={inputValue}
             style={inputStyle}
             autoComplete="off"
             autoCapitalize="none"
@@ -629,6 +675,8 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
+            onCompositionStart={this.handleCompositionStart}
+            onCompositionEnd={this.handleCompositionEnd}
             onKeyDown={handleVolumeKeyBlur}
           />
         </>
@@ -638,7 +686,7 @@ export default class MobileGridControls extends GridControls {
       <>
         <input
           name="1"
-          value={inputValue}
+          defaultValue={inputValue}
           type="text"
           style={inputStyle}
           autoComplete="off"
@@ -653,11 +701,13 @@ export default class MobileGridControls extends GridControls {
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
+          onCompositionStart={this.handleCompositionStart}
+          onCompositionEnd={this.handleCompositionEnd}
         />
         <input
           name="2"
           ref={this.inputRef}
-          value={inputValue}
+          defaultValue={inputValue}
           type="text"
           style={inputStyle}
           autoComplete="off"
@@ -672,11 +722,13 @@ export default class MobileGridControls extends GridControls {
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
+          onCompositionStart={this.handleCompositionStart}
+          onCompositionEnd={this.handleCompositionEnd}
           onKeyUp={this.handleKeyUp}
         />
         <input
           name="3"
-          value={inputValue}
+          defaultValue={inputValue}
           type="text"
           style={inputStyle}
           autoComplete="off"
@@ -691,6 +743,8 @@ export default class MobileGridControls extends GridControls {
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
+          onCompositionStart={this.handleCompositionStart}
+          onCompositionEnd={this.handleCompositionEnd}
         />
       </>
     );
