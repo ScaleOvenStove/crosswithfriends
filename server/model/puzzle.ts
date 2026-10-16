@@ -230,6 +230,10 @@ export async function listPuzzles(
       orderByClause = `ORDER BY median_solve_ms DESC NULLS LAST, pid_numeric DESC`;
     } else if (filter.sortBy === 'time_asc') {
       orderByClause = `ORDER BY median_solve_ms ASC NULLS LAST, pid_numeric DESC`;
+    } else if (filter.sortBy === 'solves_desc') {
+      orderByClause = `ORDER BY times_solved DESC NULLS LAST, pid_numeric DESC`;
+    } else if (filter.sortBy === 'solves_asc') {
+      orderByClause = `ORDER BY times_solved ASC NULLS LAST, pid_numeric DESC`;
     } else {
       orderByClause = `ORDER BY pid_numeric DESC`;
     }

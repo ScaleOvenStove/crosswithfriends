@@ -24,9 +24,12 @@ async function sortByFor(query: string) {
 }
 
 describe('GET /puzzle_list sortBy parsing', () => {
-  it.each(['rating_desc', 'rating_asc', 'time_desc', 'time_asc'])('passes %s through', async (sortBy) => {
-    expect(await sortByFor(`&filter[sortBy]=${sortBy}`)).toBe(sortBy);
-  });
+  it.each(['rating_desc', 'rating_asc', 'time_desc', 'time_asc', 'solves_desc', 'solves_asc'])(
+    'passes %s through',
+    async (sortBy) => {
+      expect(await sortByFor(`&filter[sortBy]=${sortBy}`)).toBe(sortBy);
+    }
+  );
 
   it('falls back to default for an unknown value', async () => {
     expect(await sortByFor('&filter[sortBy]=DROP%20TABLE')).toBe('default');

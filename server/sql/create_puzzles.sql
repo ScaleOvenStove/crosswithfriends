@@ -67,6 +67,13 @@ CREATE INDEX IF NOT EXISTS puzzles_median_solve_desc_idx
 CREATE INDEX IF NOT EXISTS puzzles_median_solve_asc_idx
     ON public.puzzles (median_solve_ms ASC NULLS LAST, pid_numeric DESC);
 
+-- Sort indexes for the solves_desc / solves_asc puzzle list. One per direction:
+-- both sort NULLS LAST, which a backward scan of one index cannot produce.
+CREATE INDEX IF NOT EXISTS puzzles_times_solved_desc_idx
+    ON public.puzzles (times_solved DESC NULLS LAST, pid_numeric DESC);
+CREATE INDEX IF NOT EXISTS puzzles_times_solved_asc_idx
+    ON public.puzzles (times_solved ASC NULLS LAST, pid_numeric DESC);
+
 -- Lookup by uploader for "my uploads" / profile queries.
 CREATE INDEX IF NOT EXISTS puzzles_uploaded_by_idx
     ON public.puzzles (uploaded_by) WHERE uploaded_by IS NOT NULL;
