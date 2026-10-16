@@ -8,5 +8,5 @@
 CREATE INDEX CONCURRENTLY IF NOT EXISTS puzzles_times_solved_desc_idx
   ON puzzles (times_solved DESC NULLS LAST, pid_numeric DESC);
 
-CREATE INDEX IF NOT EXISTS puzzles_times_solved_asc_idx
+CREATE INDEX CONCURRENTLY IF NOT EXISTS puzzles_times_solved_asc_idx
   ON puzzles (times_solved ASC NULLS LAST, pid_numeric DESC);
