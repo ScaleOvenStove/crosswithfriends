@@ -202,6 +202,20 @@ describe('listPuzzles', () => {
     expect(sql).toContain('ORDER BY median_solve_ms ASC NULLS LAST, pid_numeric DESC');
   });
 
+  it('orders by solve count DESC when sortBy is solves_desc', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, sortBy: 'solves_desc'}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ORDER BY times_solved DESC NULLS LAST, pid_numeric DESC');
+  });
+
+  it('orders by solve count ASC when sortBy is solves_asc', async () => {
+    pool.query.mockResolvedValue({rows: []});
+    await listPuzzles({...defaultFilter, sortBy: 'solves_asc'}, 50, 0);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('ORDER BY times_solved ASC NULLS LAST, pid_numeric DESC');
+  });
+
   it('skips the rating filter clause when minRating is not set', async () => {
     pool.query.mockResolvedValue({rows: []});
     await listPuzzles(defaultFilter, 50, 0);
