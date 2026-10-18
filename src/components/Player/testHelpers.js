@@ -53,7 +53,6 @@ export function makeDefaultProps(overrides = {}) {
     canSetDirection: vi.fn(() => true),
     onPressEnter: vi.fn(),
     onPressPeriod: vi.fn(),
-    onPressEscape: vi.fn(),
     onCheck: vi.fn(),
     onReveal: vi.fn(),
     ...overrides,

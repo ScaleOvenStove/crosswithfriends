@@ -261,3 +261,67 @@ describe('GridControls.backspace', () => {
     expect(props.onSetSelected).not.toHaveBeenCalled();
   });
 });
+
+describe('GridControls._handleKeyDown — rebus mode', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('Escape toggles rebus mode on and off', () => {
+    const {instance} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('Escape', false, false);
+    expect(instance.state.rebusMode).toBe(true);
+    instance._handleKeyDown('Escape', false, false);
+    expect(instance.state.rebusMode).toBe(false);
+  });
+
+  it('Insert also enters rebus mode', () => {
+    const {instance} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('Insert', false, false);
+    expect(instance.state.rebusMode).toBe(true);
+  });
+
+  it('appends unshifted digits to the cell without advancing', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {
+      grid: makeGrid({'0,0': {value: '1'}}),
+    });
+    instance._handleKeyDown('Escape', false, false);
+    instance._handleKeyDown('2', false, false);
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, '12');
+    expect(props.onSetSelected).not.toHaveBeenCalled();
+  });
+
+  it('Enter commits the rebus and advances to the next cell', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('Escape', false, false);
+    instance._handleKeyDown('Enter', false, false);
+    expect(instance.state.rebusMode).toBe(false);
+    expect(props.onPressEnter).not.toHaveBeenCalled();
+    expect(props.onSetSelected).toHaveBeenCalledWith({r: 0, c: 1});
+  });
+
+  it('Backspace removes one character instead of clearing the cell', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {
+      grid: makeGrid({'0,0': {value: '123'}}),
+    });
+    instance._handleKeyDown('Escape', false, false);
+    instance._handleKeyDown('Backspace', false, false);
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, '12');
+    expect(instance.state.rebusMode).toBe(true);
+  });
+
+  it('does not enter rebus mode when frozen', () => {
+    const {instance} = makeControlsInstance(GridControls, {frozen: true});
+    instance._handleKeyDown('Escape', false, false);
+    expect(instance.state.rebusMode).toBe(false);
+  });
+
+  it('leaves rebus mode when the selection moves', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('Escape', false, false);
+    const prevProps = props;
+    instance.props = {...props, selected: {r: 0, c: 2}};
+    instance.componentDidUpdate(prevProps);
+    expect(instance.state.rebusMode).toBe(false);
+  });
+});

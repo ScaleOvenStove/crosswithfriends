@@ -170,6 +170,23 @@ export default function Help() {
           the current word, and <code>Alt+S/W/P</code> to Check <em>Square</em>/<em>Word</em>/<em>Puzzle</em>.
         </p>
 
+        <h3>How do I enter a rebus (more than one character in a square)?</h3>
+        <p>
+          <strong>On a computer:</strong> press <code>Esc</code> (or <code>Insert</code>) to start a rebus in
+          the selected square. A &ldquo;Rebus&rdquo; tag appears above the grid. Type every character, numbers
+          included, then press <code>Enter</code> or <code>Esc</code> to finish. <code>Backspace</code>{' '}
+          removes one character at a time while the rebus is open. Holding <code>Shift</code> while typing
+          letters works too, but <code>Shift</code> turns numbers into symbols, so use <code>Esc</code> for
+          rebuses with numbers.
+        </p>
+        <p>
+          <strong>On a phone or tablet:</strong> turn on <em>Shift</em> or <em>Caps Lock</em> on your
+          on-screen keyboard (on most keyboards, double-tap the Shift key to lock it). Uppercase letters are
+          added to the current square instead of moving to the next one. Numbers and symbols always stay in
+          the current square. When you&apos;re done, tap the next square or type a lowercase letter to move
+          on.
+        </p>
+
         <h3>How do I switch to dark mode?</h3>
         <p>
           Click the user icon in the top right corner and choose the Dark Mode option. It cycles between{' '}

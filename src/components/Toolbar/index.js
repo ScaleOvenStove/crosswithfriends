@@ -429,6 +429,10 @@ export default class Toolbar extends Component {
             <li>
               Hold down the <code>Shift</code> key to enter multiple characters for rebus answers
             </li>
+            <li>
+              Or press <code>Esc</code> to start a rebus, type every character (numbers included), then press{' '}
+              <code>Enter</code> or <code>Esc</code> to finish
+            </li>
           </ul>
           <h4>Basic Keyboard Shortcuts</h4>
           <table>
@@ -502,6 +506,15 @@ export default class Toolbar extends Component {
                   <code>Home</code> OR <code>End</code>
                 </td>
                 <td>Move cursor to the beginning or end of a clue</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>Esc</code> OR <code>Insert</code>
+                </td>
+                <td>
+                  Start or finish a rebus (multiple characters in one square). Use this for rebuses with
+                  numbers, since holding <code>Shift</code> turns numbers into symbols
+                </td>
               </tr>
             </tbody>
           </table>

@@ -22,6 +22,9 @@ export function validLetter(letter) {
 export default class GridControls extends Component {
   constructor() {
     super();
+    // Sticky rebus entry for physical keyboards. Holding Shift also enters a rebus, but Shift turns
+    // the number row into symbols, so a multi-digit rebus is impossible without this.
+    this.state = {rebusMode: false};
     this.inputRef = React.createRef();
     this.handleClick = this.handleClick.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -52,6 +55,39 @@ export default class GridControls extends Component {
 
   componentDidMount() {
     this.focus();
+  }
+
+  componentDidUpdate(prevProps) {
+    const {selected} = this.props;
+    if (
+      this.state.rebusMode &&
+      (prevProps.selected.r !== selected.r || prevProps.selected.c !== selected.c)
+    ) {
+      this.setState({rebusMode: false});
+    }
+  }
+
+  toggleRebusMode() {
+    if (this.state.rebusMode) {
+      this.exitRebusMode();
+      return;
+    }
+    const {r, c} = this.props.selected;
+    if (this.props.frozen || !this.isSelectable(r, c) || this.props.grid[r][c].isImage) return;
+    this.setState({rebusMode: true});
+  }
+
+  // Commits the rebus by leaving the cell, the way typing a single letter would.
+  exitRebusMode() {
+    this.setState({rebusMode: false});
+    this.goToNextEmptyCell({nextClueIfFilled: this.props.autoAdvanceCursor});
+  }
+
+  rebusBackspace() {
+    const {r, c} = this.props.selected;
+    const cell = this.props.grid[r][c];
+    if (cell.good || !cell.value) return;
+    this.props.updateGrid(r, c, cell.value.slice(0, -1));
   }
 
   selectNextClue(backwards, parallel = false) {
@@ -229,7 +265,21 @@ export default class GridControls extends Component {
       actionKeys[isAcross ? 'ArrowDown' : 'ArrowRight'] = 'forward';
     }
 
-    const {onPressEnter, onPressPeriod, onPressEscape} = this.props;
+    const {onPressEnter, onPressPeriod} = this.props;
+    if (key === 'Escape' || key === 'Insert') {
+      this.toggleRebusMode();
+      return true;
+    }
+    if (this.state.rebusMode) {
+      if (key === 'Enter') {
+        this.exitRebusMode();
+        return true;
+      }
+      if (key === 'Backspace' || key === '{del}') {
+        this.rebusBackspace();
+        return true;
+      }
+    }
     if (key in actionKeys) {
       this.handleAction(actionKeys[key], shiftKey);
       return true;
@@ -246,12 +296,12 @@ export default class GridControls extends Component {
       this.handleAltKey(code, shiftKey);
       return true;
     }
-    if (key === 'Escape') {
-      onPressEscape && onPressEscape();
-    } else if (!this.props.frozen) {
+    if (!this.props.frozen) {
       const letter = key.toUpperCase();
       if (validLetter(letter)) {
-        this.typeLetter(letter, shiftKey, {nextClueIfFilled: this.props.autoAdvanceCursor});
+        this.typeLetter(letter, shiftKey || this.state.rebusMode, {
+          nextClueIfFilled: this.props.autoAdvanceCursor,
+        });
         return true;
       }
     }
@@ -515,6 +565,11 @@ export default class GridControls extends Component {
         style={gridStyle}
       >
         <div className="grid--content">{this.props.children}</div>
+        {this.state.rebusMode && (
+          <div className="grid-controls--rebus-badge" role="status">
+            Rebus — press Enter when done
+          </div>
+        )}
         <input
           tabIndex={-1}
           name="grid"

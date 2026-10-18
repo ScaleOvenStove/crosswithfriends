@@ -32,3 +32,22 @@
   font-size: 1px;
   opacity: 0;
 }
+
+.grid-controls--rebus-badge {
+  z-index: 3;
+  position: absolute;
+  top: -24px;
+  left: 0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #6aa9f4;
+  color: #fff;
+  font-weight: bold;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.dark .grid-controls--rebus-badge {
+  background: var(--dark-blue-1);
+  color: var(--dark-primary-text);
+}
