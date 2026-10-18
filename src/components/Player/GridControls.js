@@ -74,20 +74,40 @@ export default class GridControls extends Component {
     }
     const {r, c} = this.props.selected;
     if (this.props.frozen || !this.isSelectable(r, c) || this.props.grid[r][c].isImage) return;
+    // By commit time the rebus has filled the cell, so remember whether it was the word's last gap.
+    this.rebusStartedEmpty = !this.grid.isFilled(r, c);
     this.setState({rebusMode: true});
   }
 
   // Commits the rebus by leaving the cell, the way typing a single letter would.
   exitRebusMode() {
     this.setState({rebusMode: false});
-    this.goToNextEmptyCell({nextClueIfFilled: this.props.autoAdvanceCursor});
+    this.afterPendingWrites(() =>
+      this.goToNextEmptyCell({
+        nextClueIfFilled: this.props.autoAdvanceCursor,
+        currentWasEmpty: this.rebusStartedEmpty,
+      })
+    );
   }
 
   rebusBackspace() {
-    const {r, c} = this.props.selected;
-    const cell = this.props.grid[r][c];
-    if (cell.good || !cell.value) return;
-    this.props.updateGrid(r, c, cell.value.slice(0, -1));
+    this.afterPendingWrites(() => {
+      const {r, c} = this.props.selected;
+      const cell = this.props.grid[r][c];
+      if (cell.good || !cell.value) return;
+      this.props.updateGrid(r, c, cell.value.slice(0, -1));
+    });
+  }
+
+  // typeLetter defers its writes (30ms apart) and each one reads props.selected when it runs, so anything
+  // that moves the cursor or edits the cell must wait for them or it reorders the rebus.
+  afterPendingWrites(fn) {
+    const delay = this.nextTime ? this.nextTime - Date.now() : 0;
+    if (delay > 0) {
+      setTimeout(fn, delay);
+    } else {
+      fn();
+    }
   }
 
   selectNextClue(backwards, parallel = false) {
@@ -399,7 +419,7 @@ export default class GridControls extends Component {
     }
   }
 
-  goToNextEmptyCell({nextClueIfFilled = false} = {}) {
+  goToNextEmptyCell({nextClueIfFilled = false, currentWasEmpty} = {}) {
     const skipFilledSquares = this.props.skipFilledSquares;
     const {r, c} = this.props.selected;
     const nextEmptyCell = this.grid.getNextEmptyCell(r, c, this.props.direction, {
@@ -423,7 +443,7 @@ export default class GridControls extends Component {
           skipFirst: true,
           skipFilledSquares: true,
         });
-      if (noOtherEmptyCells && !this.grid.isFilled(r, c)) {
+      if (noOtherEmptyCells && (currentWasEmpty ?? !this.grid.isFilled(r, c))) {
         this.selectNextClue();
         return undefined;
       }
