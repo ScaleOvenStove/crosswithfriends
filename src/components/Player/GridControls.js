@@ -22,6 +22,9 @@ export function validLetter(letter) {
 export default class GridControls extends Component {
   constructor() {
     super();
+    // Sticky rebus entry for physical keyboards. Holding Shift also enters a rebus, but Shift turns
+    // the number row into symbols, so a multi-digit rebus is impossible without this.
+    this.state = {rebusMode: false};
     this.inputRef = React.createRef();
     this.handleClick = this.handleClick.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -52,6 +55,66 @@ export default class GridControls extends Component {
 
   componentDidMount() {
     this.focus();
+  }
+
+  componentDidUpdate(prevProps) {
+    const {selected} = this.props;
+    if (
+      this.state.rebusMode &&
+      (prevProps.selected.r !== selected.r || prevProps.selected.c !== selected.c)
+    ) {
+      this.setState({rebusMode: false});
+    }
+  }
+
+  toggleRebusMode() {
+    if (this.state.rebusMode) {
+      this.exitRebusMode();
+      return;
+    }
+    const {r, c} = this.props.selected;
+    if (this.props.frozen || !this.isSelectable(r, c) || this.props.grid[r][c].isImage) return;
+    // By commit time the rebus has filled the cell, so remember whether it was the word's last gap.
+    this.rebusStartedEmpty = !this.grid.isFilled(r, c);
+    // Queued writes target this cell even if the selection moves before they run.
+    this.rebusCell = {r, c};
+    this.setState({rebusMode: true});
+  }
+
+  // Commits the rebus by leaving the cell, the way typing a single letter would. A rebus closed with
+  // nothing in it stays put, since there is no entry to move past.
+  exitRebusMode() {
+    this.setState({rebusMode: false});
+    const {r, c} = this.rebusCell;
+    this.afterPendingWrites(() => {
+      // The user already moved on before the queue drained; don't move them again.
+      if (this.props.selected.r !== r || this.props.selected.c !== c) return;
+      if (!this.grid.isFilled(r, c)) return;
+      this.goToNextEmptyCell({
+        nextClueIfFilled: this.props.autoAdvanceCursor,
+        currentWasEmpty: this.rebusStartedEmpty,
+      });
+    });
+  }
+
+  rebusBackspace() {
+    const {r, c} = this.rebusCell;
+    this.afterPendingWrites(() => {
+      const cell = this.props.grid[r][c];
+      if (cell.good || !cell.value) return;
+      this.props.updateGrid(r, c, cell.value.slice(0, -1));
+    });
+  }
+
+  // typeLetter defers its writes (30ms apart) and each one reads props.selected when it runs, so anything
+  // that moves the cursor or edits the cell must wait for them or it reorders the rebus.
+  afterPendingWrites(fn) {
+    const delay = this.nextTime ? this.nextTime - Date.now() : 0;
+    if (delay > 0) {
+      setTimeout(fn, delay);
+    } else {
+      fn();
+    }
   }
 
   selectNextClue(backwards, parallel = false) {
@@ -229,7 +292,21 @@ export default class GridControls extends Component {
       actionKeys[isAcross ? 'ArrowDown' : 'ArrowRight'] = 'forward';
     }
 
-    const {onPressEnter, onPressPeriod, onPressEscape} = this.props;
+    const {onPressEnter, onPressPeriod} = this.props;
+    if (key === 'Escape' || key === 'Insert') {
+      this.toggleRebusMode();
+      return true;
+    }
+    if (this.state.rebusMode) {
+      if (key === 'Enter') {
+        this.exitRebusMode();
+        return true;
+      }
+      if (key === 'Backspace' || key === '{del}') {
+        this.rebusBackspace();
+        return true;
+      }
+    }
     if (key in actionKeys) {
       this.handleAction(actionKeys[key], shiftKey);
       return true;
@@ -246,12 +323,12 @@ export default class GridControls extends Component {
       this.handleAltKey(code, shiftKey);
       return true;
     }
-    if (key === 'Escape') {
-      onPressEscape && onPressEscape();
-    } else if (!this.props.frozen) {
+    if (!this.props.frozen) {
       const letter = key.toUpperCase();
       if (validLetter(letter)) {
-        this.typeLetter(letter, shiftKey, {nextClueIfFilled: this.props.autoAdvanceCursor});
+        this.typeLetter(letter, shiftKey || this.state.rebusMode, {
+          nextClueIfFilled: this.props.autoAdvanceCursor,
+        });
         return true;
       }
     }
@@ -349,7 +426,7 @@ export default class GridControls extends Component {
     }
   }
 
-  goToNextEmptyCell({nextClueIfFilled = false} = {}) {
+  goToNextEmptyCell({nextClueIfFilled = false, currentWasEmpty} = {}) {
     const skipFilledSquares = this.props.skipFilledSquares;
     const {r, c} = this.props.selected;
     const nextEmptyCell = this.grid.getNextEmptyCell(r, c, this.props.direction, {
@@ -373,7 +450,7 @@ export default class GridControls extends Component {
           skipFirst: true,
           skipFilledSquares: true,
         });
-      if (noOtherEmptyCells && !this.grid.isFilled(r, c)) {
+      if (noOtherEmptyCells && (currentWasEmpty ?? !this.grid.isFilled(r, c))) {
         this.selectNextClue();
         return undefined;
       }
@@ -428,11 +505,12 @@ export default class GridControls extends Component {
       return undefined;
     }
     if (!this.nextTime) this.nextTime = Date.now();
+    const rebusCell = this.state.rebusMode ? this.rebusCell : undefined;
     setTimeout(
       () => {
         let rebusFlag = isRebus;
         if (letter === '/') rebusFlag = true;
-        const {r: selR, c: selC} = this.props.selected;
+        const {r: selR, c: selC} = rebusCell || this.props.selected;
         const value = this.props.grid[selR][selC].value;
         if (!rebusFlag) {
           this.goToNextEmptyCell({nextClueIfFilled});
@@ -515,6 +593,11 @@ export default class GridControls extends Component {
         style={gridStyle}
       >
         <div className="grid--content">{this.props.children}</div>
+        {this.state.rebusMode && (
+          <div className="grid-controls--rebus-badge" role="status">
+            Rebus — press Enter when done
+          </div>
+        )}
         <input
           tabIndex={-1}
           name="grid"

@@ -567,6 +567,7 @@ export default class Player extends Component {
             grid={correctedGrid}
             clues={clues}
             beta={beta}
+            frozen={frozen}
             onCheck={this.props.onCheck}
             onReveal={this.props.onReveal}
           >
@@ -605,6 +606,7 @@ export default class Player extends Component {
           grid={correctedGrid}
           clues={clues}
           beta={beta}
+          frozen={frozen}
           onCheck={this.props.onCheck}
           onReveal={this.props.onReveal}
           contest={contest}
