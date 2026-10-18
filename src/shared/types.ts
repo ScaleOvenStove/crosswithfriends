@@ -126,7 +126,14 @@ export interface ListPuzzleRequest {
   pageSize: number;
 }
 
-export type PuzzleSortBy = 'default' | 'rating_desc' | 'rating_asc' | 'time_desc' | 'time_asc';
+export type PuzzleSortBy =
+  | 'default'
+  | 'rating_desc'
+  | 'rating_asc'
+  | 'time_desc'
+  | 'time_asc'
+  | 'solves_desc'
+  | 'solves_asc';
 
 export const PUZZLE_SORT_BY_VALUES: readonly PuzzleSortBy[] = [
   'default',
@@ -134,6 +141,8 @@ export const PUZZLE_SORT_BY_VALUES: readonly PuzzleSortBy[] = [
   'rating_asc',
   'time_desc',
   'time_asc',
+  'solves_desc',
+  'solves_asc',
 ];
 
 export function isPuzzleSortBy(raw: unknown): raw is PuzzleSortBy {
