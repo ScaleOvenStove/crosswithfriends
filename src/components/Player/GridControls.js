@@ -85,8 +85,10 @@ export default class GridControls extends Component {
   // nothing in it stays put, since there is no entry to move past.
   exitRebusMode() {
     this.setState({rebusMode: false});
+    const {r, c} = this.rebusCell;
     this.afterPendingWrites(() => {
-      const {r, c} = this.props.selected;
+      // The user already moved on before the queue drained; don't move them again.
+      if (this.props.selected.r !== r || this.props.selected.c !== c) return;
       if (!this.grid.isFilled(r, c)) return;
       this.goToNextEmptyCell({
         nextClueIfFilled: this.props.autoAdvanceCursor,
@@ -96,8 +98,8 @@ export default class GridControls extends Component {
   }
 
   rebusBackspace() {
+    const {r, c} = this.rebusCell;
     this.afterPendingWrites(() => {
-      const {r, c} = this.props.selected;
       const cell = this.props.grid[r][c];
       if (cell.good || !cell.value) return;
       this.props.updateGrid(r, c, cell.value.slice(0, -1));

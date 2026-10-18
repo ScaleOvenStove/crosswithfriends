@@ -359,6 +359,22 @@ describe('GridControls._handleKeyDown — rebus mode', () => {
     ]);
   });
 
+  it('applies a queued Backspace to the rebus cell when the selection moves first', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {
+      grid: makeGrid({'0,0': {value: 'X'}, '2,2': {value: 'Z'}}),
+    });
+    props.updateGrid.mockImplementation((r, c, value) => {
+      props.grid[r][c].value = value;
+    });
+    instance._handleKeyDown('Escape', false, false);
+    instance._handleKeyDown('1', false, false);
+    instance._handleKeyDown('Backspace', false, false);
+    instance.props = {...props, selected: {r: 2, c: 2}};
+    vi.runAllTimers();
+    expect(props.grid[0][0].value).toBe('X');
+    expect(props.grid[2][2].value).toBe('Z');
+  });
+
   it('stays on the square when a rebus is closed with nothing typed', () => {
     const {instance, props} = makeControlsInstance(GridControls, {
       autoAdvanceCursor: true,
