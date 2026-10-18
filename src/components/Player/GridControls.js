@@ -76,18 +76,23 @@ export default class GridControls extends Component {
     if (this.props.frozen || !this.isSelectable(r, c) || this.props.grid[r][c].isImage) return;
     // By commit time the rebus has filled the cell, so remember whether it was the word's last gap.
     this.rebusStartedEmpty = !this.grid.isFilled(r, c);
+    // Queued writes target this cell even if the selection moves before they run.
+    this.rebusCell = {r, c};
     this.setState({rebusMode: true});
   }
 
-  // Commits the rebus by leaving the cell, the way typing a single letter would.
+  // Commits the rebus by leaving the cell, the way typing a single letter would. A rebus closed with
+  // nothing in it stays put, since there is no entry to move past.
   exitRebusMode() {
     this.setState({rebusMode: false});
-    this.afterPendingWrites(() =>
+    this.afterPendingWrites(() => {
+      const {r, c} = this.props.selected;
+      if (!this.grid.isFilled(r, c)) return;
       this.goToNextEmptyCell({
         nextClueIfFilled: this.props.autoAdvanceCursor,
         currentWasEmpty: this.rebusStartedEmpty,
-      })
-    );
+      });
+    });
   }
 
   rebusBackspace() {
@@ -498,11 +503,12 @@ export default class GridControls extends Component {
       return undefined;
     }
     if (!this.nextTime) this.nextTime = Date.now();
+    const rebusCell = this.state.rebusMode ? this.rebusCell : undefined;
     setTimeout(
       () => {
         let rebusFlag = isRebus;
         if (letter === '/') rebusFlag = true;
-        const {r: selR, c: selC} = this.props.selected;
+        const {r: selR, c: selC} = rebusCell || this.props.selected;
         const value = this.props.grid[selR][selC].value;
         if (!rebusFlag) {
           this.goToNextEmptyCell({nextClueIfFilled});

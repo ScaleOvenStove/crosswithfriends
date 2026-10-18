@@ -292,7 +292,7 @@ describe('GridControls._handleKeyDown — rebus mode', () => {
   });
 
   it('Enter commits the rebus and advances to the next cell', () => {
-    const {instance, props} = makeControlsInstance(GridControls);
+    const {instance, props} = makeControlsInstance(GridControls, {grid: makeGrid({'0,0': {value: '12'}})});
     instance._handleKeyDown('Escape', false, false);
     instance._handleKeyDown('Enter', false, false);
     expect(instance.state.rebusMode).toBe(false);
@@ -328,6 +328,9 @@ describe('GridControls._handleKeyDown — rebus mode', () => {
 
   it('waits for queued characters before advancing on Enter', () => {
     const {instance, props} = makeControlsInstance(GridControls);
+    props.updateGrid.mockImplementation((r, c, value) => {
+      props.grid[r][c].value = value;
+    });
     instance._handleKeyDown('Escape', false, false);
     instance._handleKeyDown('1', false, false);
     instance._handleKeyDown('2', false, false);
@@ -340,6 +343,32 @@ describe('GridControls._handleKeyDown — rebus mode', () => {
     expect(props.updateGrid.mock.invocationCallOrder[1]).toBeLessThan(
       props.onSetSelected.mock.invocationCallOrder[0]
     );
+  });
+
+  it('keeps queued characters on the rebus cell when the selection moves first', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('Escape', false, false);
+    instance._handleKeyDown('1', false, false);
+    instance._handleKeyDown('2', false, false);
+    // Clicking another square changes the selection before the queue drains.
+    instance.props = {...props, selected: {r: 2, c: 2}};
+    vi.runAllTimers();
+    expect(props.updateGrid.mock.calls.map(([r, c]) => [r, c])).toEqual([
+      [0, 0],
+      [0, 0],
+    ]);
+  });
+
+  it('stays on the square when a rebus is closed with nothing typed', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {
+      autoAdvanceCursor: true,
+      grid: makeGrid({'0,1': {value: 'B'}, '0,2': {value: 'C'}}),
+    });
+    const selectNextClue = vi.spyOn(instance, 'selectNextClue');
+    instance._handleKeyDown('Escape', false, false);
+    instance._handleKeyDown('Enter', false, false);
+    expect(selectNextClue).not.toHaveBeenCalled();
+    expect(props.onSetSelected).not.toHaveBeenCalled();
   });
 
   it('does not enter rebus mode when frozen', () => {
