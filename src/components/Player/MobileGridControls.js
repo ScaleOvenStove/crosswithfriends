@@ -528,7 +528,13 @@ export default class MobileGridControls extends GridControls {
     // On some devices, the cursor gets stuck at position 0, even after the input box resets its value to "$".
     // To counter that, wait until after the render and then set it to the end. Use a direct reference to the
     // input in the timeout closure; the event is not reliable, nor is this.inputRef.
+    //
+    // Only touch the selection of the box that still has focus: on iOS, setting a textarea's selection
+    // focuses it. Boxes 1 and 3 hand focus to box 2 from their focus handler, so a deferred write to them
+    // would steal focus back, select another clue, hand off again and schedule the next write: an endless
+    // focus loop that froze the page on iPad whenever Tab moved focus into box 3.
     setTimeout(() => {
+      if (textArea.ownerDocument?.activeElement !== textArea) return;
       textArea.selectionStart = textArea.value.length;
       textArea.selectionEnd = textArea.value.length;
     });
@@ -617,6 +623,17 @@ export default class MobileGridControls extends GridControls {
     this.nextStepAt = at;
   }
 
+  // A hardware keyboard's Tab (iPad) would otherwise move focus into hidden box 1 or 3 and rely on the
+  // focus hand-off to change clues. Handle it here instead and keep focus where it is.
+  handleMainInputKeyDown = (ev) => {
+    if (ev.key === 'Tab' && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+      ev.preventDefault();
+      this.selectNextClue(ev.shiftKey);
+      return;
+    }
+    handleVolumeKeyBlur(ev);
+  };
+
   handleKeyUp = (ev) => {
     this.logDebug(`keyup ${ev.key ?? ''} [${ev.target.value}]`);
   };
@@ -692,7 +709,7 @@ export default class MobileGridControls extends GridControls {
             onBlur={this.handleInputBlur}
             onFocus={this.handleInputFocus}
             onChange={this.handleInputChange}
-            onKeyDown={handleVolumeKeyBlur}
+            onKeyDown={this.handleMainInputKeyDown}
             onKeyUp={this.handleKeyUp}
           />
           <textarea
@@ -754,6 +771,7 @@ export default class MobileGridControls extends GridControls {
           onBlur={this.handleInputBlur}
           onFocus={this.handleInputFocus}
           onChange={this.handleInputChange}
+          onKeyDown={this.handleMainInputKeyDown}
           onKeyUp={this.handleKeyUp}
         />
         <input

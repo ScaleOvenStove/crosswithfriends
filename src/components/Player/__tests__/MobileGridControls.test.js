@@ -309,3 +309,84 @@ describe('MobileGridControls.handleInputChange — ordering across events', () =
     vi.useRealTimers();
   });
 });
+
+describe('MobileGridControls — hidden box focus hand-off', () => {
+  // iOS WebKit focuses a textarea when its selection is set. Emulate that on real textareas wired to the
+  // component's handlers the way React wires them.
+  function mountIosBoxes(instance) {
+    const boxes = ['1', '2', '3'].map((name) => {
+      const box = document.createElement('textarea');
+      box.name = name;
+      box.value = '$';
+      const {set} = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'selectionStart');
+      Object.defineProperty(box, 'selectionStart', {
+        configurable: true,
+        get: () => box.value.length,
+        set(v) {
+          set.call(box, v);
+          if (document.activeElement !== box) box.focus();
+        },
+      });
+      box.addEventListener('focus', (e) => instance.handleInputFocus(e));
+      box.addEventListener('blur', (e) => instance.handleInputBlur(e));
+      document.body.appendChild(box);
+      return box;
+    });
+    instance.inputRef = {current: boxes[1]};
+    return boxes;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.useRealTimers();
+  });
+
+  it('moves one clue and settles on box 2 when focus lands on box 3 (iPad Tab)', () => {
+    const {instance} = makeMobileInstance();
+    const selectNextClue = vi.spyOn(instance, 'selectNextClue').mockImplementation(() => {});
+    vi.useFakeTimers();
+    const [, main, next] = mountIosBoxes(instance);
+    main.focus();
+    selectNextClue.mockClear();
+
+    next.focus();
+    // Before the fix each deferred selection write refocused box 3 and the loop never drained.
+    for (let i = 0; i < 20; i += 1) vi.runOnlyPendingTimers();
+
+    expect(vi.getTimerCount()).toBe(0);
+    expect(selectNextClue).toHaveBeenCalledTimes(1);
+    expect(selectNextClue).toHaveBeenCalledWith(false);
+    expect(document.activeElement).toBe(main);
+  });
+
+  it('does not refocus box 2 after it is blurred', () => {
+    const {instance} = makeMobileInstance();
+    vi.useFakeTimers();
+    const [, main] = mountIosBoxes(instance);
+    main.focus();
+    main.blur();
+    vi.runAllTimers();
+    expect(document.activeElement).not.toBe(main);
+  });
+
+  it('handles a hardware Tab on the main box without moving focus', () => {
+    const {instance} = makeMobileInstance();
+    const selectNextClue = vi.spyOn(instance, 'selectNextClue').mockImplementation(() => {});
+    const forward = {key: 'Tab', shiftKey: false, preventDefault: vi.fn(), target: {blur: vi.fn()}};
+    instance.handleMainInputKeyDown(forward);
+    expect(forward.preventDefault).toHaveBeenCalled();
+    expect(selectNextClue).toHaveBeenLastCalledWith(false);
+
+    const back = {key: 'Tab', shiftKey: true, preventDefault: vi.fn(), target: {blur: vi.fn()}};
+    instance.handleMainInputKeyDown(back);
+    expect(selectNextClue).toHaveBeenLastCalledWith(true);
+  });
+
+  it('still blurs on volume keys from the main box', () => {
+    const {instance} = makeMobileInstance();
+    const ev = {key: 'AudioVolumeUp', preventDefault: vi.fn(), target: {blur: vi.fn()}};
+    instance.handleMainInputKeyDown(ev);
+    expect(ev.target.blur).toHaveBeenCalled();
+    expect(ev.preventDefault).not.toHaveBeenCalled();
+  });
+});
