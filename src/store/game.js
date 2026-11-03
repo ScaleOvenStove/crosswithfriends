@@ -186,9 +186,10 @@ export default class Game extends EventEmitter {
       });
       this._joined = true;
       this.syncState = null;
-      if (!this._initialSyncCompleted) {
-        await this.syncAllGameEvents();
-      }
+      // Events broadcast while this socket was out of the room never reached
+      // it, so a reconnect after the first sync fetches history again to pick
+      // up other players' moves made during the gap.
+      await this.syncAllGameEvents({resync: this._initialSyncCompleted});
       await this.flushOfflineQueue();
       this.emitReconnect();
     });
@@ -383,13 +384,25 @@ export default class Game extends EventEmitter {
     await this.syncAllGameEvents();
   }
 
-  async syncAllGameEvents() {
+  // `resync` replays history into a game that is already loaded: only events
+  // HistoryWrapper can dedup by id are emitted, so the ones this client
+  // already has are no-ops. The create event is skipped (re-emitting it would
+  // rebuild the board), as are id-less events, which would be applied twice.
+  async syncAllGameEvents({resync = false} = {}) {
     if (!this.socket || !this.socket.connected) return;
     const response = await emitAsync(this.socket, 'sync_all_game_events', this.gid);
     // Server returns an array of events on success, or {error: ...} on failure.
     // Only process and check for gameNotFound on a valid array response.
     if (!Array.isArray(response)) {
       console.error('sync_all_game_events returned error:', response);
+      return;
+    }
+    if (resync) {
+      response.forEach((event) => {
+        if (event && event.id && event.type !== 'create') {
+          this.emitWSEvent(castNullsToUndefined(event));
+        }
+      });
       return;
     }
     response.forEach((event) => {

@@ -32,7 +32,7 @@ vi.mock('@sentry/react', () => ({
 }));
 
 import Game from '../game';
-import {emitAsyncWithTimeout} from '../../sockets/emitAsync';
+import {emitAsync, emitAsyncWithTimeout} from '../../sockets/emitAsync';
 
 function makeGame() {
   const game = new Game('/game/test-123');
@@ -288,5 +288,63 @@ describe('optimistic events', () => {
 
     expect(optimistic).toHaveLength(1);
     expect(optimistic[0].type).toBe('updateCell');
+  });
+});
+
+// ---- Reconnect resync ----
+
+describe('reconnect after the initial sync', () => {
+  afterEach(() => {
+    emitAsync.mockImplementation((_socket, ...args) => {
+      const cb = args[args.length - 1];
+      if (typeof cb === 'function') return Promise.resolve(cb());
+      return Promise.resolve();
+    });
+  });
+
+  function connectHandler() {
+    const call = mockSocket.on.mock.calls.filter((c) => c[0] === 'connect').pop();
+    return call[1];
+  }
+
+  it('replays events other players made while this client was disconnected', async () => {
+    const game = makeGame();
+    const history = [
+      {id: 'c', type: 'create', timestamp: 0, params: {}},
+      {id: 'a', type: 'updateCell', timestamp: 1, params: {value: 'A'}},
+    ];
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? history : undefined)
+    );
+    await game.attach();
+
+    const seen = [];
+    game.on('wsEvent', (e) => seen.push(e.id));
+    game.on('wsCreateEvent', (e) => seen.push(e.id));
+
+    // Someone else typed while this socket was out of the room, and an old
+    // id-less event is in history too.
+    history.push({id: 'b', type: 'updateCell', timestamp: 2, params: {value: 'B'}});
+    history.push({type: 'updateCell', timestamp: 3, params: {value: 'C'}});
+    await connectHandler()();
+
+    // 'a' is re-emitted and deduped by HistoryWrapper; create and the id-less
+    // event are skipped so neither is applied twice.
+    expect(seen).toEqual(['a', 'b']);
+  });
+
+  it('does not report gameNotFound on a resync', async () => {
+    const game = makeGame();
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? [{id: 'c', type: 'create', params: {}}] : undefined)
+    );
+    await game.attach();
+    const notFound = vi.fn();
+    game.on('gameNotFound', notFound);
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? [] : undefined)
+    );
+    await connectHandler()();
+    expect(notFound).not.toHaveBeenCalled();
   });
 });
