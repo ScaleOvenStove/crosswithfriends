@@ -74,6 +74,12 @@ function isTerminalEventRejection(error) {
   return TERMINAL_EVENT_REJECTIONS.has(error);
 }
 
+// Every Game that hasn't been detached. The socket is shared across the tab
+// and the server tracks room membership per socket, not per Game, so a
+// detached Game may leave a room only if no live Game still uses it — e.g.
+// the page navigated away from a game and straight back to it.
+const liveGames = new Set();
+
 export default class Game extends EventEmitter {
   constructor(path) {
     super();
@@ -87,6 +93,7 @@ export default class Game extends EventEmitter {
     this._socketHandlers = [];
     this._detached = false;
     this._leftRoom = false;
+    liveGames.add(this);
   }
 
   // Stop this Game from hearing anything more: remove its handlers from the
@@ -96,6 +103,7 @@ export default class Game extends EventEmitter {
   // history, into whichever game the page now shows.
   detach() {
     this._detached = true;
+    liveGames.delete(this);
     if (this.socket) {
       this._socketHandlers.forEach(([name, handler]) => this.socket.off(name, handler));
     }
@@ -111,10 +119,14 @@ export default class Game extends EventEmitter {
   // reconnect handler gone, that edit would then sit in the offline queue
   // until the player reopened this game. It does still have to leave: the
   // socket's game_event listener isn't per-game, so staying in the room would
-  // feed this game's live events to the Game that replaced it.
+  // feed this game's live events to the Game that replaced it. A live Game on
+  // the same gid owns the room now, so in that case it stays.
   _maybeLeaveRoom() {
     if (!this._detached || this._leftRoom || this._inFlight.size > 0 || this._flushing) return;
     this._leftRoom = true;
+    for (const game of liveGames) {
+      if (game.gid === this.gid) return;
+    }
     if (this.socket && this.socket.connected) this.socket.emit('leave_game', this.gid);
   }
 

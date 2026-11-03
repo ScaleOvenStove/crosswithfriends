@@ -35,10 +35,18 @@ vi.mock('@sentry/react', () => ({
 import Game from '../game';
 import {emitAsync, emitAsyncWithTimeout} from '../../sockets/emitAsync';
 
+// Games stay registered as live until detached, and a live Game on the same
+// gid keeps another from leaving the room, so each test detaches its own.
+const madeGames = [];
 function makeGame() {
   const game = new Game('/game/test-123');
+  madeGames.push(game);
   return game;
 }
+
+afterEach(() => {
+  madeGames.splice(0).forEach((game) => game.detach());
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -492,6 +500,28 @@ describe('detach', () => {
     ackEdit();
     await editing;
     expect(mockSocket.emit).toHaveBeenCalledWith('leave_game', 'test-123');
+    emitAsyncWithTimeout.mockImplementation(() => Promise.resolve());
+  });
+
+  it('stays in the room when the page has already reopened the same game', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    let ackEdit;
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          ackEdit = resolve;
+        })
+    );
+    const editing = game.addEvent({type: 'updateCell', timestamp: 1});
+    await vi.waitFor(() => expect(ackEdit).toBeDefined());
+    // Away and straight back: a new Game for the same gid joins the room.
+    game.detach();
+    makeGame();
+
+    ackEdit();
+    await editing;
+    expect(mockSocket.emit).not.toHaveBeenCalledWith('leave_game', 'test-123');
     emitAsyncWithTimeout.mockImplementation(() => Promise.resolve());
   });
 
