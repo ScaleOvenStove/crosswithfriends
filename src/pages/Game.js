@@ -129,8 +129,11 @@ class Game extends Component {
       this.handleUpdate();
     });
     this.gameModel.on('reconnect', () => {
-      // Offline events were flushed by the Game model on reconnect,
-      // so we can safely clear warnings and optimistic state
+      // Offline events were flushed by the Game model on reconnect, and each
+      // flushed event's echo arrives before its ack. Whatever optimistic event
+      // is neither confirmed nor still pending was lost and will never be
+      // echoed, so drop it rather than let it override that cell forever.
+      this.historyWrapper.retainOptimisticEvents(this.gameModel.pendingEventIds());
       this.setState({syncWarning: null});
       if (this._connectionTimer) clearTimeout(this._connectionTimer);
       this.setState({connectionFailed: false});

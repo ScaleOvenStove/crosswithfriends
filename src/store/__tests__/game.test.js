@@ -290,3 +290,64 @@ describe('optimistic events', () => {
     expect(optimistic[0].type).toBe('updateCell');
   });
 });
+
+// ---- Concurrent direct sends ----
+
+describe('events whose direct sends time out together', () => {
+  afterEach(() => {
+    emitAsyncWithTimeout.mockImplementation(() => Promise.resolve());
+  });
+
+  // Two keystrokes inside one ack timeout both read an empty queue and go
+  // straight to the socket. When both acks time out, each saves itself to the
+  // queue — and before the fix the second saved the empty queue it read
+  // before sending, overwriting the first. The lost event never echoed back,
+  // so its optimistic copy froze that cell.
+  it('queues both instead of the later one overwriting the earlier', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+
+    const rejects = [];
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejects.push(reject);
+        })
+    );
+
+    const first = game.addEvent({type: 'updateCell', timestamp: 1, params: {value: 'L'}});
+    const second = game.addEvent({type: 'updateCell', timestamp: 2, params: {value: 'E'}});
+    await vi.waitFor(() => expect(rejects).toHaveLength(2));
+
+    // From here on every send (the flush retries) fails immediately.
+    emitAsyncWithTimeout.mockImplementation(() => Promise.reject(new Error('offline')));
+    rejects[0](new Error('timeout'));
+    await first;
+    rejects[1](new Error('timeout'));
+    await second;
+
+    const queue = JSON.parse(localStorage.getItem('offline_queue_test-123'));
+    expect(queue.map((e) => e.params.value)).toEqual(['L', 'E']);
+  });
+
+  it('reports sent-but-unacked and queued events as pending', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    let resolveSend;
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSend = resolve;
+        })
+    );
+    const sending = game.addEvent({type: 'updateCell', timestamp: 1});
+    await vi.waitFor(() => expect(resolveSend).toBeDefined());
+    localStorage.setItem('offline_queue_test-123', JSON.stringify([{id: 'queued', type: 'updateCell'}]));
+
+    expect(game.pendingEventIds().size).toBe(2);
+
+    resolveSend();
+    await sending;
+    expect([...game.pendingEventIds()]).toEqual(['queued']);
+  });
+});

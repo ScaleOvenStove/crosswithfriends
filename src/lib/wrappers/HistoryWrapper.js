@@ -139,6 +139,13 @@ export default class HistoryWrapper {
     this.optimisticEvents = this.optimisticEvents.filter((ev) => ev.id !== id);
   }
 
+  // Drop every optimistic event whose id is not in `pendingIds`. An optimistic
+  // event the server will never echo is replayed on top of history forever,
+  // so its cell reverts to that value after every confirmed edit.
+  retainOptimisticEvents(pendingIds) {
+    this.optimisticEvents = this.optimisticEvents.filter((ev) => pendingIds.has(ev.id));
+  }
+
   clearOptimisticEvents() {
     this.optimisticEvents = [];
   }

@@ -82,6 +82,8 @@ export default class Game extends EventEmitter {
     this.createEvent = null;
     this.syncState = null; // null | 'retrying'
     this._flushing = false;
+    // Ids of events sent straight to the socket whose ack hasn't come back.
+    this._inFlight = new Set();
   }
 
   get gid() {
@@ -283,8 +285,8 @@ export default class Game extends EventEmitter {
     await this.connectToWebsocket();
 
     // If queue is empty, try sending immediately
-    const queue = loadOfflineQueue(this.gid);
-    if (queue.length === 0) {
+    if (loadOfflineQueue(this.gid).length === 0) {
+      this._inFlight.add(event.id);
       try {
         const ack = await this.pushEventToWebsocket(event);
         // Server rejection (e.g. 'not in game') resolves the Promise — don't
@@ -301,10 +303,19 @@ export default class Game extends EventEmitter {
         return;
       } catch {
         // Fall through to queuing logic
+      } finally {
+        this._inFlight.delete(event.id);
       }
     }
 
-    // Persist to localStorage so the event survives page refreshes / long tunnels
+    // Persist to localStorage so the event survives page refreshes / long tunnels.
+    // Re-load rather than reuse a copy read before the send: the send above
+    // can wait up to 10s for its ack, and every keystroke typed in that window
+    // takes the same direct path and saves itself here when its own ack times
+    // out. Saving a stale copy would overwrite those events, and a lost event
+    // never echoes back, so its optimistic copy stays on the board and wins
+    // over every later edit to that cell.
+    const queue = loadOfflineQueue(this.gid);
     queue.push(event);
     saveOfflineQueue(this.gid, queue);
     console.log(`Queued event offline (${queue.length} pending)`);
@@ -361,6 +372,15 @@ export default class Game extends EventEmitter {
     } finally {
       this._flushing = false;
     }
+  }
+
+  // Ids of every event that may still be echoed back by the server: queued,
+  // or sent and awaiting an ack. Any optimistic event outside this set will
+  // never be confirmed.
+  pendingEventIds() {
+    const ids = new Set(this._inFlight);
+    loadOfflineQueue(this.gid).forEach((event) => ids.add(event.id));
+    return ids;
   }
 
   pushEventToWebsocket(event) {
