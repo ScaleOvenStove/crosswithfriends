@@ -37,6 +37,79 @@
   text-decoration: none;
 }
 
+/* Collapsible panes: the puzzle-info header and the players list each get a
+   chevron toggle so they can be folded away when they crowd out the messages
+   (mostly on phones, where they start collapsed). */
+.chat--pane-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.chat--pane-toggle:focus-visible {
+  outline: 2px solid var(--main-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.chat--pane-toggle--chevron {
+  flex-shrink: 0;
+  font-size: 22px;
+  color: #888;
+  transition: transform 0.15s ease;
+}
+
+.chat--pane-toggle[aria-expanded='true'] .chat--pane-toggle--chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat--pane-toggle--chevron {
+    transition: none;
+  }
+}
+
+/* Sized to its content rather than the panel, so the chevron sits right after
+   the title and stays reachable even when the sidebar is clipped. */
+.chat--header--toggle {
+  max-width: 100%;
+}
+
+.chat--header--toggle .chat--header--title {
+  min-width: 0;
+}
+
+.chat--header.collapsed .chat--header--title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat--header--toggle-lock {
+  flex-shrink: 0;
+  color: #b08400;
+}
+
+.chat--header--details {
+  display: flex;
+  flex-direction: column;
+}
+
+.dark .chat--pane-toggle--chevron {
+  color: rgb(255 255 255 / 55%);
+}
+
+.dark .chat--header--toggle-lock {
+  color: #f0d488;
+}
+
 .chat--header--subtitle {
   margin-top: 10px;
   font-size: 14px;
@@ -154,8 +227,30 @@
 }
 
 .chat--username {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
   padding: 5px;
   padding-top: 10px;
+}
+
+.chat--username--name {
+  min-width: 0;
+}
+
+.chat--users--toggle {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.chat--users--toggle-icon {
+  font-size: 14px;
+}
+
+.dark .chat--users--toggle {
+  color: rgb(255 255 255 / 60%);
 }
 
 .chat--username--input {
