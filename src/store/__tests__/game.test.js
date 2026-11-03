@@ -473,6 +473,28 @@ describe('detach', () => {
     expect(pageListener).not.toHaveBeenCalled();
   });
 
+  it('waits for an edit still awaiting its ack before leaving the room', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    let ackEdit;
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          ackEdit = resolve;
+        })
+    );
+    // The player types, then switches games before the ack comes back.
+    const editing = game.addEvent({type: 'updateCell', timestamp: 1});
+    await vi.waitFor(() => expect(ackEdit).toBeDefined());
+    game.detach();
+    expect(mockSocket.emit).not.toHaveBeenCalledWith('leave_game', 'test-123');
+
+    ackEdit();
+    await editing;
+    expect(mockSocket.emit).toHaveBeenCalledWith('leave_game', 'test-123');
+    emitAsyncWithTimeout.mockImplementation(() => Promise.resolve());
+  });
+
   it('registers nothing when detached before the socket resolves', async () => {
     const game = makeGame();
     const connecting = game.connectToWebsocket();

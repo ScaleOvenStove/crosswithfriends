@@ -86,6 +86,7 @@ export default class Game extends EventEmitter {
     this._inFlight = new Set();
     this._socketHandlers = [];
     this._detached = false;
+    this._leftRoom = false;
   }
 
   // Stop this Game from hearing anything more: remove its handlers from the
@@ -97,10 +98,24 @@ export default class Game extends EventEmitter {
     this._detached = true;
     if (this.socket) {
       this._socketHandlers.forEach(([name, handler]) => this.socket.off(name, handler));
-      if (this.socket.connected) this.socket.emit('leave_game', this.gid);
     }
     this._socketHandlers = [];
     this.removeAllListeners();
+    this._maybeLeaveRoom();
+  }
+
+  // Leave the room once a detached Game has nothing left to deliver. Leaving
+  // any earlier would reject the edits still in flight: the server checks
+  // room membership only after an await, so a leave_game sent right behind a
+  // keystroke can land first and turn it into 'not in game'. With the
+  // reconnect handler gone, that edit would then sit in the offline queue
+  // until the player reopened this game. It does still have to leave: the
+  // socket's game_event listener isn't per-game, so staying in the room would
+  // feed this game's live events to the Game that replaced it.
+  _maybeLeaveRoom() {
+    if (!this._detached || this._leftRoom || this._inFlight.size > 0 || this._flushing) return;
+    this._leftRoom = true;
+    if (this.socket && this.socket.connected) this.socket.emit('leave_game', this.gid);
   }
 
   get gid() {
@@ -311,6 +326,14 @@ export default class Game extends EventEmitter {
   }
 
   async addEvent(event) {
+    try {
+      await this._sendEvent(event);
+    } finally {
+      this._maybeLeaveRoom();
+    }
+  }
+
+  async _sendEvent(event) {
     event.id = uuid.v4();
     this.emitOptimisticEvent(event);
     await this.connectToWebsocket();
@@ -402,6 +425,7 @@ export default class Game extends EventEmitter {
       }
     } finally {
       this._flushing = false;
+      this._maybeLeaveRoom();
     }
   }
 
