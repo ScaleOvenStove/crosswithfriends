@@ -11,6 +11,16 @@
   flex-direction: column;
 }
 
+/* Narrow desktop windows: give the grid a little more room. Keep in sync with
+   chatMinWidth() in Game/Game.js, which reserves this width when sizing the grid. */
+@media screen and (width <= 1200px) {
+  .chat {
+    min-width: 240px;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}
+
 @media print {
   .chat {
     display: none;

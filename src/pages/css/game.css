@@ -3,6 +3,15 @@
   flex-grow: 1;
 }
 
+/* The grid + clues column. It may shrink (the clue lists give up width) so the
+   chat sidebar keeps its min-width, but never below its own min-content: if it
+   could, the clue lists would paint over the chat instead of the row scrolling.
+   (.flex--column sets min-width: 0, hence the more specific selector.) */
+.game > .game--board {
+  flex-shrink: 1;
+  min-width: auto;
+}
+
 @media screen {
   .game {
     overflow: auto;
@@ -45,4 +54,13 @@
 
 .dark .game-moderation-blocker--card p {
   color: rgb(255 255 255 / 60%);
+}
+
+/* The chat sidebar's wrapper takes whatever the board leaves. A zero basis
+   keeps the chat's (long, unwrapped) max-content width from competing with
+   the board for space, and min-width: auto (overriding .flex's 0) makes the
+   wrapper honour .chat's min-width rather than letting the chat overflow it. */
+.game > .game--chat {
+  flex-basis: 0;
+  min-width: auto;
 }

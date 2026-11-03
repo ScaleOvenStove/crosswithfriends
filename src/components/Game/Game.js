@@ -19,6 +19,21 @@ const vimModeKey = 'vim-mode';
 const showProgressKey = 'show-progress';
 const vimModeRegex = /^\d+(a|d)*$/;
 
+// Horizontal space the desktop grid must leave for its row-mates (see
+// src/pages/Game.js), mirroring the CSS minimums. Both sidebars tighten at
+// width <= 1200px so a 21×21 grid at its 20px minimum cell size still fits a
+// 1024px window.
+// - clue lists (Player/css/clues.css): 2 × (min-width + margin-left 5 + padding-right 10)
+//   + .clues horizontal padding
+// - chat (Chat/css/index.css): min-width + horizontal padding + 1px border
+// - the board column's padding around the grid, plus a little slack
+const NARROW_DESKTOP_WIDTH = 1200; // matches the (width <= 1200px) media queries
+const DESKTOP_BOARD_PADDING = 40;
+const cluesMinWidth = (viewportWidth) =>
+  viewportWidth <= NARROW_DESKTOP_WIDTH ? 2 * (120 + 15) + 2 * 10 : 2 * (130 + 15) + 2 * 20;
+const chatMinWidth = (viewportWidth) =>
+  1 + (viewportWidth <= NARROW_DESKTOP_WIDTH ? 240 + 2 * 15 : 280 + 2 * 25);
+
 // component for gameplay -- incl. grid/clues & toolbar
 export default class Game extends Component {
   constructor() {
@@ -415,7 +430,15 @@ export default class Game extends Component {
       const viewportWidth = (availableHeight * cols) / rows;
       // Cap scales with fontScale so "Text: Larger" grows cells up to the viewport cap.
       const fixedWidth = (35 * 15 * this.state.fontScale * cols) / rows;
-      width = Math.min(viewportWidth, fixedWidth, screenWidth - 20);
+      // The grid sits in a row with the clue lists and the chat sidebar, and the
+      // grid itself does not shrink, so cap it by the width left once those have
+      // their minimums. Without this the row overflows and clips the chat.
+      const reservedWidth =
+        cluesMinWidth(window.innerWidth) +
+        DESKTOP_BOARD_PADDING +
+        (this.props.chatHidden ? 0 : chatMinWidth(window.innerWidth));
+      const horizontalWidth = screenWidth - reservedWidth;
+      width = Math.min(viewportWidth, fixedWidth, horizontalWidth, screenWidth - 20);
     }
     const minSize = this.props.mobile ? 1 : 20;
     const size = Math.max(minSize, width / cols);

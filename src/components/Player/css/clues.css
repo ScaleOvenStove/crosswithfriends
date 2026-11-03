@@ -16,11 +16,24 @@
 }
 
 .clues--list {
-  width: 200px;
+  /* Shrinkable so the grid + clues + chat row fits narrower desktop windows.
+     Keep the minimums in sync with cluesMinWidth() in Game/Game.js. */
+  flex: 0 1 200px;
+  min-width: 130px;
   display: flex;
   flex-direction: column;
   margin-left: 5px;
   padding-right: 10px;
+}
+
+@media screen and (width <= 1200px) {
+  .clues {
+    padding: 0 10px;
+  }
+
+  .clues--list {
+    min-width: 120px;
+  }
 }
 
 .clues--list--title {

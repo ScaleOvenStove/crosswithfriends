@@ -632,10 +632,12 @@ class Game extends Component {
       <>
         <Nav hidden={focusMode} />
         <div className="game">
-          <div className={`flex--column flex--shrink-0${chatHidden ? ' flex--center-h' : ''}`}>
+          <div className={`flex--column game--board${chatHidden ? ' flex--center-h' : ''}`}>
             {this.showingGame && this.renderGame()}
           </div>
-          {!chatHidden && <div className="flex flex--grow">{this.showingChat && this.renderChat()}</div>}
+          {!chatHidden && (
+            <div className="flex flex--grow game--chat">{this.showingChat && this.renderChat()}</div>
+          )}
         </div>
       </>
     );
