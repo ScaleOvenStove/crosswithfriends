@@ -74,6 +74,12 @@ function isTerminalEventRejection(error) {
   return TERMINAL_EVENT_REJECTIONS.has(error);
 }
 
+// Every Game that hasn't been detached. The socket is shared across the tab
+// and the server tracks room membership per socket, not per Game, so a
+// detached Game may leave a room only if no live Game still uses it — e.g.
+// the page navigated away from a game and straight back to it.
+const liveGames = new Set();
+
 export default class Game extends EventEmitter {
   constructor(path) {
     super();
@@ -82,6 +88,46 @@ export default class Game extends EventEmitter {
     this.createEvent = null;
     this.syncState = null; // null | 'retrying'
     this._flushing = false;
+    // Ids of events sent straight to the socket whose ack hasn't come back.
+    this._inFlight = new Set();
+    this._socketHandlers = [];
+    this._detached = false;
+    this._leftRoom = false;
+    liveGames.add(this);
+  }
+
+  // Stop this Game from hearing anything more: remove its handlers from the
+  // shared socket, leave the room, and drop its own listeners. The page calls
+  // this when it switches to another game or unmounts. Otherwise the old
+  // Game keeps feeding its events, and on reconnect its whole resynced
+  // history, into whichever game the page now shows.
+  detach() {
+    this._detached = true;
+    liveGames.delete(this);
+    if (this.socket) {
+      this._socketHandlers.forEach(([name, handler]) => this.socket.off(name, handler));
+    }
+    this._socketHandlers = [];
+    this.removeAllListeners();
+    this._maybeLeaveRoom();
+  }
+
+  // Leave the room once a detached Game has nothing left to deliver. Leaving
+  // any earlier would reject the edits still in flight: the server checks
+  // room membership only after an await, so a leave_game sent right behind a
+  // keystroke can land first and turn it into 'not in game'. With the
+  // reconnect handler gone, that edit would then sit in the offline queue
+  // until the player reopened this game. It does still have to leave: the
+  // socket's game_event listener isn't per-game, so staying in the room would
+  // feed this game's live events to the Game that replaced it. A live Game on
+  // the same gid owns the room now, so in that case it stays.
+  _maybeLeaveRoom() {
+    if (!this._detached || this._leftRoom || this._inFlight.size > 0 || this._flushing) return;
+    this._leftRoom = true;
+    for (const game of liveGames) {
+      if (game.gid === this.gid) return;
+    }
+    if (this.socket && this.socket.connected) this.socket.emit('leave_game', this.gid);
   }
 
   get gid() {
@@ -91,9 +137,16 @@ export default class Game extends EventEmitter {
 
   // Websocket code
   async connectToWebsocket() {
-    if (this.socket) return;
+    if (this.socket || this._detached) return;
     const socket = await getSocket();
+    if (this._detached) return;
     this.socket = socket;
+    // The socket is shared by every Game in the tab, so each handler is
+    // recorded for detach() to remove.
+    const on = (name, handler) => {
+      socket.on(name, handler);
+      this._socketHandlers.push([name, handler]);
+    };
 
     // Attach all long-lived listeners up-front, BEFORE the initial join.
     // socket.io preserves listeners across disconnect/connect on the same
@@ -104,7 +157,7 @@ export default class Game extends EventEmitter {
     // these listeners were registered AFTER the join await, so a bounce
     // during the await would leave the new transport with no listeners
     // and the page would sit blank waiting for the create event.
-    socket.on('disconnect', () => {
+    on('disconnect', () => {
       console.log('received disconnect from server');
       // Force the reconnect handler to re-issue join_game before we
       // consider ourselves in the room again. Without resetting this, a
@@ -114,7 +167,7 @@ export default class Game extends EventEmitter {
       // 'not in game' and flushOfflineQueue silently drops the event.
       this._joined = false;
     });
-    socket.on('game_event', (event) => {
+    on('game_event', (event) => {
       event = castNullsToUndefined(event);
       // Live events are server-stamped, so each one is a fresh sample of the
       // offset between server time and this device's clock. The game clock
@@ -124,7 +177,7 @@ export default class Game extends EventEmitter {
       this.emitWSEvent(event);
     });
     // Server broadcasts 'kicked' to the room when the owner kicks a player.
-    socket.on('kicked', (msg) => {
+    on('kicked', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('kicked', msg);
       }
@@ -132,7 +185,7 @@ export default class Game extends EventEmitter {
     // Owner toggled one of the per-action restrictions (check/reveal/reset).
     // Forward to listeners so the Toolbar can flip the gating live without
     // having to refetch /moderation.
-    socket.on('restrictions_changed', (msg) => {
+    on('restrictions_changed', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('restrictionsChanged', msg);
       }
@@ -142,14 +195,14 @@ export default class Game extends EventEmitter {
     // chat-side UX — showing players the room is now closed to new
     // joiners — and for keeping the owner-controls panel in sync across
     // tabs of the same account.
-    socket.on('lock_changed', (msg) => {
+    on('lock_changed', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('lockChanged', msg);
       }
     });
     // And 'unkicked' when a kick is reversed, so other tabs can drop the
     // dfac_id from their local kicked list without a full reload.
-    socket.on('unkicked', (msg) => {
+    on('unkicked', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('unkicked', msg);
       }
@@ -158,7 +211,7 @@ export default class Game extends EventEmitter {
     // socket instance (the initial connect already fired before getSocket
     // resolved). Re-issues join_game, re-runs initial sync if it never
     // completed, and flushes queued events.
-    socket.on('connect', async () => {
+    on('connect', async () => {
       console.log('reconnecting...');
       const joinSentAt = Date.now();
       const ack = await emitAsync(socket, 'join_game', this.gid);
@@ -186,8 +239,15 @@ export default class Game extends EventEmitter {
       });
       this._joined = true;
       this.syncState = null;
-      if (!this._initialSyncCompleted) {
-        await this.syncAllGameEvents();
+      // Events broadcast while this socket was out of the room never reached
+      // it, so a reconnect after the first sync fetches history again to pick
+      // up other players' moves made during the gap. A game loaded from a
+      // solved snapshot is skipped: its board and chat already include the
+      // whole event log, and if someone has since chosen to keep the replay,
+      // the server now returns that log, whose ids this client never saw —
+      // replaying it would apply every event (each chat message) twice.
+      if (!this._loadedFromSnapshot) {
+        await this.syncAllGameEvents({resync: this._initialSyncCompleted});
       }
       await this.flushOfflineQueue();
       this.emitReconnect();
@@ -278,13 +338,21 @@ export default class Game extends EventEmitter {
   }
 
   async addEvent(event) {
+    try {
+      await this._sendEvent(event);
+    } finally {
+      this._maybeLeaveRoom();
+    }
+  }
+
+  async _sendEvent(event) {
     event.id = uuid.v4();
     this.emitOptimisticEvent(event);
     await this.connectToWebsocket();
 
     // If queue is empty, try sending immediately
-    const queue = loadOfflineQueue(this.gid);
-    if (queue.length === 0) {
+    if (loadOfflineQueue(this.gid).length === 0) {
+      this._inFlight.add(event.id);
       try {
         const ack = await this.pushEventToWebsocket(event);
         // Server rejection (e.g. 'not in game') resolves the Promise — don't
@@ -301,10 +369,19 @@ export default class Game extends EventEmitter {
         return;
       } catch {
         // Fall through to queuing logic
+      } finally {
+        this._inFlight.delete(event.id);
       }
     }
 
-    // Persist to localStorage so the event survives page refreshes / long tunnels
+    // Persist to localStorage so the event survives page refreshes / long tunnels.
+    // Re-load rather than reuse a copy read before the send: the send above
+    // can wait up to 10s for its ack, and every keystroke typed in that window
+    // takes the same direct path and saves itself here when its own ack times
+    // out. Saving a stale copy would overwrite those events, and a lost event
+    // never echoes back, so its optimistic copy stays on the board and wins
+    // over every later edit to that cell.
+    const queue = loadOfflineQueue(this.gid);
     queue.push(event);
     saveOfflineQueue(this.gid, queue);
     console.log(`Queued event offline (${queue.length} pending)`);
@@ -360,7 +437,17 @@ export default class Game extends EventEmitter {
       }
     } finally {
       this._flushing = false;
+      this._maybeLeaveRoom();
     }
+  }
+
+  // Ids of every event that may still be echoed back by the server: queued,
+  // or sent and awaiting an ack. Any optimistic event outside this set will
+  // never be confirmed.
+  pendingEventIds() {
+    const ids = new Set(this._inFlight);
+    loadOfflineQueue(this.gid).forEach((event) => ids.add(event.id));
+    return ids;
   }
 
   pushEventToWebsocket(event) {
@@ -383,7 +470,11 @@ export default class Game extends EventEmitter {
     await this.syncAllGameEvents();
   }
 
-  async syncAllGameEvents() {
+  // `resync` replays history into a game that is already loaded: only events
+  // HistoryWrapper can dedup by id are emitted, so the ones this client
+  // already has are no-ops. The create event is skipped (re-emitting it would
+  // rebuild the board), as are id-less events, which would be applied twice.
+  async syncAllGameEvents({resync = false} = {}) {
     if (!this.socket || !this.socket.connected) return;
     const response = await emitAsync(this.socket, 'sync_all_game_events', this.gid);
     // Server returns an array of events on success, or {error: ...} on failure.
@@ -392,12 +483,25 @@ export default class Game extends EventEmitter {
       console.error('sync_all_game_events returned error:', response);
       return;
     }
+    if (resync) {
+      response.forEach((event) => {
+        if (event && event.id && event.type !== 'create') {
+          this.emitWSEvent(castNullsToUndefined(event));
+        }
+      });
+      return;
+    }
     response.forEach((event) => {
       event = castNullsToUndefined(event);
       this.emitWSEvent(event);
     });
     if (response.some((event) => event && event.type === 'create')) {
       this._initialSyncCompleted = true;
+      // getGameEvents answers for a solved, non-replay game with just the
+      // create event, its game already marked solved from the snapshot. A
+      // real create event is never solved.
+      this._loadedFromSnapshot =
+        response.length === 1 && response[0].type === 'create' && !!response[0].params?.game?.solved;
       this.emit('gameReady');
     } else {
       this.emit('gameNotFound');

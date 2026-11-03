@@ -4,6 +4,7 @@ import {vi} from 'vitest';
 const mockSocket = {
   connected: true,
   on: vi.fn(),
+  off: vi.fn(),
   once: vi.fn(),
   emit: vi.fn((...args) => {
     // auto-ack
@@ -32,12 +33,20 @@ vi.mock('@sentry/react', () => ({
 }));
 
 import Game from '../game';
-import {emitAsyncWithTimeout} from '../../sockets/emitAsync';
+import {emitAsync, emitAsyncWithTimeout} from '../../sockets/emitAsync';
 
+// Games stay registered as live until detached, and a live Game on the same
+// gid keeps another from leaving the room, so each test detaches its own.
+const madeGames = [];
 function makeGame() {
   const game = new Game('/game/test-123');
+  madeGames.push(game);
   return game;
 }
+
+afterEach(() => {
+  madeGames.splice(0).forEach((game) => game.detach());
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -288,5 +297,241 @@ describe('optimistic events', () => {
 
     expect(optimistic).toHaveLength(1);
     expect(optimistic[0].type).toBe('updateCell');
+  });
+});
+
+// ---- Concurrent direct sends ----
+
+describe('events whose direct sends time out together', () => {
+  afterEach(() => {
+    emitAsyncWithTimeout.mockImplementation(() => Promise.resolve());
+  });
+
+  // Two keystrokes inside one ack timeout both read an empty queue and go
+  // straight to the socket. When both acks time out, each saves itself to the
+  // queue — and before the fix the second saved the empty queue it read
+  // before sending, overwriting the first. The lost event never echoed back,
+  // so its optimistic copy froze that cell.
+  it('queues both instead of the later one overwriting the earlier', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+
+    const rejects = [];
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejects.push(reject);
+        })
+    );
+
+    const first = game.addEvent({type: 'updateCell', timestamp: 1, params: {value: 'L'}});
+    const second = game.addEvent({type: 'updateCell', timestamp: 2, params: {value: 'E'}});
+    await vi.waitFor(() => expect(rejects).toHaveLength(2));
+
+    // From here on every send (the flush retries) fails immediately.
+    emitAsyncWithTimeout.mockImplementation(() => Promise.reject(new Error('offline')));
+    rejects[0](new Error('timeout'));
+    await first;
+    rejects[1](new Error('timeout'));
+    await second;
+
+    const queue = JSON.parse(localStorage.getItem('offline_queue_test-123'));
+    expect(queue.map((e) => e.params.value)).toEqual(['L', 'E']);
+  });
+
+  it('reports sent-but-unacked and queued events as pending', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    let resolveSend;
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSend = resolve;
+        })
+    );
+    const sending = game.addEvent({type: 'updateCell', timestamp: 1});
+    await vi.waitFor(() => expect(resolveSend).toBeDefined());
+    localStorage.setItem('offline_queue_test-123', JSON.stringify([{id: 'queued', type: 'updateCell'}]));
+
+    expect(game.pendingEventIds().size).toBe(2);
+
+    resolveSend();
+    await sending;
+    expect([...game.pendingEventIds()]).toEqual(['queued']);
+  });
+});
+
+// ---- Reconnect resync ----
+
+describe('reconnect after the initial sync', () => {
+  afterEach(() => {
+    emitAsync.mockImplementation((_socket, ...args) => {
+      const cb = args[args.length - 1];
+      if (typeof cb === 'function') return Promise.resolve(cb());
+      return Promise.resolve();
+    });
+  });
+
+  function connectHandler() {
+    const call = mockSocket.on.mock.calls.filter((c) => c[0] === 'connect').pop();
+    return call[1];
+  }
+
+  it('replays events other players made while this client was disconnected', async () => {
+    const game = makeGame();
+    const history = [
+      {id: 'c', type: 'create', timestamp: 0, params: {}},
+      {id: 'a', type: 'updateCell', timestamp: 1, params: {value: 'A'}},
+    ];
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? history : undefined)
+    );
+    await game.attach();
+
+    const seen = [];
+    game.on('wsEvent', (e) => seen.push(e.id));
+    game.on('wsCreateEvent', (e) => seen.push(e.id));
+
+    // Someone else typed while this socket was out of the room, and an old
+    // id-less event is in history too.
+    history.push({id: 'b', type: 'updateCell', timestamp: 2, params: {value: 'B'}});
+    history.push({type: 'updateCell', timestamp: 3, params: {value: 'C'}});
+    await connectHandler()();
+
+    // 'a' is re-emitted and deduped by HistoryWrapper; create and the id-less
+    // event are skipped so neither is applied twice.
+    expect(seen).toEqual(['a', 'b']);
+  });
+
+  // Another tab on the same game flushed an event this tab queued (the
+  // offline queue is shared through localStorage), so only that tab saw the
+  // echo. The resync has to bring it into history before 'reconnect' fires,
+  // or the page's cleanup of unconfirmed optimistic events drops a letter
+  // the server accepted.
+  it('replays history before emitting reconnect', async () => {
+    const game = makeGame();
+    const history = [{id: 'c', type: 'create', timestamp: 0, params: {}}];
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? history : undefined)
+    );
+    await game.attach();
+
+    const order = [];
+    game.on('wsEvent', (e) => order.push(e.id));
+    game.on('reconnect', () => order.push('reconnect'));
+    history.push({id: 'flushed-by-other-tab', type: 'updateCell', timestamp: 1, params: {}});
+    await connectHandler()();
+
+    expect(order).toEqual(['flushed-by-other-tab', 'reconnect']);
+  });
+
+  it('does not replay history over a game loaded from a solved snapshot', async () => {
+    const game = makeGame();
+    let history = [{id: 'c', type: 'create', timestamp: 0, params: {game: {solved: true}}}];
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? history : undefined)
+    );
+    await game.attach();
+
+    const seen = [];
+    game.on('wsEvent', (e) => seen.push(e.id));
+    // Someone chose to keep the replay, so the server now returns the full log.
+    history = [
+      {id: 'c', type: 'create', timestamp: 0, params: {game: {}}},
+      {id: 'chat-1', type: 'chat', timestamp: 1, params: {}},
+    ];
+    await connectHandler()();
+
+    expect(seen).toEqual([]);
+  });
+
+  it('does not report gameNotFound on a resync', async () => {
+    const game = makeGame();
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? [{id: 'c', type: 'create', params: {}}] : undefined)
+    );
+    await game.attach();
+    const notFound = vi.fn();
+    game.on('gameNotFound', notFound);
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? [] : undefined)
+    );
+    await connectHandler()();
+    expect(notFound).not.toHaveBeenCalled();
+  });
+});
+
+// ---- Detach ----
+
+describe('detach', () => {
+  it("removes its handlers from the shared socket and leaves the game's room", async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    const registered = mockSocket.on.mock.calls.map(([name, handler]) => [name, handler]);
+    const pageListener = vi.fn();
+    game.on('wsEvent', pageListener);
+
+    game.detach();
+
+    expect(mockSocket.off.mock.calls).toEqual(registered);
+    expect(registered.map(([name]) => name)).toEqual(expect.arrayContaining(['connect', 'game_event']));
+    expect(mockSocket.emit).toHaveBeenCalledWith('leave_game', 'test-123');
+    // Anything already in flight (a reconnect resync) has no one to reach.
+    game.emitWSEvent({id: 'old-game-event', type: 'updateCell'});
+    expect(pageListener).not.toHaveBeenCalled();
+  });
+
+  it('waits for an edit still awaiting its ack before leaving the room', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    let ackEdit;
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          ackEdit = resolve;
+        })
+    );
+    // The player types, then switches games before the ack comes back.
+    const editing = game.addEvent({type: 'updateCell', timestamp: 1});
+    await vi.waitFor(() => expect(ackEdit).toBeDefined());
+    game.detach();
+    expect(mockSocket.emit).not.toHaveBeenCalledWith('leave_game', 'test-123');
+
+    ackEdit();
+    await editing;
+    expect(mockSocket.emit).toHaveBeenCalledWith('leave_game', 'test-123');
+    emitAsyncWithTimeout.mockImplementation(() => Promise.resolve());
+  });
+
+  it('stays in the room when the page has already reopened the same game', async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    let ackEdit;
+    emitAsyncWithTimeout.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          ackEdit = resolve;
+        })
+    );
+    const editing = game.addEvent({type: 'updateCell', timestamp: 1});
+    await vi.waitFor(() => expect(ackEdit).toBeDefined());
+    // Away and straight back: a new Game for the same gid joins the room.
+    game.detach();
+    makeGame();
+
+    ackEdit();
+    await editing;
+    expect(mockSocket.emit).not.toHaveBeenCalledWith('leave_game', 'test-123');
+    emitAsyncWithTimeout.mockImplementation(() => Promise.resolve());
+  });
+
+  it('registers nothing when detached before the socket resolves', async () => {
+    const game = makeGame();
+    const connecting = game.connectToWebsocket();
+    game.detach();
+    await connecting;
+
+    expect(mockSocket.on).not.toHaveBeenCalled();
+    expect(game.socket).toBeUndefined();
   });
 });

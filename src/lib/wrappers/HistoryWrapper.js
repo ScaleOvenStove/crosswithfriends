@@ -9,6 +9,9 @@ export default class HistoryWrapper {
     window.historyWrapper = this;
     this.reducer = reducer;
     this.history = [];
+    // Ids of events in history, so dedup stays cheap when a reconnect replays
+    // the whole game's events.
+    this.eventIds = new Set();
     this.optimisticEvents = [];
     this.memo = [];
     this.createEvent = null;
@@ -99,8 +102,9 @@ export default class HistoryWrapper {
     window.timeStampOffset = event.timestamp - Date.now();
     this.optimisticEvents = this.optimisticEvents.filter((ev) => ev.id !== event.id);
     // Dedup: skip if this event ID is already in history (can happen after reconnect retry)
-    if (event.id && this.history.some((e) => e.id === event.id)) {
-      return;
+    if (event.id) {
+      if (this.eventIds.has(event.id)) return;
+      this.eventIds.add(event.id);
     }
     // we must support retroactive updates to the event log
     const insertPoint = _.sortedLastIndexBy(this.history, event, (event) => event.timestamp);
@@ -137,6 +141,13 @@ export default class HistoryWrapper {
   removeOptimisticEvent(id) {
     if (!id) return;
     this.optimisticEvents = this.optimisticEvents.filter((ev) => ev.id !== id);
+  }
+
+  // Drop every optimistic event whose id is not in `pendingIds`. An optimistic
+  // event the server will never echo is replayed on top of history forever,
+  // so its cell reverts to that value after every confirmed edit.
+  retainOptimisticEvents(pendingIds) {
+    this.optimisticEvents = this.optimisticEvents.filter((ev) => pendingIds.has(ev.id));
   }
 
   clearOptimisticEvents() {
