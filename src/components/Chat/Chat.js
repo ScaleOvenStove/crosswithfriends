@@ -3,8 +3,8 @@ import React, {Component} from 'react';
 import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
-import {MdClose, MdErrorOutline, MdHelpOutline, MdLock, MdVisibilityOff} from 'react-icons/md';
-import {FaClone, FaCrown} from 'react-icons/fa6';
+import {MdClose, MdErrorOutline, MdExpandMore, MdHelpOutline, MdLock, MdVisibilityOff} from 'react-icons/md';
+import {FaClone, FaCrown, FaUserGroup} from 'react-icons/fa6';
 import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '../../lib/emoji';
@@ -23,6 +23,7 @@ import {kickPlayer, unkickPlayer} from '../../api/create_game';
 import {copyPuzzleId} from './puzzleId';
 import {getPuzzleSizeLabel} from '@shared/puzzleSize';
 import {getUserStats} from '../../api/user_stats';
+import {isPaneCollapsed, readCollapsePrefs, setPaneCollapsed} from './collapsePrefs';
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -42,6 +43,7 @@ export default class Chat extends Component {
       showLockInfo: false,
       copiedPuzzleId: false,
       solvedPids: null,
+      collapsePrefs: readCollapsePrefs(),
     };
     this.chatBar = React.createRef();
     this.usernameInput = React.createRef();
@@ -71,6 +73,25 @@ export default class Chat extends Component {
   get canModerate() {
     return this.isOwner && !!this.context?.accessToken;
   }
+
+  isCollapsed(pane) {
+    return isPaneCollapsed(this.state.collapsePrefs, pane, this.props.mobile);
+  }
+
+  togglePane(pane) {
+    this.setState(({collapsePrefs}) => ({
+      collapsePrefs: setPaneCollapsed(
+        collapsePrefs,
+        pane,
+        this.props.mobile,
+        !isPaneCollapsed(collapsePrefs, pane, this.props.mobile)
+      ),
+    }));
+  }
+
+  handleToggleInfo = () => this.togglePane('info');
+
+  handleTogglePlayers = () => this.togglePane('players');
 
   handleOpenLockInfo = () => {
     this.setState({showLockInfo: true});
@@ -321,10 +342,35 @@ export default class Chat extends Component {
 
   renderChatHeader() {
     if (this.props.header) return this.props.header;
+    const {info = {}} = this.props;
+    const displayTitle = info.titleOverride || info.title;
+    const collapsed = this.isCollapsed('info');
+
+    return (
+      <div className={`chat--header${collapsed ? ' collapsed' : ''}`}>
+        <button
+          type="button"
+          className="chat--pane-toggle chat--header--toggle"
+          onClick={this.handleToggleInfo}
+          aria-expanded={!collapsed}
+          aria-controls="chat-header-details"
+          title={collapsed ? 'Show puzzle details' : 'Hide puzzle details'}
+        >
+          <span className="chat--header--title">{displayTitle}</span>
+          {collapsed && !this.isOwner && this.props.locked && (
+            <MdLock className="chat--header--toggle-lock" aria-label="Game locked" />
+          )}
+          <MdExpandMore className="chat--pane-toggle--chevron" aria-hidden="true" />
+        </button>
+        {!collapsed && this.renderChatHeaderDetails()}
+      </div>
+    );
+  }
+
+  renderChatHeaderDetails() {
     const {info = {}, bid, game} = this.props;
     const {title, description, author, type, titleOverride, authorOverride} = info;
     const pid = game?.pid;
-    const displayTitle = titleOverride || title;
     const displayAuthor = authorOverride || author;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
     const hasOverride = titleOverride || authorOverride;
@@ -342,8 +388,7 @@ export default class Chat extends Component {
     const showStats = !zenModeActive || alreadySolved;
 
     return (
-      <div className="chat--header">
-        <div className="chat--header--title">{displayTitle}</div>
+      <div id="chat-header-details" className="chat--header--details">
         <div className="chat--header--subtitle">{sizeLabel && `${sizeLabel} | By ${displayAuthor}`}</div>
         {hasOverride && (
           <div className="chat--header--original">
@@ -429,20 +474,39 @@ export default class Chat extends Component {
     );
   }
 
-  renderUsernameInput() {
-    return this.props.hideChatBar ? null : (
+  renderUsernameInput(playerCount) {
+    if (this.props.hideChatBar) return null;
+    const collapsed = this.isCollapsed('players');
+    return (
       <div className="chat--username">
-        {'You are '}
-        <ColorPicker color={this.props.myColor} onUpdateColor={this.handleUpdateColor} />
-        <EditableSpan
-          ref={this.usernameInput}
-          className="chat--username--input"
-          value={this.state.username}
-          onChange={this.handleUpdateDisplayName}
-          onBlur={this.handleBlur}
-          onUnfocus={this.focus}
-          style={{color: this.props.myColor}}
-        />
+        <div className="chat--username--name">
+          {'You are '}
+          <ColorPicker color={this.props.myColor} onUpdateColor={this.handleUpdateColor} />
+          <EditableSpan
+            ref={this.usernameInput}
+            className="chat--username--input"
+            value={this.state.username}
+            onChange={this.handleUpdateDisplayName}
+            onBlur={this.handleBlur}
+            onUnfocus={this.focus}
+            style={{color: this.props.myColor}}
+          />
+        </div>
+        {/* The name is editable in place, so the toggle is its own button
+            rather than the whole strip. */}
+        <button
+          type="button"
+          className={`chat--pane-toggle chat--users--toggle${collapsed ? ' collapsed' : ''}`}
+          onClick={this.handleTogglePlayers}
+          aria-expanded={!collapsed}
+          aria-controls="chat-users-present"
+          aria-label={`${collapsed ? 'Show' : 'Hide'} players (${playerCount} in game)`}
+          title={collapsed ? 'Show players' : 'Hide players'}
+        >
+          <FaUserGroup className="chat--users--toggle-icon" aria-hidden="true" />
+          {playerCount}
+          <MdExpandMore className="chat--pane-toggle--chevron" aria-hidden="true" />
+        </button>
       </div>
     );
   }
@@ -502,18 +566,15 @@ export default class Chat extends Component {
     return false;
   }
 
-  renderUsersPresent(users) {
-    if (this.props.hideChatBar) return null;
-    const showKick = this.canModerate;
+  // Three sections: the owner gets their own slot at the top so they're
+  // always identifiable at a glance. Everyone else splits between
+  // players (have placed letters or sent chat) and spectators (joined
+  // and picked a name but haven't done anything yet). Kicked users with
+  // activity render in players (greyed for attribution); kicked users
+  // without activity are hidden entirely.
+  getUserSections(users) {
     const kickedSet = new Set(this.props.kickedDfacIds || []);
     const ownerDfacId = this.props.game?.creator?.dfacId || null;
-
-    // Three sections: the owner gets their own slot at the top so they're
-    // always identifiable at a glance. Everyone else splits between
-    // players (have placed letters or sent chat) and spectators (joined
-    // and picked a name but haven't done anything yet). Kicked users with
-    // activity render in players (greyed for attribution); kicked users
-    // without activity are hidden entirely.
     const owner = [];
     const players = [];
     const spectators = [];
@@ -529,6 +590,13 @@ export default class Chat extends Component {
         spectators.push({id, kicked});
       }
     }
+    return {owner, players, spectators};
+  }
+
+  renderUsersPresent(users, {owner, players, spectators}) {
+    if (this.props.hideChatBar || this.isCollapsed('players')) return null;
+    const showKick = this.canModerate;
+    const ownerDfacId = this.props.game?.creator?.dfacId || null;
 
     const renderEntry = ({id, kicked}) =>
       Chat.renderUserPresent(
@@ -542,7 +610,7 @@ export default class Chat extends Component {
       );
 
     return (
-      <div className="chat--users--present">
+      <div id="chat-users-present" className="chat--users--present">
         {owner.length > 0 && (
           <div className="chat--users--section">
             <div className="chat--users--section-label">Game owner</div>
@@ -712,12 +780,16 @@ export default class Chat extends Component {
 
   renderChatSubheader() {
     if (this.props.subheader) return this.props.subheader;
-    const users = this.props.users;
+    const users = this.props.users || {};
+    const sections = this.getUserSections(users);
+    const playerCount = [...sections.owner, ...sections.players, ...sections.spectators].filter(
+      ({kicked}) => !kicked
+    ).length;
 
     return (
       <>
-        {this.renderUsernameInput()}
-        {this.renderUsersPresent(users)}
+        {this.renderUsernameInput(playerCount)}
+        {this.renderUsersPresent(users, sections)}
       </>
     );
   }
