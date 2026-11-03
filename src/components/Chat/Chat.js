@@ -4,7 +4,7 @@ import _ from 'lodash';
 import Linkify from 'linkify-react';
 import {Link} from 'react-router';
 import {MdClose, MdErrorOutline, MdExpandMore, MdHelpOutline, MdLock, MdVisibilityOff} from 'react-icons/md';
-import {FaClone, FaCrown, FaUserGroup} from 'react-icons/fa6';
+import {FaClone, FaCrown} from 'react-icons/fa6';
 import * as Sentry from '@sentry/react';
 import Emoji from '../common/Emoji';
 import * as emojiLib from '../../lib/emoji';
@@ -24,6 +24,8 @@ import {copyPuzzleId} from './puzzleId';
 import {getPuzzleSizeLabel} from '@shared/puzzleSize';
 import {getUserStats} from '../../api/user_stats';
 import {isPaneCollapsed, readCollapsePrefs, setPaneCollapsed} from './collapsePrefs';
+
+const MAX_TOGGLE_DOTS = 5;
 
 const isEmojis = (str) => {
   const res = str.match(/[A-Za-z,.0-9!-]/g);
@@ -340,11 +342,26 @@ export default class Chat extends Component {
     );
   }
 
+  // "Mini Puzzle | By X" — shared by the expanded subtitle and the one-line
+  // summary shown under a collapsed header.
+  getPuzzleByline() {
+    const {info = {}, game} = this.props;
+    const {title, author, type, authorOverride} = info;
+    const displayAuthor = authorOverride || author;
+    // Same classification as the puzzle list and its size filter, rather than
+    // the coarse upload-time `type` (any grid with ≤10 rows is a "Mini Puzzle").
+    const size = type || game?.grid?.length ? getPuzzleSizeLabel(title, game?.grid, type) : null;
+    const sizeLabel = size && (size === 'Puzzle' ? size : `${size} Puzzle`);
+    return {sizeLabel, displayAuthor};
+  }
+
   renderChatHeader() {
     if (this.props.header) return this.props.header;
     const {info = {}} = this.props;
     const displayTitle = info.titleOverride || info.title;
     const collapsed = this.isCollapsed('info');
+    const {sizeLabel, displayAuthor} = this.getPuzzleByline();
+    const summary = [sizeLabel, displayAuthor && `By ${displayAuthor}`].filter(Boolean).join(' · ');
 
     return (
       <div className={`chat--header${collapsed ? ' collapsed' : ''}`}>
@@ -357,10 +374,20 @@ export default class Chat extends Component {
           title={collapsed ? 'Show puzzle details' : 'Hide puzzle details'}
         >
           <span className="chat--header--title">{displayTitle}</span>
-          {collapsed && !this.isOwner && this.props.locked && (
-            <MdLock className="chat--header--toggle-lock" aria-label="Game locked" />
+          {/* A labelled pill rather than a bare chevron, so it reads as
+              "there is more here" at a glance. */}
+          <span className="chat--pane-toggle--pill">
+            {collapsed ? 'Details' : 'Hide'}
+            <MdExpandMore className="chat--pane-toggle--chevron" aria-hidden="true" />
+          </span>
+          {collapsed && (summary || (!this.isOwner && this.props.locked)) && (
+            <span className="chat--header--summary">
+              {!this.isOwner && this.props.locked && (
+                <MdLock className="chat--header--toggle-lock" aria-label="Game locked" />
+              )}
+              {summary}
+            </span>
           )}
-          <MdExpandMore className="chat--pane-toggle--chevron" aria-hidden="true" />
         </button>
         {!collapsed && this.renderChatHeaderDetails()}
       </div>
@@ -369,15 +396,11 @@ export default class Chat extends Component {
 
   renderChatHeaderDetails() {
     const {info = {}, bid, game} = this.props;
-    const {title, description, author, type, titleOverride, authorOverride} = info;
+    const {title, description, author, titleOverride, authorOverride} = info;
     const pid = game?.pid;
-    const displayAuthor = authorOverride || author;
     const desc = description?.startsWith('; ') ? description.substring(2) : description;
     const hasOverride = titleOverride || authorOverride;
-    // Same classification as the puzzle list and its size filter, rather than
-    // the coarse upload-time `type` (any grid with ≤10 rows is a "Mini Puzzle").
-    const size = type || game?.grid?.length ? getPuzzleSizeLabel(title, game?.grid, type) : null;
-    const sizeLabel = size && (size === 'Puzzle' ? size : `${size} Puzzle`);
+    const {sizeLabel, displayAuthor} = this.getPuzzleByline();
     // Zen mode: hide spoilers (median time, rating) until the puzzle is solved.
     // Account-only — a guest must not inherit a stale localStorage flag left
     // over from a previous logged-in session. "Solved" is lifetime per-pid
@@ -474,7 +497,8 @@ export default class Chat extends Component {
     );
   }
 
-  renderUsernameInput(playerCount) {
+  renderUsernameInput(present) {
+    const playerCount = present.length;
     if (this.props.hideChatBar) return null;
     const collapsed = this.isCollapsed('players');
     return (
@@ -503,9 +527,19 @@ export default class Chat extends Component {
           aria-label={`${collapsed ? 'Show' : 'Hide'} players (${playerCount} in game)`}
           title={collapsed ? 'Show players' : 'Hide players'}
         >
-          <FaUserGroup className="chat--users--toggle-icon" aria-hidden="true" />
-          {playerCount}
-          <MdExpandMore className="chat--pane-toggle--chevron" aria-hidden="true" />
+          <span className="chat--pane-toggle--pill">
+            {/* One dot per player in their colour hints at who is behind the
+                fold; capped so a big room doesn't push the pill off the row. */}
+            <span className="chat--users--toggle-dots" aria-hidden="true">
+              {present.slice(0, MAX_TOGGLE_DOTS).map(({id}) => (
+                <span key={id} style={{color: this.props.users[id]?.color}}>
+                  {'\u25CF'}
+                </span>
+              ))}
+            </span>
+            {playerCount === 1 ? '1 player' : `${playerCount} players`}
+            <MdExpandMore className="chat--pane-toggle--chevron" aria-hidden="true" />
+          </span>
         </button>
       </div>
     );
@@ -782,13 +816,13 @@ export default class Chat extends Component {
     if (this.props.subheader) return this.props.subheader;
     const users = this.props.users || {};
     const sections = this.getUserSections(users);
-    const playerCount = [...sections.owner, ...sections.players, ...sections.spectators].filter(
+    const present = [...sections.owner, ...sections.players, ...sections.spectators].filter(
       ({kicked}) => !kicked
-    ).length;
+    );
 
     return (
       <>
-        {this.renderUsernameInput(playerCount)}
+        {this.renderUsernameInput(present)}
         {this.renderUsersPresent(users, sections)}
       </>
     );

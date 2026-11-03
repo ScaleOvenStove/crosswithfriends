@@ -59,10 +59,31 @@
   border-radius: 4px;
 }
 
+.chat--pane-toggle--pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  color: #555;
+  background: #f2f2f2;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+}
+
+.chat--pane-toggle:hover .chat--pane-toggle--pill {
+  background: #e8e8e8;
+  border-color: #ccc;
+}
+
 .chat--pane-toggle--chevron {
   flex-shrink: 0;
-  font-size: 22px;
-  color: #888;
+  font-size: 18px;
+  color: #777;
   transition: transform 0.15s ease;
 }
 
@@ -79,11 +100,28 @@
 /* Sized to its content rather than the panel, so the chevron sits right after
    the title and stays reachable even when the sidebar is clipped. */
 .chat--header--toggle {
+  flex-wrap: wrap;
+  gap: 2px 10px;
   max-width: 100%;
 }
 
 .chat--header--toggle .chat--header--title {
   min-width: 0;
+  max-width: 100%;
+}
+
+/* One muted line under a collapsed title: size, author, lock state. */
+.chat--header--summary {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: #777;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chat--header.collapsed .chat--header--title {
@@ -102,7 +140,21 @@
   flex-direction: column;
 }
 
+.dark .chat--pane-toggle--pill {
+  color: rgb(255 255 255 / 75%);
+  background: rgb(255 255 255 / 8%);
+  border-color: rgb(255 255 255 / 18%);
+}
+
+.dark .chat--pane-toggle:hover .chat--pane-toggle--pill {
+  background: rgb(255 255 255 / 14%);
+}
+
 .dark .chat--pane-toggle--chevron {
+  color: rgb(255 255 255 / 60%);
+}
+
+.dark .chat--header--summary {
   color: rgb(255 255 255 / 55%);
 }
 
@@ -241,16 +293,12 @@
 
 .chat--users--toggle {
   flex-shrink: 0;
-  font-size: 13px;
-  color: #666;
 }
 
-.chat--users--toggle-icon {
-  font-size: 14px;
-}
-
-.dark .chat--users--toggle {
-  color: rgb(255 255 255 / 60%);
+.chat--users--toggle-dots {
+  display: inline-flex;
+  font-size: 10px;
+  letter-spacing: -1px;
 }
 
 .chat--username--input {
