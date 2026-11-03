@@ -190,8 +190,14 @@ export default class Game extends EventEmitter {
       this.syncState = null;
       // Events broadcast while this socket was out of the room never reached
       // it, so a reconnect after the first sync fetches history again to pick
-      // up other players' moves made during the gap.
-      await this.syncAllGameEvents({resync: this._initialSyncCompleted});
+      // up other players' moves made during the gap. A game loaded from a
+      // solved snapshot is skipped: its board and chat already include the
+      // whole event log, and if someone has since chosen to keep the replay,
+      // the server now returns that log, whose ids this client never saw —
+      // replaying it would apply every event (each chat message) twice.
+      if (!this._loadedFromSnapshot) {
+        await this.syncAllGameEvents({resync: this._initialSyncCompleted});
+      }
       await this.flushOfflineQueue();
       this.emitReconnect();
     });
@@ -431,6 +437,11 @@ export default class Game extends EventEmitter {
     });
     if (response.some((event) => event && event.type === 'create')) {
       this._initialSyncCompleted = true;
+      // getGameEvents answers for a solved, non-replay game with just the
+      // create event, its game already marked solved from the snapshot. A
+      // real create event is never solved.
+      this._loadedFromSnapshot =
+        response.length === 1 && response[0].type === 'create' && !!response[0].params?.game?.solved;
       this.emit('gameReady');
     } else {
       this.emit('gameNotFound');

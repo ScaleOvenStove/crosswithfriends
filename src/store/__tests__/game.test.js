@@ -416,6 +416,26 @@ describe('reconnect after the initial sync', () => {
     expect(order).toEqual(['flushed-by-other-tab', 'reconnect']);
   });
 
+  it('does not replay history over a game loaded from a solved snapshot', async () => {
+    const game = makeGame();
+    let history = [{id: 'c', type: 'create', timestamp: 0, params: {game: {solved: true}}}];
+    emitAsync.mockImplementation((_socket, name) =>
+      Promise.resolve(name === 'sync_all_game_events' ? history : undefined)
+    );
+    await game.attach();
+
+    const seen = [];
+    game.on('wsEvent', (e) => seen.push(e.id));
+    // Someone chose to keep the replay, so the server now returns the full log.
+    history = [
+      {id: 'c', type: 'create', timestamp: 0, params: {game: {}}},
+      {id: 'chat-1', type: 'chat', timestamp: 1, params: {}},
+    ];
+    await connectHandler()();
+
+    expect(seen).toEqual([]);
+  });
+
   it('does not report gameNotFound on a resync', async () => {
     const game = makeGame();
     emitAsync.mockImplementation((_socket, name) =>
