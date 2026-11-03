@@ -22,6 +22,16 @@ describe('retainOptimisticEvents', () => {
     expect(history.getSnapshot()).toEqual(['E']);
   });
 
+  it('keeps a letter whose echo only arrived through a resync', () => {
+    const history = makeWrapper();
+    history.addOptimisticEvent({id: 'other-tab', value: 'L'});
+    // A reconnect resync brings in the event another tab sent for us...
+    history.addEvent({id: 'other-tab', value: 'L', timestamp: 10});
+    // ...so the cleanup that follows has nothing left to drop.
+    history.retainOptimisticEvents(new Set());
+    expect(history.getSnapshot()).toEqual(['L']);
+  });
+
   it('keeps optimistic events that are still pending', () => {
     const history = makeWrapper();
     history.addOptimisticEvent({id: 'queued', value: 'L'});
@@ -29,5 +39,29 @@ describe('retainOptimisticEvents', () => {
 
     history.retainOptimisticEvents(new Set(['queued']));
     expect(history.getSnapshot()).toEqual(['L']);
+  });
+});
+
+describe('HistoryWrapper dedup', () => {
+  it('applies a replayed event only once', () => {
+    const history = new HistoryWrapper([{type: 'create', timestamp: 0}], reducer);
+    history.addEvent({id: 'a', value: 'A', timestamp: 1});
+    history.addEvent({id: 'b', value: 'B', timestamp: 2});
+    // A reconnect resync replays the whole game.
+    history.addEvent({id: 'a', value: 'A', timestamp: 1});
+    history.addEvent({id: 'b', value: 'B', timestamp: 2});
+    history.addEvent({id: 'c', value: 'C', timestamp: 3});
+
+    expect(history.getSnapshot()).toEqual(['A', 'B', 'C']);
+  });
+
+  it('confirms the optimistic copy when its echo is a duplicate', () => {
+    const history = new HistoryWrapper([{type: 'create', timestamp: 0}], reducer);
+    history.addEvent({id: 'a', value: 'A', timestamp: 1});
+    history.addOptimisticEvent({id: 'a', value: 'A'});
+    history.addEvent({id: 'a', value: 'A', timestamp: 5});
+
+    expect(history.optimisticEvents).toEqual([]);
+    expect(history.getSnapshot()).toEqual(['A']);
   });
 });
