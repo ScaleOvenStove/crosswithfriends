@@ -93,6 +93,7 @@ class Game extends Component {
   }
 
   initializeGame() {
+    if (this.gameModel) this.gameModel.detach();
     this.gameModel = new GameModel(`/game/${this.state.gid}`);
     this.historyWrapper = new HistoryWrapper();
     this.gameModel.on('wsCreateEvent', (event) => {
@@ -310,6 +311,7 @@ class Game extends Component {
   }
 
   componentWillUnmount() {
+    if (this.gameModel) this.gameModel.detach();
     if (this._retryTimer) clearInterval(this._retryTimer);
     if (this._connectionTimer) clearTimeout(this._connectionTimer);
     window.removeEventListener('resize', this.handleResize);

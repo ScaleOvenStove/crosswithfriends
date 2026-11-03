@@ -84,6 +84,23 @@ export default class Game extends EventEmitter {
     this._flushing = false;
     // Ids of events sent straight to the socket whose ack hasn't come back.
     this._inFlight = new Set();
+    this._socketHandlers = [];
+    this._detached = false;
+  }
+
+  // Stop this Game from hearing anything more: remove its handlers from the
+  // shared socket, leave the room, and drop its own listeners. The page calls
+  // this when it switches to another game or unmounts. Otherwise the old
+  // Game keeps feeding its events, and on reconnect its whole resynced
+  // history, into whichever game the page now shows.
+  detach() {
+    this._detached = true;
+    if (this.socket) {
+      this._socketHandlers.forEach(([name, handler]) => this.socket.off(name, handler));
+      if (this.socket.connected) this.socket.emit('leave_game', this.gid);
+    }
+    this._socketHandlers = [];
+    this.removeAllListeners();
   }
 
   get gid() {
@@ -93,9 +110,16 @@ export default class Game extends EventEmitter {
 
   // Websocket code
   async connectToWebsocket() {
-    if (this.socket) return;
+    if (this.socket || this._detached) return;
     const socket = await getSocket();
+    if (this._detached) return;
     this.socket = socket;
+    // The socket is shared by every Game in the tab, so each handler is
+    // recorded for detach() to remove.
+    const on = (name, handler) => {
+      socket.on(name, handler);
+      this._socketHandlers.push([name, handler]);
+    };
 
     // Attach all long-lived listeners up-front, BEFORE the initial join.
     // socket.io preserves listeners across disconnect/connect on the same
@@ -106,7 +130,7 @@ export default class Game extends EventEmitter {
     // these listeners were registered AFTER the join await, so a bounce
     // during the await would leave the new transport with no listeners
     // and the page would sit blank waiting for the create event.
-    socket.on('disconnect', () => {
+    on('disconnect', () => {
       console.log('received disconnect from server');
       // Force the reconnect handler to re-issue join_game before we
       // consider ourselves in the room again. Without resetting this, a
@@ -116,7 +140,7 @@ export default class Game extends EventEmitter {
       // 'not in game' and flushOfflineQueue silently drops the event.
       this._joined = false;
     });
-    socket.on('game_event', (event) => {
+    on('game_event', (event) => {
       event = castNullsToUndefined(event);
       // Live events are server-stamped, so each one is a fresh sample of the
       // offset between server time and this device's clock. The game clock
@@ -126,7 +150,7 @@ export default class Game extends EventEmitter {
       this.emitWSEvent(event);
     });
     // Server broadcasts 'kicked' to the room when the owner kicks a player.
-    socket.on('kicked', (msg) => {
+    on('kicked', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('kicked', msg);
       }
@@ -134,7 +158,7 @@ export default class Game extends EventEmitter {
     // Owner toggled one of the per-action restrictions (check/reveal/reset).
     // Forward to listeners so the Toolbar can flip the gating live without
     // having to refetch /moderation.
-    socket.on('restrictions_changed', (msg) => {
+    on('restrictions_changed', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('restrictionsChanged', msg);
       }
@@ -144,14 +168,14 @@ export default class Game extends EventEmitter {
     // chat-side UX — showing players the room is now closed to new
     // joiners — and for keeping the owner-controls panel in sync across
     // tabs of the same account.
-    socket.on('lock_changed', (msg) => {
+    on('lock_changed', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('lockChanged', msg);
       }
     });
     // And 'unkicked' when a kick is reversed, so other tabs can drop the
     // dfac_id from their local kicked list without a full reload.
-    socket.on('unkicked', (msg) => {
+    on('unkicked', (msg) => {
       if (msg && msg.gid === this.gid) {
         this.emit('unkicked', msg);
       }
@@ -160,7 +184,7 @@ export default class Game extends EventEmitter {
     // socket instance (the initial connect already fired before getSocket
     // resolved). Re-issues join_game, re-runs initial sync if it never
     // completed, and flushes queued events.
-    socket.on('connect', async () => {
+    on('connect', async () => {
       console.log('reconnecting...');
       const joinSentAt = Date.now();
       const ack = await emitAsync(socket, 'join_game', this.gid);

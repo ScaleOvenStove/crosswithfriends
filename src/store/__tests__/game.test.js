@@ -4,6 +4,7 @@ import {vi} from 'vitest';
 const mockSocket = {
   connected: true,
   on: vi.fn(),
+  off: vi.fn(),
   once: vi.fn(),
   emit: vi.fn((...args) => {
     // auto-ack
@@ -449,5 +450,36 @@ describe('reconnect after the initial sync', () => {
     );
     await connectHandler()();
     expect(notFound).not.toHaveBeenCalled();
+  });
+});
+
+// ---- Detach ----
+
+describe('detach', () => {
+  it("removes its handlers from the shared socket and leaves the game's room", async () => {
+    const game = makeGame();
+    await game.connectToWebsocket();
+    const registered = mockSocket.on.mock.calls.map(([name, handler]) => [name, handler]);
+    const pageListener = vi.fn();
+    game.on('wsEvent', pageListener);
+
+    game.detach();
+
+    expect(mockSocket.off.mock.calls).toEqual(registered);
+    expect(registered.map(([name]) => name)).toEqual(expect.arrayContaining(['connect', 'game_event']));
+    expect(mockSocket.emit).toHaveBeenCalledWith('leave_game', 'test-123');
+    // Anything already in flight (a reconnect resync) has no one to reach.
+    game.emitWSEvent({id: 'old-game-event', type: 'updateCell'});
+    expect(pageListener).not.toHaveBeenCalled();
+  });
+
+  it('registers nothing when detached before the socket resolves', async () => {
+    const game = makeGame();
+    const connecting = game.connectToWebsocket();
+    game.detach();
+    await connecting;
+
+    expect(mockSocket.on).not.toHaveBeenCalled();
+    expect(game.socket).toBeUndefined();
   });
 });
