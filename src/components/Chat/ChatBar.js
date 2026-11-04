@@ -20,6 +20,10 @@ export default class ChatBar extends React.Component {
     if (message.length > 0) {
       this.props.onSendMessage(message);
       this.setState((prevState) => ({message: '', enters: prevState.enters + 1}));
+      // On mobile the chat is its own full-screen mode and the on-screen keyboard
+      // covers the message list, so dismiss it after sending to show the
+      // conversation. Desktop keeps focus so several messages can go in a row.
+      if (this.props.mobile) this.input.current?.blur();
     } else {
       this.props.onUnfocus();
     }
