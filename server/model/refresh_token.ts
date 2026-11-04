@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import {pool} from './pool';
+import {revokeAccessTokensForUser} from '../auth/access_revocation';
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -74,6 +75,8 @@ export async function rotateRefreshToken(token: string, expiresInDays = 7): Prom
           [row.user_id]
         );
         await client.query('COMMIT');
+        // Whoever replayed the token may also hold a live access token.
+        revokeAccessTokensForUser(row.user_id);
         return {status: 'reuse', userId: row.user_id};
       }
       // Benign concurrent rotation — a parallel /refresh already rotated this
@@ -132,10 +135,14 @@ export async function revokeRefreshToken(token: string): Promise<void> {
   await pool.query(`UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1`, [tokenHash]);
 }
 
+// Ends every session the user has: refresh tokens in the database, and
+// access tokens already issued (which would otherwise stay valid until they
+// expire). Used on password change/reset and account deletion.
 export async function revokeAllUserTokens(userId: string): Promise<void> {
   await pool.query(`UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL`, [
     userId,
   ]);
+  revokeAccessTokensForUser(userId);
 }
 
 /**

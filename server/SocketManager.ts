@@ -2,10 +2,10 @@
 
 import {RoomEvent} from '@shared/roomEvents';
 import * as Sentry from '@sentry/node';
-import {Server} from 'socket.io';
+import {Server, Socket} from 'socket.io';
 import {addGameEvent, gameExists, GameEvent, getGameEvents} from './model/game';
 import {addRoomEvent, getRoomEvents} from './model/room';
-import {verifyAccessToken} from './auth/jwt';
+import {verifyAccessToken, isAccessTokenPayloadLive, JwtPayload} from './auth/jwt';
 import {
   getGameOwner,
   isActionRestricted,
@@ -33,6 +33,20 @@ const RESTRICTABLE_EVENT_TYPES: Record<string, RestrictableAction> = Object.assi
 });
 
 // ============== Socket Manager ==============
+
+// The handshake verifies the access token once, but a socket can stay
+// connected for hours. Re-check the payload each time it is used, so the
+// socket stops acting as that user when the token expires or the user's
+// tokens are revoked (password change, account deletion). The client
+// reconnects with its refreshed token before expiry, so a healthy session
+// never notices.
+function liveAuthUser(socket: Socket): JwtPayload | undefined {
+  const authUser: JwtPayload | undefined = socket.data.authUser;
+  if (!authUser) return undefined;
+  if (isAccessTokenPayloadLive(authUser)) return authUser;
+  delete socket.data.authUser;
+  return undefined;
+}
 
 class SocketManager {
   io: Server;
@@ -146,7 +160,7 @@ class SocketManager {
           // For authed targets we additionally ban the linked user_id in
           // /kick, which is the layer that's actually robust.
           const identity = {
-            userId: socket.data.authUser?.userId,
+            userId: liveAuthUser(socket)?.userId,
             dfacId: socket.data.dfacId,
           };
           if (await isIdentityBanned(gid, identity)) {
@@ -233,7 +247,7 @@ class SocketManager {
           // server-side, but this gate is the durable one.
           if (
             await isIdentityBanned(gid, {
-              userId: socket.data.authUser?.userId,
+              userId: liveAuthUser(socket)?.userId,
               dfacId: socket.data.dfacId,
             })
           ) {
@@ -283,7 +297,7 @@ class SocketManager {
           // in the live presence view.
           if (
             await isIdentityBanned(message.gid, {
-              userId: socket.data.authUser?.userId,
+              userId: liveAuthUser(socket)?.userId,
               dfacId: socket.data.dfacId,
             })
           ) {
@@ -309,7 +323,7 @@ class SocketManager {
           const restrictableAction = RESTRICTABLE_EVENT_TYPES[event.type];
           if (restrictableAction && (await isActionRestricted(message.gid, restrictableAction))) {
             const owner = await getGameOwner(message.gid);
-            const callerUserId = socket.data.authUser?.userId;
+            const callerUserId = liveAuthUser(socket)?.userId;
             const dfacIds = callerUserId ? await getDfacIdsForUser(callerUserId) : [];
             if (!isOwner(owner, {userId: callerUserId, dfacIds})) {
               if (typeof ack === 'function') ack({error: 'restricted'});
@@ -345,8 +359,9 @@ class SocketManager {
           event.timestamp = receivedAt;
           // Stamp verified user identity if authenticated, otherwise clear it
           // to prevent unauthenticated users from spoofing verifiedUserId
-          if (socket.data.authUser) {
-            event.verifiedUserId = socket.data.authUser.userId;
+          const authUser = liveAuthUser(socket);
+          if (authUser) {
+            event.verifiedUserId = authUser.userId;
           } else {
             delete event.verifiedUserId;
           }

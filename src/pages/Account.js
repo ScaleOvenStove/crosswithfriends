@@ -252,7 +252,7 @@ function EmailSection({user, accessToken}) {
   );
 }
 
-function PasswordSection({user, accessToken, onSaved}) {
+function PasswordSection({user, accessToken, onSaved, onAccessTokenChanged}) {
   const [mode, setMode] = useState(null); // null | 'change' | 'set'
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -265,7 +265,10 @@ function PasswordSection({user, accessToken, onSaved}) {
     setSuccess('');
     setSaving(true);
     try {
-      await changePassword(accessToken, currentPassword, newPassword);
+      const result = await changePassword(accessToken, currentPassword, newPassword);
+      // The server revokes every access token issued before the change,
+      // including the one this tab holds, and hands back a replacement.
+      if (result?.accessToken) onAccessTokenChanged(result.accessToken);
       setSuccess('Password changed. Other sessions have been logged out.');
       setMode(null);
       setCurrentPassword('');
@@ -517,8 +520,16 @@ function DeleteAccountSection({user, accessToken, onDeleted}) {
 }
 
 export default function Account() {
-  const {isAuthenticated, user, accessToken, refreshUser, handleLogout, preferences, savePreference} =
-    useContext(AuthContext);
+  const {
+    isAuthenticated,
+    user,
+    accessToken,
+    refreshUser,
+    adoptAccessToken,
+    handleLogout,
+    preferences,
+    savePreference,
+  } = useContext(AuthContext);
   const {toggleMolesterMoons, darkModePreference} = useContext(GlobalContext);
   const [showLogin, setShowLogin] = useState(false);
   const location = useLocation();
@@ -577,7 +588,12 @@ export default function Account() {
               toggleDarkMode={toggleMolesterMoons}
             />
             <EmailSection user={user} accessToken={accessToken} />
-            <PasswordSection user={user} accessToken={accessToken} onSaved={refreshUser} />
+            <PasswordSection
+              user={user}
+              accessToken={accessToken}
+              onSaved={refreshUser}
+              onAccessTokenChanged={adoptAccessToken}
+            />
             <GoogleSection user={user} accessToken={accessToken} onSaved={refreshUser} />
             <DeleteAccountSection
               user={user}

@@ -3,6 +3,7 @@ import {pool, resetPoolMocks} from '../__mocks__/pool';
 jest.mock('../model/pool', () => require('../__mocks__/pool'));
 jest.mock('../auth/jwt', () => ({
   verifyAccessToken: jest.fn(),
+  isAccessTokenPayloadLive: jest.requireActual('../auth/jwt').isAccessTokenPayloadLive,
 }));
 jest.mock('@sentry/node', () => ({
   captureException: jest.fn(),
@@ -10,6 +11,7 @@ jest.mock('@sentry/node', () => ({
 
 import SocketManager from '../SocketManager';
 import {verifyAccessToken} from '../auth/jwt';
+import {revokeAccessTokensForUser, resetAccessRevocationsForTests} from '../auth/access_revocation';
 import * as Sentry from '@sentry/node';
 
 type AnyFn = (...args: unknown[]) => unknown;
@@ -62,6 +64,7 @@ describe('SocketManager', () => {
     pool.query.mockResolvedValue({rows: []});
     (verifyAccessToken as jest.Mock).mockReset();
     (Sentry.captureException as jest.Mock).mockClear();
+    resetAccessRevocationsForTests();
   });
 
   describe('addGameEvent', () => {
@@ -304,6 +307,45 @@ describe('SocketManager', () => {
 
       expect(event.verifiedUserId).toBe('user-42');
       expect(ack).toHaveBeenCalled();
+    });
+
+    // The handshake token is checked once, but the socket can outlive it.
+    async function sendEventAs(payload: object) {
+      (verifyAccessToken as jest.Mock).mockReturnValue(payload);
+      const {io, socketHandlers, mockSocket} = createMockIo();
+      mockSocket.handshake.auth = {token: 'valid-token'};
+      const sm = new SocketManager(io);
+      sm.listen();
+      return async () => {
+        pool.query.mockResolvedValue({rows: []});
+        // gameExists: the game has a create event
+        pool.query.mockResolvedValueOnce({rows: []});
+        pool.query.mockResolvedValueOnce({rows: []});
+        pool.query.mockResolvedValueOnce({rows: []});
+        pool.query.mockResolvedValueOnce({rows: []});
+        pool.query.mockResolvedValueOnce({rowCount: 1, rows: [{}]});
+        const ack = jest.fn();
+        const event = {type: 'updateCell', timestamp: 1700000000000, params: {id: 'p1'}} as any;
+        await socketHandlers['game_event']({gid: 'g1', event}, ack);
+        return {event, ack};
+      };
+    }
+
+    it('stops treating the socket as the user once the handshake token expires', async () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const send = await sendEventAs({userId: 'user-42', iat: nowSec - 1000, exp: nowSec - 1});
+      const {event, ack} = await send();
+      expect(event.verifiedUserId).toBeUndefined();
+      expect(ack).toHaveBeenCalled();
+    });
+
+    it("stops treating the socket as the user once the user's tokens are revoked", async () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const send = await sendEventAs({userId: 'user-42', iat: nowSec - 60, exp: nowSec + 600});
+      // e.g. the user changed their password after this socket connected
+      revokeAccessTokensForUser('user-42');
+      const {event} = await send();
+      expect(event.verifiedUserId).toBeUndefined();
     });
 
     it('does not stamp verifiedUserId for unauthenticated sockets', async () => {

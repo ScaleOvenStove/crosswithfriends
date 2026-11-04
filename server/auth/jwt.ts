@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import {ACCESS_TOKEN_TTL_SECONDS, isAccessTokenRevoked} from './access_revocation';
 
 const DEV_FALLBACK_SECRET = 'CHANGE_ME_IN_PRODUCTION';
 
@@ -21,22 +22,36 @@ function resolveJwtSecret(): string {
 }
 
 const JWT_SECRET = resolveJwtSecret();
-const ACCESS_TOKEN_TTL = '15m';
 
 export interface JwtPayload {
   userId: string;
   email: string | null;
   displayName: string | null;
+  // Standard claims, set by jsonwebtoken on sign; present on every
+  // verified token, absent on the payload passed in to signAccessToken.
+  iat?: number;
+  exp?: number;
 }
 
 export function signAccessToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {expiresIn: ACCESS_TOKEN_TTL});
+  return jwt.sign(payload, JWT_SECRET, {expiresIn: ACCESS_TOKEN_TTL_SECONDS});
 }
 
 export function verifyAccessToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    if (isAccessTokenRevoked(payload.userId, payload.iat)) return null;
+    return payload;
   } catch {
     return null;
   }
+}
+
+// For credentials checked once and then held for a long time (a socket
+// keeps its handshake token for the life of the connection): is the
+// verified payload still good right now? It stops being good when the token
+// expires or when the user's tokens are revoked after the handshake.
+export function isAccessTokenPayloadLive(payload: JwtPayload): boolean {
+  if (payload.exp !== undefined && payload.exp * 1000 <= Date.now()) return false;
+  return !isAccessTokenRevoked(payload.userId, payload.iat);
 }

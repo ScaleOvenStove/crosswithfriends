@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
-import {signAccessToken, verifyAccessToken, JwtPayload} from '../../auth/jwt';
+import {signAccessToken, verifyAccessToken, isAccessTokenPayloadLive, JwtPayload} from '../../auth/jwt';
+import {revokeAccessTokensForUser, resetAccessRevocationsForTests} from '../../auth/access_revocation';
 
 describe('signAccessToken', () => {
   it('returns a non-empty string', () => {
@@ -68,5 +69,78 @@ describe('verifyAccessToken', () => {
     const token = signAccessToken(payload);
     const decoded = verifyAccessToken(token);
     expect(decoded).toMatchObject(payload);
+  });
+});
+
+describe('access token revocation', () => {
+  afterEach(() => {
+    resetAccessRevocationsForTests();
+    jest.useRealTimers();
+  });
+
+  it("rejects a token issued before the user's tokens were revoked", () => {
+    jest.useFakeTimers({now: new Date('2026-01-01T00:00:00Z')});
+    const token = signAccessToken({userId: 'u1', email: null, displayName: null});
+    jest.setSystemTime(new Date('2026-01-01T00:01:00Z'));
+    revokeAccessTokensForUser('u1');
+    expect(verifyAccessToken(token)).toBeNull();
+  });
+
+  it('accepts a token issued after the revocation', () => {
+    jest.useFakeTimers({now: new Date('2026-01-01T00:00:00Z')});
+    revokeAccessTokensForUser('u1');
+    jest.setSystemTime(new Date('2026-01-01T00:00:01Z'));
+    const token = signAccessToken({userId: 'u1', email: null, displayName: null});
+    expect(verifyAccessToken(token)).not.toBeNull();
+  });
+
+  it('accepts the replacement issued in the same second as the revocation', () => {
+    // change-password revokes and then signs the caller's new token at once
+    jest.useFakeTimers({now: new Date('2026-01-01T00:00:00.100Z')});
+    revokeAccessTokensForUser('u1');
+    jest.setSystemTime(new Date('2026-01-01T00:00:00.900Z'));
+    const token = signAccessToken({userId: 'u1', email: null, displayName: null});
+    expect(verifyAccessToken(token)).not.toBeNull();
+  });
+
+  it("does not affect other users' tokens", () => {
+    jest.useFakeTimers({now: new Date('2026-01-01T00:00:00Z')});
+    const token = signAccessToken({userId: 'u2', email: null, displayName: null});
+    jest.setSystemTime(new Date('2026-01-01T00:01:00Z'));
+    revokeAccessTokensForUser('u1');
+    expect(verifyAccessToken(token)).not.toBeNull();
+  });
+});
+
+describe('isAccessTokenPayloadLive', () => {
+  afterEach(() => {
+    resetAccessRevocationsForTests();
+  });
+
+  it('is true for an unexpired, unrevoked payload', () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    expect(
+      isAccessTokenPayloadLive({userId: 'u1', email: null, displayName: null, iat: nowSec, exp: nowSec + 60})
+    ).toBe(true);
+  });
+
+  it('is false once the payload has expired', () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    expect(
+      isAccessTokenPayloadLive({
+        userId: 'u1',
+        email: null,
+        displayName: null,
+        iat: nowSec - 900,
+        exp: nowSec - 1,
+      })
+    ).toBe(false);
+  });
+
+  it("is false once the user's tokens are revoked", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const payload = {userId: 'u1', email: null, displayName: null, iat: nowSec - 10, exp: nowSec + 600};
+    revokeAccessTokensForUser('u1');
+    expect(isAccessTokenPayloadLive(payload)).toBe(false);
   });
 });

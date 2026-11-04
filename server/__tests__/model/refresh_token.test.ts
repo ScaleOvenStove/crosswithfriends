@@ -10,6 +10,7 @@ import {
   cleanupExpiredTokens,
   rotateRefreshToken,
 } from '../../model/refresh_token';
+import {isAccessTokenRevoked, resetAccessRevocationsForTests} from '../../auth/access_revocation';
 
 describe('createRefreshToken', () => {
   beforeEach(() => {
@@ -120,6 +121,15 @@ describe('revokeAllUserTokens', () => {
     const params = pool.query.mock.calls[0][1] as any[];
     expect(params[0]).toBe('user-1');
   });
+
+  it('also cuts off access tokens already issued to the user', async () => {
+    resetAccessRevocationsForTests();
+    const issuedBefore = Math.floor(Date.now() / 1000) - 60;
+    await revokeAllUserTokens('user-1');
+    expect(isAccessTokenRevoked('user-1', issuedBefore)).toBe(true);
+    expect(isAccessTokenRevoked('user-2', issuedBefore)).toBe(false);
+    resetAccessRevocationsForTests();
+  });
 });
 
 describe('rotateRefreshToken', () => {
@@ -197,6 +207,9 @@ describe('rotateRefreshToken', () => {
     const sqls = mockClient.query.mock.calls.map((c) => c[0] as string);
     expect(sqls.some((s) => /revoked_at IS NULL/.test(s))).toBe(true);
     expect(sqls).toContain('COMMIT');
+    // The replayer may also hold a live access token for the account.
+    expect(isAccessTokenRevoked('user-1', Math.floor(Date.now() / 1000) - 60)).toBe(true);
+    resetAccessRevocationsForTests();
   });
 
   it('treats a logout-revoked (not rotated) token as invalid without revoking the family, even beyond grace', async () => {

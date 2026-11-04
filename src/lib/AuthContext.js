@@ -140,11 +140,21 @@ export function AuthProvider({children}) {
     setPreferences(readLocalStoragePrefs());
   }, []);
 
+  // Swap in a fresh access token issued by the server for the current
+  // session (e.g. change-password revokes every token issued before it and
+  // returns a replacement). The ref is updated immediately so a refreshUser
+  // call in the same tick uses the new token, not the revoked one.
+  const adoptAccessToken = useCallback((token) => {
+    accessTokenRef.current = token;
+    setAccessToken(token);
+  }, []);
+
   const refreshUser = useCallback(async () => {
-    if (!accessToken) return;
-    const me = await getMe(accessToken);
+    const token = accessTokenRef.current;
+    if (!token) return;
+    const me = await getMe(token);
     if (me) setUser(me);
-  }, [accessToken]);
+  }, []);
 
   const savePreference = useCallback((key, value) => {
     // Update localStorage immediately
@@ -181,6 +191,7 @@ export function AuthProvider({children}) {
     handleLoginSuccess,
     handleLogout,
     refreshUser,
+    adoptAccessToken,
     preferences,
     savePreference,
   };
