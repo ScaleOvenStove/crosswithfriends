@@ -30,25 +30,24 @@ export async function createVerificationToken(userId: string, newEmail?: string)
   return rawToken;
 }
 
+// Consuming a token is a single conditional UPDATE so that the check and
+// the claim are one atomic step. Reading the row and then marking it used
+// in a second statement lets two concurrent requests both see used_at IS
+// NULL and both succeed. Expiry is checked against the database clock in
+// the same predicate.
 export async function validateVerificationToken(
   token: string
 ): Promise<{userId: string; newEmail: string | null} | null> {
   const tokenHash = hashToken(token);
   const res = await pool.query(
-    `SELECT user_id, new_email, expires_at, used_at
-     FROM email_verification_tokens
-     WHERE token_hash = $1`,
+    `UPDATE email_verification_tokens SET used_at = NOW()
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()
+     RETURNING user_id, new_email`,
     [tokenHash]
   );
 
   const row = res.rows[0];
   if (!row) return null;
-  if (row.used_at) return null;
-  if (new Date(row.expires_at) < new Date()) return null;
-
-  // Mark as used
-  await pool.query(`UPDATE email_verification_tokens SET used_at = NOW() WHERE token_hash = $1`, [tokenHash]);
-
   return {userId: row.user_id, newEmail: row.new_email};
 }
 
@@ -91,23 +90,18 @@ export async function createPasswordResetToken(userId: string): Promise<string> 
   return rawToken;
 }
 
+// Atomic consume, as with validateVerificationToken above.
 export async function validatePasswordResetToken(token: string): Promise<{userId: string} | null> {
   const tokenHash = hashToken(token);
   const res = await pool.query(
-    `SELECT user_id, expires_at, used_at
-     FROM password_reset_tokens
-     WHERE token_hash = $1`,
+    `UPDATE password_reset_tokens SET used_at = NOW()
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()
+     RETURNING user_id`,
     [tokenHash]
   );
 
   const row = res.rows[0];
   if (!row) return null;
-  if (row.used_at) return null;
-  if (new Date(row.expires_at) < new Date()) return null;
-
-  // Mark as used
-  await pool.query(`UPDATE password_reset_tokens SET used_at = NOW() WHERE token_hash = $1`, [tokenHash]);
-
   return {userId: row.user_id};
 }
 

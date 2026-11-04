@@ -52,66 +52,30 @@ describe('validateVerificationToken', () => {
     resetPoolMocks();
   });
 
-  it('returns {userId, newEmail} for a valid unused token', async () => {
-    const futureDate = new Date(Date.now() + 86400000).toISOString();
-    pool.query
-      .mockResolvedValueOnce({
-        rows: [{user_id: 'user-1', new_email: 'new@test.com', expires_at: futureDate, used_at: null}],
-      })
-      .mockResolvedValueOnce({rows: []}); // mark as used
+  it('returns {userId, newEmail} when the token is claimed', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{user_id: 'user-1', new_email: 'new@test.com'}]});
     const result = await validateVerificationToken('some-token');
     expect(result).toEqual({userId: 'user-1', newEmail: 'new@test.com'});
   });
 
-  it('returns null when token is not found', async () => {
+  it('returns null when no unused, unexpired token matches', async () => {
     pool.query.mockResolvedValueOnce({rows: []});
-    const result = await validateVerificationToken('nonexistent');
-    expect(result).toBeNull();
+    expect(await validateVerificationToken('used-expired-or-missing')).toBeNull();
   });
 
-  it('returns null when token is already used', async () => {
-    pool.query.mockResolvedValueOnce({
-      rows: [
-        {
-          user_id: 'user-1',
-          new_email: null,
-          expires_at: new Date(Date.now() + 86400000).toISOString(),
-          used_at: new Date().toISOString(),
-        },
-      ],
-    });
-    const result = await validateVerificationToken('used-token');
-    expect(result).toBeNull();
-  });
-
-  it('returns null when token is expired', async () => {
-    pool.query.mockResolvedValueOnce({
-      rows: [
-        {
-          user_id: 'user-1',
-          new_email: null,
-          expires_at: new Date(Date.now() - 86400000).toISOString(),
-          used_at: null,
-        },
-      ],
-    });
-    const result = await validateVerificationToken('expired-token');
-    expect(result).toBeNull();
-  });
-
-  it('marks token as used after successful validation', async () => {
-    const futureDate = new Date(Date.now() + 86400000).toISOString();
-    pool.query
-      .mockResolvedValueOnce({
-        rows: [{user_id: 'user-1', new_email: null, expires_at: futureDate, used_at: null}],
-      })
-      .mockResolvedValueOnce({rows: []});
-
+  it('checks and claims the token in one conditional UPDATE', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{user_id: 'user-1', new_email: null}]});
     await validateVerificationToken('valid-token');
-    expect(pool.query).toHaveBeenCalledTimes(2);
-    const markUsedSql = pool.query.mock.calls[1][0] as string;
-    expect(markUsedSql).toContain('UPDATE email_verification_tokens');
-    expect(markUsedSql).toContain('used_at = NOW()');
+    // A separate SELECT-then-UPDATE lets two concurrent requests both
+    // redeem the same token; the claim must be a single statement.
+    expect(pool.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = pool.query.mock.calls[0] as [string, string[]];
+    expect(sql).toContain('UPDATE email_verification_tokens SET used_at = NOW()');
+    expect(sql).toContain('used_at IS NULL');
+    expect(sql).toContain('expires_at > NOW()');
+    expect(sql).toContain('RETURNING');
+    expect(params[0]).toMatch(/^[0-9a-f]{64}$/);
+    expect(params[0]).not.toBe('valid-token');
   });
 });
 
@@ -158,42 +122,25 @@ describe('validatePasswordResetToken', () => {
     resetPoolMocks();
   });
 
-  it('returns {userId} for a valid token and marks as used', async () => {
-    const futureDate = new Date(Date.now() + 3600000).toISOString();
-    pool.query
-      .mockResolvedValueOnce({
-        rows: [{user_id: 'user-1', expires_at: futureDate, used_at: null}],
-      })
-      .mockResolvedValueOnce({rows: []});
-    const result = await validatePasswordResetToken('valid-token');
-    expect(result).toEqual({userId: 'user-1'});
-    expect(pool.query).toHaveBeenCalledTimes(2);
+  it('returns {userId} when the token is claimed', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{user_id: 'user-1'}]});
+    expect(await validatePasswordResetToken('valid-token')).toEqual({userId: 'user-1'});
   });
 
-  it('returns null for used/expired/missing token', async () => {
-    // missing
+  it('returns null when no unused, unexpired token matches', async () => {
     pool.query.mockResolvedValueOnce({rows: []});
-    expect(await validatePasswordResetToken('missing')).toBeNull();
+    expect(await validatePasswordResetToken('used-expired-or-missing')).toBeNull();
+  });
 
-    // used
-    resetPoolMocks();
-    pool.query.mockResolvedValueOnce({
-      rows: [
-        {
-          user_id: 'u1',
-          expires_at: new Date(Date.now() + 3600000).toISOString(),
-          used_at: new Date().toISOString(),
-        },
-      ],
-    });
-    expect(await validatePasswordResetToken('used')).toBeNull();
-
-    // expired
-    resetPoolMocks();
-    pool.query.mockResolvedValueOnce({
-      rows: [{user_id: 'u1', expires_at: new Date(Date.now() - 3600000).toISOString(), used_at: null}],
-    });
-    expect(await validatePasswordResetToken('expired')).toBeNull();
+  it('checks and claims the token in one conditional UPDATE', async () => {
+    pool.query.mockResolvedValueOnce({rows: [{user_id: 'user-1'}]});
+    await validatePasswordResetToken('valid-token');
+    expect(pool.query).toHaveBeenCalledTimes(1);
+    const sql = pool.query.mock.calls[0][0] as string;
+    expect(sql).toContain('UPDATE password_reset_tokens SET used_at = NOW()');
+    expect(sql).toContain('used_at IS NULL');
+    expect(sql).toContain('expires_at > NOW()');
+    expect(sql).toContain('RETURNING');
   });
 });
 
