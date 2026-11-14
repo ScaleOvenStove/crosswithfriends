@@ -209,6 +209,8 @@ export default class Toolbar extends Component {
       skipFilledSquares,
       autoAdvanceCursor,
       showProgress,
+      subtleColors,
+      onToggleSubtleColors,
       onFontScaleChange,
       fontScale = 1,
       focusMode,
@@ -219,6 +221,7 @@ export default class Toolbar extends Component {
     const skipFilledSquaresLabel = skipFilledSquares ? "Don't skip filled" : 'Skip filled';
     const autoAdvanceLabel = autoAdvanceCursor ? 'No auto-advance' : 'Auto-advance';
     const showProgressLabel = showProgress ? 'Hide progress' : 'Show progress';
+    const subtleColorsLabel = subtleColors ? 'Subtle colors off' : 'Subtle colors';
     const focusModeLabel = focusMode ? 'Focus mode off' : 'Focus mode';
     const isScaled = Math.round(fontScale * 100) !== 100;
     const resetLabel = `Text: Reset (${Math.round(fontScale * 100)}%)`;
@@ -233,6 +236,7 @@ export default class Toolbar extends Component {
           [showProgressLabel]: this.props.onToggleShowProgress,
           ...(!mobile && onToggleFocusMode && {[focusModeLabel]: onToggleFocusMode}),
           'Color Attribution': onToggleColorAttributionMode,
+          ...(onToggleSubtleColors && {[subtleColorsLabel]: onToggleSubtleColors}),
           'List View': this.props.onToggleListView,
           Pencil: this.props.onTogglePencil,
           Autocheck: this.props.onToggleAutocheck,

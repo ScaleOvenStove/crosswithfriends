@@ -99,6 +99,11 @@ function GamePreferencesSection({preferences, savePreference, darkModePreference
     {key: 'autoAdvanceCursor', label: 'Auto-advance cursor', value: preferences?.autoAdvanceCursor ?? true},
     {key: 'showProgress', label: 'Show progress', value: preferences?.showProgress ?? true},
     {key: 'colorAttribution', label: 'Color Attribution', value: preferences?.colorAttribution ?? false},
+    {
+      key: 'subtleColors',
+      label: "Subtle colors (fade other players' colors on the grid)",
+      value: preferences?.subtleColors ?? false,
+    },
     {key: 'sound', label: 'Sound on solve', value: preferences?.sound ?? true},
     {
       key: 'zenMode',

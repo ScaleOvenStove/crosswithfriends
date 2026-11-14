@@ -25,9 +25,15 @@ export const darken = (number) => {
   return num({r, g, b});
 };
 
-export const lightenHsl = (string) => {
+// Alpha (percent) for other players' attribution fills and cursors on the grid.
+// "Subtle colors" is a per-player preference that only changes what that player sees.
+export const ATTRIBUTION_ALPHA = 40;
+export const SUBTLE_ATTRIBUTION_ALPHA = 20;
+export const SUBTLE_CURSOR_ALPHA = 50;
+
+export const lightenHsl = (string, alpha = ATTRIBUTION_ALPHA) => {
   if (!_.startsWith(string, 'hsl(')) {
     return '';
   }
-  return `hsla${string.substring(3, string.length - 1)},40%)`;
+  return `hsla${string.substring(3, string.length - 1)},${alpha}%)`;
 };

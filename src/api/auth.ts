@@ -7,6 +7,7 @@ export interface UserPreferences {
   showProgress?: boolean;
   darkMode?: string;
   colorAttribution?: boolean;
+  subtleColors?: boolean;
   sound?: boolean;
   zenMode?: boolean;
 }
