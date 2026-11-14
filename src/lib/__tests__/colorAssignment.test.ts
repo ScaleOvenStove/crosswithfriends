@@ -1,8 +1,15 @@
-import {PALETTE_COLORS, pickDistinctColor} from '../colorAssignment';
+import {AUTO_ASSIGN_COLORS, PALETTE_COLORS, pickDistinctColor} from '../colorAssignment';
 
 describe('PALETTE_COLORS', () => {
-  it('contains 18 colors', () => {
-    expect(PALETTE_COLORS).toHaveLength(18);
+  it('contains the 18 auto-assign colors plus a pale grey', () => {
+    expect(AUTO_ASSIGN_COLORS).toHaveLength(18);
+    expect(PALETTE_COLORS).toHaveLength(19);
+    expect(PALETTE_COLORS).toEqual(expect.arrayContaining([...AUTO_ASSIGN_COLORS]));
+    expect(PALETTE_COLORS).toContain('hsl(200,10%,72%)');
+  });
+
+  it('has no duplicate colors', () => {
+    expect(new Set(PALETTE_COLORS).size).toBe(PALETTE_COLORS.length);
   });
 
   it('all colors are valid hsl strings', () => {
@@ -47,6 +54,15 @@ describe('pickDistinctColor', () => {
   it('handles all palette colors being taken', () => {
     const color = pickDistinctColor([...PALETTE_COLORS]);
     expect(PALETTE_COLORS).toContain(color);
+  });
+
+  it('never auto-assigns a manual-only color', () => {
+    const manualOnly = PALETTE_COLORS.filter((c) => !AUTO_ASSIGN_COLORS.includes(c));
+    expect(manualOnly.length).toBeGreaterThan(0);
+    for (let i = 0; i < 50; i++) {
+      expect(manualOnly).not.toContain(pickDistinctColor([]));
+    }
+    expect(manualOnly).not.toContain(pickDistinctColor([...AUTO_ASSIGN_COLORS]));
   });
 
   it('handles legacy rand_color format', () => {
