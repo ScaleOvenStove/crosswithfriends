@@ -606,6 +606,7 @@ const preferencesSchema = Joi.object({
   showProgress: Joi.boolean(),
   darkMode: Joi.string().valid('0', '1', '2'),
   colorAttribution: Joi.boolean(),
+  subtleColors: Joi.boolean(),
   sound: Joi.boolean(),
   zenMode: Joi.boolean(),
 }).unknown(false);
@@ -630,6 +631,7 @@ const preferencesSchema = Joi.object({
  *               showProgress: {type: boolean}
  *               darkMode: {type: string, enum: ['0', '1', '2']}
  *               colorAttribution: {type: boolean}
+ *               subtleColors: {type: boolean}
  *               sound: {type: boolean}
  *               zenMode: {type: boolean}
  *     responses:

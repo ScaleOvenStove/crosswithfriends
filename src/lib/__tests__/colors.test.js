@@ -51,7 +51,12 @@ describe('lightenHsl', () => {
     expect(lightenHsl('hsl(200, 50%, 50%)')).toBe('hsla(200, 50%, 50%,40%)');
   });
 
+  it('takes an explicit alpha for subtle colors', () => {
+    expect(lightenHsl('hsl(200,50%,50%)', 20)).toBe('hsla(200,50%,50%,20%)');
+  });
+
   it('returns empty string for non-hsl input', () => {
+    expect(lightenHsl('#ff0000', 20)).toBe('');
     expect(lightenHsl('#ff0000')).toBe('');
     expect(lightenHsl('rgb(255, 0, 0)')).toBe('');
     expect(lightenHsl('')).toBe('');

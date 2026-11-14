@@ -16,7 +16,7 @@ import MobileListViewControls from './MobileListViewControls';
 import ListViewControls from './ListViewControls';
 import ConnectionStats from './ConnectionStats';
 
-import {lightenHsl} from '../../lib/colors';
+import {lightenHsl, ATTRIBUTION_ALPHA, SUBTLE_ATTRIBUTION_ALPHA, SUBTLE_CURSOR_ALPHA} from '../../lib/colors';
 import * as gameUtils from '../../lib/gameUtils';
 import {VimCommandBar} from './VimCommandBar';
 
@@ -389,6 +389,7 @@ export default class Player extends Component {
       clueBarStyle = {},
       gridStyle = {},
       colorAttributionMode,
+      subtleColors,
       contest,
       fontScale,
     } = this.props;
@@ -396,12 +397,13 @@ export default class Player extends Component {
     const {cellStyle = {}} = gridStyle;
 
     const currentTime = Date.now();
+    const cursorColor = (color) => (subtleColors && lightenHsl(color, SUBTLE_CURSOR_ALPHA)) || color;
     const cursors = allCursors
       .filter((cursor) => cursor.id !== id)
       .map((cursor) => ({
         ...cursor,
         active: cursor.timestamp > currentTime - CURSOR_TIMEOUT,
-        color: users[cursor.id]?.color || 'blue',
+        color: cursorColor(users[cursor.id]?.color || 'blue'),
         displayName: users[cursor.id]?.displayName || '',
       }));
     const pings = allPings
@@ -426,10 +428,12 @@ export default class Player extends Component {
         )
       : grid;
 
+    const attributionAlpha = subtleColors ? SUBTLE_ATTRIBUTION_ALPHA : ATTRIBUTION_ALPHA;
     const gridWithColors = correctedGrid.map((row) =>
       row.map((cell) => ({
         ...cell,
-        attributionColor: cell.value && colorAttributionMode ? lightenHsl(users[cell.user_id]?.color) : '',
+        attributionColor:
+          cell.value && colorAttributionMode ? lightenHsl(users[cell.user_id]?.color, attributionAlpha) : '',
       }))
     );
 

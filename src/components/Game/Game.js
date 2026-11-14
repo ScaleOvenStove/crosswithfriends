@@ -17,6 +17,7 @@ const skipFilledSquaresKey = 'skip-filled-squares';
 const autoAdvanceCursorKey = 'auto-advance-cursor';
 const vimModeKey = 'vim-mode';
 const showProgressKey = 'show-progress';
+const subtleColorsKey = 'subtle-colors';
 const vimModeRegex = /^\d+(a|d)*$/;
 
 // component for gameplay -- incl. grid/clues & toolbar
@@ -33,6 +34,7 @@ export default class Game extends Component {
       skipFilledSquares: true,
       autoAdvanceCursor: true,
       colorAttributionMode: false,
+      subtleColors: false,
       expandMenu: false,
       lastMilestone: 0,
       milestoneInitialized: false,
@@ -86,6 +88,17 @@ export default class Game extends Component {
       console.error('Failed to parse local storage: showProgress');
     }
     this.setState({showProgress});
+
+    let subtleColors = this.state.subtleColors;
+    try {
+      const storedValue = localStorage.getItem(subtleColorsKey);
+      if (storedValue != null) {
+        subtleColors = JSON.parse(storedValue);
+      }
+    } catch (_e) {
+      console.error('Failed to parse local storage: subtleColors');
+    }
+    this.setState({subtleColors});
 
     this.componentDidUpdate({});
 
@@ -291,6 +304,15 @@ export default class Game extends Component {
     });
   };
 
+  handleToggleSubtleColors = () => {
+    this.setState((prevState) => {
+      const subtleColors = !prevState.subtleColors;
+      localStorage.setItem(subtleColorsKey, JSON.stringify(subtleColors));
+      this.props.onPreferenceChange?.('subtleColors', subtleColors);
+      return {subtleColors};
+    });
+  };
+
   handleTogglePencil = () => {
     this.setState((prevState) => ({
       pencilMode: !prevState.pencilMode,
@@ -459,6 +481,7 @@ export default class Game extends Component {
         onToggleSkipFilledSquares={this.handleToggleSkipFilledSquares}
         autoAdvanceCursor={this.state.autoAdvanceCursor}
         colorAttributionMode={this.state.colorAttributionMode}
+        subtleColors={this.state.subtleColors}
         mobile={mobile}
         optimisticCounter={optimisticCounter}
         onCheck={this.handleCheck}
@@ -545,6 +568,8 @@ export default class Game extends Component {
         isAuthenticated={this.props.isAuthenticated}
         showProgress={this.state.showProgress}
         onToggleShowProgress={this.handleToggleShowProgress}
+        subtleColors={this.state.subtleColors}
+        onToggleSubtleColors={this.handleToggleSubtleColors}
         percentComplete={this.state.showProgress ? this.getPercentComplete() : 0}
         fontScale={this.state.fontScale}
         onFontScaleChange={this.handleFontScale}

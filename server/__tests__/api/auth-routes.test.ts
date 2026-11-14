@@ -511,7 +511,7 @@ describe('POST /auth/profile-visibility', () => {
 
 describe('PUT /auth/preferences', () => {
   it('accepts the documented preference keys', async () => {
-    const prefs = {vimMode: true, darkMode: '2', sound: false, zenMode: true};
+    const prefs = {vimMode: true, darkMode: '2', sound: false, zenMode: true, subtleColors: true};
 
     const res = await request(buildApp())
       .put('/auth/preferences')
@@ -527,6 +527,16 @@ describe('PUT /auth/preferences', () => {
       .put('/auth/preferences')
       .set('Authorization', `Bearer ${tokenFor()}`)
       .send({isAdmin: true});
+
+    expect(res.status).toBe(400);
+    expect(userModel.updateUserPreferences).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-boolean subtleColors', async () => {
+    const res = await request(buildApp())
+      .put('/auth/preferences')
+      .set('Authorization', `Bearer ${tokenFor()}`)
+      .send({subtleColors: 'yes'});
 
     expect(res.status).toBe(400);
     expect(userModel.updateUserPreferences).not.toHaveBeenCalled();

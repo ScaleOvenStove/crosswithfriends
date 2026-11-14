@@ -1,11 +1,12 @@
 /**
  * Shared color palette and distinct color selection for player cursors.
  *
- * Curated palette of 18 visually distinct HSL colors, used by both
- * auto-assignment (when joining a game) and the manual ColorPicker swatch.
+ * AUTO_ASSIGN_COLORS is a curated set of 18 visually distinct HSL colors that
+ * auto-assignment (when joining a game) chooses from. PALETTE_COLORS is what the
+ * manual ColorPicker shows: the same 18 plus manual-only extras.
  */
 
-export const PALETTE_COLORS: readonly string[] = [
+export const AUTO_ASSIGN_COLORS: readonly string[] = [
   'hsl(4,90%,58%)',
   'hsl(340,82%,52%)',
   'hsl(291,47%,51%)',
@@ -26,6 +27,15 @@ export const PALETTE_COLORS: readonly string[] = [
   'hsl(200,18%,46%)',
 ];
 
+/**
+ * Manual-only swatches. A pale grey for players who want their cursor and
+ * attribution fill to sit quietly on the grid. It is never auto-assigned: a
+ * low-contrast cursor is a choice a player should make, not one made for them.
+ */
+const MANUAL_ONLY_COLORS: readonly string[] = ['hsl(200,10%,72%)'];
+
+export const PALETTE_COLORS: readonly string[] = [...AUTO_ASSIGN_COLORS, ...MANUAL_ONLY_COLORS];
+
 function parseHue(hslString: string): number | null {
   const match = hslString.match(/^hsla?\((\d+)/);
   return match ? parseInt(match[1], 10) : null;
@@ -41,19 +51,19 @@ function hueDistance(h1: number, h2: number): number {
  *
  * For each palette color, computes its minimum angular hue distance to any
  * existing color, then returns the one with the largest minimum distance.
- * Falls back to a random palette color if no existing colors are parseable.
+ * Falls back to a random auto-assign color if no existing colors are parseable.
  */
 export function pickDistinctColor(existingColors: string[]): string {
   const existingHues = existingColors.map(parseHue).filter((h): h is number => h !== null);
 
   if (existingHues.length === 0) {
-    return PALETTE_COLORS[Math.floor(Math.random() * PALETTE_COLORS.length)];
+    return AUTO_ASSIGN_COLORS[Math.floor(Math.random() * AUTO_ASSIGN_COLORS.length)];
   }
 
-  let bestColor = PALETTE_COLORS[0];
+  let bestColor = AUTO_ASSIGN_COLORS[0];
   let bestMinDistance = -1;
 
-  for (const candidate of PALETTE_COLORS) {
+  for (const candidate of AUTO_ASSIGN_COLORS) {
     const candidateHue = parseHue(candidate);
     if (candidateHue === null) continue;
 
