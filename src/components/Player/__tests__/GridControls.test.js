@@ -402,3 +402,95 @@ describe('GridControls._handleKeyDown — rebus mode', () => {
     expect(instance.state.rebusMode).toBe(false);
   });
 });
+
+describe('GridControls — input method editors', () => {
+  const keyDown = (overrides) => ({
+    key: 'Process',
+    keyCode: 229,
+    shiftKey: false,
+    altKey: false,
+    nativeEvent: {isComposing: false},
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+    ...overrides,
+  });
+  const inputEvent = (value, isComposing = false) => {
+    const target = {value};
+    return {target, nativeEvent: {isComposing}};
+  };
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('leaves a "Process" keydown to the IME and types the letter from the input event', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    const ev = keyDown();
+    instance.handleKeyDown(ev);
+    expect(ev.preventDefault).not.toHaveBeenCalled();
+    const input = inputEvent('f');
+    instance.handleInput(input);
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, 'F');
+    expect(input.target.value).toBe('');
+  });
+
+  it('treats keyCode 229 as an IME keydown even without key "Process"', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance.handleKeyDown(keyDown({key: 'Unidentified'}));
+    instance.handleInput(inputEvent('q'));
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, 'Q');
+  });
+
+  it('relays space from an IME to the grid action', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance.handleKeyDown(keyDown());
+    instance.handleInput(inputEvent(' '));
+    expect(props.onSetDirection).toHaveBeenCalledWith('down');
+  });
+
+  it('waits for compositionend before typing composed text', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance.handleKeyDown(keyDown({nativeEvent: {isComposing: true}}));
+    instance.handleCompositionStart();
+    const mid = inputEvent('k', true);
+    instance.handleInput(mid);
+    vi.runAllTimers();
+    expect(props.updateGrid).not.toHaveBeenCalled();
+    expect(mid.target.value).toBe('k');
+
+    instance.handleCompositionEnd({target: mid.target});
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, 'K');
+    expect(mid.target.value).toBe('');
+    // Firefox's trailing input event finds the box already drained.
+    instance.handleInput({target: mid.target, nativeEvent: {isComposing: false}});
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledTimes(1);
+  });
+
+  it('discards text from keys the grid ignored without typing it', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance.handleKeyDown(keyDown({key: "'", keyCode: 222}));
+    const input = inputEvent("'");
+    instance.handleInput(input);
+    vi.runAllTimers();
+    expect(props.updateGrid).not.toHaveBeenCalled();
+    expect(input.target.value).toBe('');
+  });
+
+  it('does not re-run a vim normal-mode command when its character lands in the input', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {vimMode: true});
+    instance.handleKeyDown(keyDown({key: 'l', keyCode: 76}));
+    expect(props.onSetSelected).toHaveBeenCalledTimes(1);
+    instance.handleInput(inputEvent('l'));
+    expect(props.onSetSelected).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes IME input through the vim handler in vim mode', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {vimMode: true});
+    instance.handleKeyDown(keyDown());
+    instance.handleInput(inputEvent('l'));
+    expect(props.onSetSelected).toHaveBeenCalledWith({r: 0, c: 1});
+  });
+});
