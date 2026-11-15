@@ -27,6 +27,8 @@ function isImeKeyDown(ev) {
   return ev.key === 'Process' || ev.keyCode === 229 || Boolean(ev.nativeEvent?.isComposing ?? ev.isComposing);
 }
 
+const ALT_KEY_SCOPES = {KeyS: 'square', KeyW: 'word', KeyP: 'puzzle'};
+
 export default class GridControls extends Component {
   constructor() {
     super();
@@ -266,18 +268,16 @@ export default class GridControls extends Component {
     this.actions[action](shiftKey);
   }
 
+  // Alt+S/W/P check (or with Shift, reveal) the square/word/puzzle. Matched on code rather than key since
+  // macOS Option turns the letter into a symbol ("ß"). Returns true only for those, so every other Alt combo
+  // (Alt+D to the address bar, Alt+Left to go back, menu accelerators) is left to the browser.
   handleAltKey(code, shiftKey) {
-    if (this.props.contest) return; // no check/reveal for contest puzzles
+    if (this.props.contest) return false; // no check/reveal for contest puzzles
+    const scope = ALT_KEY_SCOPES[code];
+    if (!scope) return false;
     const altAction = shiftKey ? this.props.onReveal : this.props.onCheck;
-    if (code === 'KeyS') {
-      altAction('square');
-    }
-    if (code === 'KeyW') {
-      altAction('word');
-    }
-    if (code === 'KeyP') {
-      altAction('puzzle');
-    }
+    altAction(scope);
+    return true;
   }
 
   // takes in key, a string
@@ -304,6 +304,10 @@ export default class GridControls extends Component {
       actionKeys[isAcross ? 'ArrowDown' : 'ArrowRight'] = 'forward';
     }
 
+    // Checked first so an Alt combo the grid doesn't own reaches the browser instead of acting as its plain key.
+    if (altKey) {
+      return this.handleAltKey(code, shiftKey) || undefined;
+    }
     const {onPressEnter, onPressPeriod} = this.props;
     if (key === 'Escape' || key === 'Insert') {
       this.toggleRebusMode();
@@ -329,10 +333,6 @@ export default class GridControls extends Component {
     }
     if (key === 'Enter') {
       onPressEnter && onPressEnter();
-      return true;
-    }
-    if (altKey) {
-      this.handleAltKey(code, shiftKey);
       return true;
     }
     if (!this.props.frozen) {
@@ -376,12 +376,11 @@ export default class GridControls extends Component {
 
     const {onVimNormal, onVimInsert, vimInsert, onVimCommand, vimCommand, onPressEnter, onPressPeriod} =
       this.props;
+    if (altKey) {
+      return this.handleAltKey(code, shiftKey) || undefined;
+    }
     if (key in actionKeys) {
       this.handleAction(actionKeys[key], shiftKey);
-      return true;
-    }
-    if (altKey) {
-      this.handleAltKey(code, shiftKey);
       return true;
     }
     if (!vimInsert && !vimCommand) {

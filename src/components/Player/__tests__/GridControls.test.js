@@ -124,6 +124,42 @@ describe('GridControls._handleKeyDown — alt key shortcuts', () => {
     instance._handleKeyDown('s', false, true, 'KeyS');
     expect(props.onCheck).toHaveBeenCalledWith('square');
   });
+
+  it('claims Alt+S so the browser does not also act on it', () => {
+    const {instance} = makeControlsInstance(GridControls);
+    expect(instance._handleKeyDown('s', false, true, 'KeyS')).toBe(true);
+  });
+
+  it('leaves other Alt combos (Alt+D) to the browser without typing', () => {
+    vi.useFakeTimers();
+    const {instance, props} = makeControlsInstance(GridControls);
+    expect(instance._handleKeyDown('d', false, true, 'KeyD')).toBeUndefined();
+    vi.runAllTimers();
+    expect(props.updateGrid).not.toHaveBeenCalled();
+    expect(props.onCheck).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('leaves Alt+ArrowLeft (browser back) alone instead of moving the cursor', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    expect(instance._handleKeyDown('ArrowLeft', false, true, 'ArrowLeft')).toBeUndefined();
+    expect(props.onSetSelected).not.toHaveBeenCalled();
+  });
+
+  it('leaves Alt+S to the browser in contest mode, where check is disabled', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {contest: true});
+    expect(instance._handleKeyDown('s', false, true, 'KeyS')).toBeUndefined();
+    expect(props.onCheck).not.toHaveBeenCalled();
+  });
+
+  it('applies the same rules in vim mode', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {vimMode: true});
+    expect(instance._handleKeyDownVim('d', false, true, 'KeyD')).toBeUndefined();
+    expect(instance._handleKeyDownVim('ArrowLeft', false, true, 'ArrowLeft')).toBeUndefined();
+    expect(props.onSetSelected).not.toHaveBeenCalled();
+    expect(instance._handleKeyDownVim('w', false, true, 'KeyW')).toBe(true);
+    expect(props.onCheck).toHaveBeenCalledWith('word');
+  });
 });
 
 describe('GridControls.delete', () => {
