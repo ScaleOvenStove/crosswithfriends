@@ -19,6 +19,14 @@ export function validLetter(letter) {
   return letter.match(/^[A-Z0-9]$/);
 }
 
+// With an input method editor active (ibus/fcitx on Linux, the Japanese/Chinese/Korean IMEs everywhere), a
+// keydown carries no usable key: Chrome reports key "Process" and Firefox keyCode 229, and the character only
+// shows up afterwards as an input event on the focused hidden <input>. isComposing covers keys pressed
+// mid-composition, which belong to the IME (e.g. arrows moving through its candidate list).
+function isImeKeyDown(ev) {
+  return ev.key === 'Process' || ev.keyCode === 229 || Boolean(ev.nativeEvent?.isComposing ?? ev.isComposing);
+}
+
 export default class GridControls extends Component {
   constructor() {
     super();
@@ -28,6 +36,10 @@ export default class GridControls extends Component {
     this.inputRef = React.createRef();
     this.handleClick = this.handleClick.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
+    // Set by an IME keydown so the input event it produces is relayed to the grid; see handleInput.
+    this.imeInputPending = false;
+    this.imeShiftKey = false;
+    this.composing = false;
   }
 
   actions = {
@@ -418,11 +430,51 @@ export default class GridControls extends Component {
     if (ev.target !== this.inputRef && (ev.tagName === 'INPUT' || ev.metaKey || ev.ctrlKey)) {
       return;
     }
+    if (isImeKeyDown(ev)) {
+      // Leave the key to the IME (no preventDefault) and pick up what it writes in handleInput.
+      this.imeInputPending = true;
+      this.imeShiftKey = ev.shiftKey;
+      return;
+    }
+    this.imeInputPending = false;
     // React 16 SyntheticEvent doesn't expose ev.code; read from nativeEvent
     const code = ev.nativeEvent ? ev.nativeEvent.code : ev.code;
     if (keyDownHandler(ev.key, ev.shiftKey, ev.altKey, code)) {
       ev.preventDefault();
       ev.stopPropagation();
+    }
+  }
+
+  handleCompositionStart = () => {
+    this.composing = true;
+  };
+
+  // Text composed in the IME (pinyin, kana, ...) is committed here. Chrome fires its last input event before
+  // compositionend and Firefox after; whichever comes first drains the box and the other finds it empty.
+  handleCompositionEnd = (ev) => {
+    this.composing = false;
+    this.consumeInput(ev.target, true, false);
+  };
+
+  // Keys handled in handleKeyDown are preventDefault-ed and never reach the hidden input, so anything that
+  // lands in it came from an IME (relayed to the grid) or from a key the grid ignored, like an apostrophe or
+  // vim's normal-mode commands (already acted on in keydown, so only discarded). Either way the box is emptied
+  // so it doesn't collect text.
+  handleInput = (ev) => {
+    if (this.composing || ev.nativeEvent?.isComposing) return;
+    const relay = this.imeInputPending;
+    this.imeInputPending = false;
+    this.consumeInput(ev.target, relay, this.imeShiftKey);
+  };
+
+  consumeInput(input, relay, shiftKey) {
+    if (!input) return;
+    const text = input.value;
+    input.value = '';
+    if (!relay) return;
+    const keyDownHandler = this.props.vimMode ? this._handleKeyDownVim : this._handleKeyDown;
+    for (const char of text) {
+      keyDownHandler(char, shiftKey, false, undefined);
     }
   }
 
@@ -609,6 +661,9 @@ export default class GridControls extends Component {
           data-lpignore="true"
           data-bw-ignore="true"
           data-form-type="other"
+          onInput={this.handleInput}
+          onCompositionStart={this.handleCompositionStart}
+          onCompositionEnd={this.handleCompositionEnd}
         />
       </div>
     );
