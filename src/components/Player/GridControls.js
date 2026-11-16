@@ -13,10 +13,14 @@ function safe_while(condition, step, capLimit = 500) {
   }
 }
 
+// Callers uppercase before checking, so a letter that has case must already be uppercase. Any script's letters
+// count, not just A-Z, so puzzles in other languages can be filled in (É, Ñ, Ø typed via AltGr or dead keys, or
+// characters from an IME). A letter whose uppercase is more than one character (ß -> SS) fails the single-
+// character match and is not entered.
 export function validLetter(letter) {
   const VALID_SYMBOLS = '!@#$%^&*()-+=`~/?\\'; // special theme puzzles have these sometimes;
   if (VALID_SYMBOLS.indexOf(letter) !== -1) return true;
-  return letter.match(/^[A-Z0-9]$/);
+  return /^[\p{L}0-9]$/u.test(letter) && letter === letter.toUpperCase();
 }
 
 // With an input method editor active (ibus/fcitx on Linux, the Japanese/Chinese/Korean IMEs everywhere), a

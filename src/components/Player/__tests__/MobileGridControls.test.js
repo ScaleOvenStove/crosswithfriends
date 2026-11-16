@@ -77,6 +77,33 @@ describe('MobileGridControls.handleInputChange — letter input', () => {
     expect(props.updateGrid).toHaveBeenCalledWith(0, 0, '5');
     vi.useRealTimers();
   });
+
+  it('types an accented lowercase letter as its capital, not as a rebus', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'X'}})});
+    vi.useFakeTimers();
+    instance.handleInputChange(makeInputEvent('$é'));
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, 'É');
+    vi.useRealTimers();
+  });
+
+  it('types an accented capital as a rebus, like any Shift-held letter', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'X'}})});
+    vi.useFakeTimers();
+    instance.handleInputChange(makeInputEvent('$É'));
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, 'XÉ');
+    vi.useRealTimers();
+  });
+
+  it('types a caseless letter (CJK) normally rather than appending it as a rebus', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'X'}})});
+    vi.useFakeTimers();
+    instance.handleInputChange(makeInputEvent('$中'));
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, '中');
+    vi.useRealTimers();
+  });
 });
 
 describe('MobileGridControls.handleInputChange — backspace', () => {

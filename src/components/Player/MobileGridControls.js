@@ -48,6 +48,14 @@ function diffValues(prev, next) {
   return [prev.length - common, next.slice(common)];
 }
 
+// A capital letter means Shift was held, which enters a rebus (as do digits and symbols, as before). Letters
+// with no case (Chinese, Japanese, Arabic, ...) equal their own uppercase but say nothing about Shift, so they
+// are typed normally instead of piling up as a rebus in one square.
+function isShiftedChar(char) {
+  const caselessLetter = /\p{L}/u.test(char) && char.toLowerCase() === char.toUpperCase();
+  return !caselessLetter && char.toUpperCase() === char;
+}
+
 // Spacebar, comma and period trigger grid actions (flip direction, next clue) rather than typing. They stay in
 // the box, so deleting one has to count as a grid backspace, the same as it did when the box was reset after
 // every key.
@@ -586,7 +594,7 @@ export default class MobileGridControls extends GridControls {
       for (const char of inserted) {
         if (ACTION_CHARS.includes(char)) continue;
         steps.push(() =>
-          this.typeLetter(char.toUpperCase(), char.toUpperCase() === char, {
+          this.typeLetter(char.toUpperCase(), isShiftedChar(char), {
             nextClueIfFilled: this.props.autoAdvanceCursor,
           })
         );
