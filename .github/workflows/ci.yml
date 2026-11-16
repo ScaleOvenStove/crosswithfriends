@@ -232,9 +232,7 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
-    # Pinned: ubuntu-latest moved to 26.04, which Playwright 1.58 can't install Chromium on.
-    # Unpin once @playwright/test supports it.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     # The e2e suite drives a real stack rather than the production backend.
