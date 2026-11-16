@@ -40,12 +40,16 @@ function handleVolumeKeyBlur(ev) {
 }
 
 // Splits the change from prev to next into [number of characters deleted from the end, string appended].
-function diffValues(prev, next) {
+// Compares by code point, not UTF-16 unit, so a letter outside the BMP (𠮷) counts as one character when
+// deleted, the same as when it was typed.
+function diffValues(prevValue, nextValue) {
+  const prev = Array.from(prevValue);
+  const next = Array.from(nextValue);
   let common = 0;
   while (common < prev.length && common < next.length && prev[common] === next[common]) {
     common += 1;
   }
-  return [prev.length - common, next.slice(common)];
+  return [prev.length - common, next.slice(common).join('')];
 }
 
 // A capital letter means Shift was held, which enters a rebus (as do digits and symbols, as before). Letters

@@ -96,6 +96,23 @@ describe('MobileGridControls.handleInputChange — letter input', () => {
     vi.useRealTimers();
   });
 
+  it('backspaces once when a letter outside the BMP is deleted', () => {
+    const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'A'}})});
+    vi.useFakeTimers();
+    const target = {value: '$a𠮷', name: '2', ownerDocument: document};
+    instance.handleInputChange({target, nativeEvent: {}});
+    vi.runAllTimers();
+    props.updateGrid.mockClear();
+    props.onSetSelected.mockClear();
+    target.value = '$a';
+    instance.handleInputChange({target, nativeEvent: {}});
+    vi.runAllTimers();
+    // One backspace on the selected cell (0,0); a second would have moved back a cell.
+    expect(props.updateGrid).toHaveBeenCalledTimes(1);
+    expect(props.onSetSelected).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
   it('types a caseless letter (CJK) normally rather than appending it as a rebus', () => {
     const {instance, props} = makeMobileInstance({grid: makeGrid({'0,0': {value: 'X'}})});
     vi.useFakeTimers();
