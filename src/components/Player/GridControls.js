@@ -23,6 +23,16 @@ export function validLetter(letter) {
   return /^[\p{L}0-9]$/u.test(letter) && letter === letter.toUpperCase();
 }
 
+// Rebus values are capped at 10 characters before the new one is appended. Counted by code point so a letter
+// outside the BMP (𠮷) is never cut in half.
+function appendToRebus(value, letter) {
+  return (
+    Array.from(value || '')
+      .slice(0, 10)
+      .join('') + letter
+  );
+}
+
 // With an input method editor active (ibus/fcitx on Linux, the Japanese/Chinese/Korean IMEs everywhere), a
 // keydown carries no usable key: Chrome reports key "Process" and Firefox keyCode 229, and the character only
 // shows up afterwards as an input event on the focused hidden <input>. isComposing covers keys pressed
@@ -120,7 +130,7 @@ export default class GridControls extends Component {
     this.afterPendingWrites(() => {
       const cell = this.props.grid[r][c];
       if (cell.good || !cell.value) return;
-      this.props.updateGrid(r, c, cell.value.slice(0, -1));
+      this.props.updateGrid(r, c, Array.from(cell.value).slice(0, -1).join(''));
     });
   }
 
@@ -570,7 +580,7 @@ export default class GridControls extends Component {
         if (!rebusFlag) {
           this.goToNextEmptyCell({nextClueIfFilled});
         }
-        this.props.updateGrid(selR, selC, rebusFlag ? (value || '').substr(0, 10) + letter : letter);
+        this.props.updateGrid(selR, selC, rebusFlag ? appendToRebus(value, letter) : letter);
       },
       Math.max(0, this.nextTime - Date.now())
     );
@@ -585,7 +595,7 @@ export default class GridControls extends Component {
     if (!rebusFlag) {
       this.goToNextEmptyCell({nextClueIfFilled});
     }
-    this.props.updateGrid(r, c, rebusFlag ? (value || '').substr(0, 10) + letter : letter);
+    this.props.updateGrid(r, c, rebusFlag ? appendToRebus(value, letter) : letter);
   }
 
   // Returns true if the letter was successfully deleted
