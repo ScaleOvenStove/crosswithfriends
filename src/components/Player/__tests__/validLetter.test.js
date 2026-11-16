@@ -31,6 +31,28 @@ describe('validLetter', () => {
     expect(validLetter('z')).toBeFalsy();
   });
 
+  it('accepts uppercase letters from other languages and scripts', () => {
+    for (const ch of ['É', 'Ñ', 'Ø', 'Ü', 'Ł', 'Ж', 'Ω', '中', 'あ', 'ع']) {
+      expect(validLetter(ch)).toBeTruthy();
+    }
+  });
+
+  it('rejects lowercase accented letters (input is uppercased first)', () => {
+    expect(validLetter('é')).toBeFalsy();
+    expect(validLetter('ñ')).toBeFalsy();
+  });
+
+  it('rejects letters whose uppercase is more than one character (ß -> SS)', () => {
+    expect(validLetter('ß'.toUpperCase())).toBeFalsy();
+  });
+
+  it('rejects multi-character strings and non-letter symbols', () => {
+    expect(validLetter('AB')).toBeFalsy();
+    expect(validLetter('Process')).toBeFalsy();
+    expect(validLetter('€')).toBeFalsy();
+    expect(validLetter('½')).toBeFalsy();
+  });
+
   it('rejects whitespace', () => {
     expect(validLetter(' ')).toBeFalsy();
     expect(validLetter('\t')).toBeFalsy();

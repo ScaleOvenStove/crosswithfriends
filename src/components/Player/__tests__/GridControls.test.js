@@ -21,7 +21,34 @@ describe('GridControls._handleKeyDown — letter input', () => {
 
   it('rejects non-letter, non-action characters', () => {
     const {instance, props} = makeControlsInstance(GridControls);
-    instance._handleKeyDown('é', false, false);
+    instance._handleKeyDown('€', false, false);
+    instance._handleKeyDown('§', false, false);
+    expect(props.updateGrid).not.toHaveBeenCalled();
+  });
+
+  it('accepts accented letters (AltGr / dead keys), uppercased', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    vi.useFakeTimers();
+    instance._handleKeyDown('é', false, false, 'KeyE');
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, 'É');
+    vi.useRealTimers();
+  });
+
+  it('appends a letter outside the BMP to a rebus without splitting earlier ones', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {
+      grid: makeGrid({'0,0': {value: '𠮷'.repeat(11)}}),
+    });
+    vi.useFakeTimers();
+    instance._handleKeyDown('A', true, false, 'KeyA');
+    vi.runAllTimers();
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, `${'𠮷'.repeat(10)}A`);
+    vi.useRealTimers();
+  });
+
+  it('ignores a dead key press itself', () => {
+    const {instance, props} = makeControlsInstance(GridControls);
+    instance._handleKeyDown('Dead', false, false, 'Quote');
     expect(props.updateGrid).not.toHaveBeenCalled();
   });
 
@@ -344,6 +371,15 @@ describe('GridControls._handleKeyDown — rebus mode', () => {
     instance._handleKeyDown('Backspace', false, false);
     expect(props.updateGrid).toHaveBeenCalledWith(0, 0, '12');
     expect(instance.state.rebusMode).toBe(true);
+  });
+
+  it('Backspace removes a whole letter outside the BMP, not half of it', () => {
+    const {instance, props} = makeControlsInstance(GridControls, {
+      grid: makeGrid({'0,0': {value: 'A𠮷'}}),
+    });
+    instance._handleKeyDown('Escape', false, false);
+    instance._handleKeyDown('Backspace', false, false);
+    expect(props.updateGrid).toHaveBeenCalledWith(0, 0, 'A');
   });
 
   it('moves to the next clue when the rebus filled the last empty square of the word', () => {
