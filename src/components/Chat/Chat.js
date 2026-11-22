@@ -20,7 +20,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import InfoDialog from '../common/InfoDialog';
 import AuthContext from '../../lib/AuthContext';
 import {kickPlayer, unkickPlayer} from '../../api/create_game';
-import {copyPuzzleId} from './puzzleId';
+import {copyPuzzleId, copyText} from './puzzleId';
 import {getPuzzleSizeLabel} from '@shared/puzzleSize';
 import {getUserStats} from '../../api/user_stats';
 import {isPaneCollapsed, readCollapsePrefs, setPaneCollapsed} from './collapsePrefs';
@@ -236,9 +236,8 @@ export default class Chat extends Component {
     return `${Chat.serverUrl}/beta${this.props.path}`;
   }
 
-  handleCopyClick = () => {
-    navigator.clipboard.writeText(this.url);
-    // `${window.location.host}/beta${this.props.path}`);
+  handleCopyClick = async () => {
+    if (!(await copyText(this.url))) return;
     const link = document.getElementById('pathText');
     link.classList.remove('flashBlue');
     // Force reflow to restart CSS animation
@@ -257,13 +256,13 @@ export default class Chat extends Component {
     }, 1200);
   };
 
-  handleShareScoreClick = () => {
+  handleShareScoreClick = async () => {
     const text = `${Object.keys(this.props.users).length > 1 ? 'We' : 'I'} solved ${
       this.props.game.info.titleOverride || this.props.game.info.title
     } in ${formatMilliseconds(this.props.game.clock.totalTime)}!\n\n${Chat.serverUrl}/beta/play/${
       this.props.game.pid
     }`;
-    navigator.clipboard.writeText(text);
+    if (!(await copyText(text))) return;
     const link = document.getElementById('shareText');
     link.classList.remove('flashBlue');
     // Force reflow to restart CSS animation
