@@ -565,3 +565,36 @@ describe('revealAllClues', () => {
     expect(result).toBe(initialState);
   });
 });
+
+// ============================== out-of-range cells ==============================
+
+// Replaying history can hand a reducer coordinates outside the grid (Sentry
+// JAVASCRIPT-REACT-60/61/62). The event must be ignored, not crash the replay.
+describe('events targeting a cell outside the grid', () => {
+  const outOfRange = [
+    {r: 3, c: 0},
+    {r: 0, c: 3},
+    {r: -1, c: 0},
+  ];
+
+  it.each(outOfRange)('updateCell at %o leaves state unchanged', (cell) => {
+    const state = createGameWithPlayers();
+    const next = gameReducer(state, {
+      type: 'updateCell',
+      params: {id: 'p1', cell, value: 'A', autocheck: false},
+    });
+    expect(next).toBe(state);
+  });
+
+  it.each(outOfRange)('check at %o leaves state unchanged', (cell) => {
+    const state = createGameWithPlayers();
+    const next = gameReducer(state, {type: 'check', params: {id: 'p1', scope: [cell]}});
+    expect(next).toBe(state);
+  });
+
+  it.each(outOfRange)('reveal at %o leaves state unchanged', (cell) => {
+    const state = createGameWithPlayers();
+    const next = gameReducer(state, {type: 'reveal', params: {id: 'p1', scope: [cell]}});
+    expect(next).toBe(state);
+  });
+});
