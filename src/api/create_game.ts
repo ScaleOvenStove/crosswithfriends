@@ -32,11 +32,16 @@ export async function createGame(
     } catch {
       // response wasn't JSON, use default message
     }
-    const err = new Error(message) as Error & {rateLimited?: boolean};
+    const err = new Error(message) as Error & {rateLimited?: boolean; puzzleNotFound?: boolean};
     // 429 = user mashed the create button (or hit a popular puzzle); WAI,
     // don't pollute Sentry. Mark the error so callers can offer a softer UI.
+    // 404 = the pid no longer exists (deleted or merged puzzle, stale link).
+    // Also WAI: the server's only 404 here is "Puzzle not found", and the
+    // message already tells the user what happened.
     if (resp.status === 429) {
       err.rateLimited = true;
+    } else if (resp.status === 404) {
+      err.puzzleNotFound = true;
     } else {
       Sentry.captureException(err, {extra: {gid: data.gid, pid: data.pid, status: resp.status}});
     }

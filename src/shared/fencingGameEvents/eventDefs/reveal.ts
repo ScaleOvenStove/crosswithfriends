@@ -25,6 +25,7 @@ const reveal: EventDef<RevealEvent> = {
     }
     const [{r, c}] = scope;
     if (
+      !teamGrid[r]?.[c] || // illegal update if the cell is outside the grid
       teamGrid[r][c].good // if cell is already correct, no need to update
     ) {
       return state;

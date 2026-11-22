@@ -33,6 +33,11 @@ if (sentryDsn) {
       /^The operation is insecure\.$/,
       // Clipboard permission denied
       /Write permission denied/,
+      // Autoplay blocked before the user interacts with the page. Our own
+      // play() call (Confetti.js) already swallows its rejection; these
+      // arrive with no stack, from media we don't control.
+      /play\(\) failed because the user didn't interact with the document first/,
+      /The play method is not allowed by the user agent or the platform/,
       // Stale assets after deploy
       /Unable to preload CSS/,
       /Importing a module script failed/,
