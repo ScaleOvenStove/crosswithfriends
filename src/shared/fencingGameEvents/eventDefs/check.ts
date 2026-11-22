@@ -39,6 +39,7 @@ const check: EventDef<CheckEvent> = {
     }
     const [{r, c}] = scope;
     if (
+      !teamGrid[r]?.[c] || // illegal update if the cell is outside the grid
       teamGrid[r][c].good || // if cell is already correct, no need to update
       !teamGrid[r][c].value // if cell is not filled out, cannot check
     ) {

@@ -32,6 +32,9 @@ const updateCell: EventDef<UpdateCellEvent> = {
     if (!grid) {
       return state; // illegal update if grid is somehow undefined
     }
+    if (!grid[r]?.[c]) {
+      return state; // illegal update if the cell is outside the grid
+    }
     if (grid[r][c].good) {
       return state; // if cell is already correct, no need to update
     }
