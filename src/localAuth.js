@@ -1,4 +1,5 @@
 import {v4 as uuidv4} from 'uuid';
+import {getStoredItem, setStoredItem} from './lib/safeStorage';
 
 const idKey = 'dfac-id';
 
@@ -13,16 +14,17 @@ function genAnonId() {
 let cachedId = null;
 function getLocalId() {
   if (cachedId) return cachedId;
-  if (localStorage) {
-    if (localStorage.getItem(idKey)) {
-      cachedId = localStorage.getItem(idKey);
-      return cachedId;
-    }
-    const id = genId();
-    localStorage.setItem(idKey, id);
+  const stored = getStoredItem(idKey);
+  if (stored) {
+    cachedId = stored;
+    return cachedId;
+  }
+  const id = genId();
+  if (setStoredItem(idKey, id)) {
     cachedId = id;
     return id;
   }
+  // Storage is blocked: fall back to an id that lives for this page load.
   console.log('local storage not detected , unable to assign dfac-id');
   cachedId = genAnonId();
   return cachedId;

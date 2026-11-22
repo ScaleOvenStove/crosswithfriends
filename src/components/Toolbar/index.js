@@ -16,6 +16,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import ActionMenu from './ActionMenu';
 import Popup from './Popup';
 import {isMobile} from '../../lib/jsUtils';
+import {getStoredItem, setStoredItem} from '../../lib/safeStorage';
 
 const pencilColorKey = 'pencil-color';
 
@@ -39,7 +40,7 @@ function handleKeyDown(callback) {
 function handlePencilColorPickerChange(e) {
   const color = e.target.value;
   document.documentElement.style.setProperty('--pencil-color', color);
-  localStorage.setItem(pencilColorKey, color);
+  setStoredItem(pencilColorKey, color);
 }
 
 export default class Toolbar extends Component {
@@ -55,10 +56,7 @@ export default class Toolbar extends Component {
 
   // eslint-disable-next-line class-methods-use-this
   componentDidMount() {
-    document.documentElement.style.setProperty(
-      '--pencil-color',
-      localStorage.getItem(pencilColorKey) || '#888888'
-    );
+    document.documentElement.style.setProperty('--pencil-color', getStoredItem(pencilColorKey) || '#888888');
   }
 
   handleBlur = () => {

@@ -53,6 +53,7 @@ import {HelmetProvider} from 'react-helmet-async';
 import useMediaQuery from './lib/hooks/useMediaQuery';
 import {BrowserRouter as Router, Route, Routes, Navigate, useLocation} from 'react-router';
 import {isMobile} from './lib/jsUtils';
+import {getStoredItem, setStoredItem} from './lib/safeStorage';
 // Eager-loaded pages (critical path)
 import {Game, Room, WrappedWelcome} from './pages';
 
@@ -270,7 +271,7 @@ function ErrorFallback({resetError}) {
 
 const Root = () => {
   const urlDarkMode = window.location.search.indexOf('dark') !== -1;
-  const savedDarkModePreference = (localStorage && localStorage.getItem(darkModeLocalStorageKey)) || '0';
+  const savedDarkModePreference = getStoredItem(darkModeLocalStorageKey) || '0';
   const [darkModePreference, setDarkModePreference] = React.useState(
     urlDarkMode ? '1' : savedDarkModePreference
   );
@@ -288,7 +289,7 @@ const Root = () => {
       default:
         newDarkModePreference = '0';
     }
-    localStorage && localStorage.setItem(darkModeLocalStorageKey, newDarkModePreference);
+    setStoredItem(darkModeLocalStorageKey, newDarkModePreference);
     setDarkModePreference(newDarkModePreference);
   };
 
